@@ -24,6 +24,7 @@ export function seedState() {
     task("task-4", "Selecionar motorista de apoio", "quote-1006", "COT-1006", "Carro blindado · Diretoria", "todo", "high", "João Mendes", "Operação", dateFromToday(1), "Separar duas opções de motorista habilitado.", "task-5"),
     task("task-5", "Montar cotação do carro blindado", "quote-1006", "COT-1006", "Carro blindado · Diretoria", "doing", "high", "Marina Alves", "Comercial", dateFromToday(1), "Compor o valor final com deslocamento e espera."),
     task("task-6", "Registrar resposta enviada", "quote-1005", "COT-1005", "Recepção de convidados · Congonhas", "done", "low", "Camila Torres", "Comercial", dateFromToday(-1), "Resposta enviada e registrada no histórico."),
+    task("task-7", "Validar causa do erro operacional", null, "QAL-204", "Atraso na confirmação do fornecedor", "waiting", "high", "Rafael Lima", "Qualidade", dateFromToday(1), "Confirmar causa e registrar ação corretiva.", null, { sourceType: "quality", sourceId: "quality-error-204", sourceLabel: "Erro operacional", sourceCode: "QAL-204", blockedReason: "Aguardando retorno do fornecedor" }),
   ];
   return { quotes, tasks, lastUpdated: new Date().toISOString() };
 }
@@ -31,7 +32,7 @@ export function seedState() {
 function task(id, title, quoteId, quoteCode, quoteTitle, status, priority, assigneeName, teamName, dueDate, description, parentTaskId = null, context = {}) {
   return {
     id, title, parentTaskId, quoteId, quoteCode, quoteTitle, status, priority, assigneeName, teamName, dueDate,
-    description, labels: [quoteCode], sourceType: quoteId ? "quote" : "manual", sourceId: quoteId, sourceLabel: quoteId ? "Pedido de cotaÃ§Ã£o" : "Tarefa manual", sourceCode: quoteCode, blockedReason: "", ...context, comments: [], attachments: [],
+    description, labels: [quoteCode], sourceType: quoteId ? "quote" : "manual", sourceId: quoteId, sourceLabel: quoteId ? "Pedido de cotação" : "Tarefa manual", sourceCode: quoteCode, blockedReason: "", ...context, comments: [], attachments: [],
     history: [{ id: uid("history"), text: "Tarefa criada no cenário de demonstração.", createdAt: new Date().toISOString(), author: "Sistema" }],
   };
 }
@@ -58,7 +59,7 @@ export function createTask(state, input) {
     quoteCode: input.quoteCode || "", quoteTitle: input.quoteTitle || "Sem vínculo", title: input.title.trim(),
     status: input.status || STATUSES[0].id, priority: input.priority || "medium", assigneeName: input.assigneeName || "Não atribuído",
     teamName: input.teamName || "Operação", dueDate: input.dueDate || "", description: input.description || "",
-    labels: input.quoteCode ? [input.quoteCode] : [], sourceType, sourceId: input.sourceId || input.quoteId || null, sourceLabel: input.sourceLabel || (sourceType === "quality" ? "AÃ§Ã£o de qualidade" : sourceType === "quote" ? "Pedido de cotaÃ§Ã£o" : "Tarefa manual"), sourceCode: input.sourceCode || input.quoteCode || "", blockedReason: input.blockedReason || "", comments: [], attachments: [],
+    labels: input.quoteCode ? [input.quoteCode] : [], sourceType, sourceId: input.sourceId || input.quoteId || null, sourceLabel: input.sourceLabel || (sourceType === "quality" ? "Ação de qualidade" : sourceType === "quote" ? "Pedido de cotação" : "Tarefa manual"), sourceCode: input.sourceCode || input.quoteCode || "", blockedReason: input.blockedReason || "", comments: [], attachments: [],
     history: [{ id: uid("history"), text: "Tarefa criada no mock.", createdAt: new Date().toISOString(), author: "Você" }],
   };
   return saveState({ ...state, tasks: [...state.tasks, nextTask] });

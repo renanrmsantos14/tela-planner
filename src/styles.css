@@ -1,4 +1,16 @@
 @import "@fontsource/manrope/latin-400.css";
+
+/* Passe de acabamento: feedback claro sem alterar o contrato visual da tela. */
+button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px solid rgba(33, 89, 210, .2); outline-offset: 2px; }
+.metric-card { transition: transform 180ms var(--ease-out), box-shadow 180ms var(--ease-out), border-color 180ms ease; }
+.metric-card:hover { transform: translateY(-2px); border-color: #cbd8ea; box-shadow: 0 14px 30px rgba(0, 26, 61, .08); }
+.priority-row, .agenda-row, .table-row { transition: background-color 150ms ease, transform 150ms var(--ease-out); }
+.priority-row:active, .agenda-row:active, .table-row:active { transform: scale(.995); }
+.search-field:focus-within { border-color: #6c91e8; box-shadow: 0 0 0 3px rgba(33, 89, 210, .11); }
+.drawer-body { scrollbar-gutter: stable; scrollbar-color: #cbd5e1 transparent; scrollbar-width: thin; }
+.drawer-footer { background: rgba(252, 252, 251, .94); backdrop-filter: blur(8px); }
+.toast { border-color: rgba(22, 143, 87, .28); }
+@media (hover: hover) and (pointer: fine) { .quote-row, .agenda-row, .table-row { cursor: pointer; } }
 @import "@fontsource/manrope/latin-500.css";
 @import "@fontsource/manrope/latin-600.css";
 @import "@fontsource/manrope/latin-700.css";

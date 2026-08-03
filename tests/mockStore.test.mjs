@@ -15,7 +15,7 @@ test("cria e atualiza tarefa sem alterar a referência original", () => {
   const created = next.tasks.at(-1);
   const updated = updateTask(next, created.id, { status: "done" });
   assert.equal(updated.tasks.at(-1).status, "done");
-  assert.equal(initial.tasks.length, 6);
+  assert.equal(initial.tasks.length, 7);
 });
 
 test("adiciona comentário e anexo mock", () => {
@@ -34,4 +34,13 @@ test("cria tarefa principal para cotação sem duplicar", () => {
   const quote = initial.quotes.find((item) => item.id === "quote-1008");
   const same = ensureQuoteTask(initial, quote);
   assert.equal(same.tasks.length, initial.tasks.length);
+});
+
+test("preserva origem e bloqueio na tarefa criada", () => {
+  withStorage();
+  const created = createTask(seedState(), { title: "Tratar ocorrência", sourceType: "quality", sourceId: "quality-1", sourceLabel: "Ação de qualidade", sourceCode: "QAL-1", blockedReason: "Aguardando evidência" });
+  const task = created.tasks.at(-1);
+  assert.equal(task.sourceType, "quality");
+  assert.equal(task.sourceId, "quality-1");
+  assert.equal(task.blockedReason, "Aguardando evidência");
 });

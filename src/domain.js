@@ -26,7 +26,7 @@ export function normalizeText(value) {
 
 export const TASK_SOURCES = [
   { id: "manual", label: "Manual", tone: "neutral" },
-  { id: "quote", label: "CotaÃ§Ã£o", tone: "action" },
+  { id: "quote", label: "Cotação", tone: "action" },
   { id: "quality", label: "Qualidade", tone: "warning" },
 ];
 
