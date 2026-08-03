@@ -1,5 +1,10 @@
 export const ROOT_REGISTRY_KEY = "__telaPlannerReactRoot";
 
+export function hasReactRoot(rootElement) {
+  return Object.getOwnPropertyNames(rootElement)
+    .some((propertyName) => propertyName.startsWith("__reactContainer$"));
+}
+
 export function getOrCreateRoot({ host, rootElement, createRootFactory }) {
   const registered = host[ROOT_REGISTRY_KEY];
   if (registered?.element === rootElement) return registered.root;

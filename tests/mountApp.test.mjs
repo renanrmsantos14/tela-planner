@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { getOrCreateRoot } from '../src/mountApp.js';
+import { getOrCreateRoot, hasReactRoot } from '../src/mountApp.js';
 
 test('reutiliza a raiz React quando o bootstrap é executado novamente', () => {
   const host = {};
@@ -28,4 +28,12 @@ test('cria uma nova raiz quando o container realmente muda', () => {
   const second = getOrCreateRoot({ host, rootElement: {}, createRootFactory });
 
   assert.notEqual(first, second);
+});
+
+test('reconhece raiz criada por outra cópia do bundle React', () => {
+  const element = {};
+  Object.defineProperty(element, '__reactContainer$bundleAnterior', { value: {} });
+
+  assert.equal(hasReactRoot(element), true);
+  assert.equal(hasReactRoot({}), false);
 });
