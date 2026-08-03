@@ -19,6 +19,9 @@ $apiBaseUrl = "$environmentBaseUrl/api/data/v9.2"
 $solutionUniqueName = "AppBetinhos"
 $resourceName = "new_TelaPlanner.html"
 $resourcePath = Join-Path $root "dist\webresource.html"
+$sitemapId = "787c8fda-53d0-f011-8543-6045bd3a51ea"
+$operationalGroupId = "group_16b0a016"
+$plannerSubAreaId = "subarea_tela_planner"
 
 if (-not (Test-Path -LiteralPath $resourcePath)) { throw "Webresource não encontrado: $resourcePath. Execute npm run build primeiro." }
 if (-not (Get-Module -ListAvailable MSAL.PS)) { throw "Módulo MSAL.PS não encontrado. Instale com: Install-Module MSAL.PS -Scope CurrentUser" }
@@ -73,6 +76,30 @@ if (-not $NoPublish) {
   Write-Step "publicando $resourceName"
   $publishXml = "<importexportxml><webresources><webresource>$webResourceId</webresource></webresources></importexportxml>"
   Invoke-RestMethod -Method Post -Uri "$apiBaseUrl/PublishXml" -Headers $headers -ContentType "application/json; charset=utf-8" -Body (@{ ParameterXml = $publishXml } | ConvertTo-Json) | Out-Null
+
+  Write-Step "validando navegação do app Model Driven Betinhos"
+  $sitemap = Invoke-RestMethod -Method Get -Uri "$apiBaseUrl/sitemaps($sitemapId)?`$select=sitemapxml" -Headers $headers
+  $sitemapXml = [string] $sitemap.sitemapxml
+  if ([string]::IsNullOrWhiteSpace($sitemapXml)) { throw "Sitemap $sitemapId não retornou XML. Deploy abortado." }
+
+  if ($sitemapXml -notmatch [regex]::Escape("Id=`"$plannerSubAreaId`"")) {
+    $groupPattern = '(<Group\b[^>]*\bId="' + $operationalGroupId + '"[^>]*>[\s\S]*?)(</Group>)'
+    $groupMatch = [regex]::Match($sitemapXml, $groupPattern)
+    if (-not $groupMatch.Success) { throw "Grupo Operacional não encontrado no sitemap. Deploy abortado." }
+
+    $plannerSubArea = '<SubArea Id="subarea_tela_planner" ResourceId="SitemapDesigner.NewSubArea" VectorIcon="/WebResources/cr40f_sitemap_clipboard_list.svg" Icon="/_imgs/imagestrips/transparent_spacer.gif" Url="$webresource:new_TelaPlanner.html" Client="All,Outlook,OutlookLaptopClient,OutlookWorkstationClient,Web" AvailableOffline="true" PassParams="false" Sku="All,OnPremise,Live,SPLA"><Titles><Title LCID="1046" Title="Planner" /></Titles></SubArea>'
+    $replacement = $groupMatch.Groups[1].Value + $plannerSubArea + $groupMatch.Groups[2].Value
+    $updatedSitemapXml = $sitemapXml.Remove($groupMatch.Index, $groupMatch.Length).Insert($groupMatch.Index, $replacement)
+    Invoke-RestMethod -Method Patch -Uri "$apiBaseUrl/sitemaps($sitemapId)" -Headers $headers -ContentType "application/json; charset=utf-8" -Body (@{ sitemapxml = $updatedSitemapXml } | ConvertTo-Json) | Out-Null
+    Write-Step "Planner adicionado ao grupo Operacional"
+  }
+  else {
+    Write-Step "Planner já está no grupo Operacional; nenhuma duplicação feita"
+  }
+
+  Write-Step "publicando sitemap do app"
+  $sitemapPublishXml = "<importexportxml><sitemaps><sitemap>$sitemapId</sitemap></sitemaps></importexportxml>"
+  Invoke-RestMethod -Method Post -Uri "$apiBaseUrl/PublishXml" -Headers $headers -ContentType "application/json; charset=utf-8" -Body (@{ ParameterXml = $sitemapPublishXml } | ConvertTo-Json) | Out-Null
 }
 
 Write-Step "concluído: $resourceName ($webResourceId)"
