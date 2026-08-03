@@ -31,15 +31,17 @@ function InputSelect({ value, onChange, options, placeholder = "Selecione", disa
   return <SearchableSelect value={value} onChange={onChange} disabled={disabled} placeholder={placeholder} options={options.map((option) => typeof option === "string" ? { value: option, label: option } : option)} />;
 }
 
-function AppShell({ active, onNavigate, children, onCreate }) {
+function AppShell({ active, onNavigate, children, onCreate, tasks }) {
   const [expanded, setExpanded] = useState(true);
+  const stats = taskStats(tasks);
+  const todayLabel = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short" }).format(new Date()).replace(".", "");
   return <div className={`app-shell ${expanded ? "" : "sidebar-collapsed"}`}>
     <aside className="sidebar">
       <button className="sidebar-toggle" type="button" onClick={() => setExpanded((value) => !value)} aria-label={expanded ? "Recolher navegação" : "Expandir navegação"} title={expanded ? "Recolher navegação" : "Expandir navegação"}>
         {expanded ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}
       </button>
       <div className="brand-block"><div className="brand-mark"><ClipboardList size={20} /></div><div className="brand-copy"><strong>Tela Planner</strong><span>Operação Betinhos</span></div></div>
-      <div className="workspace-switch"><span className="workspace-dot" /><span>Operação central</span><ChevronRight size={14} /></div>
+      <div className="sidebar-day-card" aria-label={`Hoje, ${stats.open} pendências e ${stats.overdue} atrasados`}><div className="sidebar-day-title"><span>Hoje</span><strong>{todayLabel}</strong></div><div className="sidebar-day-stats"><span className="sidebar-day-stat"><strong>{stats.open}</strong><small>Pendências</small></span><span className="sidebar-day-stat sidebar-day-stat-overdue"><strong>{stats.overdue}</strong><small>Atrasados</small></span></div></div>
       <nav className="main-nav">{navItems.map(([id, label, Icon]) => <button key={id} className={active === id ? "nav-item active" : "nav-item"} onClick={() => onNavigate(id)}><Icon size={18} /><span>{label}</span>{id === "board" && <span className="nav-count">12</span>}</button>)}</nav>
       <div className="sidebar-bottom"><div className="mock-label"><span className="pulse-dot" />Modo demonstração</div><div className="user-card"><Avatar name="Renan Santos" /><div className="user-copy"><strong>Renan Santos</strong><span>Administrador</span></div><button className="user-settings-button" type="button" onClick={() => onNavigate("settings")} aria-label="Abrir configurações" title="Configurações"><Settings size={15} /></button></div></div>
     </aside>
@@ -132,5 +134,5 @@ export default function App() {
     if (active === "calendar") return <CalendarView state={state} onOpen={openTask} />;
     return <SettingsView onReset={resetMock} />;
   };
-  return <AppShell active={active} onNavigate={setActive} onCreate={() => setCreating(true)}>{renderPage()}{notice && <div className="toast"><CheckCircle2 size={17} /><span>{notice}</span></div>}{selected && <TaskDrawer task={selected} state={state} onClose={closeTask} onSave={saveTask} onComment={(id, text) => updateState(addComment(state, id, text), "Comentário adicionado.")} onAttachment={(id, name) => updateState(addAttachment(state, id, name), "Anexo mock adicionado.")} onOpenQuote={(id) => { setActive("dashboard"); closeTask(); setNotice(`Cotação ${state.quotes.find((quote) => quote.id === id)?.code || ""} vinculada.`); }} />}{creating && <NewTaskDrawer quotes={state.quotes} onClose={() => setCreating(false)} onSave={createNewTask} />}</AppShell>;
+  return <AppShell active={active} onNavigate={setActive} onCreate={() => setCreating(true)} tasks={state.tasks}>{renderPage()}{notice && <div className="toast"><CheckCircle2 size={17} /><span>{notice}</span></div>}{selected && <TaskDrawer task={selected} state={state} onClose={closeTask} onSave={saveTask} onComment={(id, text) => updateState(addComment(state, id, text), "Comentário adicionado.")} onAttachment={(id, name) => updateState(addAttachment(state, id, name), "Anexo mock adicionado.")} onOpenQuote={(id) => { setActive("dashboard"); closeTask(); setNotice(`Cotação ${state.quotes.find((quote) => quote.id === id)?.code || ""} vinculada.`); }} />}{creating && <NewTaskDrawer quotes={state.quotes} onClose={() => setCreating(false)} onSave={createNewTask} />}</AppShell>;
 }
