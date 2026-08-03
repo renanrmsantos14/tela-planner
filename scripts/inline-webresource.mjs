@@ -12,7 +12,7 @@ for (const [, assetPath] of assets) {
   const content = await readFile(filePath, "utf8");
   const escapedPath = escapeRegExp(assetPath);
   if (assetPath.endsWith(".css")) html = html.replace(new RegExp(`<link[^>]+href="${escapedPath}"[^>]*>`), () => `<style>${content}</style>`);
-  else html = html.replace(new RegExp(`<script[^>]+src="${escapedPath}"[^>]*><\\/script>`), () => `<script>${content}</script>`);
+  else html = html.replace(new RegExp(`<script[^>]+src="${escapedPath}"[^>]*><\\/script>`), () => `<script type="module">${content}</script>`);
 }
 await writeFile(resolve(dist, "webresource.html"), html, "utf8");
 console.log("webresource.html gerado com assets inline");
