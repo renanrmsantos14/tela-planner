@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { filterTasks, formatDate, formatLongDate, isDueToday, isOverdue, PRIORITIES, sortTasks, STATUSES, statusById, taskStats } from "./domain";
 import { addAttachment, addComment, createTask, ensureQuoteTask, loadState, resetState, saveState, updateTask } from "./mockStore";
+import SearchableSelect from "./SearchableSelect.jsx";
 
 const navItems = [
   ["dashboard", "Visão geral", LayoutDashboard], ["board", "Quadro", ClipboardList], ["list", "Lista operacional", ListFilter], ["calendar", "Agenda", CalendarDays], ["settings", "Configurações", Settings],
@@ -24,6 +25,10 @@ function StatusBadge({ status }) {
 function PriorityBadge({ priority }) {
   const item = PRIORITIES.find((entry) => entry.id === priority) || PRIORITIES[1];
   return <span className={`priority priority-${item.tone}`}>{item.label}</span>;
+}
+
+function InputSelect({ value, onChange, options, placeholder = "Selecione", disabled = false }) {
+  return <SearchableSelect value={value} onChange={onChange} disabled={disabled} placeholder={placeholder} options={options.map((option) => typeof option === "string" ? { value: option, label: option } : option)} />;
 }
 
 function AppShell({ active, onNavigate, children, onCreate }) {
@@ -68,7 +73,7 @@ function Board({ tasks, onOpen, onMove }) {
 }
 
 function FilterBar({ filters, setFilters, onCreate }) {
-  return <div className="filter-bar"><div className="search-field"><Search size={16} /><input value={filters.query} onChange={(event) => setFilters((current) => ({ ...current, query: event.target.value }))} placeholder="Buscar tarefas, cotações ou pessoas" /></div><select value={filters.status} onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value }))}><option value="">Todos os status</option>{STATUSES.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select><select value={filters.priority} onChange={(event) => setFilters((current) => ({ ...current, priority: event.target.value }))}><option value="">Todas as prioridades</option>{PRIORITIES.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select><button className="button button-primary" onClick={onCreate}><Plus size={16} />Nova tarefa</button></div>;
+  return <div className="filter-bar"><div className="search-field"><Search size={16} /><input value={filters.query} onChange={(event) => setFilters((current) => ({ ...current, query: event.target.value }))} placeholder="Buscar tarefas, cotações ou pessoas" /></div><InputSelect value={filters.status} onChange={(value) => setFilters((current) => ({ ...current, status: value }))} placeholder="Todos os status" options={[{ value: "", label: "Todos os status" }, ...STATUSES.map((item) => ({ value: item.id, label: item.label }))]} /><InputSelect value={filters.priority} onChange={(value) => setFilters((current) => ({ ...current, priority: value }))} placeholder="Todas as prioridades" options={[{ value: "", label: "Todas as prioridades" }, ...PRIORITIES.map((item) => ({ value: item.id, label: item.label }))]} /><button className="button button-primary" onClick={onCreate}><Plus size={16} />Nova tarefa</button></div>;
 }
 
 function Dashboard({ state, onNavigate, onOpen, onCreate, onRefresh }) {
