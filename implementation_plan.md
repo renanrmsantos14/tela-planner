@@ -129,3 +129,36 @@ Os logical names e tipos das novas tabelas/colunas ficam pendentes de consulta a
 ## Próximo passo
 
 Fazer a consulta de metadata do Dataverse para fechar o modelo de tarefa e, em paralelo, criar a primeira tela mock do board com o visual herdado do `Módulo Qualidade`.
+
+## Plano de correção: performance + frontend quebrado
+
+### Evidência local
+
+- `npm test`: 7 testes passando.
+- `npm run build`: Vite, inline webresource e verificação de encoding passando; bundle inline validado.
+- Graphify em `src`: 59 nós e 137 arestas; `App.jsx` concentra renderização e derivacões de estado.
+- `App.jsx`: filtros/ordenação repetidos em board, lista, agenda e dashboard; `Intl.DateTimeFormat` recriado durante render; callbacks e listas de opções recriados a cada render.
+- `domain.js`: `taskStats` faz quatro varreduras; `formatDate`/`formatLongDate` recriam formatadores; filtro não normaliza acentos.
+- `SearchableSelect.jsx`: listeners globais e reposicionamento por scroll/resize precisam ser limitados ao estado aberto e atualizados sem trabalho redundante.
+
+### Escopo de implementação
+
+- `[MODIFY] src/domain.js`: cachear formatadores, normalizar busca uma vez por tarefa e calcular estatísticas em uma passada, preservando contratos e resultados.
+- `[MODIFY] src/App.jsx`: memoizar derivações por tela, estabilizar opções/callbacks de selects e corrigir ações visuais sem handler (`Novo prazo`, botão de filtros e adicionar subtarefa) para não parecerem quebradas; manter DOM e comportamento existente.
+- `[MODIFY] src/SearchableSelect.jsx`: reduzir reposicionamentos redundantes e garantir cleanup/estado correto ao fechar, sem alterar teclado, busca, multi-select ou acessibilidade.
+- `[MODIFY] tests/domain.test.mjs`, `[MODIFY] tests/mockStore.test.mjs`: cobrir busca sem acento, estatísticas e regressões dos handlers.
+- `[MODIFY] src/styles.css` somente se a validação visual confirmar overflow, overlay ou estado disabled quebrado; sem redesign.
+
+### Critérios de aceite
+
+1. `npm run check` passa.
+2. Nenhum listener global fica ativo com select fechado; cleanup permanece idempotente.
+3. Board/lista/agenda mantêm os mesmos registros, filtros, ordem e ações.
+4. Botões visíveis sem função passam a executar a ação correspondente ou ficam explicitamente desabilitados.
+5. Bundle inline continua gerado e validado; nenhuma publicação externa será feita nesta etapa.
+
+### Fora de escopo
+
+- Integração Dataverse/metadata live.
+- Mudança de modelo visual, rotas, payloads ou contrato de webresource.
+- Benchmark de produção sem ambiente publicado.

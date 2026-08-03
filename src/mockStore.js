@@ -28,10 +28,10 @@ export function seedState() {
   return { quotes, tasks, lastUpdated: new Date().toISOString() };
 }
 
-function task(id, title, quoteId, quoteCode, quoteTitle, status, priority, assigneeName, teamName, dueDate, description, parentTaskId = null) {
+function task(id, title, quoteId, quoteCode, quoteTitle, status, priority, assigneeName, teamName, dueDate, description, parentTaskId = null, context = {}) {
   return {
     id, title, parentTaskId, quoteId, quoteCode, quoteTitle, status, priority, assigneeName, teamName, dueDate,
-    description, labels: [quoteCode], comments: [], attachments: [],
+    description, labels: [quoteCode], sourceType: quoteId ? "quote" : "manual", sourceId: quoteId, sourceLabel: quoteId ? "Pedido de cotaÃ§Ã£o" : "Tarefa manual", sourceCode: quoteCode, blockedReason: "", ...context, comments: [], attachments: [],
     history: [{ id: uid("history"), text: "Tarefa criada no cenário de demonstração.", createdAt: new Date().toISOString(), author: "Sistema" }],
   };
 }
@@ -52,12 +52,13 @@ export function saveState(state) {
 }
 
 export function createTask(state, input) {
+  const sourceType = input.sourceType || (input.quoteId ? "quote" : "manual");
   const nextTask = {
     id: uid("task"), parentTaskId: input.parentTaskId || null, quoteId: input.quoteId || null,
     quoteCode: input.quoteCode || "", quoteTitle: input.quoteTitle || "Sem vínculo", title: input.title.trim(),
     status: input.status || STATUSES[0].id, priority: input.priority || "medium", assigneeName: input.assigneeName || "Não atribuído",
     teamName: input.teamName || "Operação", dueDate: input.dueDate || "", description: input.description || "",
-    labels: input.quoteCode ? [input.quoteCode] : [], comments: [], attachments: [],
+    labels: input.quoteCode ? [input.quoteCode] : [], sourceType, sourceId: input.sourceId || input.quoteId || null, sourceLabel: input.sourceLabel || (sourceType === "quality" ? "AÃ§Ã£o de qualidade" : sourceType === "quote" ? "Pedido de cotaÃ§Ã£o" : "Tarefa manual"), sourceCode: input.sourceCode || input.quoteCode || "", blockedReason: input.blockedReason || "", comments: [], attachments: [],
     history: [{ id: uid("history"), text: "Tarefa criada no mock.", createdAt: new Date().toISOString(), author: "Você" }],
   };
   return saveState({ ...state, tasks: [...state.tasks, nextTask] });

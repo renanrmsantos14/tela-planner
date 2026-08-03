@@ -60,6 +60,14 @@ button { cursor: pointer; }
 @keyframes drawer-mobile-in { from { transform: translateY(18px); opacity: .7; } to { transform: translateY(0); opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }
 
+.task-source-row { display: flex; align-items: center; gap: 6px; min-width: 0; margin-top: 7px; color: var(--muted); font-size: 9px; }
+.task-source-row em { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-style: normal; }
+.source-badge { flex: 0 0 auto; padding: 3px 6px; border-radius: 999px; font-size: 8px; font-weight: 800; }
+.source-neutral { color: var(--muted); background: #f0f3f7; }
+.source-action { color: var(--blue); background: var(--blue-soft); }
+.source-warning { color: var(--amber); background: var(--amber-soft); }
+.blocked-note { display: flex; align-items: flex-start; gap: 5px; margin-top: 8px; color: var(--red); font-size: 9px; font-weight: 700; line-height: 1.35; }
+
 /* Input components herdados do Módulo Qualidade: portal, busca, teclado e multi-select. */
 .custom-select { position: relative; width: 100%; min-width: 0; max-width: 100%; }
 .custom-select-native { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; padding: 0; border: 0; opacity: 0; pointer-events: none; }

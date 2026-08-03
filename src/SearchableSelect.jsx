@@ -118,6 +118,7 @@ export default function SearchableSelect({
   const triggerRef = useRef(null);
   const panelRef = useRef(null);
   const panelScrollTopRef = useRef(0);
+  const positionFrameRef = useRef(0);
   const searchRef = useRef(null);
   const optionRefs = useRef([]);
   const suppressFocusRef = useRef(false);
@@ -234,6 +235,14 @@ export default function SearchableSelect({
     panelRef.current.style.maxHeight = `${maxHeight}px`;
   }, [open]);
 
+  const schedulePosition = useCallback(() => {
+    if (positionFrameRef.current) return;
+    positionFrameRef.current = window.requestAnimationFrame(() => {
+      positionFrameRef.current = 0;
+      updatePosition();
+    });
+  }, [updatePosition]);
+
   useLayoutEffect(() => {
     if (!open) return undefined;
     updatePosition();
@@ -269,7 +278,7 @@ export default function SearchableSelect({
         return;
       setOpen(false);
     };
-    const reposition = () => updatePosition();
+    const reposition = () => schedulePosition();
     const closeOnEscape = (event) => {
       if (event.key === "Escape") {
         event.preventDefault();
@@ -292,8 +301,12 @@ export default function SearchableSelect({
       window.removeEventListener("resize", reposition);
       window.visualViewport?.removeEventListener("resize", reposition);
       window.visualViewport?.removeEventListener("scroll", reposition);
+      if (positionFrameRef.current) {
+        window.cancelAnimationFrame(positionFrameRef.current);
+        positionFrameRef.current = 0;
+      }
     };
-  }, [open, updatePosition]);
+  }, [open, schedulePosition]);
 
   useEffect(() => {
     if (!open) {

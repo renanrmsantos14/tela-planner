@@ -13,8 +13,26 @@ export const PRIORITIES = [
 
 export const QUOTE_STATUSES = ["Nova", "Em análise", "Aguardando fornecedor", "Respondida"];
 
+const SHORT_DATE_FORMATTER = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short" });
+const LONG_DATE_FORMATTER = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
+
+export function normalizeText(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+export const TASK_SOURCES = [
+  { id: "manual", label: "Manual", tone: "neutral" },
+  { id: "quote", label: "CotaÃ§Ã£o", tone: "action" },
+  { id: "quality", label: "Qualidade", tone: "warning" },
+];
+
 export const statusById = (id) => STATUSES.find((item) => item.id === id) || STATUSES[0];
 export const priorityById = (id) => PRIORITIES.find((item) => item.id === id) || PRIORITIES[1];
+export const sourceById = (id) => TASK_SOURCES.find((item) => item.id === id) || TASK_SOURCES[0];
 
 export function isOverdue(task, today = new Date()) {
   if (!task.dueDate || task.status === "done") return false;
@@ -27,27 +45,34 @@ export function isDueToday(task, today = new Date()) {
   return date.toDateString() === today.toDateString();
 }
 
+export function isBlocked(task) {
+  return task.status !== "done" && Boolean(String(task.blockedReason || "").trim());
+}
+
 export function formatDate(value) {
   if (!value) return "Sem prazo";
-  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short" })
-    .format(new Date(`${value}T12:00:00`))
-    .replace(" de ", " ");
+  return SHORT_DATE_FORMATTER.format(new Date(`${value}T12:00:00`)).replace(" de ", " ");
 }
 
 export function formatLongDate(value) {
   if (!value) return "Sem prazo definido";
-  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "long", year: "numeric" })
-    .format(new Date(`${value}T12:00:00`));
+  return LONG_DATE_FORMATTER.format(new Date(`${value}T12:00:00`));
 }
 
 export function filterTasks(tasks, filters) {
-  const query = filters.query.trim().toLowerCase();
+  const query = normalizeText(filters.query);
+  const queryTokens = query.split(/\s+/).filter(Boolean);
   return tasks.filter((task) => {
     const matchesQuery = !query || [task.title, task.quoteTitle, task.assigneeName, task.teamName]
-      .some((value) => String(value || "").toLowerCase().includes(query));
+      .some((value) => {
+        const normalizedValue = normalizeText(value);
+        return normalizedValue.includes(query) || queryTokens.every((token) => normalizedValue.includes(token));
+      });
     const matchesStatus = !filters.status || task.status === filters.status;
     const matchesPriority = !filters.priority || task.priority === filters.priority;
-    return matchesQuery && matchesStatus && matchesPriority;
+    const matchesSource = !filters.source || task.sourceType === filters.source;
+    const matchesBlocked = !filters.blocked || isBlocked(task);
+    return matchesQuery && matchesStatus && matchesPriority && matchesSource && matchesBlocked;
   });
 }
 
@@ -60,10 +85,11 @@ export function sortTasks(tasks) {
 }
 
 export function taskStats(tasks, today = new Date()) {
-  return {
-    open: tasks.filter((task) => task.status !== "done").length,
-    overdue: tasks.filter((task) => isOverdue(task, today)).length,
-    today: tasks.filter((task) => isDueToday(task, today)).length,
-    waiting: tasks.filter((task) => task.status === "waiting").length,
-  };
+  return tasks.reduce((stats, task) => {
+    if (task.status !== "done") stats.open += 1;
+    if (isOverdue(task, today)) stats.overdue += 1;
+    if (isDueToday(task, today)) stats.today += 1;
+    if (task.status === "waiting") stats.waiting += 1;
+    return stats;
+  }, { open: 0, overdue: 0, today: 0, waiting: 0 });
 }

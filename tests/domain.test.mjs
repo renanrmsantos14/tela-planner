@@ -19,6 +19,11 @@ test("filtra por texto, status e prioridade", () => {
   assert.equal(filterTasks(tasks, { query: "", status: "doing", priority: "medium" }).length, 1);
 });
 
+test("filtra texto ignorando acentos e caixa", () => {
+  const accented = [{ ...tasks[0], title: "Revisão de cotação" }];
+  assert.equal(filterTasks(accented, { query: "REVISAO COTACAO", status: "", priority: "" }).length, 1);
+});
+
 test("calcula indicadores operacionais", () => {
   const stats = taskStats(tasks, new Date("2026-08-03T12:00:00"));
   assert.deepEqual(stats, { open: 2, overdue: 1, today: 1, waiting: 0 });
