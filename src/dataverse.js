@@ -6,12 +6,27 @@ const TASK_TABLE = "cr40f_plannertarefa";
 const EVENT_TABLE = "cr40f_plannertarefaevento";
 const RELATION_TABLE = "cr40f_plannertarearelacao";
 const ANNOTATION_TABLE = "annotation";
+const ENTITY_SETS = Object.freeze({
+  [QUOTE_TABLE]: "cr40f_pedidodecotacaos",
+  [TASK_TABLE]: "cr40f_plannertarefas",
+  [EVENT_TABLE]: "cr40f_plannertarefaeventos",
+  [RELATION_TABLE]: "cr40f_plannertarearelacaos",
+  [ANNOTATION_TABLE]: "annotations",
+  systemuser: "systemusers",
+  team: "teams",
+});
 const ORIGIN_VALUES = { manual: 100000000, quote: 100000001, quality: 100000002 };
 const STATUS_VALUES = { todo: 100000000, doing: 100000001, waiting: 100000002, done: 100000003, cancelled: 100000004 };
 const PRIORITY_VALUES = { low: 100000000, medium: 100000001, high: 100000002, urgent: 100000003 };
 const STATUS_BY_VALUE = Object.fromEntries(Object.entries(STATUS_VALUES).map(([key, value]) => [value, key]));
 const PRIORITY_BY_VALUE = Object.fromEntries(Object.entries(PRIORITY_VALUES).map(([key, value]) => [value, key]));
 const lookupCache = new Map();
+
+export function entitySetName(logicalName) {
+  const entitySet = ENTITY_SETS[logicalName];
+  if (!entitySet) throw new Error(`Entity Set não mapeado para ${logicalName}.`);
+  return entitySet;
+}
 
 function getXrm() {
   const candidates = [];
@@ -62,7 +77,7 @@ async function request(xrm, path, options = {}) {
 }
 
 async function retrieveMany(xrm, table, query) {
-  const result = await request(xrm, `/${table}${query}`);
+  const result = await request(xrm, `/${entitySetName(table)}${query}`);
   return result?.value || [];
 }
 
@@ -79,7 +94,7 @@ async function resolveLookupNavigation(xrm, entity, attribute, target) {
 async function bindLookup(xrm, payload, entity, attribute, target, id) {
   if (!id) return;
   const navigation = await resolveLookupNavigation(xrm, entity, attribute, target);
-  payload[`${navigation}@odata.bind`] = `/${target}(${cleanId(id)})`;
+  payload[`${navigation}@odata.bind`] = `/${entitySetName(target)}(${cleanId(id)})`;
 }
 
 async function resolveIdByName(xrm, table, field, value) {
@@ -92,7 +107,7 @@ async function resolveIdByName(xrm, table, field, value) {
 
 async function markQuoteOrigin(xrm, quoteId) {
   if (!quoteId) return;
-  await request(xrm, `/${QUOTE_TABLE}(${cleanId(quoteId)})`, { method: "PATCH", body: JSON.stringify({ cr40f_origemultimasincronizacao: "Planner", cr40f_ultimasincronizacao: new Date().toISOString() }) });
+  await request(xrm, `/${entitySetName(QUOTE_TABLE)}(${cleanId(quoteId)})`, { method: "PATCH", body: JSON.stringify({ cr40f_origemultimasincronizacao: "Planner", cr40f_ultimasincronizacao: new Date().toISOString() }) });
 }
 
 function normalizeQuote(row) {
@@ -141,10 +156,10 @@ function normalizeTask(row, annotations = [], events = []) {
 async function loadLiveState(xrm) {
   const [quotes, rows, events] = await Promise.all([
     retrieveMany(xrm, QUOTE_TABLE, "?$select=cr40f_pedidodecotacaoid,cr40f_numerodacotacao,cr40f_titulo,cr40f_clienteempresa,cr40f_statuscotacao,cr40f_prazoresponder,cr40f_valorcotado&$filter=statecode eq 0&$orderby=modifiedon desc&$top=500"),
-    retrieveMany(xrm, TASK_TABLE, "?$select=cr40f_plannertarefaid,cr40f_name,cr40f_titulo,cr40f_descricao,cr40f_status,cr40f_prioridade,cr40f_prazo,cr40f_responsavel,cr40f_equipe,cr40f_pedidocotacao,cr40f_errooperacional,cr40f_acaooperacional,cr40f_origem,cr40f_codigoorigem,cr40f_motivobloqueio&$filter=statecode eq 0&$orderby=modifiedon desc&$top=500"),
-    retrieveMany(xrm, EVENT_TABLE, "?$select=cr40f_plannertarefaeventoid,cr40f_tarefa,cr40f_tipo,cr40f_descricao,cr40f_ocorridoem,cr40f_autor&$orderby=cr40f_ocorridoem desc&$top=5000"),
+    retrieveMany(xrm, TASK_TABLE, "?$select=cr40f_plannertarefaid,cr40f_name,cr40f_titulo,cr40f_descricao,cr40f_status,cr40f_prioridade,cr40f_prazo,_cr40f_responsavel_value,_cr40f_equipe_value,_cr40f_pedidocotacao_value,_cr40f_errooperacional_value,_cr40f_acaooperacional_value,cr40f_origem,cr40f_codigoorigem,cr40f_motivobloqueio&$filter=statecode eq 0&$orderby=modifiedon desc&$top=500"),
+    retrieveMany(xrm, EVENT_TABLE, "?$select=cr40f_plannertarefaeventoid,_cr40f_tarefa_value,cr40f_tipo,cr40f_descricao,cr40f_ocorridoem,_cr40f_autor_value&$orderby=cr40f_ocorridoem desc&$top=5000"),
   ]);
-  const annotations = await retrieveMany(xrm, ANNOTATION_TABLE, "?$select=annotationid,objectid,notetext,filename,isdocument,createdon,createdby&$filter=isdocument eq false or isdocument eq true&$top=5000");
+  const annotations = await retrieveMany(xrm, ANNOTATION_TABLE, "?$select=annotationid,_objectid_value,notetext,filename,isdocument,createdon,_createdby_value&$filter=isdocument eq false or isdocument eq true&$top=5000");
   const tasks = rows.map((row) => normalizeTask(row, annotations.filter((item) => item._objectid_value === row.cr40f_plannertarefaid), events.filter((item) => item._cr40f_tarefa_value === row.cr40f_plannertarefaid)));
   const quoteById = new Map(quotes.map((row) => [row.cr40f_pedidodecotacaoid, normalizeQuote(row)]));
   return { quotes: [...quoteById.values()], tasks: tasks.map((task) => ({ ...task, quoteCode: quoteById.get(task.quoteId)?.code || "", quoteTitle: quoteById.get(task.quoteId)?.title || "" })), lastUpdated: new Date().toISOString(), live: true };
@@ -153,7 +168,7 @@ async function loadLiveState(xrm) {
 async function createEvent(xrm, taskId, type, description, field = "", previous = "", next = "") {
   const payload = { cr40f_tipo: type, cr40f_descricao: description, cr40f_campo: field, cr40f_valoranterior: previous, cr40f_valornovo: next, cr40f_ocorridoem: new Date().toISOString() };
   await bindLookup(xrm, payload, EVENT_TABLE, "cr40f_tarefa", TASK_TABLE, taskId);
-  await request(xrm, `/${EVENT_TABLE}`, { method: "POST", body: JSON.stringify(payload) });
+  await request(xrm, `/${entitySetName(EVENT_TABLE)}`, { method: "POST", body: JSON.stringify(payload) });
 }
 
 async function createLiveTask(xrm, state, input) {
@@ -163,7 +178,7 @@ async function createLiveTask(xrm, state, input) {
   await bindLookup(xrm, payload, TASK_TABLE, "cr40f_pedidocotacao", QUOTE_TABLE, input.quoteId);
   await bindLookup(xrm, payload, TASK_TABLE, "cr40f_responsavel", "systemuser", assigneeId);
   await bindLookup(xrm, payload, TASK_TABLE, "cr40f_equipe", "team", teamId);
-  const created = await request(xrm, `/${TASK_TABLE}`, { method: "POST", body: JSON.stringify(payload) });
+  const created = await request(xrm, `/${entitySetName(TASK_TABLE)}`, { method: "POST", body: JSON.stringify(payload) });
   const id = created?.cr40f_plannertarefaid;
   if (!id) throw new Error("Dataverse criou tarefa sem retornar o ID.");
   await markQuoteOrigin(xrm, input.quoteId);
@@ -181,7 +196,7 @@ async function updateLiveTask(xrm, state, id, patch) {
   if (patch.blockedReason !== undefined) payload.cr40f_motivobloqueio = patch.blockedReason;
   if (patch.assigneeId !== undefined || patch.assigneeName !== undefined) await bindLookup(xrm, payload, TASK_TABLE, "cr40f_responsavel", "systemuser", patch.assigneeId || await resolveIdByName(xrm, "systemuser", "fullname", patch.assigneeName));
   if (patch.teamId !== undefined || patch.teamName !== undefined) await bindLookup(xrm, payload, TASK_TABLE, "cr40f_equipe", "team", patch.teamId || await resolveIdByName(xrm, "team", "name", patch.teamName));
-  await request(xrm, `/${TASK_TABLE}(${cleanId(id)})`, { method: "PATCH", body: JSON.stringify(payload) });
+  await request(xrm, `/${entitySetName(TASK_TABLE)}(${cleanId(id)})`, { method: "PATCH", body: JSON.stringify(payload) });
   const existing = state.tasks.find((item) => item.id === id);
   await markQuoteOrigin(xrm, existing?.quoteId);
   await createEvent(xrm, id, patch.status !== undefined ? 100000002 : 100000001, "Tarefa atualizada.");
@@ -191,14 +206,14 @@ async function updateLiveTask(xrm, state, id, patch) {
 async function addLiveComment(xrm, taskId, text) {
   const payload = { subject: "Comentário da tarefa", notetext: text.trim(), isdocument: false };
   await bindLookup(xrm, payload, ANNOTATION_TABLE, "objectid", TASK_TABLE, taskId);
-  await request(xrm, `/${ANNOTATION_TABLE}`, { method: "POST", body: JSON.stringify(payload) });
+  await request(xrm, `/${entitySetName(ANNOTATION_TABLE)}`, { method: "POST", body: JSON.stringify(payload) });
   return loadLiveState(xrm);
 }
 
 async function addLiveAttachment(xrm, taskId, file) {
   const payload = { subject: file.name, filename: file.name, mimetype: file.type || "application/octet-stream", documentbody: file.base64, isdocument: true };
   await bindLookup(xrm, payload, ANNOTATION_TABLE, "objectid", TASK_TABLE, taskId);
-  await request(xrm, `/${ANNOTATION_TABLE}`, { method: "POST", body: JSON.stringify(payload) });
+  await request(xrm, `/${entitySetName(ANNOTATION_TABLE)}`, { method: "POST", body: JSON.stringify(payload) });
   return loadLiveState(xrm);
 }
 
