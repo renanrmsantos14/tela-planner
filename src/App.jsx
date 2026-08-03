@@ -35,13 +35,13 @@ function AppShell({ active, onNavigate, children, onCreate }) {
   const [expanded, setExpanded] = useState(true);
   return <div className={`app-shell ${expanded ? "" : "sidebar-collapsed"}`}>
     <aside className="sidebar">
-      <button className="sidebar-toggle" onClick={() => setExpanded((value) => !value)} aria-label="Recolher navegação">
+      <button className="sidebar-toggle" type="button" onClick={() => setExpanded((value) => !value)} aria-label={expanded ? "Recolher navegação" : "Expandir navegação"} title={expanded ? "Recolher navegação" : "Expandir navegação"}>
         {expanded ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}
       </button>
-      <div className="brand-block"><div className="brand-mark"><Target size={20} /></div><div className="brand-copy"><strong>Tela Planner</strong><span>Operação Betinhos</span></div></div>
+      <div className="brand-block"><div className="brand-mark"><ClipboardList size={20} /></div><div className="brand-copy"><strong>Tela Planner</strong><span>Operação Betinhos</span></div></div>
       <div className="workspace-switch"><span className="workspace-dot" /><span>Operação central</span><ChevronRight size={14} /></div>
       <nav className="main-nav">{navItems.map(([id, label, Icon]) => <button key={id} className={active === id ? "nav-item active" : "nav-item"} onClick={() => onNavigate(id)}><Icon size={18} /><span>{label}</span>{id === "board" && <span className="nav-count">12</span>}</button>)}</nav>
-      <div className="sidebar-bottom"><div className="mock-label"><span className="pulse-dot" />Modo demonstração</div><div className="user-card"><Avatar name="Renan Santos" /><div className="user-copy"><strong>Renan Santos</strong><span>Administrador</span></div><Settings size={15} /></div></div>
+      <div className="sidebar-bottom"><div className="mock-label"><span className="pulse-dot" />Modo demonstração</div><div className="user-card"><Avatar name="Renan Santos" /><div className="user-copy"><strong>Renan Santos</strong><span>Administrador</span></div><button className="user-settings-button" type="button" onClick={() => onNavigate("settings")} aria-label="Abrir configurações" title="Configurações"><Settings size={15} /></button></div></div>
     </aside>
     <main className="main-area"><header className="mobile-header"><button className="icon-button" onClick={() => setExpanded((value) => !value)}><Menu size={20} /></button><strong>Tela Planner</strong><Avatar name="Renan Santos" small /></header>{children}</main>
     <button className="mobile-fab" onClick={onCreate}><Plus size={22} /></button>
