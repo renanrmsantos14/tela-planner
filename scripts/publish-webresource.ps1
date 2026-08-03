@@ -11,6 +11,34 @@ Set-StrictMode -Version Latest
 
 function Write-Step([string] $Message) { Write-Host "[publish-webresource] $Message" }
 function Escape-OData([string] $Value) { return $Value.Replace("'", "''") }
+function Publish-XmlWithRetry([hashtable] $Headers, [string] $ApiBaseUrl, [string] $ParameterXml, [string] $Label) {
+  for ($attempt = 1; $attempt -le 7; $attempt++) {
+    try {
+      Invoke-RestMethod -Method Post -Uri "$ApiBaseUrl/PublishXml" -Headers $Headers -ContentType "application/json; charset=utf-8" -Body (@{ ParameterXml = $ParameterXml } | ConvertTo-Json) -ErrorAction Stop | Out-Null
+      return
+    }
+    catch {
+      $message = $_.Exception.Message
+      if ($message -notmatch "0x80071151|another \[Import\] running" -or $attempt -eq 7) { throw }
+      Write-Step "$Label bloqueado por importação concorrente; nova tentativa em 10s ($attempt/6)"
+      Start-Sleep -Seconds 10
+    }
+  }
+}
+function Update-RecordWithRetry([hashtable] $Headers, [string] $Uri, [string] $Body, [string] $Label) {
+  for ($attempt = 1; $attempt -le 7; $attempt++) {
+    try {
+      Invoke-RestMethod -Method Patch -Uri $Uri -Headers $Headers -ContentType "application/json; charset=utf-8" -Body $Body -ErrorAction Stop | Out-Null
+      return
+    }
+    catch {
+      $message = $_.Exception.Message
+      if ($message -notmatch "0x80071151|0x80048543|another \[Import\] running|currently being imported" -or $attempt -eq 7) { throw }
+      Write-Step "$Label bloqueado por importação concorrente; nova tentativa em 10s ($attempt/6)"
+      Start-Sleep -Seconds 10
+    }
+  }
+}
 
 $root = Resolve-Path (Join-Path $PSScriptRoot "..")
 Set-Location $root
@@ -69,13 +97,13 @@ else {
   $webResourceId = $lookup.value[0].webresourceid
   if ($lookup.value[0].webresourcetype -ne 1) { throw "$resourceName já existe, mas não é HTML. Deploy abortado." }
   Write-Step "atualizando $resourceName"
-  Invoke-RestMethod -Method Patch -Uri "$apiBaseUrl/webresourceset($webResourceId)" -Headers $headers -ContentType "application/json; charset=utf-8" -Body (@{ displayname = "Tela Planner"; content = $content } | ConvertTo-Json) | Out-Null
+  Update-RecordWithRetry -Headers $headers -Uri "$apiBaseUrl/webresourceset($webResourceId)" -Body (@{ displayname = "Tela Planner"; content = $content } | ConvertTo-Json) -Label $resourceName
 }
 
 if (-not $NoPublish) {
   Write-Step "publicando $resourceName"
   $publishXml = "<importexportxml><webresources><webresource>$webResourceId</webresource></webresources></importexportxml>"
-  Invoke-RestMethod -Method Post -Uri "$apiBaseUrl/PublishXml" -Headers $headers -ContentType "application/json; charset=utf-8" -Body (@{ ParameterXml = $publishXml } | ConvertTo-Json) | Out-Null
+  Publish-XmlWithRetry -Headers $headers -ApiBaseUrl $apiBaseUrl -ParameterXml $publishXml -Label $resourceName
 
   Write-Step "validando navegação do app Model Driven Betinhos"
   $sitemap = Invoke-RestMethod -Method Get -Uri "$apiBaseUrl/sitemaps($sitemapId)?`$select=sitemapxml" -Headers $headers
@@ -90,7 +118,7 @@ if (-not $NoPublish) {
     $plannerSubArea = '<SubArea Id="subarea_tela_planner" ResourceId="SitemapDesigner.NewSubArea" VectorIcon="/WebResources/cr40f_sitemap_clipboard_list.svg" Icon="/_imgs/imagestrips/transparent_spacer.gif" Url="$webresource:new_TelaPlanner.html" Client="All,Outlook,OutlookLaptopClient,OutlookWorkstationClient,Web" AvailableOffline="true" PassParams="false" Sku="All,OnPremise,Live,SPLA"><Titles><Title LCID="1046" Title="Planner" /></Titles></SubArea>'
     $replacement = $groupMatch.Groups[1].Value + $plannerSubArea + $groupMatch.Groups[2].Value
     $updatedSitemapXml = $sitemapXml.Remove($groupMatch.Index, $groupMatch.Length).Insert($groupMatch.Index, $replacement)
-    Invoke-RestMethod -Method Patch -Uri "$apiBaseUrl/sitemaps($sitemapId)" -Headers $headers -ContentType "application/json; charset=utf-8" -Body (@{ sitemapxml = $updatedSitemapXml } | ConvertTo-Json) | Out-Null
+    Update-RecordWithRetry -Headers $headers -Uri "$apiBaseUrl/sitemaps($sitemapId)" -Body (@{ sitemapxml = $updatedSitemapXml } | ConvertTo-Json) -Label "Sitemap"
     Write-Step "Planner adicionado ao grupo Operacional"
   }
   else {
@@ -99,7 +127,7 @@ if (-not $NoPublish) {
 
   Write-Step "publicando sitemap do app"
   $sitemapPublishXml = "<importexportxml><sitemaps><sitemap>$sitemapId</sitemap></sitemaps></importexportxml>"
-  Invoke-RestMethod -Method Post -Uri "$apiBaseUrl/PublishXml" -Headers $headers -ContentType "application/json; charset=utf-8" -Body (@{ ParameterXml = $sitemapPublishXml } | ConvertTo-Json) | Out-Null
+  Publish-XmlWithRetry -Headers $headers -ApiBaseUrl $apiBaseUrl -ParameterXml $sitemapPublishXml -Label "Sitemap"
 }
 
 Write-Step "concluído: $resourceName ($webResourceId)"
