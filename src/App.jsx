@@ -5,7 +5,7 @@ import {
   PanelLeftOpen, Plus, RotateCcw, Search, Settings, Sparkles, Target, UserRound, Users, X,
 } from "lucide-react";
 import { filterTasks, formatDate, formatLongDate, isBlocked, isDueToday, isOverdue, PRIORITIES, sortTasks, sourceById, STATUSES, statusById, TASK_SOURCES, taskStats } from "./domain";
-import { addAttachment, addComment, createTask, ensureQuoteTask, loadState, resetState, saveState, updateTask } from "./mockStore";
+import { createDataStore } from "./dataverse";
 import SearchableSelect from "./SearchableSelect.jsx";
 
 const navItems = [
@@ -135,15 +135,18 @@ function NewTaskDrawer({ quotes, onClose, onSave }) {
 }
 
 export default function App() {
-  const [active, setActive] = useState("dashboard"); const [state, setState] = useState(() => loadState()); const [selectedId, setSelectedId] = useState(""); const [creating, setCreating] = useState(false); const [filters, setFilters] = useState({ query: "", status: "", priority: "" }); const [notice, setNotice] = useState("");
-  const selected = useMemo(() => state.tasks.find((taskItem) => taskItem.id === selectedId), [state.tasks, selectedId]);
-  const updateState = useCallback((next, message = "") => { setState(next); if (message) { setNotice(message); window.setTimeout(() => setNotice(""), 2600); } }, []);
+  const [active, setActive] = useState("dashboard"); const [state, setState] = useState(null); const [store] = useState(() => createDataStore()); const [selectedId, setSelectedId] = useState(""); const [creating, setCreating] = useState(false); const [filters, setFilters] = useState({ query: "", status: "", priority: "" }); const [notice, setNotice] = useState(""); const [error, setError] = useState("");
+  useEffect(() => { store.load().then(setState).catch((failure) => setError(failure.message || "Não foi possível carregar as tarefas.")); }, [store]);
+  const runMutation = useCallback((operation, message) => operation.then((next) => { setState(next); setNotice(message); window.setTimeout(() => setNotice(""), 2600); }).catch((failure) => setError(failure.message || "Não foi possível concluir a operação.")), []);
+  const selected = useMemo(() => state?.tasks.find((taskItem) => taskItem.id === selectedId), [state, selectedId]);
   const openTask = useCallback((id) => setSelectedId(id), []); const closeTask = useCallback(() => setSelectedId(""), []);
-  const moveTask = useCallback((id, status) => updateState(updateTask(state, id, { status }), "Status atualizado no mock."), [state, updateState]);
-  const saveTask = useCallback((id, patch) => updateState(updateTask(state, id, patch), "Tarefa salva."), [state, updateState]);
-  const createNewTask = useCallback((input) => { updateState(createTask(state, input), "Tarefa criada no mock."); setCreating(false); }, [state, updateState]);
-  const refreshMock = useCallback((quote) => { if (quote) updateState(ensureQuoteTask(state, quote), "Tarefa principal criada automaticamente."); else updateState(saveState(state), "Dados do mock atualizados."); }, [state, updateState]);
-  const resetMock = useCallback(() => { updateState(resetState(), "Cenário inicial restaurado."); setSelectedId(""); }, [updateState]);
+  const moveTask = useCallback((id, status) => runMutation(store.updateTask(state, id, { status }), store.live ? "Status atualizado." : "Status atualizado no mock."), [state, store, runMutation]);
+  const saveTask = useCallback((id, patch) => runMutation(store.updateTask(state, id, patch), store.live ? "Tarefa salva." : "Tarefa salva no mock."), [state, store, runMutation]);
+  const createNewTask = useCallback((input) => { runMutation(store.createTask(state, input), store.live ? "Tarefa criada." : "Tarefa criada no mock."); setCreating(false); }, [state, store, runMutation]);
+  const refreshMock = useCallback((quote) => runMutation(quote ? store.ensureQuoteTask(state, quote) : store.save(state), quote ? "Tarefa principal criada." : "Dados atualizados."), [state, store, runMutation]);
+  const resetMock = useCallback(() => { runMutation(store.reset(), store.live ? "Dados recarregados." : "Cenário inicial restaurado."); setSelectedId(""); }, [store, runMutation]);
+  if (error) return <div className="app-error"><strong>Não foi possível carregar o Planner.</strong><span>{error}</span><button className="button button-secondary" onClick={() => { setError(""); store.load().then(setState).catch((failure) => setError(failure.message)); }}>Tentar novamente</button></div>;
+  if (!state) return <div className="app-loading">Carregando dados operacionais…</div>;
   const renderPage = () => {
     if (active === "dashboard") return <Dashboard state={state} onNavigate={setActive} onOpen={openTask} onCreate={() => setCreating(true)} onRefresh={refreshMock} />;
     if (active === "board") return <BoardView state={state} onOpen={openTask} onMove={moveTask} onCreate={() => setCreating(true)} filters={filters} setFilters={setFilters} />;
@@ -151,5 +154,5 @@ export default function App() {
     if (active === "calendar") return <CalendarView state={state} onOpen={openTask} onCreate={() => setCreating(true)} />;
     return <SettingsView onReset={resetMock} />;
   };
-  return <AppShell active={active} onNavigate={setActive} onCreate={() => setCreating(true)} tasks={state.tasks}>{renderPage()}{notice && <div className="toast"><CheckCircle2 size={17} /><span>{notice}</span></div>}{selected && <TaskDrawer task={selected} state={state} onClose={closeTask} onSave={saveTask} onComment={(id, text) => updateState(addComment(state, id, text), "Comentário adicionado.")} onAttachment={(id, name) => updateState(addAttachment(state, id, name), "Anexo mock adicionado.")} onOpenQuote={(id) => { setActive("dashboard"); closeTask(); setNotice(`Cotação ${state.quotes.find((quote) => quote.id === id)?.code || ""} vinculada.`); }} />}{creating && <NewTaskDrawer quotes={state.quotes} onClose={() => setCreating(false)} onSave={createNewTask} />}</AppShell>;
+  return <AppShell active={active} onNavigate={setActive} onCreate={() => setCreating(true)} tasks={state.tasks}>{renderPage()}{notice && <div className="toast"><CheckCircle2 size={17} /><span>{notice}</span></div>}{selected && <TaskDrawer task={selected} state={state} onClose={closeTask} onSave={saveTask} onComment={(id, text) => runMutation(store.addComment(state, id, text), "Comentário adicionado.")} onAttachment={(id, file) => runMutation(store.addAttachment(state, id, file), "Anexo adicionado.")} onOpenQuote={(id) => { setActive("dashboard"); closeTask(); setNotice(`Cotação ${state.quotes.find((quote) => quote.id === id)?.code || ""} vinculada.`); }} />}{creating && <NewTaskDrawer quotes={state.quotes} onClose={() => setCreating(false)} onSave={createNewTask} />}</AppShell>;
 }

@@ -92,6 +92,15 @@ Os logical names e tipos das novas tabelas/colunas ficam pendentes de consulta a
 - Revalidar após salvar e tratar concorrência/registro removido.
 - Exibir erros técnicos de forma segura e mensagem operacional curta.
 
+Modelo DEV criado e validado em 2026-08-03:
+
+- `cr40f_plannertarefa`: tarefa operacional, status, prioridade, prazo, origem, bloqueio, responsável, equipe e vínculos tipados com cotação/qualidade.
+- `cr40f_plannertarefaevento`: histórico append-only de criação, alteração, status, atribuição e bloqueios.
+- `cr40f_plannertarearelacao`: relação pai/subtarefa com dois lookups para `cr40f_plannertarefa`; usada porque o autorrelacionamento direto falhou no provisionamento MCP.
+- Comentários/anexos: `annotation.objectid` apontando para `cr40f_plannertarefa`.
+
+O cliente live fica isolado em `src/dataverse.js`, resolve navegação de lookup por metadata em runtime e marca `cr40f_origemultimasincronizacao = Planner` na cotação para impedir loops de automação.
+
 ### Fase 3 — integração de cotação
 
 - Abrir o Planner a partir de uma cotação.
