@@ -56,7 +56,7 @@ function AppShell({ active, onNavigate, children, onCreate, tasks }) {
       <nav className="main-nav">{navItems.map(([id, label, Icon]) => <button key={id} className={active === id ? "nav-item active" : "nav-item"} onClick={() => onNavigate(id)}><Icon size={18} /><span>{label}</span>{id === "board" && <span className="nav-count">12</span>}</button>)}</nav>
       <div className="sidebar-bottom"><div className="mock-label"><span className="pulse-dot" />Modo demonstração</div><div className="user-card"><Avatar name="Renan Santos" /><div className="user-copy"><strong>Renan Santos</strong><span>Administrador</span></div><button className="user-settings-button" type="button" onClick={() => onNavigate("settings")} aria-label="Abrir configurações" title="Configurações"><Settings size={15} /></button></div></div>
     </aside>
-    <main className="main-area"><header className="mobile-header"><button className="icon-button" onClick={() => setExpanded((value) => !value)}><Menu size={20} /></button><strong>Tela Planner</strong><Avatar name="Renan Santos" small /></header>{children}</main>
+    <main className="main-area"><header className="mobile-header"><button className="icon-button" onClick={() => setExpanded((value) => !value)} aria-label="Abrir navegação" title="Abrir navegação"><Menu size={20} /></button><strong>Tela Planner</strong><Avatar name="Renan Santos" small /></header>{children}</main>
     <button className="mobile-fab" onClick={onCreate}><Plus size={22} /></button>
   </div>;
 }
@@ -71,7 +71,7 @@ function MetricCard({ label, value, detail, tone = "neutral", icon: Icon }) {
 
 function TaskCard({ task: taskItem, onOpen, compact = false, onDrop }) {
   const overdue = isOverdue(taskItem);
-  return <article className={`task-card ${compact ? "task-card-compact" : ""} ${overdue ? "task-overdue" : ""}`} draggable onDragStart={(event) => event.dataTransfer.setData("text/task-id", taskItem.id)} onClick={() => onOpen(taskItem.id)}>
+  return <article className={`task-card ${compact ? "task-card-compact" : ""} ${overdue ? "task-overdue" : ""}`} draggable tabIndex="0" onDragStart={(event) => event.dataTransfer.setData("text/task-id", taskItem.id)} onClick={() => onOpen(taskItem.id)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onOpen(taskItem.id); } }}>
     <div className="task-card-top"><PriorityBadge priority={taskItem.priority} />{overdue && <span className="overdue-label">Vencida</span>}<button className="card-open" onClick={(event) => { event.stopPropagation(); onOpen(taskItem.id); }} aria-label="Abrir tarefa"><ArrowUpRight size={15} /></button></div>
     <h3>{taskItem.title}</h3>
     {taskItem.quoteId && <div className="task-link"><FileText size={13} /><span>{taskItem.quoteCode}</span><em>{taskItem.quoteTitle}</em></div>}
