@@ -167,14 +167,20 @@ function normalizeTask(row, annotations = [], events = []) {
   };
 }
 
+function normalizeRelation(row) {
+  return { id: row.cr40f_plannertarearelacaoid, parentTaskId: row._cr40f_tarefapai_value || "", childTaskId: row._cr40f_subtarefa_value || "" };
+}
+
 async function loadLiveState(xrm) {
-  const [quotes, rows, events] = await Promise.all([
+  const [quotes, rows, events, relations] = await Promise.all([
     retrieveMany(xrm, QUOTE_TABLE, "?$select=cr40f_pedidodecotacaoid,cr40f_numerodacotacao,cr40f_titulo,cr40f_clienteempresa,cr40f_statuscotacao,cr40f_prazoresponder,cr40f_valorcotado,cr40f_plannertaskid,cr40f_linktarefaplanner,cr40f_linkmensagemteams&$filter=statecode eq 0&$orderby=modifiedon desc"),
     retrieveMany(xrm, TASK_TABLE, "?$select=cr40f_plannertarefaid,cr40f_name,cr40f_titulo,cr40f_descricao,cr40f_status,cr40f_prioridade,cr40f_prazo,_cr40f_responsavel_value,_cr40f_equipe_value,_cr40f_pedidocotacao_value,_cr40f_errooperacional_value,_cr40f_acaooperacional_value,cr40f_origem,cr40f_codigoorigem,cr40f_motivobloqueio&$filter=statecode eq 0&$orderby=modifiedon desc"),
     retrieveMany(xrm, EVENT_TABLE, "?$select=cr40f_plannertarefaeventoid,_cr40f_tarefa_value,cr40f_tipo,cr40f_descricao,cr40f_ocorridoem,_cr40f_autor_value&$orderby=cr40f_ocorridoem desc"),
+    retrieveMany(xrm, RELATION_TABLE, "?$select=cr40f_plannertarearelacaoid,_cr40f_tarefapai_value,_cr40f_subtarefa_value&$filter=statecode eq 0"),
   ]);
   const annotations = await retrieveMany(xrm, ANNOTATION_TABLE, "?$select=annotationid,_objectid_value,notetext,filename,isdocument,createdon,_createdby_value&$filter=isdocument eq false or isdocument eq true&$top=5000");
-  const tasks = rows.map((row) => normalizeTask(row, annotations.filter((item) => item._objectid_value === row.cr40f_plannertarefaid), events.filter((item) => item._cr40f_tarefa_value === row.cr40f_plannertarefaid)));
+  const relationByChild = new Map(relations.map(normalizeRelation).map((item) => [item.childTaskId, item.parentTaskId]));
+  const tasks = rows.map((row) => ({ ...normalizeTask(row, annotations.filter((item) => item._objectid_value === row.cr40f_plannertarefaid), events.filter((item) => item._cr40f_tarefa_value === row.cr40f_plannertarefaid)), parentTaskId: relationByChild.get(row.cr40f_plannertarefaid) || null }));
   const quoteById = new Map(quotes.map((row) => [row.cr40f_pedidodecotacaoid, normalizeQuote(row)]));
   return { quotes: [...quoteById.values()], tasks: tasks.map((task) => ({ ...task, quoteCode: quoteById.get(task.quoteId)?.code || "", quoteTitle: quoteById.get(task.quoteId)?.title || "" })), lastUpdated: new Date().toISOString(), live: true };
 }
@@ -232,6 +238,17 @@ async function addLiveAttachment(xrm, taskId, file) {
   return loadLiveState(xrm);
 }
 
+async function createLiveSubtask(xrm, state, parentId, input) {
+  const nextState = await createLiveTask(xrm, state, { ...input, sourceType: input.sourceType || "manual", sourceCode: input.sourceCode || "" });
+  const child = nextState.tasks.find((item) => item.title === input.title.trim() && !item.parentTaskId);
+  if (!child) throw new Error("Dataverse criou a subtarefa, mas não foi possível localizar o ID.");
+  const payload = { cr40f_tipo: 100000000, cr40f_name: `${parentId}-${child.id}` };
+  await bindLookup(xrm, payload, RELATION_TABLE, "cr40f_tarefapai", TASK_TABLE, parentId);
+  await bindLookup(xrm, payload, RELATION_TABLE, "cr40f_subtarefa", TASK_TABLE, child.id);
+  await request(xrm, `/${entitySetName(RELATION_TABLE)}`, { method: "POST", body: JSON.stringify(payload) });
+  return loadLiveState(xrm);
+}
+
 async function fileToBase64(file) {
   if (!file?.arrayBuffer) throw new Error("Arquivo inválido para anexar.");
   const bytes = new Uint8Array(await file.arrayBuffer());
@@ -253,6 +270,7 @@ export function createDataStore() {
     load: async () => loadMockState(),
     reset: async () => resetMockState(),
     createTask: async (state, input) => createMockTask(state, input),
+    createSubtask: async (state, parentId, input) => createMockTask(state, { ...input, parentTaskId: parentId }),
     updateTask: async (state, id, patch) => updateMockTask(state, id, patch),
     addComment: async (state, id, text) => addMockComment(state, id, text),
     addAttachment: async (state, id, file) => addMockAttachment(state, id, file.name || file),
@@ -264,6 +282,7 @@ export function createDataStore() {
     live: true,
     load: () => loadLiveState(xrm),
     createTask: (state, input) => createLiveTask(xrm, state, input),
+    createSubtask: (state, parentId, input) => createLiveSubtask(xrm, state, parentId, input),
     updateTask: (state, id, patch) => updateLiveTask(xrm, state, id, patch),
     addComment: (state, id, text) => addLiveComment(xrm, id, text),
     addAttachment: (state, id, file) => addLiveAttachment(xrm, id, file),
