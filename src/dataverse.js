@@ -2,16 +2,27 @@ import { addAttachment as addMockAttachment, addComment as addMockComment, creat
 
 const API_VERSION = "v9.2";
 const QUOTE_TABLE = "cr40f_pedidodecotacao";
+const QUALITY_ERROR_TABLE = "cr40f_errooperacional";
+const QUALITY_ACTION_TABLE = "cr40f_acaooperacional";
 const TASK_TABLE = "cr40f_plannertarefa";
 const EVENT_TABLE = "cr40f_plannertarefaevento";
 const RELATION_TABLE = "cr40f_plannertarearelacao";
 const ANNOTATION_TABLE = "annotation";
+const ENVIRONMENT_VARIABLE_DEFINITION_TABLE = "environmentvariabledefinition";
+const ENVIRONMENT_VARIABLE_VALUE_TABLE = "environmentvariablevalue";
+const FLOW_URL_SCHEMA = "new_FlowURLFlowSalvarArquivosOnedrive";
+const DEV_DATAVERSE_URL = "https://org23b93544.crm2.dynamics.com";
+const MAX_ATTACHMENT_SIZE = 5 * 1024 * 1024;
 const ENTITY_SETS = Object.freeze({
   [QUOTE_TABLE]: "cr40f_pedidodecotacaos",
+  [QUALITY_ERROR_TABLE]: "cr40f_errooperacionals",
+  [QUALITY_ACTION_TABLE]: "cr40f_acaooperacionals",
   [TASK_TABLE]: "cr40f_plannertarefas",
   [EVENT_TABLE]: "cr40f_plannertarefaeventos",
   [RELATION_TABLE]: "cr40f_plannertarearelacaos",
   [ANNOTATION_TABLE]: "annotations",
+  [ENVIRONMENT_VARIABLE_DEFINITION_TABLE]: "environmentvariabledefinitions",
+  [ENVIRONMENT_VARIABLE_VALUE_TABLE]: "environmentvariablevalues",
   systemuser: "systemusers",
   team: "teams",
 });
@@ -21,6 +32,25 @@ const PRIORITY_VALUES = { low: 100000000, medium: 100000001, high: 100000002, ur
 const STATUS_BY_VALUE = Object.fromEntries(Object.entries(STATUS_VALUES).map(([key, value]) => [value, key]));
 const PRIORITY_BY_VALUE = Object.fromEntries(Object.entries(PRIORITY_VALUES).map(([key, value]) => [value, key]));
 const lookupCache = new Map();
+
+function sanitizePathSegment(value, fallback = "sem-codigo") {
+  const sanitized = String(value || "").trim().replace(/[<>:\"/\\|?*\x00-\x1F]/g, "-").replace(/\s+/g, " ").replace(/\.+$/g, "");
+  return sanitized || fallback;
+}
+
+function extractFlowRecord(value) {
+  if (!value) return null;
+  if (typeof value === "object") return value;
+  try { const parsed = JSON.parse(value); return parsed && typeof parsed === "object" ? parsed : null; } catch { return null; }
+}
+
+function getFlowLink(result) {
+  for (const key of ["shareLink", "link", "webUrl", "url", "fileLink", "sharedLink"]) {
+    if (typeof result?.[key] === "string" && result[key].trim()) return result[key].trim();
+  }
+  const nested = extractFlowRecord(result?.body || result?.Body || result?.responseText);
+  return nested ? getFlowLink(nested) : "";
+}
 
 export function entitySetName(logicalName) {
   const entitySet = ENTITY_SETS[logicalName];
@@ -92,6 +122,14 @@ async function retrieveMany(xrm, table, query) {
   return rows;
 }
 
+async function resolveOneDriveFlowUrl(xrm) {
+  const definitions = await retrieveMany(xrm, ENVIRONMENT_VARIABLE_DEFINITION_TABLE, `?$select=environmentvariabledefinitionid,defaultvalue&$filter=schemaname eq '${FLOW_URL_SCHEMA}'&$top=1`);
+  const definition = definitions[0];
+  if (!definition) return String(import.meta.env?.VITE_FLOW_SALVAR_ANEXOS_ONEDRIVE_URL || "").trim();
+  const values = await retrieveMany(xrm, ENVIRONMENT_VARIABLE_VALUE_TABLE, `?$select=value&$filter=_environmentvariabledefinitionid_value eq ${definition.environmentvariabledefinitionid}&$top=1`);
+  return String(values[0]?.value || definition.defaultvalue || import.meta.env?.VITE_FLOW_SALVAR_ANEXOS_ONEDRIVE_URL || "").trim();
+}
+
 async function resolveLookupNavigation(xrm, entity, attribute, target) {
   const cacheKey = `${entity}:${attribute}:${target}`;
   if (lookupCache.has(cacheKey)) return lookupCache.get(cacheKey);
@@ -136,12 +174,18 @@ function normalizeQuote(row) {
   };
 }
 
+function normalizeQuality(row, type) {
+  const isAction = type === "action";
+  return { id: row[isAction ? "cr40f_acaooperacionalid" : "cr40f_errooperacionalid"], type, code: row.cr40f_codigo || "", title: row.cr40f_titulo || "", description: row.cr40f_descricao || "", status: row[isAction ? "cr40f_status@OData.Community.Display.V1.FormattedValue" : "cr40f_status@OData.Community.Display.V1.FormattedValue"] || "", dueDate: dateOnly(row[isAction ? "cr40f_prazo" : "cr40f_prazoresolucao"]) };
+}
+
 function normalizeTask(row, annotations = [], events = []) {
   const status = STATUS_BY_VALUE[row.cr40f_status] || "todo";
   const priority = PRIORITY_BY_VALUE[row.cr40f_prioridade] || "medium";
   const origin = Object.entries(ORIGIN_VALUES).find(([, value]) => value === row.cr40f_origem)?.[0] || "manual";
-  const comments = annotations.filter((item) => item.isdocument !== true).map((item) => ({ id: item.annotationid, text: item.notetext || "", createdAt: item.createdon, author: item.createdbyName || "Sistema" }));
-  const attachments = annotations.filter((item) => item.isdocument === true).map((item) => ({ id: item.annotationid, name: item.filename || "Anexo", createdAt: item.createdon }));
+  const driveNotes = annotations.filter((item) => item.isdocument !== true && String(item.notetext || "").startsWith("Arquivo salvo no OneDrive:"));
+  const comments = annotations.filter((item) => item.isdocument !== true && !String(item.notetext || "").startsWith("Arquivo salvo no OneDrive:")).map((item) => ({ id: item.annotationid, text: item.notetext || "", createdAt: item.createdon, author: item.createdbyName || "Sistema" }));
+  const attachments = [...annotations.filter((item) => item.isdocument === true), ...driveNotes].map((item) => ({ id: item.annotationid, name: item.filename || "Anexo", link: String(item.notetext || "").replace(/^Arquivo salvo no OneDrive:\s*/, ""), createdAt: item.createdon }));
   return {
     id: row.cr40f_plannertarefaid,
     title: row.cr40f_titulo || row.cr40f_name || "Sem título",
@@ -172,17 +216,19 @@ function normalizeRelation(row) {
 }
 
 async function loadLiveState(xrm) {
-  const [quotes, rows, events, relations] = await Promise.all([
+  const [quotes, rows, events, relations, qualityErrors, qualityActions] = await Promise.all([
     retrieveMany(xrm, QUOTE_TABLE, "?$select=cr40f_pedidodecotacaoid,cr40f_numerodacotacao,cr40f_titulo,cr40f_clienteempresa,cr40f_statuscotacao,cr40f_prazoresponder,cr40f_valorcotado,cr40f_plannertaskid,cr40f_linktarefaplanner,cr40f_linkmensagemteams&$filter=statecode eq 0&$orderby=modifiedon desc"),
     retrieveMany(xrm, TASK_TABLE, "?$select=cr40f_plannertarefaid,cr40f_name,cr40f_titulo,cr40f_descricao,cr40f_status,cr40f_prioridade,cr40f_prazo,_cr40f_responsavel_value,_cr40f_equipe_value,_cr40f_pedidocotacao_value,_cr40f_errooperacional_value,_cr40f_acaooperacional_value,cr40f_origem,cr40f_codigoorigem,cr40f_motivobloqueio&$filter=statecode eq 0&$orderby=modifiedon desc"),
     retrieveMany(xrm, EVENT_TABLE, "?$select=cr40f_plannertarefaeventoid,_cr40f_tarefa_value,cr40f_tipo,cr40f_descricao,cr40f_ocorridoem,_cr40f_autor_value&$orderby=cr40f_ocorridoem desc"),
     retrieveMany(xrm, RELATION_TABLE, "?$select=cr40f_plannertarearelacaoid,_cr40f_tarefapai_value,_cr40f_subtarefa_value&$filter=statecode eq 0"),
+    retrieveMany(xrm, QUALITY_ERROR_TABLE, "?$select=cr40f_errooperacionalid,cr40f_codigo,cr40f_titulo,cr40f_descricao,cr40f_status,cr40f_prazoresolucao&$filter=statecode eq 0&$orderby=createdon desc"),
+    retrieveMany(xrm, QUALITY_ACTION_TABLE, "?$select=cr40f_acaooperacionalid,cr40f_titulo,cr40f_descricao,cr40f_status,cr40f_prazo&$filter=statecode eq 0&$orderby=createdon desc"),
   ]);
-  const annotations = await retrieveMany(xrm, ANNOTATION_TABLE, "?$select=annotationid,_objectid_value,notetext,filename,isdocument,createdon,_createdby_value&$filter=isdocument eq false or isdocument eq true&$top=5000");
+  const annotations = await retrieveMany(xrm, ANNOTATION_TABLE, "?$select=annotationid,_objectid_value,notetext,filename,mimetype,isdocument,createdon,_createdby_value&$filter=isdocument eq false or isdocument eq true&$top=5000");
   const relationByChild = new Map(relations.map(normalizeRelation).map((item) => [item.childTaskId, item.parentTaskId]));
   const tasks = rows.map((row) => ({ ...normalizeTask(row, annotations.filter((item) => item._objectid_value === row.cr40f_plannertarefaid), events.filter((item) => item._cr40f_tarefa_value === row.cr40f_plannertarefaid)), parentTaskId: relationByChild.get(row.cr40f_plannertarefaid) || null }));
   const quoteById = new Map(quotes.map((row) => [row.cr40f_pedidodecotacaoid, normalizeQuote(row)]));
-  return { quotes: [...quoteById.values()], tasks: tasks.map((task) => ({ ...task, quoteCode: quoteById.get(task.quoteId)?.code || "", quoteTitle: quoteById.get(task.quoteId)?.title || "" })), lastUpdated: new Date().toISOString(), live: true };
+  return { quotes: [...quoteById.values()], quality: [...qualityErrors.map((row) => normalizeQuality(row, "error")), ...qualityActions.map((row) => normalizeQuality(row, "action"))], tasks: tasks.map((task) => ({ ...task, quoteCode: quoteById.get(task.quoteId)?.code || "", quoteTitle: quoteById.get(task.quoteId)?.title || "" })), lastUpdated: new Date().toISOString(), live: true };
 }
 
 async function createEvent(xrm, taskId, type, description, field = "", previous = "", next = "") {
@@ -196,6 +242,8 @@ async function createLiveTask(xrm, state, input) {
   const assigneeId = input.assigneeId || await resolveIdByName(xrm, "systemuser", "fullname", input.assigneeName);
   const teamId = input.teamId || await resolveIdByName(xrm, "team", "name", input.teamName);
   await bindLookup(xrm, payload, TASK_TABLE, "cr40f_pedidocotacao", QUOTE_TABLE, input.quoteId);
+  await bindLookup(xrm, payload, TASK_TABLE, "cr40f_errooperacional", QUALITY_ERROR_TABLE, input.qualityType === "error" ? input.qualityId : "");
+  await bindLookup(xrm, payload, TASK_TABLE, "cr40f_acaooperacional", QUALITY_ACTION_TABLE, input.qualityType === "action" ? input.qualityId : "");
   await bindLookup(xrm, payload, TASK_TABLE, "cr40f_responsavel", "systemuser", assigneeId);
   await bindLookup(xrm, payload, TASK_TABLE, "cr40f_equipe", "team", teamId);
   const created = await request(xrm, `/${entitySetName(TASK_TABLE)}`, { method: "POST", body: JSON.stringify(payload) });
@@ -231,8 +279,23 @@ async function addLiveComment(xrm, taskId, text) {
 }
 
 async function addLiveAttachment(xrm, taskId, file) {
-  const documentbody = file.base64 || await fileToBase64(file);
-  const payload = { subject: file.name, filename: file.name, mimetype: file.type || "application/octet-stream", documentbody, isdocument: true };
+  if (!file) return loadLiveState(xrm);
+  if (file.size > MAX_ATTACHMENT_SIZE) throw new Error("O anexo deve ter no máximo 5 MB.");
+  const taskRows = await retrieveMany(xrm, TASK_TABLE, `?$select=cr40f_titulo,cr40f_codigoorigem&$filter=cr40f_plannertarefaid eq ${cleanId(taskId)}&$top=1`);
+  const task = taskRows[0] || {};
+  const fileName = sanitizePathSegment(file.name, "arquivo");
+  const taskKey = sanitizePathSegment(task.cr40f_codigoorigem || taskId);
+  const path = `Tarefas Planner/${String(apiUrl(xrm)).toLowerCase().includes(DEV_DATAVERSE_URL) ? "DEV/" : ""}${taskKey}/Anexos`;
+  const flowUrl = await resolveOneDriveFlowUrl(xrm);
+  if (!flowUrl) throw new Error(`URL do Flow não configurada: ${FLOW_URL_SCHEMA}.`);
+  const base64 = file.base64 || await fileToBase64(file);
+  const response = await fetch(flowUrl, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ caminhoCompleto: path, nomeArquivo: fileName, conteudoBase64: base64, mimeType: file.type || "application/octet-stream", metadados: { tarefaId: taskId, tarefa: task.cr40f_titulo || "", origem: "PLANNER_INTERNO" } }) });
+  const responseText = await response.text();
+  if (!response.ok) throw new Error(`Flow OneDrive falhou: HTTP ${response.status}.`);
+  const result = extractFlowRecord(responseText) || {};
+  const link = getFlowLink(result);
+  if (!link) throw new Error("Arquivo salvo no OneDrive, mas o Flow não retornou link.");
+  const payload = { subject: fileName, filename: fileName, mimetype: file.type || "application/octet-stream", notetext: `Arquivo salvo no OneDrive: ${link}`, isdocument: false };
   await bindLookup(xrm, payload, ANNOTATION_TABLE, "objectid", TASK_TABLE, taskId);
   await request(xrm, `/${entitySetName(ANNOTATION_TABLE)}`, { method: "POST", body: JSON.stringify(payload) });
   return loadLiveState(xrm);
@@ -271,6 +334,7 @@ export function createDataStore() {
     reset: async () => resetMockState(),
     createTask: async (state, input) => createMockTask(state, input),
     createSubtask: async (state, parentId, input) => createMockTask(state, { ...input, parentTaskId: parentId }),
+    createQualityTask: async (state, item) => createMockTask(state, { title: item.title, description: item.description, dueDate: item.dueDate, sourceType: "quality", sourceId: item.id, sourceCode: item.code }),
     updateTask: async (state, id, patch) => updateMockTask(state, id, patch),
     addComment: async (state, id, text) => addMockComment(state, id, text),
     addAttachment: async (state, id, file) => addMockAttachment(state, id, file.name || file),
@@ -283,6 +347,7 @@ export function createDataStore() {
     load: () => loadLiveState(xrm),
     createTask: (state, input) => createLiveTask(xrm, state, input),
     createSubtask: (state, parentId, input) => createLiveSubtask(xrm, state, parentId, input),
+    createQualityTask: (state, item) => createLiveTask(xrm, state, { title: item.title, description: item.description, dueDate: item.dueDate, sourceType: "quality", sourceCode: item.code, qualityType: item.type, qualityId: item.id }),
     updateTask: (state, id, patch) => updateLiveTask(xrm, state, id, patch),
     addComment: (state, id, text) => addLiveComment(xrm, id, text),
     addAttachment: (state, id, file) => addLiveAttachment(xrm, id, file),

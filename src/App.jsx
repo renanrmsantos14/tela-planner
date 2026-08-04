@@ -2,14 +2,14 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertCircle, ArrowUpRight, CalendarDays, Check, CheckCircle2, ChevronRight, CircleHelp, ClipboardList,
   Clock3, FileText, Filter, LayoutDashboard, ListFilter, Menu, MessageCircle, Paperclip, PanelLeftClose,
-  PanelLeftOpen, Plus, RotateCcw, Search, Settings, Sparkles, Target, UserRound, Users, X,
+  PanelLeftOpen, Plus, RotateCcw, Search, Settings, ShieldAlert, Sparkles, Target, UserRound, Users, X,
 } from "lucide-react";
 import { filterTasks, formatDate, formatLongDate, isBlocked, isDueToday, isOverdue, PRIORITIES, sortTasks, sourceById, STATUSES, statusById, TASK_SOURCES, taskStats } from "./domain";
 import { createDataStore } from "./dataverse";
 import SearchableSelect from "./SearchableSelect.jsx";
 
 const navItems = [
-  ["dashboard", "Visão geral", LayoutDashboard], ["board", "Quadro", ClipboardList], ["list", "Lista operacional", ListFilter], ["calendar", "Agenda", CalendarDays], ["settings", "Configurações", Settings],
+  ["dashboard", "Visão geral", LayoutDashboard], ["board", "Quadro", ClipboardList], ["list", "Lista operacional", ListFilter], ["calendar", "Agenda", CalendarDays], ["quality", "Qualidade", ShieldAlert], ["settings", "Configurações", Settings],
 ];
 const STATUS_OPTIONS = STATUSES.map((item) => ({ value: item.id, label: item.label }));
 const PRIORITY_OPTIONS = PRIORITIES.map((item) => ({ value: item.id, label: item.label }));
@@ -115,6 +115,11 @@ function CalendarView({ state, onOpen, onCreate }) {
   return <div className="page-content"><PageHeader eyebrow="Prazos e ritmo" title="Agenda operacional" description="Uma visão simples dos compromissos que movem a operação." action={<button className="button button-primary" onClick={onCreate}><Plus size={16} />Novo prazo</button>} /><div className="calendar-strip">{days.map((date) => <div className={`calendar-day ${date.toDateString() === new Date().toDateString() ? "today" : ""}`} key={date.toISOString()}><span>{CALENDAR_WEEKDAY_FORMATTER.format(date).replace(".", "")}</span><strong>{date.getDate()}</strong></div>)}</div><section className="panel agenda-panel"><div className="panel-heading"><div><span className="eyebrow">Esta semana</span><h2>O que acontece em seguida</h2></div></div>{openTasks.map((taskItem) => <button className="agenda-row" key={taskItem.id} onClick={() => onOpen(taskItem.id)}><span className="agenda-time">{formatDate(taskItem.dueDate)}</span><div className="agenda-line" /><div className="agenda-info"><strong>{taskItem.title}</strong><span>{taskItem.quoteCode} · {taskItem.assigneeName}</span></div><StatusBadge status={taskItem.status} /><ChevronRight size={16} /></button>)}</section></div>;
 }
 
+function QualityView({ state, onCreate }) {
+  const quality = state.quality || [];
+  return <div className="page-content"><PageHeader eyebrow="Origem operacional" title="Qualidade" description="Transforme erros e ações operacionais em tarefas do Planner interno." /><section className="panel task-table"><div className="table-header"><span>Registro</span><span>Tipo</span><span>Prazo</span><span>Status</span><span>Ação</span></div>{quality.map((item) => { const linked = state.tasks.some((taskItem) => taskItem.sourceId === item.id); return <div className="table-row" key={`${item.type}-${item.id}`}><div className="table-task"><span className="table-status status-waiting" /><strong>{item.code ? `${item.code} · ` : ""}{item.title}</strong></div><span>{item.type === "error" ? "Erro operacional" : "Ação operacional"}</span><span>{formatDate(item.dueDate)}</span><span>{item.status || "Ativo"}</span>{linked ? <span className="linked-label">Tarefa criada</span> : <button className="small-button" onClick={() => onCreate(item)}>Criar tarefa</button>}</div>; })}{!quality.length && <div className="empty-inline">Nenhum erro ou ação operacional disponível.</div>}</section></div>;
+}
+
 function SettingsView({ onReset }) {
   return <div className="page-content"><PageHeader eyebrow="Ambiente de demonstração" title="Configurações" description="Controles do protótipo local antes da integração com o Dataverse." /><section className="settings-grid"><div className="panel setting-card"><div className="setting-icon"><RotateCcw size={19} /></div><div><h2>Restaurar cenário inicial</h2><p>Apaga as alterações locais e repõe as cotações, tarefas e subtarefas sintéticas.</p><button className="button button-secondary" onClick={onReset}><RotateCcw size={15} />Restaurar mock</button></div></div><div className="panel setting-card"><div className="setting-icon setting-icon-blue"><Target size={19} /></div><div><h2>Próxima etapa</h2><p>Depois da aprovação visual, o adaptador local será substituído por consultas reais do Dataverse.</p><span className="status-note"><span className="pulse-dot" />Mock ativo · sem conexões externas</span></div></div></section></div>;
 }
@@ -144,6 +149,7 @@ export default function App() {
   const saveTask = useCallback((id, patch) => runMutation(store.updateTask(state, id, patch), store.live ? "Tarefa salva." : "Tarefa salva no mock."), [state, store, runMutation]);
   const createNewTask = useCallback((input) => { runMutation(store.createTask(state, input), store.live ? "Tarefa criada." : "Tarefa criada no mock."); setCreating(false); }, [state, store, runMutation]);
   const createNewSubtask = useCallback((input) => { runMutation(store.createSubtask(state, creatingSubtaskFor, input), store.live ? "Subtarefa criada." : "Subtarefa criada no mock."); setCreatingSubtaskFor(""); }, [state, store, runMutation, creatingSubtaskFor]);
+  const createQualityTask = useCallback((item) => runMutation(store.createQualityTask(state, item), store.live ? "Tarefa de qualidade criada." : "Tarefa de qualidade criada no mock."), [state, store, runMutation]);
   const refreshMock = useCallback((quote) => runMutation(quote ? store.ensureQuoteTask(state, quote) : store.save(state), quote ? "Tarefa principal criada." : "Dados atualizados."), [state, store, runMutation]);
   const resetMock = useCallback(() => { runMutation(store.reset(), store.live ? "Dados recarregados." : "Cenário inicial restaurado."); setSelectedId(""); }, [store, runMutation]);
   if (error) return <div className="app-error"><strong>Não foi possível carregar o Planner.</strong><span>{error}</span><button className="button button-secondary" onClick={() => { setError(""); store.load().then(setState).catch((failure) => setError(failure.message)); }}>Tentar novamente</button></div>;
@@ -153,6 +159,7 @@ export default function App() {
     if (active === "board") return <BoardView state={state} onOpen={openTask} onMove={moveTask} onCreate={() => setCreating(true)} filters={filters} setFilters={setFilters} />;
     if (active === "list") return <ListView state={state} onOpen={openTask} onCreate={() => setCreating(true)} filters={filters} setFilters={setFilters} />;
     if (active === "calendar") return <CalendarView state={state} onOpen={openTask} onCreate={() => setCreating(true)} />;
+    if (active === "quality") return <QualityView state={state} onCreate={createQualityTask} />;
     return <SettingsView onReset={resetMock} />;
   };
   return <AppShell active={active} onNavigate={setActive} onCreate={() => setCreating(true)} tasks={state.tasks}>{renderPage()}{notice && <div className="toast"><CheckCircle2 size={17} /><span>{notice}</span></div>}{selected && <TaskDrawer task={selected} state={state} onClose={closeTask} onSave={saveTask} onComment={(id, text) => runMutation(store.addComment(state, id, text), "Comentário adicionado.")} onAttachment={(id, file) => runMutation(store.addAttachment(state, id, file), "Anexo adicionado.")} onOpenQuote={(id) => { setActive("dashboard"); closeTask(); setNotice(`Cotação ${state.quotes.find((quote) => quote.id === id)?.code || ""} vinculada.`); }} onAddSubtask={() => setCreatingSubtaskFor(selected.id)} />}{creating && <NewTaskDrawer quotes={state.quotes} onClose={() => setCreating(false)} onSave={createNewTask} />}{creatingSubtaskFor && <NewTaskDrawer quotes={state.quotes} onClose={() => setCreatingSubtaskFor("")} onSave={createNewSubtask} />}</AppShell>;
