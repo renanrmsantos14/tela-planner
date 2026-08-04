@@ -54,31 +54,42 @@ function dateOnly(value) {
 }
 
 async function request(xrm, path, options = {}) {
-  const response = await fetch(`${apiUrl(xrm)}${path}`, {
-    credentials: "include",
-    ...options,
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json; charset=utf-8",
-      "OData-MaxVersion": "4.0",
-      "OData-Version": "4.0",
-      Prefer: 'odata.include-annotations="*",return=representation',
-      ...(options.headers || {}),
-    },
-  });
-  const body = await response.text();
-  let parsed = null;
-  try { parsed = body ? JSON.parse(body) : null; } catch { parsed = body; }
-  if (!response.ok) {
-    const detail = parsed?.error?.message || body || response.statusText;
-    throw new Error(`${options.method || "GET"} ${path} falhou: ${response.status} ${detail}`);
+  const retryable = (status) => status === 408 || status === 429 || status >= 500;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const response = await fetch(`${apiUrl(xrm)}${path}`, {
+      credentials: "include",
+      ...options,
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json; charset=utf-8",
+        "OData-MaxVersion": "4.0",
+        "OData-Version": "4.0",
+        Prefer: 'odata.include-annotations="*",return=representation',
+        ...(options.headers || {}),
+      },
+    });
+    const body = await response.text();
+    let parsed = null;
+    try { parsed = body ? JSON.parse(body) : null; } catch { parsed = body; }
+    if (response.ok) return parsed;
+    if (!retryable(response.status) || attempt === 2) {
+      const detail = parsed?.error?.message || body || response.statusText;
+      throw new Error(`${options.method || "GET"} ${path} falhou: ${response.status} ${detail}`);
+    }
+    const retryAfter = Number(response.headers.get("Retry-After"));
+    await new Promise((resolve) => window.setTimeout(resolve, Number.isFinite(retryAfter) ? retryAfter * 1000 : 400 * (attempt + 1)));
   }
-  return parsed;
 }
 
 async function retrieveMany(xrm, table, query) {
-  const result = await request(xrm, `/${entitySetName(table)}${query}`);
-  return result?.value || [];
+  const rows = [];
+  let next = `/${entitySetName(table)}${query}`;
+  while (next) {
+    const result = await request(xrm, next);
+    rows.push(...(result?.value || []));
+    next = result?.["@odata.nextLink"] ? new URL(result["@odata.nextLink"]).pathname.replace(`/api/data/${API_VERSION}`, "") + new URL(result["@odata.nextLink"]).search : "";
+  }
+  return rows;
 }
 
 async function resolveLookupNavigation(xrm, entity, attribute, target) {
@@ -119,6 +130,9 @@ function normalizeQuote(row) {
     status: row["cr40f_statuscotacao@OData.Community.Display.V1.FormattedValue"] || "",
     deadline: dateOnly(row.cr40f_prazoresponder),
     value: row.cr40f_valorcotado == null ? "" : String(row.cr40f_valorcotado),
+    plannerTaskId: row.cr40f_plannertaskid || "",
+    plannerLink: row.cr40f_linktarefaplanner || "",
+    teamsLink: row.cr40f_linkmensagemteams || "",
   };
 }
 
@@ -155,9 +169,9 @@ function normalizeTask(row, annotations = [], events = []) {
 
 async function loadLiveState(xrm) {
   const [quotes, rows, events] = await Promise.all([
-    retrieveMany(xrm, QUOTE_TABLE, "?$select=cr40f_pedidodecotacaoid,cr40f_numerodacotacao,cr40f_titulo,cr40f_clienteempresa,cr40f_statuscotacao,cr40f_prazoresponder,cr40f_valorcotado&$filter=statecode eq 0&$orderby=modifiedon desc&$top=500"),
-    retrieveMany(xrm, TASK_TABLE, "?$select=cr40f_plannertarefaid,cr40f_name,cr40f_titulo,cr40f_descricao,cr40f_status,cr40f_prioridade,cr40f_prazo,_cr40f_responsavel_value,_cr40f_equipe_value,_cr40f_pedidocotacao_value,_cr40f_errooperacional_value,_cr40f_acaooperacional_value,cr40f_origem,cr40f_codigoorigem,cr40f_motivobloqueio&$filter=statecode eq 0&$orderby=modifiedon desc&$top=500"),
-    retrieveMany(xrm, EVENT_TABLE, "?$select=cr40f_plannertarefaeventoid,_cr40f_tarefa_value,cr40f_tipo,cr40f_descricao,cr40f_ocorridoem,_cr40f_autor_value&$orderby=cr40f_ocorridoem desc&$top=5000"),
+    retrieveMany(xrm, QUOTE_TABLE, "?$select=cr40f_pedidodecotacaoid,cr40f_numerodacotacao,cr40f_titulo,cr40f_clienteempresa,cr40f_statuscotacao,cr40f_prazoresponder,cr40f_valorcotado,cr40f_plannertaskid,cr40f_linktarefaplanner,cr40f_linkmensagemteams&$filter=statecode eq 0&$orderby=modifiedon desc"),
+    retrieveMany(xrm, TASK_TABLE, "?$select=cr40f_plannertarefaid,cr40f_name,cr40f_titulo,cr40f_descricao,cr40f_status,cr40f_prioridade,cr40f_prazo,_cr40f_responsavel_value,_cr40f_equipe_value,_cr40f_pedidocotacao_value,_cr40f_errooperacional_value,_cr40f_acaooperacional_value,cr40f_origem,cr40f_codigoorigem,cr40f_motivobloqueio&$filter=statecode eq 0&$orderby=modifiedon desc"),
+    retrieveMany(xrm, EVENT_TABLE, "?$select=cr40f_plannertarefaeventoid,_cr40f_tarefa_value,cr40f_tipo,cr40f_descricao,cr40f_ocorridoem,_cr40f_autor_value&$orderby=cr40f_ocorridoem desc"),
   ]);
   const annotations = await retrieveMany(xrm, ANNOTATION_TABLE, "?$select=annotationid,_objectid_value,notetext,filename,isdocument,createdon,_createdby_value&$filter=isdocument eq false or isdocument eq true&$top=5000");
   const tasks = rows.map((row) => normalizeTask(row, annotations.filter((item) => item._objectid_value === row.cr40f_plannertarefaid), events.filter((item) => item._cr40f_tarefa_value === row.cr40f_plannertarefaid)));
@@ -211,15 +225,24 @@ async function addLiveComment(xrm, taskId, text) {
 }
 
 async function addLiveAttachment(xrm, taskId, file) {
-  const payload = { subject: file.name, filename: file.name, mimetype: file.type || "application/octet-stream", documentbody: file.base64, isdocument: true };
+  const documentbody = file.base64 || await fileToBase64(file);
+  const payload = { subject: file.name, filename: file.name, mimetype: file.type || "application/octet-stream", documentbody, isdocument: true };
   await bindLookup(xrm, payload, ANNOTATION_TABLE, "objectid", TASK_TABLE, taskId);
   await request(xrm, `/${entitySetName(ANNOTATION_TABLE)}`, { method: "POST", body: JSON.stringify(payload) });
   return loadLiveState(xrm);
 }
 
+async function fileToBase64(file) {
+  if (!file?.arrayBuffer) throw new Error("Arquivo inválido para anexar.");
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  let binary = "";
+  for (let index = 0; index < bytes.length; index += 1) binary += String.fromCharCode(bytes[index]);
+  return btoa(binary);
+}
+
 async function ensureLiveQuoteTask(xrm, state, quote) {
   const existing = state.tasks.find((item) => item.quoteId === quote.id && !item.parentTaskId);
-  if (existing) return state;
+  if (existing || quote.plannerTaskId) return state;
   return createLiveTask(xrm, state, { title: `Acompanhar ${quote.code}`, quoteId: quote.id, quoteCode: quote.code, quoteTitle: quote.title, dueDate: quote.deadline, priority: "medium", sourceType: "quote", assigneeName: "Não atribuído", teamName: "Comercial", description: `Acompanhar a cotação ${quote.code} até a resposta ao cliente.` });
 }
 
@@ -235,6 +258,7 @@ export function createDataStore() {
     addAttachment: async (state, id, file) => addMockAttachment(state, id, file.name || file),
     ensureQuoteTask: async (state, quote) => ensureMockQuoteTask(state, quote),
     save: async (state) => saveMockState(state),
+    openQuote: async () => false,
   };
   return {
     live: true,
@@ -246,5 +270,6 @@ export function createDataStore() {
     ensureQuoteTask: (state, quote) => ensureLiveQuoteTask(xrm, state, quote),
     save: (state) => loadLiveState(xrm),
     reset: () => loadLiveState(xrm),
+    openQuote: (id) => xrm.Navigation?.openForm?.({ entityName: QUOTE_TABLE, entityId: cleanId(id) }),
   };
 }
