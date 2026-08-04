@@ -1,0 +1,33 @@
+/* Planner skin aligned to the active shadcn/ui preset. */
+:root {
+  --canvas: #f7f8fa;
+  --surface: #ffffff;
+  --surface-soft: #f8fafc;
+  --neutral: #fbfcfe;
+  --line: color-mix(in oklch, var(--border), transparent 12%);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 2px);
+  --shadow-surface: 0 1px 2px rgb(15 23 42 / 0.04), 0 8px 24px rgb(15 23 42 / 0.035);
+  --shadow-panel: 0 1px 2px rgb(15 23 42 / 0.04), 0 12px 30px rgb(15 23 42 / 0.045);
+}
+
+body { background: var(--background); color: var(--foreground); }
+.page-content { max-width: 1560px; }
+.page-header h1 { font-family: var(--font-heading); font-weight: 650; }
+.panel, .filter-bar, .calendar-day, .task-card, .metric-card { border-color: var(--border); box-shadow: var(--shadow-surface); }
+.panel { border-radius: var(--radius-lg); }
+.metric-card[data-slot="card"] { display: block; padding: 0; border-radius: var(--radius-lg); background: var(--card); }
+.metric-card-content { display: flex; align-items: flex-start; gap: 12px; padding: 18px; }
+.metric-card:hover { transform: translateY(-1px); box-shadow: var(--shadow-panel); }
+.filter-bar { border-radius: var(--radius-lg); background: var(--card); }
+.search-field, .filter-bar select, .drawer-field-grid select, .drawer-field-grid input, .linked-record select,
+.drawer-description textarea, .comment-compose textarea { border-color: var(--input); background: color-mix(in oklch, var(--input), transparent 70%); }
+.button-primary { background: var(--primary); color: var(--primary-foreground); }
+.button-primary:hover { background: color-mix(in oklch, var(--primary), var(--foreground) 12%); }
+.button-secondary { border-color: var(--border); background: var(--secondary); color: var(--secondary-foreground); }
+.button-quiet:hover, .text-button:hover { background: var(--muted); }
+.task-card { border-radius: var(--radius); }
+.column-body { border-color: var(--border); background: color-mix(in oklch, var(--muted), transparent 35%); }
+.drawer-layer { background: rgb(15 23 42 / 0.42); }
+.task-drawer { border-left: 1px solid var(--border); }
+.mobile-fab[data-slot="button"] { border-radius: 999px; background: var(--primary); color: var(--primary-foreground); }

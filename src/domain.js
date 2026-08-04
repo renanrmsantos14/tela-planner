@@ -71,8 +71,10 @@ export function filterTasks(tasks, filters) {
     const matchesStatus = !filters.status || task.status === filters.status;
     const matchesPriority = !filters.priority || task.priority === filters.priority;
     const matchesSource = !filters.source || task.sourceType === filters.source;
+    const matchesAssignee = !filters.assignee || task.assigneeName === filters.assignee;
+    const matchesTeam = !filters.team || task.teamName === filters.team;
     const matchesBlocked = !filters.blocked || isBlocked(task);
-    return matchesQuery && matchesStatus && matchesPriority && matchesSource && matchesBlocked;
+    return matchesQuery && matchesStatus && matchesPriority && matchesSource && matchesAssignee && matchesTeam && matchesBlocked;
   });
 }
 
