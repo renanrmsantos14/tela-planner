@@ -4,6 +4,7 @@ import App from "./App";
 import { getOrCreateRoot, hasReactRoot } from "./mountApp";
 import "./styles.css";
 import "./shadcn.css";
+import "./shadcn-overrides.css";
 
 const rootElement = document.getElementById("root");
 if (!rootElement) throw new Error("Mount point #root não encontrado.");

@@ -7,6 +7,8 @@ import {
 import { filterTasks, formatDate, formatLongDate, isBlocked, isDueToday, isOverdue, PRIORITIES, sortTasks, sourceById, STATUSES, statusById, TASK_SOURCES, taskStats } from "./domain";
 import { createDataStore } from "./dataverse";
 import SearchableSelect from "./SearchableSelect.jsx";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 
 const navItems = [
   ["dashboard", "Visão geral", LayoutDashboard], ["board", "Quadro", ClipboardList], ["list", "Lista operacional", ListFilter], ["calendar", "Agenda", CalendarDays], ["settings", "Configurações", Settings],
@@ -57,7 +59,7 @@ function AppShell({ active, onNavigate, children, onCreate, tasks }) {
       <div className="sidebar-bottom"><div className="mock-label"><span className="pulse-dot" />Modo demonstração</div><div className="user-card"><Avatar name="Renan Santos" /><div className="user-copy"><strong>Renan Santos</strong><span>Administrador</span></div><button className="user-settings-button" type="button" onClick={() => onNavigate("settings")} aria-label="Abrir configurações" title="Configurações"><Settings size={15} /></button></div></div>
     </aside>
     <main className="main-area"><header className="mobile-header"><button className="icon-button" onClick={() => setExpanded((value) => !value)} aria-label="Abrir navegação" title="Abrir navegação"><Menu size={20} /></button><strong>Tela Planner</strong><Avatar name="Renan Santos" small /></header>{children}</main>
-    <button className="mobile-fab" onClick={onCreate}><Plus size={22} /></button>
+    <Button className="mobile-fab" size="icon-lg" onClick={onCreate} aria-label="Criar tarefa"><Plus size={22} /></Button>
   </div>;
 }
 
@@ -66,7 +68,7 @@ function PageHeader({ eyebrow, title, description, action, children }) {
 }
 
 function MetricCard({ label, value, detail, tone = "neutral", icon: Icon }) {
-  return <div className={`metric-card metric-${tone}`}><div className="metric-icon"><Icon size={18} /></div><div><span>{label}</span><strong>{value}</strong><small>{detail}</small></div></div>;
+  return <Card className={`metric-card metric-${tone}`}><CardContent className="metric-card-content"><div className="metric-icon"><Icon size={18} /></div><div><span>{label}</span><strong>{value}</strong><small>{detail}</small></div></CardContent></Card>;
 }
 
 function TaskCard({ task: taskItem, onOpen, compact = false, onDrop }) {
