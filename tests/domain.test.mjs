@@ -16,7 +16,7 @@ test("identifica atraso sem marcar tarefa concluída", () => {
 
 test("filtra por texto, status e prioridade", () => {
   assert.equal(filterTasks(tasks, { query: "Rafael", status: "", priority: "" }).length, 1);
-  assert.equal(filterTasks(tasks, { query: "", status: "doing", priority: "medium" }).length, 1);
+  assert.equal(filterTasks(tasks, { query: "", status: ["doing", "waiting"], priority: ["medium", "high"] }).length, 1);
 });
 
 test("filtra texto ignorando acentos e caixa", () => {
@@ -36,5 +36,5 @@ test("ordena tarefas abertas antes das concluídas", () => {
 test("filtra origem e bloqueio operacional", () => {
   const qualityTask = { ...tasks[1], sourceType: "quality", sourceLabel: "Erro operacional", blockedReason: "Aguardando terceiro" };
   assert.equal(isBlocked(qualityTask), true);
-  assert.equal(filterTasks([tasks[0], qualityTask], { query: "", status: "", priority: "", source: "quality", blocked: true }).length, 1);
+  assert.equal(filterTasks([tasks[0], qualityTask], { query: "", status: [], priority: [], source: ["quality"], blocked: true }).length, 1);
 });

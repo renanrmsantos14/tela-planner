@@ -62,15 +62,19 @@ export function formatLongDate(value) {
 export function filterTasks(tasks, filters) {
   const query = normalizeText(filters.query);
   const queryTokens = query.split(/\s+/).filter(Boolean);
+  const selectedValues = (value) => Array.isArray(value) ? value : value ? [value] : [];
+  const statusValues = selectedValues(filters.status);
+  const priorityValues = selectedValues(filters.priority);
+  const sourceValues = selectedValues(filters.source);
   return tasks.filter((task) => {
     const matchesQuery = !query || [task.title, task.quoteTitle, task.assigneeName, task.teamName]
       .some((value) => {
         const normalizedValue = normalizeText(value);
         return normalizedValue.includes(query) || queryTokens.every((token) => normalizedValue.includes(token));
       });
-    const matchesStatus = !filters.status || task.status === filters.status;
-    const matchesPriority = !filters.priority || task.priority === filters.priority;
-    const matchesSource = !filters.source || task.sourceType === filters.source;
+    const matchesStatus = !statusValues.length || statusValues.includes(task.status);
+    const matchesPriority = !priorityValues.length || priorityValues.includes(task.priority);
+    const matchesSource = !sourceValues.length || sourceValues.includes(task.sourceType);
     const matchesAssignee = !filters.assignee || task.assigneeName === filters.assignee;
     const matchesTeam = !filters.team || task.teamName === filters.team;
     const matchesBlocked = !filters.blocked || isBlocked(task);

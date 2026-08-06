@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import { filterTasks, formatDate, formatLongDate, isBlocked, isDueToday, isOverdue, PRIORITIES, sortTasks, sourceById, STATUSES, statusById, TASK_SOURCES, taskStats } from "./domain";
 import { createDataStore } from "./dataverse";
-import SearchableSelect from "./SearchableSelect.jsx";
+import SearchableSelect, { SearchableMultiSelect } from "./SearchableSelect.jsx";
 
 const navItems = [
   ["dashboard", "Visão geral", LayoutDashboard], ["board", "Quadro", ClipboardList], ["list", "Lista operacional", ListFilter], ["calendar", "Agenda", CalendarDays], ["quality", "Qualidade", ShieldAlert], ["settings", "Configurações", Settings],
@@ -88,7 +88,7 @@ function Board({ tasks, onOpen, onMove }) {
 }
 
 function FilterBar({ filters, setFilters, onCreate }) {
-  return <div className="filter-bar"><div className="search-field"><Search size={16} /><input value={filters.query} onChange={(event) => setFilters((current) => ({ ...current, query: event.target.value }))} placeholder="Buscar tarefas, cotações, qualidade ou pessoas" /></div><InputSelect value={filters.status} onChange={(value) => setFilters((current) => ({ ...current, status: value }))} placeholder="Todos os status" options={[{ value: "", label: "Todos os status" }, ...STATUS_OPTIONS]} /><InputSelect value={filters.priority} onChange={(value) => setFilters((current) => ({ ...current, priority: value }))} placeholder="Todas as prioridades" options={[{ value: "", label: "Todas as prioridades" }, ...PRIORITY_OPTIONS]} /><InputSelect value={filters.source} onChange={(value) => setFilters((current) => ({ ...current, source: value }))} placeholder="Todas as origens" options={[{ value: "", label: "Todas as origens" }, ...SOURCE_OPTIONS]} /><button className={`button ${filters.blocked ? "button-secondary" : "button-quiet"}`} onClick={() => setFilters((current) => ({ ...current, blocked: !current.blocked }))}><CircleHelp size={15} />Bloqueadas</button><button className="button button-primary" onClick={onCreate}><Plus size={16} />Nova tarefa</button></div>;
+  return <div className="filter-bar"><div className="search-field"><Search size={16} /><input value={filters.query} onChange={(event) => setFilters((current) => ({ ...current, query: event.target.value }))} placeholder="Buscar tarefas, cotações, qualidade ou pessoas" /></div><SearchableMultiSelect value={filters.status} onChange={(value) => setFilters((current) => ({ ...current, status: value }))} placeholder="Todos os status" options={STATUS_OPTIONS} /><SearchableMultiSelect value={filters.priority} onChange={(value) => setFilters((current) => ({ ...current, priority: value }))} placeholder="Todas as prioridades" options={PRIORITY_OPTIONS} /><SearchableMultiSelect value={filters.source} onChange={(value) => setFilters((current) => ({ ...current, source: value }))} placeholder="Todas as origens" options={SOURCE_OPTIONS} /><button className={`button ${filters.blocked ? "button-secondary" : "button-quiet"}`} onClick={() => setFilters((current) => ({ ...current, blocked: !current.blocked }))}><CircleHelp size={15} />Bloqueadas</button><button className="button button-primary" onClick={onCreate}><Plus size={16} />Nova tarefa</button></div>;
 }
 
 function Dashboard({ state, onNavigate, onOpen, onCreate, onRefresh }) {
@@ -140,7 +140,7 @@ function NewTaskDrawer({ quotes, onClose, onSave }) {
 }
 
 export default function App() {
-  const [active, setActive] = useState("dashboard"); const [state, setState] = useState(null); const [store] = useState(() => createDataStore()); const [selectedId, setSelectedId] = useState(""); const [creating, setCreating] = useState(false); const [creatingSubtaskFor, setCreatingSubtaskFor] = useState(""); const [filters, setFilters] = useState({ query: "", status: "", priority: "" }); const [notice, setNotice] = useState(""); const [error, setError] = useState("");
+  const [active, setActive] = useState("dashboard"); const [state, setState] = useState(null); const [store] = useState(() => createDataStore()); const [selectedId, setSelectedId] = useState(""); const [creating, setCreating] = useState(false); const [creatingSubtaskFor, setCreatingSubtaskFor] = useState(""); const [filters, setFilters] = useState({ query: "", status: [], priority: [], source: [] }); const [notice, setNotice] = useState(""); const [error, setError] = useState("");
   useEffect(() => { store.load().then(setState).catch((failure) => setError(failure.message || "Não foi possível carregar as tarefas.")); }, [store]);
   const runMutation = useCallback((operation, message) => operation.then((next) => { setState(next); setNotice(message); window.setTimeout(() => setNotice(""), 2600); }).catch((failure) => setError(failure.message || "Não foi possível concluir a operação.")), []);
   const selected = useMemo(() => state?.tasks.find((taskItem) => taskItem.id === selectedId), [state, selectedId]);
