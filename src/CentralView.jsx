@@ -11,7 +11,7 @@ export default function CentralView({ state, onOpenTask, onOpenSource, onCreate,
   const [filters, setFilters] = useState({ query: "", source: "all", assignee: "all", statusGroup: "all" });
   const currentUserId = String(window.parent?.Xrm?.Utility?.getGlobalContext?.().userSettings?.userId || window.Xrm?.Utility?.getGlobalContext?.().userSettings?.userId || "").replace(/[{}]/g, "").toLowerCase();
   const currentEmployee = (state.employees || []).find((employee) => String(employee.userId || "").replace(/[{}]/g, "").toLowerCase() === currentUserId);
-  const scopedItems = mineOnly && currentEmployee ? (state.workItems || []).filter((item) => item.assigneeEmployeeId === currentEmployee.id || item.assigneeName === currentEmployee.name) : (state.workItems || []);
+  const scopedItems = mineOnly ? (currentEmployee ? (state.workItems || []).filter((item) => item.assigneeEmployeeId === currentEmployee.id || item.assigneeName === currentEmployee.name) : []) : (state.workItems || []);
   const items = useMemo(() => sortWorkItems(filterWorkItems(scopedItems, filters)), [scopedItems, filters]);
   const stats = useMemo(() => workItemStats(state.workItems || []), [state.workItems]);
   const assignees = useMemo(() => [...new Map((state.employees || []).map((employee) => [employee.id || employee.name, employee])).values()], [state.employees]);
