@@ -1,10 +1,21 @@
-import { addAttachment as addMockAttachment, addComment as addMockComment, createTask as createMockTask, ensureQuoteTask as ensureMockQuoteTask, loadState as loadMockState, resetState as resetMockState, saveState as saveMockState, updateTask as updateMockTask } from "./mockStore.js";
+import {
+  addAttachment as addMockAttachment,
+  addComment as addMockComment,
+  createTask as createMockTask,
+  ensureQuoteTask as ensureMockQuoteTask,
+  loadState as loadMockState,
+  resetState as resetMockState,
+  saveState as saveMockState,
+  updateTask as updateMockTask,
+} from "./mockStore.js";
 
 const API_VERSION = "v9.2";
 const QUOTE_TABLE = "cr40f_pedidodecotacao";
 const QUALITY_ERROR_TABLE = "cr40f_errooperacional";
 const QUALITY_ACTION_TABLE = "cr40f_acaooperacional";
 const TASK_TABLE = "cr40f_plannertarefa";
+const EMPLOYEE_TABLE = "cr40f_funcionarios";
+const EMPLOYEE_ASSIGNEE_FIELD = "cr40f_cr40f_funcionarioresponsavel";
 const EVENT_TABLE = "cr40f_plannertarefaevento";
 const RELATION_TABLE = "cr40f_plannertarearelacao";
 const ANNOTATION_TABLE = "annotation";
@@ -18,6 +29,7 @@ const ENTITY_SETS = Object.freeze({
   [QUALITY_ERROR_TABLE]: "cr40f_errooperacionals",
   [QUALITY_ACTION_TABLE]: "cr40f_acaooperacionals",
   [TASK_TABLE]: "cr40f_plannertarefas",
+  [EMPLOYEE_TABLE]: "cr40f_funcionarioses",
   [EVENT_TABLE]: "cr40f_plannertarefaeventos",
   [RELATION_TABLE]: "cr40f_plannertarearelacaos",
   [ANNOTATION_TABLE]: "annotations",
@@ -154,9 +166,12 @@ async function resolveIdByName(xrm, table, field, value) {
   return rows[0]?.[table === "systemuser" ? "systemuserid" : "teamid"] || "";
 }
 
-async function markQuoteOrigin(xrm, quoteId) {
+async function markQuoteOrigin(xrm, quoteId, taskId = "") {
   if (!quoteId) return;
-  await request(xrm, `/${entitySetName(QUOTE_TABLE)}(${cleanId(quoteId)})`, { method: "PATCH", body: JSON.stringify({ cr40f_origemultimasincronizacao: "Planner", cr40f_ultimasincronizacao: new Date().toISOString() }) });
+  const clientUrl = xrm.Utility?.getGlobalContext?.().getClientUrl?.() || window.location.origin;
+  const patch = { cr40f_origemultimasincronizacao: "Planner", cr40f_ultimasincronizacao: new Date().toISOString() };
+  if (taskId) { patch.cr40f_plannertaskid = taskId; patch.cr40f_linktarefaplanner = `${clientUrl}/WebResources/new_TelaPlanner.html?data=taskId=${cleanId(taskId)}`; }
+  await request(xrm, `/${entitySetName(QUOTE_TABLE)}(${cleanId(quoteId)})`, { method: "PATCH", body: JSON.stringify(patch) });
 }
 
 function normalizeQuote(row) {
@@ -174,9 +189,17 @@ function normalizeQuote(row) {
   };
 }
 
+async function resolveEmployeeIdByName(xrm, value) {
+  if (!value || value === "Não atribuído") return "";
+  const escaped = String(value).replace(/'/g, "''");
+  const rows = await retrieveMany(xrm, EMPLOYEE_TABLE, `?$select=cr40f_funcionariosid&$filter=cr40f_nomecompleto eq '${escaped}' and statecode eq 0 and cr40f_status eq 0 and cr40f_funcao eq 202410001&$top=2`);
+  if (rows.length !== 1) throw new Error(`Funcionário administrativo ativo não encontrado de forma única: ${value}.`);
+  return rows[0].cr40f_funcionariosid;
+}
+
 function normalizeQuality(row, type) {
   const isAction = type === "action";
-  return { id: row[isAction ? "cr40f_acaooperacionalid" : "cr40f_errooperacionalid"], type, code: row.cr40f_codigo || "", title: row.cr40f_titulo || "", description: row.cr40f_descricao || "", status: row[isAction ? "cr40f_status@OData.Community.Display.V1.FormattedValue" : "cr40f_status@OData.Community.Display.V1.FormattedValue"] || "", dueDate: dateOnly(row[isAction ? "cr40f_prazo" : "cr40f_prazoresolucao"]) };
+  return { id: row[isAction ? "cr40f_acaooperacionalid" : "cr40f_errooperacionalid"], type, code: row.cr40f_codigo || "", title: row.cr40f_titulo || "", description: row.cr40f_descricao || "", status: row[isAction ? "cr40f_status@OData.Community.Display.V1.FormattedValue" : "cr40f_status@OData.Community.Display.V1.FormattedValue"] || "", dueDate: dateOnly(row[isAction ? "cr40f_prazo" : "cr40f_prazoresolucao"]), assigneeId: row._cr40f_responsavel_value || "", assigneeName: row["_cr40f_responsavel_value@OData.Community.Display.V1.FormattedValue"] || "" };
 }
 
 function normalizeTask(row, annotations = [], events = []) {
@@ -193,8 +216,8 @@ function normalizeTask(row, annotations = [], events = []) {
     status,
     priority,
     dueDate: dateOnly(row.cr40f_prazo),
-    assigneeName: formatLookup(row, "cr40f_responsavel"),
-    assigneeId: row._cr40f_responsavel_value || "",
+    assigneeName: formatLookup(row, EMPLOYEE_ASSIGNEE_FIELD),
+    assigneeId: row[`_${EMPLOYEE_ASSIGNEE_FIELD}_value`] || "",
     teamName: formatLookup(row, "cr40f_equipe", "Sem equipe"),
     teamId: row._cr40f_equipe_value || "",
     quoteId: row._cr40f_pedidocotacao_value || null,
@@ -216,19 +239,20 @@ function normalizeRelation(row) {
 }
 
 async function loadLiveState(xrm) {
-  const [quotes, rows, events, relations, qualityErrors, qualityActions] = await Promise.all([
+  const [quotes, rows, events, relations, qualityErrors, qualityActions, employees] = await Promise.all([
     retrieveMany(xrm, QUOTE_TABLE, "?$select=cr40f_pedidodecotacaoid,cr40f_numerodacotacao,cr40f_titulo,cr40f_clienteempresa,cr40f_statuscotacao,cr40f_prazoresponder,cr40f_valorcotado,cr40f_plannertaskid,cr40f_linktarefaplanner,cr40f_linkmensagemteams&$filter=statecode eq 0&$orderby=modifiedon desc"),
-    retrieveMany(xrm, TASK_TABLE, "?$select=cr40f_plannertarefaid,cr40f_name,cr40f_titulo,cr40f_descricao,cr40f_status,cr40f_prioridade,cr40f_prazo,_cr40f_responsavel_value,_cr40f_equipe_value,_cr40f_pedidocotacao_value,_cr40f_errooperacional_value,_cr40f_acaooperacional_value,cr40f_origem,cr40f_codigoorigem,cr40f_motivobloqueio&$filter=statecode eq 0&$orderby=modifiedon desc"),
+    retrieveMany(xrm, TASK_TABLE, `?$select=cr40f_plannertarefaid,cr40f_name,cr40f_titulo,cr40f_descricao,cr40f_status,cr40f_prioridade,cr40f_prazo,_${EMPLOYEE_ASSIGNEE_FIELD}_value,_cr40f_equipe_value,_cr40f_pedidocotacao_value,_cr40f_errooperacional_value,_cr40f_acaooperacional_value,cr40f_origem,cr40f_codigoorigem,cr40f_motivobloqueio&$filter=statecode eq 0&$orderby=modifiedon desc`),
     retrieveMany(xrm, EVENT_TABLE, "?$select=cr40f_plannertarefaeventoid,_cr40f_tarefa_value,cr40f_tipo,cr40f_descricao,cr40f_ocorridoem,_cr40f_autor_value&$orderby=cr40f_ocorridoem desc"),
     retrieveMany(xrm, RELATION_TABLE, "?$select=cr40f_plannertarearelacaoid,_cr40f_tarefapai_value,_cr40f_subtarefa_value&$filter=statecode eq 0"),
-    retrieveMany(xrm, QUALITY_ERROR_TABLE, "?$select=cr40f_errooperacionalid,cr40f_codigo,cr40f_titulo,cr40f_descricao,cr40f_status,cr40f_prazoresolucao&$filter=statecode eq 0&$orderby=createdon desc"),
-    retrieveMany(xrm, QUALITY_ACTION_TABLE, "?$select=cr40f_acaooperacionalid,cr40f_titulo,cr40f_descricao,cr40f_status,cr40f_prazo&$filter=statecode eq 0&$orderby=createdon desc"),
+    retrieveMany(xrm, QUALITY_ERROR_TABLE, "?$select=cr40f_errooperacionalid,cr40f_codigo,cr40f_titulo,cr40f_descricao,cr40f_status,cr40f_prazoresolucao,_cr40f_responsavel_value&$filter=statecode eq 0&$orderby=createdon desc"),
+    retrieveMany(xrm, QUALITY_ACTION_TABLE, "?$select=cr40f_acaooperacionalid,cr40f_titulo,cr40f_descricao,cr40f_status,cr40f_prazo,_cr40f_responsavel_value&$filter=statecode eq 0&$orderby=createdon desc"),
+    retrieveMany(xrm, EMPLOYEE_TABLE, "?$select=cr40f_funcionariosid,cr40f_nomecompleto,new_apelido,_cr40f_usuariodataverse_value&$filter=statecode eq 0 and cr40f_status eq 0 and cr40f_funcao eq 202410001&$orderby=cr40f_nomecompleto asc"),
   ]);
   const annotations = await retrieveMany(xrm, ANNOTATION_TABLE, "?$select=annotationid,_objectid_value,notetext,filename,mimetype,isdocument,createdon,_createdby_value&$filter=isdocument eq false or isdocument eq true&$top=5000");
   const relationByChild = new Map(relations.map(normalizeRelation).map((item) => [item.childTaskId, item.parentTaskId]));
   const tasks = rows.map((row) => ({ ...normalizeTask(row, annotations.filter((item) => item._objectid_value === row.cr40f_plannertarefaid), events.filter((item) => item._cr40f_tarefa_value === row.cr40f_plannertarefaid)), parentTaskId: relationByChild.get(row.cr40f_plannertarefaid) || null }));
   const quoteById = new Map(quotes.map((row) => [row.cr40f_pedidodecotacaoid, normalizeQuote(row)]));
-  return { quotes: [...quoteById.values()], quality: [...qualityErrors.map((row) => normalizeQuality(row, "error")), ...qualityActions.map((row) => normalizeQuality(row, "action"))], tasks: tasks.map((task) => ({ ...task, quoteCode: quoteById.get(task.quoteId)?.code || "", quoteTitle: quoteById.get(task.quoteId)?.title || "" })), lastUpdated: new Date().toISOString(), live: true };
+  return { quotes: [...quoteById.values()], employees: employees.map((row) => ({ id: row.cr40f_funcionariosid, name: row.cr40f_nomecompleto || row.new_apelido || "Sem nome", userId: row._cr40f_usuariodataverse_value || "" })), quality: [...qualityErrors.map((row) => normalizeQuality(row, "error")), ...qualityActions.map((row) => normalizeQuality(row, "action"))], tasks: tasks.map((task) => ({ ...task, quoteCode: quoteById.get(task.quoteId)?.code || "", quoteTitle: quoteById.get(task.quoteId)?.title || "" })), lastUpdated: new Date().toISOString(), live: true };
 }
 
 async function createEvent(xrm, taskId, type, description, field = "", previous = "", next = "") {
@@ -238,18 +262,21 @@ async function createEvent(xrm, taskId, type, description, field = "", previous 
 }
 
 async function createLiveTask(xrm, state, input) {
+  if (input.quoteId && !input.parentTaskId) {
+  const activeMain = state.tasks.find((task) => task.quoteId === input.quoteId && !task.parentTaskId && !["done", "cancelled"].includes(task.status));
+    if (activeMain) throw new Error("Esta cotação já possui um acompanhamento principal ativo.");
+  }
   const payload = { cr40f_titulo: input.title.trim(), cr40f_descricao: input.description || "", cr40f_status: STATUS_VALUES.todo, cr40f_prioridade: PRIORITY_VALUES[input.priority] || PRIORITY_VALUES.medium, cr40f_prazo: input.dueDate ? `${input.dueDate}T12:00:00Z` : null, cr40f_origem: ORIGIN_VALUES[input.sourceType || (input.quoteId ? "quote" : "manual")], cr40f_codigoorigem: input.sourceCode || input.quoteCode || "", cr40f_motivobloqueio: input.blockedReason || "" };
-  const assigneeId = input.assigneeId || await resolveIdByName(xrm, "systemuser", "fullname", input.assigneeName);
   const teamId = input.teamId || await resolveIdByName(xrm, "team", "name", input.teamName);
   await bindLookup(xrm, payload, TASK_TABLE, "cr40f_pedidocotacao", QUOTE_TABLE, input.quoteId);
   await bindLookup(xrm, payload, TASK_TABLE, "cr40f_errooperacional", QUALITY_ERROR_TABLE, input.qualityType === "error" ? input.qualityId : "");
   await bindLookup(xrm, payload, TASK_TABLE, "cr40f_acaooperacional", QUALITY_ACTION_TABLE, input.qualityType === "action" ? input.qualityId : "");
-  await bindLookup(xrm, payload, TASK_TABLE, "cr40f_responsavel", "systemuser", assigneeId);
+  await bindLookup(xrm, payload, TASK_TABLE, EMPLOYEE_ASSIGNEE_FIELD, EMPLOYEE_TABLE, input.assigneeId || await resolveEmployeeIdByName(xrm, input.assigneeName));
   await bindLookup(xrm, payload, TASK_TABLE, "cr40f_equipe", "team", teamId);
   const created = await request(xrm, `/${entitySetName(TASK_TABLE)}`, { method: "POST", body: JSON.stringify(payload) });
   const id = created?.cr40f_plannertarefaid;
   if (!id) throw new Error("Dataverse criou tarefa sem retornar o ID.");
-  await markQuoteOrigin(xrm, input.quoteId);
+  await markQuoteOrigin(xrm, input.quoteId, id);
   await createEvent(xrm, id, 100000000, "Tarefa criada.");
   return loadLiveState(xrm);
 }
@@ -262,7 +289,11 @@ async function updateLiveTask(xrm, state, id, patch) {
   if (patch.priority !== undefined) payload.cr40f_prioridade = PRIORITY_VALUES[patch.priority];
   if (patch.dueDate !== undefined) payload.cr40f_prazo = patch.dueDate ? `${patch.dueDate}T12:00:00Z` : null;
   if (patch.blockedReason !== undefined) payload.cr40f_motivobloqueio = patch.blockedReason;
-  if (patch.assigneeId !== undefined || patch.assigneeName !== undefined) await bindLookup(xrm, payload, TASK_TABLE, "cr40f_responsavel", "systemuser", patch.assigneeId || await resolveIdByName(xrm, "systemuser", "fullname", patch.assigneeName));
+  if (patch.assigneeId !== undefined || patch.assigneeName !== undefined) {
+    const navigation = await resolveLookupNavigation(xrm, TASK_TABLE, EMPLOYEE_ASSIGNEE_FIELD, EMPLOYEE_TABLE);
+    const employeeId = patch.assigneeId || await resolveEmployeeIdByName(xrm, patch.assigneeName);
+    payload[`${navigation}@odata.bind`] = employeeId ? `/${entitySetName(EMPLOYEE_TABLE)}(${cleanId(employeeId)})` : null;
+  }
   if (patch.teamId !== undefined || patch.teamName !== undefined) await bindLookup(xrm, payload, TASK_TABLE, "cr40f_equipe", "team", patch.teamId || await resolveIdByName(xrm, "team", "name", patch.teamName));
   await request(xrm, `/${entitySetName(TASK_TABLE)}(${cleanId(id)})`, { method: "PATCH", body: JSON.stringify(payload) });
   const existing = state.tasks.find((item) => item.id === id);
@@ -302,7 +333,7 @@ async function addLiveAttachment(xrm, taskId, file) {
 }
 
 async function createLiveSubtask(xrm, state, parentId, input) {
-  const nextState = await createLiveTask(xrm, state, { ...input, sourceType: input.sourceType || "manual", sourceCode: input.sourceCode || "" });
+  const nextState = await createLiveTask(xrm, state, { ...input, parentTaskId: parentId, sourceType: input.sourceType || "manual", sourceCode: input.sourceCode || "" });
   const child = nextState.tasks.find((item) => item.title === input.title.trim() && !item.parentTaskId);
   if (!child) throw new Error("Dataverse criou a subtarefa, mas não foi possível localizar o ID.");
   const payload = { cr40f_tipo: 100000000, cr40f_name: `${parentId}-${child.id}` };
@@ -323,25 +354,35 @@ async function fileToBase64(file) {
 async function ensureLiveQuoteTask(xrm, state, quote) {
   const existing = state.tasks.find((item) => item.quoteId === quote.id && !item.parentTaskId);
   if (existing || quote.plannerTaskId) return state;
-  return createLiveTask(xrm, state, { title: `Acompanhar ${quote.code}`, quoteId: quote.id, quoteCode: quote.code, quoteTitle: quote.title, dueDate: quote.deadline, priority: "medium", sourceType: "quote", assigneeName: "Não atribuído", teamName: "Comercial", description: `Acompanhar a cotação ${quote.code} até a resposta ao cliente.` });
+  const reference = String(quote.code || quote.title || "").trim();
+  return createLiveTask(xrm, state, { title: `Acompanhar ${reference || "cotação"}`, quoteId: quote.id, quoteCode: quote.code || "", quoteTitle: quote.title || "", dueDate: quote.deadline, priority: "medium", sourceType: "quote", assigneeName: "Não atribuído", teamName: "Comercial", description: `Acompanhar a cotação ${reference || "selecionada"} até a resposta ao cliente.` });
+}
+
+function createMockDataStore() {
+  const withMode = (state) => ({ ...state, live: false });
+  const withoutMode = ({ live: _live, ...state }) => state;
+  const persist = (state) => withMode(saveMockState(withoutMode(state)));
+
+  return {
+    live: false,
+    load: async () => withMode(loadMockState()),
+    createTask: async (state, input) => withMode(createMockTask(state, input)),
+    createSubtask: async (state, parentId, input) => withMode(createMockTask(state, { ...input, parentTaskId: parentId })),
+    createQualityTask: async (state, item) => withMode(createMockTask(state, { title: item.title, description: item.description, dueDate: item.dueDate, sourceType: "quality", sourceId: item.id, sourceCode: item.code, sourceLabel: item.type === "error" ? "Erro operacional" : "Ação operacional" })),
+    updateTask: async (state, id, patch) => withMode(updateMockTask(state, id, patch)),
+    addComment: async (state, id, text) => withMode(addMockComment(state, id, text)),
+    addAttachment: async (state, id, file) => withMode(addMockAttachment(state, id, file?.name || "Arquivo")),
+    ensureQuoteTask: async (state, quote) => withMode(ensureMockQuoteTask(state, quote)),
+    save: async (state) => persist(state),
+    reset: async () => withMode(resetMockState()),
+    openQuote: () => undefined,
+    openSource: () => undefined,
+  };
 }
 
 export function createDataStore() {
   const xrm = getXrm();
-  if (!xrm) return {
-    live: false,
-    load: async () => loadMockState(),
-    reset: async () => resetMockState(),
-    createTask: async (state, input) => createMockTask(state, input),
-    createSubtask: async (state, parentId, input) => createMockTask(state, { ...input, parentTaskId: parentId }),
-    createQualityTask: async (state, item) => createMockTask(state, { title: item.title, description: item.description, dueDate: item.dueDate, sourceType: "quality", sourceId: item.id, sourceCode: item.code }),
-    updateTask: async (state, id, patch) => updateMockTask(state, id, patch),
-    addComment: async (state, id, text) => addMockComment(state, id, text),
-    addAttachment: async (state, id, file) => addMockAttachment(state, id, file.name || file),
-    ensureQuoteTask: async (state, quote) => ensureMockQuoteTask(state, quote),
-    save: async (state) => saveMockState(state),
-    openQuote: async () => false,
-  };
+  if (!xrm) return createMockDataStore();
   return {
     live: true,
     load: () => loadLiveState(xrm),
@@ -355,5 +396,10 @@ export function createDataStore() {
     save: (state) => loadLiveState(xrm),
     reset: () => loadLiveState(xrm),
     openQuote: (id) => xrm.Navigation?.openForm?.({ entityName: QUOTE_TABLE, entityId: cleanId(id) }),
+    openSource: ({ source, sourceRecordId }) => {
+      const resource = source === "quality_error" || source === "quality_action" ? "new_gestao_erros_operacionais.html" : source === "quote_followup" ? "cr40f_TelaPedirCotacao.html" : "new_TelaPlanner.html";
+      const params = source === "quality_error" ? `errorId=${cleanId(sourceRecordId)}` : source === "quality_action" ? `actionId=${cleanId(sourceRecordId)}` : source === "quote_followup" ? `view=recent&recordId=${cleanId(sourceRecordId)}` : `taskId=${cleanId(sourceRecordId)}`;
+      return xrm.Navigation?.openWebResource?.(resource, { data: params });
+    },
   };
 }
