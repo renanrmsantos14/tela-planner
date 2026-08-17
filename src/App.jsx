@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  AlertCircle, ArrowUpRight, CalendarDays, Check, CheckCircle2, ChevronRight, CircleHelp, ClipboardList, Trash2,
+  AlertCircle, ArrowUpRight, CalendarDays, Check, CheckCircle2, ChevronDown, ChevronRight, CircleHelp, ClipboardList, Trash2,
   Clock3, FileText, LayoutDashboard, ListFilter, Menu, MessageCircle, Paperclip, PanelLeftClose,
   PanelLeftOpen, Plus, RotateCcw, Search, Settings, ShieldAlert, Sparkles, Target, UserRound, Users, X,
 } from "lucide-react";
@@ -13,6 +13,10 @@ import { APP_VERSION } from "./version.js";
 
 const CENTRAL_NAV_ITEMS = [
   ["dashboard", "Minhas pendências", LayoutDashboard], ["team", "Equipe", Users], ["board", "Tarefas", ClipboardList], ["calendar", "Agenda", CalendarDays], ["settings", "Configurações", Settings],
+];
+
+const MOBILE_NAV_ITEMS = [
+  ["dashboard", "Início", LayoutDashboard], ["board", "Quadro", ClipboardList], ["list", "Lista", ListFilter], ["calendar", "Agenda", CalendarDays], ["settings", "Mais", Settings],
 ];
 
 const navItems = [
@@ -72,6 +76,7 @@ function AppShell({ active, onNavigate, children, onCreate, tasks, live, current
   const stats = personalStats || taskStats(tasks);
   const todayLabel = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short" }).format(new Date()).replace(".", "");
   const userName = currentEmployee?.name || "Usuário não vinculado";
+  const activeLabel = MOBILE_NAV_ITEMS.find(([id]) => id === active)?.[1] || "Central";
   return <div className={`app-shell ${expanded ? "" : "sidebar-collapsed"}`}>
     <aside className="sidebar">
       <button className="sidebar-toggle" type="button" onClick={() => setExpanded((value) => !value)} aria-label={expanded ? "Recolher navegação" : "Expandir navegação"} title={expanded ? "Recolher navegação" : "Expandir navegação"}>
@@ -82,8 +87,9 @@ function AppShell({ active, onNavigate, children, onCreate, tasks, live, current
       <nav className="main-nav">{CENTRAL_NAV_ITEMS.map(([id, label, Icon]) => <button key={id} className={active === id ? "nav-item active" : "nav-item"} onClick={() => onNavigate(id)}><Icon size={18} /><span>{label}</span>{id === "board" && <span className="nav-count">{openTaskCount}</span>}</button>)}</nav>
       <div className="sidebar-bottom"><div className="mock-label"><span className="pulse-dot" />{live ? "Dataverse conectado" : "Modo local · mock"}</div><div className="sidebar-version" aria-label={`Versão do aplicativo ${APP_VERSION}`}>Versão {APP_VERSION}</div><div className="user-card"><Avatar name={userName} /><div className="user-copy"><strong>{userName}</strong><span>{currentEmployee ? "Administrativo" : "Sem vínculo Dataverse"}</span></div><button className="user-settings-button" type="button" onClick={() => onNavigate("settings")} aria-label="Abrir configurações" title="Configurações"><Settings size={15} /></button></div></div>
     </aside>
-    <main className="main-area"><header className="mobile-header"><button className="icon-button" onClick={() => setExpanded((value) => !value)} aria-label="Abrir navegação" title="Abrir navegação"><Menu size={20} /></button><strong>Central de Trabalho</strong><Avatar name={userName} small /></header>{children}</main>
-    <button className="mobile-fab" onClick={onCreate}><Plus size={22} /></button>
+    <main className="main-area"><header className="mobile-header"><div className="mobile-header-copy"><strong>{activeLabel}</strong><span>Central de Trabalho</span></div><div className="mobile-header-status" title={live ? "Dataverse conectado" : "Modo local"}><span className="pulse-dot" />{live ? "Live" : "Local"}</div><Avatar name={userName} small /></header>{children}</main>
+    <nav className="mobile-bottom-nav" aria-label="Navegação principal">{MOBILE_NAV_ITEMS.map(([id, label, Icon]) => <button key={id} className={active === id ? "mobile-nav-item active" : "mobile-nav-item"} type="button" onClick={() => onNavigate(id)} aria-current={active === id ? "page" : undefined}><Icon size={19} strokeWidth={active === id ? 2.4 : 2} /><span>{label}</span>{id === "board" && openTaskCount > 0 && <b>{openTaskCount}</b>}</button>)}</nav>
+    <button className="mobile-fab" onClick={onCreate} aria-label="Criar nova tarefa"><Plus size={22} /></button>
   </div>;
 }
 
@@ -115,8 +121,10 @@ function Board({ tasks, onOpen, onMove, onCreate }) {
 }
 
 function FilterBar({ filters, setFilters, onCreate, employees = [] }) {
+  const [expanded, setExpanded] = useState(false);
   const assigneeOptions = ["Não atribuído", ...employees.map((employee) => employee.name)];
-  return <div className="filter-bar"><div className="search-field"><Search size={16} /><input value={filters.query} onChange={(event) => setFilters((current) => ({ ...current, query: event.target.value }))} placeholder="Buscar tarefas, cotações, qualidade ou pessoas" /></div><SearchableMultiSelect value={filters.assignee} onChange={(value) => setFilters((current) => ({ ...current, assignee: value }))} placeholder="Todos os responsáveis" options={assigneeOptions.map((name) => ({ value: name, label: name }))} /><SearchableMultiSelect value={filters.priority} onChange={(value) => setFilters((current) => ({ ...current, priority: value }))} placeholder="Todas as prioridades" options={PRIORITY_OPTIONS} /><SearchableMultiSelect value={filters.source} onChange={(value) => setFilters((current) => ({ ...current, source: value }))} placeholder="Todas as origens" options={SOURCE_OPTIONS} /><button className={`button ${filters.blocked ? "button-secondary" : "button-quiet"}`} onClick={() => setFilters((current) => ({ ...current, blocked: !current.blocked }))}><CircleHelp size={15} />Bloqueadas</button><button className="button button-primary" onClick={onCreate}><Plus size={16} />Nova tarefa</button></div>;
+  const activeFilterCount = [filters.query, filters.assignee?.length, filters.priority?.length, filters.source?.length, filters.blocked].filter(Boolean).length;
+  return <div className={`filter-bar ${expanded ? "is-expanded" : "is-collapsed"}`}><button className="filter-toggle" type="button" onClick={() => setExpanded((value) => !value)} aria-expanded={expanded}><ListFilter size={15} /><span>Filtros</span>{activeFilterCount > 0 && <b>{activeFilterCount}</b>}<ChevronDown size={15} /></button><div className="filter-bar-content"><div className="search-field"><Search size={16} /><input value={filters.query} onChange={(event) => setFilters((current) => ({ ...current, query: event.target.value }))} placeholder="Buscar tarefas, cotações, qualidade ou pessoas" /></div><SearchableMultiSelect value={filters.assignee} onChange={(value) => setFilters((current) => ({ ...current, assignee: value }))} placeholder="Todos os responsáveis" options={assigneeOptions.map((name) => ({ value: name, label: name }))} /><SearchableMultiSelect value={filters.priority} onChange={(value) => setFilters((current) => ({ ...current, priority: value }))} placeholder="Todas as prioridades" options={PRIORITY_OPTIONS} /><SearchableMultiSelect value={filters.source} onChange={(value) => setFilters((current) => ({ ...current, source: value }))} placeholder="Todas as origens" options={SOURCE_OPTIONS} /><button className={`button ${filters.blocked ? "button-secondary" : "button-quiet"}`} onClick={() => setFilters((current) => ({ ...current, blocked: !current.blocked }))}><CircleHelp size={15} />Bloqueadas</button><button className="button button-primary" onClick={onCreate}><Plus size={16} />Nova tarefa</button></div></div>;
 }
 
 function Dashboard({ state, onNavigate, onOpen, onCreate, onRefresh }) {
@@ -191,8 +199,14 @@ function TaskDrawer({ task, onDelete, ...props }) {
   return <><TaskDrawerContent task={task} onDelete={onDelete} {...props} />{deleteState === "deleting" && <div className="drawer-delete-feedback" role="status" aria-live="polite"><div className="drawer-delete-icon"><Trash2 size={30} strokeWidth={2.5} /></div><strong>Tarefa excluída</strong><span>Removendo do Planner…</span></div>}<button className="button button-danger task-delete-floating" type="button" onClick={() => setShowDeletePrompt(true)} disabled={deleteState !== "idle"}><Trash2 size={15} />Excluir</button>{showDeletePrompt && <DeleteTaskDialog taskTitle={task.title} onCancel={() => setShowDeletePrompt(false)} onConfirm={confirmDelete} />}</>;
 }
 
+function InlineSubtasksEditor({ items, setItems }) {
+  const [draft, setDraft] = useState("");
+  const add = () => { const title = draft.trim(); if (!title) return; setItems((current) => [...current, title]); setDraft(""); };
+  return <section className="creation-subtasks"><div className="drawer-section-heading"><h3>Subtarefas</h3><span className="section-hint">opcional</span></div>{items.map((title, index) => <div className="creation-subtask-row" key={`${title}-${index}`}><span className="subtask-check" aria-hidden="true" /><span>{title}</span><button className="subtask-delete creation-subtask-delete" type="button" onClick={() => setItems((current) => current.filter((_, itemIndex) => itemIndex !== index))} aria-label={`Remover subtarefa ${title}`} title="Remover subtarefa"><Trash2 size={13} /></button></div>)}<div className="creation-subtask-input"><span className="subtask-check" aria-hidden="true" /><input value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); add(); } }} placeholder="Adicionar subtarefa" aria-label="Título da subtarefa" /><button className="subtask-inline-action" type="button" onClick={add} disabled={!draft.trim()} aria-label="Adicionar subtarefa"><Plus size={14} /></button></div></section>;
+}
+
 function NewTaskDrawer({ quotes, onClose, onSave }) {
-  const [form, setForm] = useState(() => ({ title: "", quoteId: quotes[0]?.id || "", priority: "medium", assigneeName: "Não atribuído", teamName: "Comercial", dueDate: "", description: "" })); const initialFormRef = useRef(form); const [showDiscardPrompt, setShowDiscardPrompt] = useState(false); const quote = quotes.find((item) => item.id === form.quoteId);
+  const [form, setForm] = useState(() => ({ title: "", quoteId: quotes[0]?.id || "", priority: "medium", assigneeName: "Não atribuído", teamName: "Comercial", dueDate: "", description: "" })); const [subtasks, setSubtasks] = useState([]); const initialFormRef = useRef(form); const [showDiscardPrompt, setShowDiscardPrompt] = useState(false); const quote = quotes.find((item) => item.id === form.quoteId);
   const isDirty = Object.keys(initialFormRef.current).some((key) => form[key] !== initialFormRef.current[key]);
   const requestClose = () => { if (isDirty) setShowDiscardPrompt(true); else onClose(); };
   const set = (key, value) => setForm((current) => ({ ...current, [key]: value }));
@@ -238,7 +252,7 @@ export default function App() {
   }, [applyPendingMutations, showNotice]);
   const runOptimisticCreate = useCallback((input, operation, message, parentTaskId = null) => {
     const optimisticTask = buildOptimisticTask(input, parentTaskId);
-    runOptimisticMutation((current) => ({ ...current, tasks: [optimisticTask, ...current.tasks] }), operation, store.live ? "Tarefa adicionada. Enviando ao Dataverse..." : "Tarefa adicionada no mock local.", message);
+    return runOptimisticMutation((current) => ({ ...current, tasks: [optimisticTask, ...current.tasks] }), operation, store.live ? "Tarefa adicionada. Enviando ao Dataverse..." : "Tarefa adicionada no mock local.", message);
   }, [runOptimisticMutation, store]);
   const selected = useMemo(() => {
     const taskItem = state?.tasks.find((item) => item.id === selectedId);
@@ -265,7 +279,7 @@ export default function App() {
   const deleteTask = useCallback((id) => {
     runOptimisticMutation((current) => ({ ...current, tasks: current.tasks.filter((taskItem) => taskItem.id !== id) }), () => store.deleteTask(state, id), "", "").then((success) => { if (success) setSelectedId(""); });
   }, [state, store, runOptimisticMutation]);
-  const createNewTask = useCallback((input) => { const params = new URLSearchParams(window.location.search); const data = new URLSearchParams((params.get("data") || "").replace(/^\?/, "")); const isQuoteFollowUp = (params.get("source") || data.get("source")) === "quote"; const commonTask = isQuoteFollowUp ? { ...input, sourceType: "quote" } : { ...input, quoteId: undefined, sourceType: "manual", sourceId: undefined, sourceCode: undefined, quoteCode: undefined, quoteTitle: undefined }; runOptimisticCreate(commonTask, () => store.createTask(state, commonTask), store.live ? "Tarefa sincronizada." : "Tarefa salva localmente."); setCreating(false); }, [state, store, runOptimisticCreate]);
+  const createNewTask = useCallback((input) => { const { subtasks = [], ...taskInput } = input; const params = new URLSearchParams(window.location.search); const data = new URLSearchParams((params.get("data") || "").replace(/^\?/, "")); const isQuoteFollowUp = (params.get("source") || data.get("source")) === "quote"; const commonTask = isQuoteFollowUp ? { ...taskInput, sourceType: "quote" } : { ...taskInput, quoteId: undefined, sourceType: "manual", sourceId: undefined, sourceCode: undefined, quoteCode: undefined, quoteTitle: undefined }; const operation = () => store.createTask(state, commonTask).then((nextState) => { const parent = nextState.tasks.find((taskItem) => taskItem.title === commonTask.title && !taskItem.parentTaskId); if (!parent || !subtasks.length) return nextState; return subtasks.reduce((promise, title) => promise.then((currentState) => store.createSubtask(currentState, parent.id, { title, description: "", priority: "medium", assigneeName: "Não atribuído", teamName: "Operação", dueDate: "" })), Promise.resolve(nextState)); }); return runOptimisticCreate(commonTask, operation, store.live ? "Tarefa sincronizada." : "Tarefa salva localmente.").then(() => setCreating(false)); }, [state, store, runOptimisticCreate]);
   const createSubtask = useCallback((parentId, title) => { const input = { title, description: "", priority: "medium", assigneeName: "Não atribuído", teamName: "Operação", dueDate: "" }; runOptimisticCreate(input, () => store.createSubtask(state, parentId, input), store.live ? "Subtarefa sincronizada." : "Subtarefa salva localmente.", parentId); }, [state, store, runOptimisticCreate]);
   const createQualityTask = useCallback((item) => { const input = { title: item.title, description: item.description, dueDate: item.dueDate, sourceType: "quality", sourceId: item.id, sourceCode: item.code, sourceLabel: item.type === "error" ? "Erro operacional" : "Ação operacional" }; runOptimisticCreate(input, () => store.createQualityTask(state, item), store.live ? "Tarefa de qualidade sincronizada." : "Tarefa de qualidade salva localmente."); }, [state, store, runOptimisticCreate]);
   const refreshData = useCallback((quote) => { if (!quote) return runMutation(store.save(state), store.live ? "Dados atualizados." : "Dados locais atualizados."); const input = { title: quoteTaskTitle(quote), quoteId: quote.id, quoteCode: quote.code || "", quoteTitle: quote.title || "", dueDate: quote.deadline, priority: "medium", sourceType: "quote", assigneeName: "Não atribuído", teamName: "Comercial" }; return runOptimisticCreate(input, () => store.ensureQuoteTask(state, quote), store.live ? "Tarefa principal sincronizada." : "Tarefa principal salva localmente."); }, [state, store, runMutation, runOptimisticCreate]);
