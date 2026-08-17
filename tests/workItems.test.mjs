@@ -16,5 +16,29 @@ test("ordena vencidos antes de prazo e prioridade", () => {
 test("filtra origem e calcula pendências", () => {
   const items = [{ id: "a", source: "task", title: "A", context: "", assigneeName: "Renan", statusGroup: "todo", isOverdue: true }, { id: "b", source: "quality_action", title: "B", context: "", assigneeName: "Outro", statusGroup: "waiting", isOverdue: false }];
   assert.equal(filterWorkItems(items, { source: "task" }).length, 1);
-  assert.deepEqual(workItemStats(items), { open: 1, overdue: 1, doing: 0, waiting: 1 });
+  assert.deepEqual(workItemStats(items), { open: 2, overdue: 1, doing: 0, waiting: 1 });
+});
+
+test("remove estados terminais e traduz status", () => {
+  const items = normalizeWorkItems({
+    tasks: [
+      { id: "done", title: "Concluída", status: "done", priority: "low" },
+      { id: "open", title: "Acompanhar undefined", status: "waiting", sourceType: "quote", quoteCode: "COT-9", priority: "medium" },
+    ],
+    quality: [{ id: "q1", type: "error", title: "Resolvida", status: "Resolvido" }],
+  });
+  const visible = filterWorkItems(items);
+  assert.equal(visible.length, 1);
+  assert.equal(visible[0].title, "Acompanhar COT-9");
+  assert.equal(visible[0].statusLabel, "Aguardando");
+  assert.equal(items.find((item) => item.sourceRecordId === "done").isTerminal, true);
+});
+
+test("escopa itens por responsável sem perder itens não atribuídos na equipe", () => {
+  const items = [
+    { id: "mine", assigneeEmployeeId: "e1", assigneeName: "Renan", statusGroup: "todo", isTerminal: false },
+    { id: "unassigned", assigneeEmployeeId: "", assigneeName: "Não atribuído", statusGroup: "todo", isTerminal: false },
+  ];
+  assert.equal(items.filter((item) => item.assigneeEmployeeId === "e1").length, 1);
+  assert.equal(filterWorkItems(items).length, 2);
 });

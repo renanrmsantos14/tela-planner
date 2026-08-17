@@ -8,7 +8,7 @@ import { addOptimisticAttachment, addOptimisticComment, applyOptimisticTaskPatch
 import { createDataStore } from "./dataverse";
 import SearchableSelect, { SearchableMultiSelect } from "./SearchableSelect.jsx";
 import CentralView from "./CentralView.jsx";
-import { normalizeWorkItems } from "./workItems.js";
+import { filterWorkItems, normalizeWorkItems, workItemStats } from "./workItems.js";
 
 const CENTRAL_NAV_ITEMS = [
   ["dashboard", "Minhas pendências", LayoutDashboard], ["team", "Equipe", Users], ["board", "Tarefas", ClipboardList], ["calendar", "Agenda", CalendarDays], ["settings", "Configurações", Settings],
@@ -23,6 +23,16 @@ const SOURCE_OPTIONS = TASK_SOURCES.map((item) => ({ value: item.id, label: item
 const ASSIGNEE_OPTIONS = ["Não atribuído"];
 const TEAM_OPTIONS = ["Comercial", "Operação", "Financeiro"];
 const CALENDAR_WEEKDAY_FORMATTER = new Intl.DateTimeFormat("pt-BR", { weekday: "short" });
+
+function currentUserId() {
+  return String(window.parent?.Xrm?.Utility?.getGlobalContext?.().userSettings?.userId || window.Xrm?.Utility?.getGlobalContext?.().userSettings?.userId || "").replace(/[{}]/g, "").toLowerCase();
+}
+
+function resolveCurrentEmployee(employees, live) {
+  if (!live) return null;
+  const userId = currentUserId();
+  return (employees || []).find((employee) => String(employee.userId || "").replace(/[{}]/g, "").toLowerCase() === userId) || null;
+}
 
 function Avatar({ name = "Sistema", small = false }) {
   const initials = name.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase();
@@ -48,10 +58,11 @@ function InputSelect({ value, onChange, options, placeholder = "Selecione", disa
   return <SearchableSelect value={value} onChange={onChange} disabled={disabled} placeholder={placeholder} options={options.map((option) => typeof option === "string" ? { value: option, label: option } : option)} />;
 }
 
-function AppShell({ active, onNavigate, children, onCreate, tasks, live }) {
+function AppShell({ active, onNavigate, children, onCreate, tasks, live, currentEmployee, personalStats, openTaskCount }) {
   const [expanded, setExpanded] = useState(true);
-  const stats = taskStats(tasks);
+  const stats = personalStats || taskStats(tasks);
   const todayLabel = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short" }).format(new Date()).replace(".", "");
+  const userName = currentEmployee?.name || "Usuário não vinculado";
   return <div className={`app-shell ${expanded ? "" : "sidebar-collapsed"}`}>
     <aside className="sidebar">
       <button className="sidebar-toggle" type="button" onClick={() => setExpanded((value) => !value)} aria-label={expanded ? "Recolher navegação" : "Expandir navegação"} title={expanded ? "Recolher navegação" : "Expandir navegação"}>
@@ -59,10 +70,10 @@ function AppShell({ active, onNavigate, children, onCreate, tasks, live }) {
       </button>
       <div className="brand-block"><div className="brand-mark"><ClipboardList size={20} /></div><div className="brand-copy"><strong>Central de Trabalho</strong><span>Operação Betinhos</span></div></div>
       <div className="sidebar-day-card" aria-label={`Hoje, ${stats.open} pendências e ${stats.overdue} atrasados`}><div className="sidebar-day-title"><span>Hoje</span><strong>{todayLabel}</strong></div><div className="sidebar-day-stats"><span className="sidebar-day-stat"><strong>{stats.open}</strong><small>Pendências</small></span><span className="sidebar-day-stat sidebar-day-stat-overdue"><strong>{stats.overdue}</strong><small>Atrasados</small></span></div></div>
-      <nav className="main-nav">{CENTRAL_NAV_ITEMS.map(([id, label, Icon]) => <button key={id} className={active === id ? "nav-item active" : "nav-item"} onClick={() => onNavigate(id)}><Icon size={18} /><span>{label}</span>{id === "board" && <span className="nav-count">12</span>}</button>)}</nav>
-      <div className="sidebar-bottom"><div className="mock-label"><span className="pulse-dot" />{live ? "Dataverse conectado" : "Modo local · mock"}</div><div className="user-card"><Avatar name="Renan Santos" /><div className="user-copy"><strong>Renan Santos</strong><span>Administrador</span></div><button className="user-settings-button" type="button" onClick={() => onNavigate("settings")} aria-label="Abrir configurações" title="Configurações"><Settings size={15} /></button></div></div>
+      <nav className="main-nav">{CENTRAL_NAV_ITEMS.map(([id, label, Icon]) => <button key={id} className={active === id ? "nav-item active" : "nav-item"} onClick={() => onNavigate(id)}><Icon size={18} /><span>{label}</span>{id === "board" && <span className="nav-count">{openTaskCount}</span>}</button>)}</nav>
+      <div className="sidebar-bottom"><div className="mock-label"><span className="pulse-dot" />{live ? "Dataverse conectado" : "Modo local · mock"}</div><div className="user-card"><Avatar name={userName} /><div className="user-copy"><strong>{userName}</strong><span>{currentEmployee ? "Administrativo" : "Sem vínculo Dataverse"}</span></div><button className="user-settings-button" type="button" onClick={() => onNavigate("settings")} aria-label="Abrir configurações" title="Configurações"><Settings size={15} /></button></div></div>
     </aside>
-    <main className="main-area"><header className="mobile-header"><button className="icon-button" onClick={() => setExpanded((value) => !value)} aria-label="Abrir navegação" title="Abrir navegação"><Menu size={20} /></button><strong>Central de Trabalho</strong><Avatar name="Renan Santos" small /></header>{children}</main>
+    <main className="main-area"><header className="mobile-header"><button className="icon-button" onClick={() => setExpanded((value) => !value)} aria-label="Abrir navegação" title="Abrir navegação"><Menu size={20} /></button><strong>Central de Trabalho</strong><Avatar name={userName} small /></header>{children}</main>
     <button className="mobile-fab" onClick={onCreate}><Plus size={22} /></button>
   </div>;
 }
@@ -160,7 +171,6 @@ export default function App() {
   const applyPendingMutations = useCallback((confirmed) => [...pendingMutationsRef.current.values()].reduce((current, mutation) => mutation.update(current), confirmed), []);
   useEffect(() => { store.load().then((next) => { confirmedStateRef.current = next; setState(applyPendingMutations(next)); }).catch((failure) => setError(failure.message || "Não foi possível carregar as tarefas.")); }, [store, applyPendingMutations]);
   const runMutation = useCallback((operation, message) => operation.then((next) => { confirmedStateRef.current = next; setState(applyPendingMutations(next)); showNotice(message); }).catch((failure) => showNotice(failure.message || "Não foi possível concluir a operação.", 5200)), [applyPendingMutations, showNotice]);
-  useEffect(() => { if (state) setState((current) => ({ ...current, workItems: normalizeWorkItems(current) })); }, [state?.tasks, state?.quality]);
   useEffect(() => { if (!state || launchHandledRef.current) return; launchHandledRef.current = true; const params = new URLSearchParams(window.location.search); const data = new URLSearchParams((params.get("data") || "").replace(/^\?/, "")); const taskId = params.get("taskId") || data.get("taskId") || ""; const mode = params.get("mode") || data.get("mode") || ""; if (taskId) setSelectedId(taskId); if (mode === "create") setCreating(true); }, [state]);
   const runOptimisticMutation = useCallback((update, operation, pendingMessage, successMessage) => {
     const mutationId = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`;
@@ -193,15 +203,21 @@ export default function App() {
   const reloadData = useCallback(() => { runMutation(store.reset(), "Dados recarregados."); setSelectedId(""); }, [store, runMutation]);
   const addComment = useCallback((id, text) => runOptimisticMutation((current) => addOptimisticComment(current, id, text), () => store.addComment(state, id, text), store.live ? "Comentário adicionado. Sincronizando..." : "Comentário adicionado no mock local.", store.live ? "Comentário sincronizado." : "Comentário salvo localmente."), [state, store, runOptimisticMutation]);
   const addAttachment = useCallback((id, file) => runOptimisticMutation((current) => addOptimisticAttachment(current, id, file), () => store.addAttachment(state, id, file), store.live ? "Anexo em envio..." : "Anexo adicionado no mock local.", store.live ? "Anexo salvo no OneDrive." : "Anexo salvo localmente."), [state, store, runOptimisticMutation]);
+  const workItems = useMemo(() => normalizeWorkItems(state || {}), [state?.tasks, state?.quality]);
   if (error) return <div className="app-error"><strong>Não foi possível carregar o Planner.</strong><span>{error}</span><button className="button button-secondary" onClick={() => { setError(""); store.load().then(setState).catch((failure) => setError(failure.message)); }}>Tentar novamente</button></div>;
   if (!state) return <div className="app-loading">Carregando dados operacionais…</div>;
+  const viewState = { ...state, workItems };
+  const currentEmployee = resolveCurrentEmployee(state.employees, store.live);
+  const personalItems = currentEmployee ? workItems.filter((item) => item.assigneeEmployeeId === currentEmployee.id || item.assigneeName === currentEmployee.name) : [];
+  const personalStats = workItemStats(filterWorkItems(personalItems));
+  const openTaskCount = state.tasks.filter((task) => !task.parentTaskId && !["done", "cancelled"].includes(task.status)).length;
   ASSIGNEE_OPTIONS.splice(1, ASSIGNEE_OPTIONS.length - 1, ...(state.employees || []).map((item) => item.name));
   const renderPage = () => {
-    if (active === "dashboard" || active === "team") return <CentralView state={{ ...state, workItems: state.workItems || normalizeWorkItems(state) }} mineOnly={active === "dashboard"} onOpenTask={openTask} onOpenSource={(item) => store.openSource?.(item)} onTransition={moveTask} onCreate={() => setCreating(true)} />;
+    if (active === "dashboard" || active === "team") return <CentralView state={viewState} mode={active === "dashboard" ? "mine" : "team"} currentEmployee={currentEmployee} onOpenTask={openTask} onOpenSource={(item) => store.openSource?.(item)} onTransition={moveTask} onCreate={() => setCreating(true)} />;
     if (active === "board") return <BoardView state={state} onOpen={openTask} onMove={moveTask} onCreate={() => setCreating(true)} filters={filters} setFilters={setFilters} />;
     if (active === "list") return <ListView state={state} onOpen={openTask} onCreate={() => setCreating(true)} filters={filters} setFilters={setFilters} />;
     if (active === "calendar") return <CalendarView state={state} onOpen={openTask} onCreate={() => setCreating(true)} />;
     return <SettingsView onReset={reloadData} live={store.live} />;
   };
-  return <AppShell active={active} onNavigate={setActive} onCreate={() => setCreating(true)} tasks={state.tasks} live={store.live}>{renderPage()}{notice && <div className={`toast ${notice.startsWith("Falha") ? "toast-error" : ""}`}><CheckCircle2 size={17} /><span>{notice}</span></div>}{selected && <TaskDrawer task={selected} state={state} onClose={closeTask} onSave={saveTask} onComment={addComment} onAttachment={addAttachment} onOpenQuote={(id) => { setActive("dashboard"); closeTask(); showNotice(`Cotação ${state.quotes.find((quote) => quote.id === id)?.code || ""} vinculada.`); }} onAddSubtask={() => setCreatingSubtaskFor(selected.id)} />}{creating && <NewTaskDrawer quotes={state.quotes} onClose={() => setCreating(false)} onSave={createNewTask} />}{creatingSubtaskFor && <NewTaskDrawer quotes={state.quotes} onClose={() => setCreatingSubtaskFor("")} onSave={createNewSubtask} />}</AppShell>;
+  return <AppShell active={active} onNavigate={setActive} onCreate={() => setCreating(true)} tasks={state.tasks} live={store.live} currentEmployee={currentEmployee} personalStats={personalStats} openTaskCount={openTaskCount}>{renderPage()}{notice && <div className={`toast ${notice.startsWith("Falha") ? "toast-error" : ""}`}><CheckCircle2 size={17} /><span>{notice}</span></div>}{selected && <TaskDrawer task={selected} state={state} onClose={closeTask} onSave={saveTask} onComment={addComment} onAttachment={addAttachment} onOpenQuote={(id) => { setActive("dashboard"); closeTask(); showNotice(`Cotação ${state.quotes.find((quote) => quote.id === id)?.code || ""} vinculada.`); }} onAddSubtask={() => setCreatingSubtaskFor(selected.id)} />}{creating && <NewTaskDrawer quotes={state.quotes} onClose={() => setCreating(false)} onSave={createNewTask} />}{creatingSubtaskFor && <NewTaskDrawer quotes={state.quotes} onClose={() => setCreatingSubtaskFor("")} onSave={createNewSubtask} />}</AppShell>;
 }
