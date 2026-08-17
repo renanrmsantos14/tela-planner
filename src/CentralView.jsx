@@ -47,7 +47,7 @@ export default function CentralView({ state, mode = "mine", currentEmployee, onO
 
   return <div className="page-content">
     <PageHeader mode={mode} onCreate={onCreate} />
-    <div className="metric-grid"><Metric label="Pendências abertas" value={stats.open} icon={CheckCircle2} /><Metric label="Atrasadas" value={stats.overdue} icon={Clock3} tone="danger" /><Metric label="Em andamento" value={stats.doing} icon={ArrowUpRight} tone="action" /><Metric label="Aguardando" value={stats.waiting} icon={Users} tone="warning" /></div>
+    <div className="metric-grid central-metrics"><Metric label="Pendências abertas" value={stats.open} icon={CheckCircle2} /><Metric label="Atrasadas" value={stats.overdue} icon={Clock3} tone="danger" /><Metric label="Em andamento" value={stats.doing} icon={ArrowUpRight} tone="action" /><Metric label="Aguardando" value={stats.waiting} icon={Users} tone="warning" /></div>
     <section className="panel central-panel">
       <div className="panel-heading"><div><span className="eyebrow">{mineOnly ? "MINHAS PENDÊNCIAS" : "EQUIPE ADMINISTRATIVA"}</span><h2>{mineOnly ? "Próximos movimentos" : "Pendências da equipe"}</h2></div><span className="panel-count">{items.length}</span></div>
       <div className="central-filters" role="search" aria-label="Filtros de pendências">
@@ -81,5 +81,5 @@ function PageHeader({ mode, onCreate }) {
 }
 
 function Metric({ label, value, icon: Icon, tone = "neutral" }) {
-  return <div className={`metric-card metric-${tone}`}><div className="metric-icon"><Icon size={18} /></div><div><span>{label}</span><strong>{value}</strong><small>na Central</small></div></div>;
+  return <div className={`metric-card metric-${tone}`}><div className="metric-icon"><Icon size={18} /></div><div><span>{label}</span><strong>{value}</strong></div></div>;
 }
