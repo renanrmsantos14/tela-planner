@@ -34,6 +34,71 @@ export const statusById = (id) => STATUSES.find((item) => item.id === id) || STA
 export const priorityById = (id) => PRIORITIES.find((item) => item.id === id) || PRIORITIES[1];
 export const sourceById = (id) => TASK_SOURCES.find((item) => item.id === id) || TASK_SOURCES[0];
 
+export function quoteTaskTitle(quote = {}) {
+  const reference = String(quote.code || quote.title || "").trim();
+  return `Acompanhar ${reference || "cotação"}`;
+}
+
+export function buildOptimisticTask(input, parentTaskId = null) {
+  const quoteId = input.quoteId || null;
+  return {
+    id: `optimistic-${globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`}`,
+    title: String(input.title || "Nova tarefa").trim(),
+    description: input.description || "",
+    status: input.status || "todo",
+    priority: input.priority || "medium",
+    dueDate: input.dueDate || "",
+    assigneeName: input.assigneeName || "Não atribuído",
+    teamName: input.teamName || "Sem equipe",
+    quoteId,
+    quoteCode: input.quoteCode || "",
+    quoteTitle: input.quoteTitle || "",
+    sourceType: input.sourceType || (quoteId ? "quote" : "manual"),
+    sourceId: input.sourceId || quoteId,
+    sourceCode: input.sourceCode || input.quoteCode || "",
+    sourceLabel: input.sourceLabel || (quoteId ? "Pedido de cotação" : "Tarefa manual"),
+    blockedReason: input.blockedReason || "",
+    parentTaskId,
+    comments: [],
+    attachments: [],
+    history: [],
+    syncStatus: "syncing",
+  };
+}
+
+function updateTaskInState(state, taskId, update) {
+  return {
+    ...state,
+    tasks: state.tasks.map((task) => task.id === taskId ? update(task) : task),
+  };
+}
+
+export function applyOptimisticTaskPatch(state, taskId, patch) {
+  return updateTaskInState(state, taskId, (task) => ({ ...task, ...patch, syncStatus: "syncing" }));
+}
+
+export function addOptimisticComment(state, taskId, text) {
+  const comment = {
+    id: `optimistic-comment-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    text: String(text || "").trim(),
+    createdAt: new Date().toISOString(),
+    author: "Você",
+    syncStatus: "syncing",
+  };
+  return updateTaskInState(state, taskId, (task) => ({ ...task, comments: [...(task.comments || []), comment] }));
+}
+
+export function addOptimisticAttachment(state, taskId, file) {
+  const attachment = {
+    id: `optimistic-attachment-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    name: file?.name || "Arquivo",
+    link: "",
+    createdAt: new Date().toISOString(),
+    syncStatus: "syncing",
+  };
+  return updateTaskInState(state, taskId, (task) => ({ ...task, attachments: [...(task.attachments || []), attachment] }));
+}
+
 export function isOverdue(task, today = new Date()) {
   if (!task.dueDate || task.status === "done") return false;
   return new Date(`${task.dueDate}T23:59:59`) < today;

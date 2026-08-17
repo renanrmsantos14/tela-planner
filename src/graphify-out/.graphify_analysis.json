@@ -1,0 +1,199 @@
+{
+  "communities": {
+    "0": [
+      "app_app",
+      "mockstore",
+      "mockstore_addattachment",
+      "mockstore_addcomment",
+      "mockstore_createtask",
+      "mockstore_datefromtoday",
+      "mockstore_ensurequotetask",
+      "mockstore_loadstate",
+      "mockstore_resetstate",
+      "mockstore_savestate",
+      "mockstore_seedstate",
+      "mockstore_task",
+      "mockstore_uid",
+      "mockstore_updatetask"
+    ],
+    "1": [
+      "searchableselect",
+      "searchableselect_focusadjacentcontrol",
+      "searchableselect_normalizedsearchmatches",
+      "searchableselect_normalizesearchtext",
+      "searchableselect_searchablemultiselect",
+      "searchableselect_searchableselect",
+      "searchableselect_searchabletextmatches",
+      "searchableselect_searchtokens",
+      "searchableselect_shouldautofocussearch",
+      "searchableselect_viewportmetrics",
+      "selectscroll",
+      "selectscroll_preservepanelscroll"
+    ],
+    "2": [
+      "app",
+      "app_avatar",
+      "app_board",
+      "app_filterbar",
+      "app_inputselect",
+      "app_metriccard",
+      "app_navitems",
+      "app_newtaskdrawer",
+      "app_pageheader",
+      "app_settingsview",
+      "main"
+    ],
+    "3": [
+      "app_prioritybadge",
+      "app_statusbadge",
+      "domain",
+      "domain_formatlongdate",
+      "domain_priorities",
+      "domain_prioritybyid",
+      "domain_quote_statuses",
+      "domain_statusbyid",
+      "domain_statuses"
+    ],
+    "4": [
+      "app_appshell",
+      "app_dashboard",
+      "domain_isduetoday",
+      "domain_isoverdue",
+      "domain_taskstats"
+    ],
+    "5": [
+      "app_boardview",
+      "app_listview",
+      "domain_filtertasks",
+      "domain_sorttasks"
+    ],
+    "6": [
+      "app_calendarview",
+      "app_taskcard",
+      "app_taskdrawer",
+      "domain_formatdate"
+    ]
+  },
+  "cohesion": {
+    "0": 0.37362637362637363,
+    "1": 0.3333333333333333,
+    "2": 0.18181818181818182,
+    "3": 0.2777777777777778,
+    "4": 0.5,
+    "5": 0.6666666666666666,
+    "6": 0.5
+  },
+  "gods": [
+    {
+      "id": "app_app",
+      "label": "App()",
+      "degree": 10
+    },
+    {
+      "id": "searchableselect_searchableselect",
+      "label": "SearchableSelect()",
+      "degree": 9
+    },
+    {
+      "id": "domain_formatdate",
+      "label": "formatDate()",
+      "degree": 7
+    },
+    {
+      "id": "domain_taskstats",
+      "label": "taskStats()",
+      "degree": 7
+    },
+    {
+      "id": "mockstore_savestate",
+      "label": "saveState()",
+      "degree": 7
+    },
+    {
+      "id": "domain_isoverdue",
+      "label": "isOverdue()",
+      "degree": 6
+    },
+    {
+      "id": "domain_sorttasks",
+      "label": "sortTasks()",
+      "degree": 6
+    },
+    {
+      "id": "mockstore_uid",
+      "label": "uid()",
+      "degree": 6
+    },
+    {
+      "id": "mockstore_createtask",
+      "label": "createTask()",
+      "degree": 6
+    },
+    {
+      "id": "mockstore_updatetask",
+      "label": "updateTask()",
+      "degree": 6
+    }
+  ],
+  "surprises": [
+    {
+      "source": "taskStats()",
+      "target": "task()",
+      "source_files": [
+        "domain.js",
+        "mockStore.js"
+      ],
+      "confidence": "INFERRED",
+      "relation": "indirect_call",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; bridges separate communities"
+    },
+    {
+      "source": "AppShell()",
+      "target": "taskStats()",
+      "source_files": [
+        "App.jsx",
+        "domain.js"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "connects across different repos/directories; peripheral node `AppShell()` unexpectedly reaches hub `taskStats()`"
+    },
+    {
+      "source": "TaskCard()",
+      "target": "isOverdue()",
+      "source_files": [
+        "App.jsx",
+        "domain.js"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "connects across different repos/directories; bridges separate communities"
+    },
+    {
+      "source": "Dashboard()",
+      "target": "formatDate()",
+      "source_files": [
+        "App.jsx",
+        "domain.js"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "connects across different repos/directories; bridges separate communities"
+    },
+    {
+      "source": "Dashboard()",
+      "target": "sortTasks()",
+      "source_files": [
+        "App.jsx",
+        "domain.js"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "connects across different repos/directories; bridges separate communities"
+    }
+  ],
+  "tokens": {
+    "input": 0,
+    "output": 0
+  }
+}
