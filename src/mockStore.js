@@ -1,4 +1,4 @@
-import { STATUSES } from "./domain.js";
+import { normalizeAssigneeNames, STATUSES } from "./domain.js";
 
 export const STORAGE_KEY = "betinhos-tela-planner-mock-v1";
 
@@ -30,8 +30,9 @@ export function seedState() {
 }
 
 function task(id, title, quoteId, quoteCode, quoteTitle, status, priority, assigneeName, teamName, dueDate, description, parentTaskId = null, context = {}) {
+  const assigneeNames = normalizeAssigneeNames(assigneeName);
   return {
-    id, title, parentTaskId, quoteId, quoteCode, quoteTitle, status, priority, assigneeName, teamName, dueDate,
+    id, title, parentTaskId, quoteId, quoteCode, quoteTitle, status, priority, assigneeNames, assigneeName: assigneeNames.join(", "), teamName, dueDate,
     description, labels: [quoteCode], sourceType: quoteId ? "quote" : "manual", sourceId: quoteId, sourceLabel: quoteId ? "Pedido de cotação" : "Tarefa manual", sourceCode: quoteCode, blockedReason: "", ...context, comments: [], attachments: [],
     history: [{ id: uid("history"), text: "Tarefa criada no cenário de demonstração.", createdAt: new Date().toISOString(), author: "Sistema" }],
   };
@@ -54,10 +55,11 @@ export function saveState(state) {
 
 export function createTask(state, input) {
   const sourceType = input.sourceType || (input.quoteId ? "quote" : "manual");
+  const assigneeNames = normalizeAssigneeNames(input.assigneeNames || input.assigneeName);
   const nextTask = {
     id: uid("task"), parentTaskId: input.parentTaskId || null, quoteId: input.quoteId || null,
     quoteCode: input.quoteCode || "", quoteTitle: input.quoteTitle || "Sem vínculo", title: input.title.trim(),
-    status: input.status || STATUSES[0].id, priority: input.priority || "medium", assigneeName: input.assigneeName || "Não atribuído",
+    status: input.status || STATUSES[0].id, priority: input.priority || "medium", assigneeNames, assigneeName: assigneeNames.join(", "),
     teamName: input.teamName || "Operação", dueDate: input.dueDate || "", description: input.description || "",
     labels: input.quoteCode ? [input.quoteCode] : [], sourceType, sourceId: input.sourceId || input.quoteId || null, sourceLabel: input.sourceLabel || (sourceType === "quality" ? "Ação de qualidade" : sourceType === "quote" ? "Pedido de cotação" : "Tarefa manual"), sourceCode: input.sourceCode || input.quoteCode || "", blockedReason: input.blockedReason || "", comments: [], attachments: [],
     history: [{ id: uid("history"), text: "Tarefa criada no mock.", createdAt: new Date().toISOString(), author: "Você" }],

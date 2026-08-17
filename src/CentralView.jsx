@@ -18,6 +18,12 @@ function SourceBadge({ source }) {
   return <span className={`source-badge source-${source === "task" ? "neutral" : source === "quote_followup" ? "action" : "warning"}`}>{SOURCE_LABELS[source] || "Origem"}</span>;
 }
 
+function assigneeSummary(value) {
+  const names = Array.isArray(value) ? value : String(value || "Não atribuído").split(/\s*,\s*/).filter(Boolean);
+  if (names.length <= 1) return names[0] || "Não atribuído";
+  return `${names[0]} +${names.length - 1}`;
+}
+
 function hasActiveFilters(filters) {
   return Boolean(filters.query.trim()) || filters.source !== "all" || filters.assignee !== "all" || filters.statusGroup !== "all";
 }
@@ -70,7 +76,7 @@ function CentralRow({ item, onOpen }) {
   return <article className="central-row">
     <button className="central-row-open" type="button" onClick={() => onOpen(item)} aria-label={`Abrir ${item.title}`}>
       <div className="central-row-main"><SourceBadge source={item.source} /><strong>{item.title}</strong><span>{item.context}</span></div>
-      <div className="central-row-meta"><span><Users size={13} aria-hidden="true" />{item.assigneeName}</span><span className={item.isOverdue ? "danger-text" : ""}><CalendarDays size={13} aria-hidden="true" />{formatDate(item.dueAt)}</span><span className={`central-status central-${item.statusGroup}`}>{statusLabel}</span><ArrowUpRight size={16} aria-hidden="true" /></div>
+      <div className="central-row-meta"><span title={item.assigneeName}><Users size={13} aria-hidden="true" />{assigneeSummary(item.assigneeNames || item.assigneeName)}</span><span className={item.isOverdue ? "danger-text" : ""}><CalendarDays size={13} aria-hidden="true" />{formatDate(item.dueAt)}</span><span className={`central-status central-${item.statusGroup}`}>{statusLabel}</span><ArrowUpRight size={16} aria-hidden="true" /></div>
     </button>
   </article>;
 }

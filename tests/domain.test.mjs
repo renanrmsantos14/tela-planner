@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { addOptimisticAttachment, addOptimisticComment, applyOptimisticTaskPatch, buildOptimisticTask, filterTasks, isBlocked, isOverdue, quoteTaskTitle, sortTasks, taskStats } from "../src/domain.js";
+import { addOptimisticAttachment, addOptimisticComment, applyOptimisticTaskPatch, buildOptimisticTask, filterTasks, isBlocked, isOverdue, normalizeAssigneeNames, quoteTaskTitle, sortTasks, taskStats } from "../src/domain.js";
 
 const tasks = [
   { id: "1", title: "Atrasada", quoteTitle: "Cotação A", assigneeName: "Marina", status: "todo", priority: "high", dueDate: "2026-08-01" },
@@ -22,6 +22,11 @@ test("filtra por texto, status e prioridade", () => {
 test("filtra por um ou mais responsáveis", () => {
   assert.deepEqual(filterTasks(tasks, { query: "", assignee: ["Marina", "Camila"] }).map((task) => task.id), ["1", "3"]);
   assert.equal(filterTasks(tasks, { query: "", assignee: "Rafael" }).length, 1);
+});
+
+test("normaliza múltiplos responsáveis", () => {
+  assert.deepEqual(normalizeAssigneeNames(["Não atribuído", "Marina", "Marina", "Rafael"]), ["Marina", "Rafael"]);
+  assert.deepEqual(normalizeAssigneeNames([]), ["Não atribuído"]);
 });
 
 test("filtra texto ignorando acentos e caixa", () => {

@@ -9,6 +9,7 @@ import {
   saveState as saveMockState,
   updateTask as updateMockTask,
 } from "./mockStore.js";
+import { normalizeAssigneeNames } from "./domain.js";
 
 const API_VERSION = "v9.2";
 const QUOTE_TABLE = "cr40f_pedidodecotacao";
@@ -19,6 +20,7 @@ const EMPLOYEE_TABLE = "cr40f_funcionarios";
 const EMPLOYEE_ASSIGNEE_FIELD = "cr40f_cr40f_funcionarioresponsavel";
 const EVENT_TABLE = "cr40f_plannertarefaevento";
 const RELATION_TABLE = "cr40f_plannertarearelacao";
+const ASSIGNEE_RELATION_TABLE = "cr40f_plannertarearesponsavel";
 const ANNOTATION_TABLE = "annotation";
 const ENVIRONMENT_VARIABLE_DEFINITION_TABLE = "environmentvariabledefinition";
 const ENVIRONMENT_VARIABLE_VALUE_TABLE = "environmentvariablevalue";
@@ -33,6 +35,7 @@ const ENTITY_SETS = Object.freeze({
   [EMPLOYEE_TABLE]: "cr40f_funcionarioses",
   [EVENT_TABLE]: "cr40f_plannertarefaeventos",
   [RELATION_TABLE]: "cr40f_plannertarearelacaos",
+  [ASSIGNEE_RELATION_TABLE]: "cr40f_plannertarearesponsavels",
   [ANNOTATION_TABLE]: "annotations",
   [ENVIRONMENT_VARIABLE_DEFINITION_TABLE]: "environmentvariabledefinitions",
   [ENVIRONMENT_VARIABLE_VALUE_TABLE]: "environmentvariablevalues",
@@ -198,12 +201,29 @@ async function resolveEmployeeIdByName(xrm, value) {
   return rows[0].cr40f_funcionariosid;
 }
 
+async function resolveAssigneeIds(xrm, input) {
+  if (Array.isArray(input.assigneeIds)) return [...new Set(input.assigneeIds.filter(Boolean))];
+  return (await Promise.all(normalizeAssigneeNames(input.assigneeNames || input.assigneeName).map((name) => resolveEmployeeIdByName(xrm, name)))).filter(Boolean);
+}
+
+async function replaceTaskAssignees(xrm, taskId, input) {
+  const ids = await resolveAssigneeIds(xrm, input);
+  const relations = await retrieveMany(xrm, ASSIGNEE_RELATION_TABLE, `?$select=${ASSIGNEE_RELATION_TABLE}id&$filter=_cr40f_tarefa_value eq ${cleanId(taskId)}`);
+  await Promise.all(relations.map((relation) => request(xrm, `/${entitySetName(ASSIGNEE_RELATION_TABLE)}(${cleanId(relation[`${ASSIGNEE_RELATION_TABLE}id`])})`, { method: "DELETE" })));
+  await Promise.all(ids.map(async (employeeId) => {
+    const payload = { cr40f_name: `${taskId}-${employeeId}` };
+    await bindLookup(xrm, payload, ASSIGNEE_RELATION_TABLE, "cr40f_tarefa", TASK_TABLE, taskId);
+    await bindLookup(xrm, payload, ASSIGNEE_RELATION_TABLE, "cr40f_funcionario", EMPLOYEE_TABLE, employeeId);
+    await request(xrm, `/${entitySetName(ASSIGNEE_RELATION_TABLE)}`, { method: "POST", body: JSON.stringify(payload) });
+  }));
+}
+
 function normalizeQuality(row, type) {
   const isAction = type === "action";
   return { id: row[isAction ? "cr40f_acaooperacionalid" : "cr40f_errooperacionalid"], type, code: row.cr40f_codigo || "", title: row.cr40f_titulo || "", description: row.cr40f_descricao || "", status: row[isAction ? "cr40f_status@OData.Community.Display.V1.FormattedValue" : "cr40f_status@OData.Community.Display.V1.FormattedValue"] || "", dueDate: dateOnly(row[isAction ? "cr40f_prazo" : "cr40f_prazoresolucao"]), assigneeId: row._cr40f_responsavel_value || "", assigneeName: row["_cr40f_responsavel_value@OData.Community.Display.V1.FormattedValue"] || "" };
 }
 
-function normalizeTask(row, annotations = [], events = []) {
+function normalizeTask(row, annotations = [], events = [], assignees = []) {
   const status = STATUS_BY_VALUE[row.cr40f_status] || "todo";
   const priority = PRIORITY_BY_VALUE[row.cr40f_prioridade] || "medium";
   const origin = Object.entries(ORIGIN_VALUES).find(([, value]) => value === row.cr40f_origem)?.[0] || "manual";
@@ -217,8 +237,10 @@ function normalizeTask(row, annotations = [], events = []) {
     status,
     priority,
     dueDate: dateOnly(row.cr40f_prazo),
-    assigneeName: formatLookup(row, EMPLOYEE_ASSIGNEE_FIELD),
-    assigneeId: row[`_${EMPLOYEE_ASSIGNEE_FIELD}_value`] || "",
+    assigneeNames: assignees.length ? assignees.map((item) => item.name) : normalizeAssigneeNames(formatLookup(row, EMPLOYEE_ASSIGNEE_FIELD)),
+    assigneeName: assignees.length ? assignees.map((item) => item.name).join(", ") : formatLookup(row, EMPLOYEE_ASSIGNEE_FIELD),
+    assigneeIds: assignees.length ? assignees.map((item) => item.id) : [row[`_${EMPLOYEE_ASSIGNEE_FIELD}_value`] || ""].filter(Boolean),
+    assigneeId: assignees[0]?.id || row[`_${EMPLOYEE_ASSIGNEE_FIELD}_value`] || "",
     teamName: formatLookup(row, "cr40f_equipe", "Sem equipe"),
     teamId: row._cr40f_equipe_value || "",
     quoteId: row._cr40f_pedidocotacao_value || null,
@@ -240,18 +262,25 @@ function normalizeRelation(row) {
 }
 
 async function loadLiveState(xrm) {
-  const [quotes, rows, events, relations, qualityErrors, qualityActions, employees] = await Promise.all([
+  const [quotes, rows, events, relations, assigneeRelations, qualityErrors, qualityActions, employees] = await Promise.all([
     retrieveMany(xrm, QUOTE_TABLE, "?$select=cr40f_pedidodecotacaoid,cr40f_numerodacotacao,cr40f_titulo,cr40f_clienteempresa,cr40f_statuscotacao,cr40f_prazoresponder,cr40f_valorcotado,cr40f_plannertaskid,cr40f_linktarefaplanner,cr40f_linkmensagemteams&$filter=statecode eq 0&$orderby=modifiedon desc"),
     retrieveMany(xrm, TASK_TABLE, `?$select=cr40f_plannertarefaid,cr40f_name,cr40f_titulo,cr40f_descricao,cr40f_status,cr40f_prioridade,cr40f_prazo,_${EMPLOYEE_ASSIGNEE_FIELD}_value,_cr40f_equipe_value,_cr40f_pedidocotacao_value,_cr40f_errooperacional_value,_cr40f_acaooperacional_value,cr40f_origem,cr40f_codigoorigem,cr40f_motivobloqueio&$filter=statecode eq 0&$orderby=modifiedon desc`),
     retrieveMany(xrm, EVENT_TABLE, "?$select=cr40f_plannertarefaeventoid,_cr40f_tarefa_value,cr40f_tipo,cr40f_descricao,cr40f_ocorridoem,_cr40f_autor_value&$orderby=cr40f_ocorridoem desc"),
     retrieveMany(xrm, RELATION_TABLE, "?$select=cr40f_plannertarearelacaoid,_cr40f_tarefapai_value,_cr40f_subtarefa_value&$filter=statecode eq 0"),
+    retrieveMany(xrm, ASSIGNEE_RELATION_TABLE, "?$select=cr40f_plannertarearesponsavelid,_cr40f_tarefa_value,_cr40f_funcionario_value,_cr40f_funcionario_value&$filter=statecode eq 0"),
     retrieveMany(xrm, QUALITY_ERROR_TABLE, "?$select=cr40f_errooperacionalid,cr40f_codigo,cr40f_titulo,cr40f_descricao,cr40f_status,cr40f_prazoresolucao,_cr40f_responsavel_value&$filter=statecode eq 0&$orderby=createdon desc"),
     retrieveMany(xrm, QUALITY_ACTION_TABLE, "?$select=cr40f_acaooperacionalid,cr40f_titulo,cr40f_descricao,cr40f_status,cr40f_prazo,_cr40f_responsavel_value&$filter=statecode eq 0&$orderby=createdon desc"),
     retrieveMany(xrm, EMPLOYEE_TABLE, "?$select=cr40f_funcionariosid,cr40f_nomecompleto,new_apelido,_cr40f_usuariodataverse_value&$filter=statecode eq 0 and cr40f_status eq 0 and cr40f_funcao eq 202410001&$orderby=cr40f_nomecompleto asc"),
   ]);
   const annotations = await retrieveMany(xrm, ANNOTATION_TABLE, "?$select=annotationid,_objectid_value,notetext,filename,mimetype,isdocument,createdon,_createdby_value&$filter=isdocument eq false or isdocument eq true&$top=5000");
   const relationByChild = new Map(relations.map(normalizeRelation).map((item) => [item.childTaskId, item.parentTaskId]));
-  const tasks = rows.map((row) => ({ ...normalizeTask(row, annotations.filter((item) => item._objectid_value === row.cr40f_plannertarefaid), events.filter((item) => item._cr40f_tarefa_value === row.cr40f_plannertarefaid)), parentTaskId: relationByChild.get(row.cr40f_plannertarefaid) || null }));
+  const assigneesByTask = new Map();
+  assigneeRelations.forEach((item) => {
+    const list = assigneesByTask.get(item._cr40f_tarefa_value) || [];
+    list.push({ id: item._cr40f_funcionario_value, name: item["_cr40f_funcionario_value@OData.Community.Display.V1.FormattedValue"] || "Sem nome" });
+    assigneesByTask.set(item._cr40f_tarefa_value, list);
+  });
+  const tasks = rows.map((row) => ({ ...normalizeTask(row, annotations.filter((item) => item._objectid_value === row.cr40f_plannertarefaid), events.filter((item) => item._cr40f_tarefa_value === row.cr40f_plannertarefaid), assigneesByTask.get(row.cr40f_plannertarefaid) || []), parentTaskId: relationByChild.get(row.cr40f_plannertarefaid) || null }));
   const quoteById = new Map(quotes.map((row) => [row.cr40f_pedidodecotacaoid, normalizeQuote(row)]));
   return { quotes: [...quoteById.values()], employees: employees.map((row) => ({ id: row.cr40f_funcionariosid, name: row.cr40f_nomecompleto || row.new_apelido || "Sem nome", userId: row._cr40f_usuariodataverse_value || "" })), quality: [...qualityErrors.map((row) => normalizeQuality(row, "error")), ...qualityActions.map((row) => normalizeQuality(row, "action"))], tasks: tasks.map((task) => ({ ...task, quoteCode: quoteById.get(task.quoteId)?.code || "", quoteTitle: quoteById.get(task.quoteId)?.title || "" })), lastUpdated: new Date().toISOString(), live: true };
 }
@@ -272,11 +301,13 @@ async function createLiveTask(xrm, state, input) {
   await bindLookup(xrm, payload, TASK_TABLE, "cr40f_pedidocotacao", QUOTE_TABLE, input.quoteId);
   await bindLookup(xrm, payload, TASK_TABLE, "cr40f_errooperacional", QUALITY_ERROR_TABLE, input.qualityType === "error" ? input.qualityId : "");
   await bindLookup(xrm, payload, TASK_TABLE, "cr40f_acaooperacional", QUALITY_ACTION_TABLE, input.qualityType === "action" ? input.qualityId : "");
-  await bindLookup(xrm, payload, TASK_TABLE, EMPLOYEE_ASSIGNEE_FIELD, EMPLOYEE_TABLE, input.assigneeId || await resolveEmployeeIdByName(xrm, input.assigneeName));
+  const assigneeIds = await resolveAssigneeIds(xrm, input);
+  await bindLookup(xrm, payload, TASK_TABLE, EMPLOYEE_ASSIGNEE_FIELD, EMPLOYEE_TABLE, assigneeIds[0]);
   await bindLookup(xrm, payload, TASK_TABLE, "cr40f_equipe", "team", teamId);
   const created = await request(xrm, `/${entitySetName(TASK_TABLE)}`, { method: "POST", body: JSON.stringify(payload) });
   const id = created?.cr40f_plannertarefaid;
   if (!id) throw new Error("Dataverse criou tarefa sem retornar o ID.");
+  await replaceTaskAssignees(xrm, id, { ...input, assigneeIds });
   await markQuoteOrigin(xrm, input.quoteId, id);
   await createEvent(xrm, id, 100000000, "Tarefa criada.");
   return loadLiveState(xrm);
@@ -290,10 +321,12 @@ async function updateLiveTask(xrm, state, id, patch) {
   if (patch.priority !== undefined) payload.cr40f_prioridade = PRIORITY_VALUES[patch.priority];
   if (patch.dueDate !== undefined) payload.cr40f_prazo = patch.dueDate ? `${patch.dueDate}T12:00:00Z` : null;
   if (patch.blockedReason !== undefined) payload.cr40f_motivobloqueio = patch.blockedReason;
-  if (patch.assigneeId !== undefined || patch.assigneeName !== undefined) {
+  if (patch.assigneeId !== undefined || patch.assigneeName !== undefined || patch.assigneeNames !== undefined) {
     const navigation = await resolveLookupNavigation(xrm, TASK_TABLE, EMPLOYEE_ASSIGNEE_FIELD, EMPLOYEE_TABLE);
-    const employeeId = patch.assigneeId || await resolveEmployeeIdByName(xrm, patch.assigneeName);
+    const assigneeIds = await resolveAssigneeIds(xrm, patch);
+    const employeeId = assigneeIds[0] || "";
     payload[`${navigation}@odata.bind`] = employeeId ? `/${entitySetName(EMPLOYEE_TABLE)}(${cleanId(employeeId)})` : null;
+    await replaceTaskAssignees(xrm, id, { ...patch, assigneeIds });
   }
   if (patch.teamId !== undefined || patch.teamName !== undefined) await bindLookup(xrm, payload, TASK_TABLE, "cr40f_equipe", "team", patch.teamId || await resolveIdByName(xrm, "team", "name", patch.teamName));
   await request(xrm, `/${entitySetName(TASK_TABLE)}(${cleanId(id)})`, { method: "PATCH", body: JSON.stringify(payload) });
@@ -361,6 +394,8 @@ async function ensureLiveQuoteTask(xrm, state, quote) {
 
 async function deleteLiveTask(xrm, state, id) {
   const task = state.tasks.find((item) => item.id === id);
+  const assigneeRelations = await retrieveMany(xrm, ASSIGNEE_RELATION_TABLE, `?$select=${ASSIGNEE_RELATION_TABLE}id&$filter=_cr40f_tarefa_value eq ${cleanId(id)}`);
+  await Promise.all(assigneeRelations.map((relation) => request(xrm, `/${entitySetName(ASSIGNEE_RELATION_TABLE)}(${cleanId(relation[`${ASSIGNEE_RELATION_TABLE}id`])})`, { method: "DELETE" })));
   if (task?.parentTaskId) {
     const relations = await retrieveMany(xrm, RELATION_TABLE, `?$select=${RELATION_TABLE}id&$filter=_cr40f_subtarefa_value eq ${cleanId(id)}`);
     await Promise.all(relations.map((relation) => request(xrm, `/${entitySetName(RELATION_TABLE)}(${cleanId(relation[`${RELATION_TABLE}id`])})`, { method: "DELETE" })));

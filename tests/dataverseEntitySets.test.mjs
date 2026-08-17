@@ -8,6 +8,7 @@ test('resolve os Entity Sets reais validados no metadata Dataverse', () => {
   assert.equal(entitySetName('cr40f_plannertarefa'), 'cr40f_plannertarefas');
   assert.equal(entitySetName('cr40f_plannertarefaevento'), 'cr40f_plannertarefaeventos');
   assert.equal(entitySetName('cr40f_plannertarearelacao'), 'cr40f_plannertarearelacaos');
+  assert.equal(entitySetName('cr40f_plannertarearesponsavel'), 'cr40f_plannertarearesponsavels');
   assert.equal(entitySetName('annotation'), 'annotations');
   assert.equal(entitySetName('systemuser'), 'systemusers');
   assert.equal(entitySetName('team'), 'teams');

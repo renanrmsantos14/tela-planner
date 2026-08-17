@@ -4,7 +4,7 @@ import {
   Clock3, FileText, LayoutDashboard, ListFilter, Menu, MessageCircle, Paperclip, PanelLeftClose,
   PanelLeftOpen, Plus, RotateCcw, Search, Settings, ShieldAlert, Sparkles, Target, UserRound, Users, X,
 } from "lucide-react";
-import { addOptimisticAttachment, addOptimisticComment, applyOptimisticTaskPatch, buildOptimisticTask, filterTasks, formatDate, formatLongDate, isBlocked, isDueToday, isOverdue, normalizeText, PRIORITIES, quoteTaskTitle, sortTasks, sourceById, STATUSES, statusById, TASK_SOURCES, taskStats } from "./domain";
+import { addOptimisticAttachment, addOptimisticComment, applyOptimisticTaskPatch, buildOptimisticTask, filterTasks, formatDate, formatLongDate, isBlocked, isDueToday, isOverdue, normalizeAssigneeNames, normalizeText, PRIORITIES, quoteTaskTitle, sortTasks, sourceById, STATUSES, statusById, TASK_SOURCES, taskStats } from "./domain";
 import { createDataStore } from "./dataverse";
 import SearchableSelect, { SearchableMultiSelect } from "./SearchableSelect.jsx";
 import CentralView from "./CentralView.jsx";
@@ -40,8 +40,24 @@ function resolveCurrentEmployee(employees, live) {
 }
 
 function Avatar({ name = "Sistema", small = false }) {
-  const initials = name.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase();
-  return <span className={`avatar ${small ? "avatar-small" : ""}`} title={name}>{initials}</span>;
+  const names = String(name || "Sistema").split(/\s*,\s*/).filter(Boolean);
+  const initials = (value) => value.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase();
+  if (names.length === 1) return <span className={`avatar ${small ? "avatar-small" : ""}`} title={name}>{initials(names[0])}</span>;
+  const visibleNames = names.slice(0, 2);
+  return <span className={`avatar avatar-stack ${small ? "avatar-stack-small" : ""}`} title={name} aria-label={`${names.length} responsáveis`}>
+    {visibleNames.map((item, index) => <span className="avatar avatar-stack-item" key={`${item}-${index}`}>{initials(item)}</span>)}
+    {names.length > visibleNames.length && <span className="avatar avatar-stack-count">+{names.length - visibleNames.length}</span>}
+  </span>;
+}
+
+function shortAssigneeName(name = "Não atribuído") {
+  const value = String(name || "Não atribuído").trim();
+  if (!value || /^não atribuído$/i.test(value)) return value || "Não atribuído";
+  const names = value.split(/\s*,\s*/).filter(Boolean);
+  const first = names[0];
+  const parts = first.split(/\s+/);
+  const shortName = parts.length > 1 ? `${parts[0]} ${parts[parts.length - 1].charAt(0).toUpperCase()}.` : first;
+  return names.length > 1 ? `${shortName} +${names.length - 1}` : shortName;
 }
 
 function StatusBadge({ status }) {
@@ -59,8 +75,11 @@ function SourceBadge({ sourceType }) {
   return <span className={`source-badge source-${item.tone}`}>{item.label}</span>;
 }
 
-function InputSelect({ value, onChange, options, placeholder = "Selecione", disabled = false }) {
-  return <SearchableSelect value={value} onChange={onChange} disabled={disabled} placeholder={placeholder} options={options.map((option) => typeof option === "string" ? { value: option, label: option } : option)} />;
+function InputSelect({ value, onChange, options, placeholder = "Selecione", disabled = false, multiple = Array.isArray(value) }) {
+  const normalizedOptions = options.map((option) => typeof option === "string" ? { value: option, label: option } : option);
+  return multiple
+    ? <SearchableMultiSelect value={value} onChange={onChange} disabled={disabled} placeholder={placeholder} options={normalizedOptions} />
+    : <SearchableSelect value={value} onChange={onChange} disabled={disabled} placeholder={placeholder} options={normalizedOptions} />;
 }
 
 function UnsavedChangesDialog({ onContinue, onDiscard }) {
@@ -111,7 +130,7 @@ function TaskCard({ task: taskItem, onOpen, compact = false, onDrop }) {
     {(taskItem.sourceType || taskItem.quoteId) && <div className="task-source-row"><SourceBadge sourceType={taskItem.sourceType || (taskItem.quoteId ? "quote" : "manual")} /><span>{taskItem.sourceCode || taskItem.quoteCode}</span><em>{taskItem.sourceLabel || taskItem.quoteTitle}</em></div>}
     {isBlocked(taskItem) && <div className="blocked-note"><CircleHelp size={13} />Bloqueada: {taskItem.blockedReason}</div>}
     {!compact && <p className="task-description">{taskItem.description}</p>}
-    <div className="task-card-footer"><div className="task-owner"><Avatar name={taskItem.assigneeName} small /><span>{taskItem.assigneeName}</span></div>{taskItem.syncStatus === "syncing" ? <span className="sync-chip" role="status">Enviando...</span> : <span className={overdue ? "date-chip overdue" : "date-chip"}><Clock3 size={13} />{formatDate(taskItem.dueDate)}</span>}</div>
+    <div className="task-card-footer"><div className="task-owner" title={taskItem.assigneeName}><Avatar name={taskItem.assigneeName} small /><span>{shortAssigneeName(taskItem.assigneeName)}</span></div>{taskItem.syncStatus === "syncing" ? <span className="sync-chip" role="status">Enviando...</span> : <span className={overdue ? "date-chip overdue" : "date-chip"}><Clock3 size={13} />{formatDate(taskItem.dueDate)}</span>}</div>
     {taskItem.parentTaskId && <div className="subtask-mark"><CheckCircle2 size={13} />Subtarefa</div>}
   </article>;
 }
@@ -142,7 +161,7 @@ function BoardView({ state, onOpen, onMove, onCreate, filters, setFilters }) {
 
 function ListView({ state, onOpen, onCreate, filters, setFilters }) {
   const filtered = useMemo(() => sortTasks(filterTasks(state.tasks, filters)), [state.tasks, filters]);
-  return <div className="page-content"><PageHeader eyebrow="Gestão de tarefas" title="Lista operacional" description="Encontre rapidamente o próximo responsável por cada tarefa." /><FilterBar filters={filters} setFilters={setFilters} onCreate={onCreate} employees={state.employees} /><section className="panel task-table"><div className="table-header"><span>Tarefa</span><span>Vínculo</span><span>Responsável</span><span>Prazo</span><span>Status</span></div>{filtered.map((taskItem) => <button className="table-row" key={taskItem.id} onClick={() => onOpen(taskItem.id)}><div className="table-task"><span className={`table-status status-${taskItem.status}`} /><strong>{taskItem.title}</strong></div><span>{taskItem.quoteCode || "—"}</span><div className="table-person"><Avatar name={taskItem.assigneeName} small />{taskItem.assigneeName}</div><span className={isOverdue(taskItem) ? "danger-text" : ""}>{formatDate(taskItem.dueDate)}</span><StatusBadge status={taskItem.status} /></button>)}</section></div>;
+  return <div className="page-content"><PageHeader eyebrow="Gestão de tarefas" title="Lista operacional" description="Encontre rapidamente o próximo responsável por cada tarefa." /><FilterBar filters={filters} setFilters={setFilters} onCreate={onCreate} employees={state.employees} /><section className="panel task-table"><div className="table-header"><span>Tarefa</span><span>Vínculo</span><span>Responsável</span><span>Prazo</span><span>Status</span></div>{filtered.map((taskItem) => <button className="table-row" key={taskItem.id} onClick={() => onOpen(taskItem.id)}><div className="table-task"><span className={`table-status status-${taskItem.status}`} /><strong>{taskItem.title}</strong></div><span>{taskItem.quoteCode || "—"}</span><div className="table-person" title={taskItem.assigneeName}><Avatar name={taskItem.assigneeName} small />{shortAssigneeName(taskItem.assigneeName)}</div><span className={isOverdue(taskItem) ? "danger-text" : ""}>{formatDate(taskItem.dueDate)}</span><div className="table-row-tags"><PriorityBadge priority={taskItem.priority} /><StatusBadge status={taskItem.status} /></div></button>)}</section></div>;
 }
 
 function CalendarView({ state, onOpen, onCreate, filters, setFilters }) {
@@ -172,20 +191,20 @@ function TaskDrawerContent({ task: taskItem, state, onClose, onSave, onDelete, o
   const [form, setForm] = useState(taskItem ? { ...taskItem } : null); const [comment, setComment] = useState(""); const [newSubtaskTitle, setNewSubtaskTitle] = useState(""); const [isAddingSubtask, setIsAddingSubtask] = useState(false); const [subtaskToDelete, setSubtaskToDelete] = useState(null); const [saveState, setSaveState] = useState("idle"); const [showDiscardPrompt, setShowDiscardPrompt] = useState(false);
   const saveCloseTimerRef = useRef(null);
   useEffect(() => {
-    setForm(taskItem ? { ...taskItem } : null); setComment(""); setNewSubtaskTitle(""); setIsAddingSubtask(false); setSubtaskToDelete(null); setSaveState("idle"); setShowDiscardPrompt(false);
+    setForm(taskItem ? { ...taskItem, assigneeName: normalizeAssigneeNames(taskItem.assigneeNames || taskItem.assigneeName) } : null); setComment(""); setNewSubtaskTitle(""); setIsAddingSubtask(false); setSubtaskToDelete(null); setSaveState("idle"); setShowDiscardPrompt(false);
     if (saveCloseTimerRef.current) window.clearTimeout(saveCloseTimerRef.current);
     return () => { if (saveCloseTimerRef.current) window.clearTimeout(saveCloseTimerRef.current); };
   }, [taskItem?.id]);
   if (!taskItem || !form) return null;
   const subtasks = state.tasks.filter((item) => item.parentTaskId === taskItem.id); const history = [...(taskItem.history || [])].reverse();
   const set = (key, value) => setForm((current) => ({ ...current, [key]: value }));
-  const isDirty = ["title", "status", "priority", "assigneeName", "teamName", "dueDate", "description"].some((key) => (form[key] || "") !== (taskItem[key] || ""));
+  const isDirty = ["title", "status", "priority", "assigneeName", "teamName", "dueDate", "description"].some((key) => JSON.stringify(form[key] || "") !== JSON.stringify(taskItem[key] || ""));
   const requestClose = () => { if (saveState !== "idle") return; if (isDirty) setShowDiscardPrompt(true); else onClose(); };
   const submitSubtask = () => { const title = newSubtaskTitle.trim(); if (!title) return; onAddSubtask(taskItem.id, title); setNewSubtaskTitle(""); setIsAddingSubtask(false); };
   const handleSave = () => {
     if (saveState !== "idle") return;
     setSaveState("saving");
-    onSave(taskItem.id, { title: form.title, status: form.status, priority: form.priority, assigneeName: form.assigneeName, teamName: form.teamName, dueDate: form.dueDate, description: form.description });
+    onSave(taskItem.id, { title: form.title, status: form.status, priority: form.priority, assigneeNames: form.assigneeName, teamName: form.teamName, dueDate: form.dueDate, description: form.description });
     setSaveState("success");
     saveCloseTimerRef.current = window.setTimeout(onClose, 620);
   };
@@ -205,8 +224,8 @@ function InlineSubtasksEditor({ items, setItems }) {
   return <section className="creation-subtasks"><div className="drawer-section-heading"><h3>Subtarefas</h3><span className="section-hint">opcional</span></div>{items.map((title, index) => <div className="creation-subtask-row" key={`${title}-${index}`}><span className="subtask-check" aria-hidden="true" /><span>{title}</span><button className="subtask-delete creation-subtask-delete" type="button" onClick={() => setItems((current) => current.filter((_, itemIndex) => itemIndex !== index))} aria-label={`Remover subtarefa ${title}`} title="Remover subtarefa"><Trash2 size={13} /></button></div>)}<div className="creation-subtask-input"><span className="subtask-check" aria-hidden="true" /><input value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); add(); } }} placeholder="Adicionar subtarefa" aria-label="Título da subtarefa" /><button className="subtask-inline-action" type="button" onClick={add} disabled={!draft.trim()} aria-label="Adicionar subtarefa"><Plus size={14} /></button></div></section>;
 }
 
-function NewTaskDrawer({ quotes, onClose, onSave }) {
-  const [form, setForm] = useState(() => ({ title: "", quoteId: quotes[0]?.id || "", priority: "medium", assigneeName: "Não atribuído", teamName: "Comercial", dueDate: "", description: "" })); const [subtasks, setSubtasks] = useState([]); const initialFormRef = useRef(form); const [showDiscardPrompt, setShowDiscardPrompt] = useState(false); const quote = quotes.find((item) => item.id === form.quoteId);
+function NewTaskDrawer({ quotes, employees = [], onClose, onSave }) {
+  const [form, setForm] = useState(() => ({ title: "", quoteId: quotes[0]?.id || "", priority: "medium", assigneeName: ["Não atribuído"], teamName: "Comercial", dueDate: "", description: "" })); const [subtasks, setSubtasks] = useState([]); const initialFormRef = useRef(form); const [showDiscardPrompt, setShowDiscardPrompt] = useState(false); const quote = quotes.find((item) => item.id === form.quoteId);
   const isDirty = Object.keys(initialFormRef.current).some((key) => form[key] !== initialFormRef.current[key]);
   const requestClose = () => { if (isDirty) setShowDiscardPrompt(true); else onClose(); };
   const set = (key, value) => setForm((current) => ({ ...current, [key]: value }));

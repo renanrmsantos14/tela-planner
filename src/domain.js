@@ -41,6 +41,7 @@ export function quoteTaskTitle(quote = {}) {
 
 export function buildOptimisticTask(input, parentTaskId = null) {
   const quoteId = input.quoteId || null;
+  const assigneeNames = normalizeAssigneeNames(input.assigneeNames || input.assigneeName);
   return {
     id: `optimistic-${globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`}`,
     title: String(input.title || "Nova tarefa").trim(),
@@ -48,7 +49,8 @@ export function buildOptimisticTask(input, parentTaskId = null) {
     status: input.status || "todo",
     priority: input.priority || "medium",
     dueDate: input.dueDate || "",
-    assigneeName: input.assigneeName || "Não atribuído",
+    assigneeNames,
+    assigneeName: assigneeNames.join(", "),
     teamName: input.teamName || "Sem equipe",
     quoteId,
     quoteCode: input.quoteCode || "",
@@ -64,6 +66,13 @@ export function buildOptimisticTask(input, parentTaskId = null) {
     history: [],
     syncStatus: "syncing",
   };
+}
+
+export function normalizeAssigneeNames(value) {
+  const values = Array.isArray(value) ? value : value ? [value] : [];
+  const unique = [...new Set(values.map((item) => String(item || "").trim()).filter(Boolean))];
+  if (unique.length > 1) return unique.filter((item) => item !== "Não atribuído");
+  return unique.length ? unique : ["Não atribuído"];
 }
 
 function updateTaskInState(state, taskId, update) {
@@ -141,7 +150,8 @@ export function filterTasks(tasks, filters) {
     const matchesStatus = !statusValues.length || statusValues.includes(task.status);
     const matchesPriority = !priorityValues.length || priorityValues.includes(task.priority);
     const matchesSource = !sourceValues.length || sourceValues.includes(task.sourceType);
-    const matchesAssignee = !assigneeValues.length || assigneeValues.includes(task.assigneeName);
+    const taskAssignees = task.assigneeNames || normalizeAssigneeNames(task.assigneeName);
+    const matchesAssignee = !assigneeValues.length || assigneeValues.some((value) => taskAssignees.includes(value));
     const matchesTeam = !filters.team || task.teamName === filters.team;
     const matchesBlocked = !filters.blocked || isBlocked(task);
     return matchesQuery && matchesStatus && matchesPriority && matchesSource && matchesAssignee && matchesTeam && matchesBlocked;

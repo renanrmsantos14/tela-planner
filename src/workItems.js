@@ -1,4 +1,4 @@
-import { isOverdue } from "./domain.js";
+import { isOverdue, normalizeAssigneeNames } from "./domain.js";
 
 const TERMINAL_QUALITY_STATUSES = new Set(["resolvido", "encerrado", "cancelado", "concluida", "cancelada"]);
 const TASK_STATUS_LABELS = Object.freeze({ todo: "A fazer", doing: "Em andamento", waiting: "Aguardando", done: "Concluído", cancelled: "Cancelado" });
@@ -71,7 +71,8 @@ export function normalizeWorkItems(state = {}) {
     sourceCode: cleanText(task.sourceCode || task.quoteCode),
     title: taskTitle(task),
     context: taskContext(task),
-    assigneeEmployeeId: task.assigneeId || "",
+    assigneeEmployeeId: task.assigneeId || task.assigneeIds?.[0] || "",
+    assigneeNames: task.assigneeNames || normalizeAssigneeNames(task.assigneeName),
     assigneeName: cleanText(task.assigneeName, "Não atribuído"),
     dueAt: cleanText(task.dueDate),
     priorityRank: ({ urgent: 0, high: 1, medium: 2, low: 3 }[task.priority] ?? 2),
