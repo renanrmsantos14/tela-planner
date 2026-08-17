@@ -85,6 +85,17 @@ function cleanId(value) {
   return String(value || "").replace(/[{}]/g, "");
 }
 
+export function microsoftProfilePhotoUrl(email) {
+  const normalizedEmail = String(email || "").trim();
+  return normalizedEmail
+    ? `https://outlook.office.com/owa/service.svc/s/GetPersonaPhoto?email=${encodeURIComponent(normalizedEmail)}&UA=0&size=HR96x96`
+    : "";
+}
+
+function userAvatarUrl(user) {
+  return user?.entityimage_url || user?.photourl || microsoftProfilePhotoUrl(user?.internalemailaddress);
+}
+
 function apiUrl(xrm) {
   const base = xrm.Utility.getGlobalContext().getClientUrl()?.replace(/\/$/, "");
   if (!base) throw new Error("Não foi possível obter a URL do ambiente Dataverse.");
@@ -280,7 +291,7 @@ async function loadLiveState(xrm) {
   if (linkedUserIds.length) {
     try {
       const userFilter = linkedUserIds.map((id) => `systemuserid eq ${id}`).join(" or ");
-      systemUsers = await retrieveMany(xrm, "systemuser", `?$select=systemuserid,entityimage_url,photourl&$filter=${userFilter}`);
+      systemUsers = await retrieveMany(xrm, "systemuser", `?$select=systemuserid,entityimage_url,photourl,internalemailaddress&$filter=${userFilter}`);
     } catch (error) {
       console.warn("Não foi possível carregar as fotos dos usuários Dataverse.", error);
     }
@@ -293,12 +304,12 @@ async function loadLiveState(xrm) {
     const list = assigneesByTask.get(item._cr40f_tarefa_value) || [];
     const employee = employeeById.get(cleanId(item._cr40f_funcionario_value).toLowerCase());
     const user = userById.get(cleanId(employee?.userId).toLowerCase());
-    list.push({ id: item._cr40f_funcionario_value, name: item["_cr40f_funcionario_value@OData.Community.Display.V1.FormattedValue"] || employee?.name || "Sem nome", userId: employee?.userId || "", avatarUrl: user?.entityimage_url || user?.photourl || "" });
+    list.push({ id: item._cr40f_funcionario_value, name: item["_cr40f_funcionario_value@OData.Community.Display.V1.FormattedValue"] || employee?.name || "Sem nome", userId: employee?.userId || "", avatarUrl: userAvatarUrl(user) });
     assigneesByTask.set(item._cr40f_tarefa_value, list);
   });
   const tasks = rows.map((row) => ({ ...normalizeTask(row, annotations.filter((item) => item._objectid_value === row.cr40f_plannertarefaid), events.filter((item) => item._cr40f_tarefa_value === row.cr40f_plannertarefaid), assigneesByTask.get(row.cr40f_plannertarefaid) || []), parentTaskId: relationByChild.get(row.cr40f_plannertarefaid) || null }));
   const quoteById = new Map(quotes.map((row) => [row.cr40f_pedidodecotacaoid, normalizeQuote(row)]));
-  const employeesWithProfiles = employeeRecords.map((employee) => ({ ...employee, avatarUrl: userById.get(cleanId(employee.userId).toLowerCase())?.entityimage_url || userById.get(cleanId(employee.userId).toLowerCase())?.photourl || "" }));
+  const employeesWithProfiles = employeeRecords.map((employee) => ({ ...employee, avatarUrl: userAvatarUrl(userById.get(cleanId(employee.userId).toLowerCase())) }));
   const quality = [...qualityErrors.map((row) => normalizeQuality(row, "error")), ...qualityActions.map((row) => normalizeQuality(row, "action"))].map((item) => ({ ...item, assigneeProfiles: employeeById.has(cleanId(item.assigneeId).toLowerCase()) ? [employeesWithProfiles.find((employee) => cleanId(employee.id).toLowerCase() === cleanId(item.assigneeId).toLowerCase())] : [] }));
   const tasksWithProfiles = tasks.map((task) => ({ ...task, assigneeProfiles: task.assigneeProfiles?.length ? task.assigneeProfiles : task.assigneeIds.map((id) => employeesWithProfiles.find((employee) => cleanId(employee.id).toLowerCase() === cleanId(id).toLowerCase())).filter(Boolean), quoteCode: quoteById.get(task.quoteId)?.code || "", quoteTitle: quoteById.get(task.quoteId)?.title || "" }));
   return { quotes: [...quoteById.values()], employees: employeesWithProfiles, quality, tasks: tasksWithProfiles, lastUpdated: new Date().toISOString(), live: true };
