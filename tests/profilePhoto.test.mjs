@@ -1,14 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { dataverseImageUrl } from "../src/dataverse.js";
+import { graphPhotoEndpoint } from "../src/graphPhotos.js";
 
-test("monta a URL autenticada da foto armazenada no Dataverse", () => {
+test("monta o endpoint Graph com o Object ID do usuário vinculado", () => {
   assert.equal(
-    dataverseImageUrl("https://org.crm.dynamics.com", "ABC-123", "cr40f_funcionarioses", "cr40f_foto"),
-    "https://org.crm.dynamics.com/api/data/v9.2/cr40f_funcionarioses(ABC-123)/cr40f_foto/$value",
+    graphPhotoEndpoint("{91bad67f-021a-4b01-9f04-e9be7cf577f1}"),
+    "https://graph.microsoft.com/v1.0/users/91bad67f-021a-4b01-9f04-e9be7cf577f1/photo/$value",
   );
 });
 
-test("não cria URL de imagem sem registro com foto", () => {
-  assert.equal(dataverseImageUrl("https://org.crm.dynamics.com", "", "cr40f_funcionarioses", "cr40f_foto"), "");
+test("não cria endpoint sem usuário vinculado", () => {
+  assert.equal(graphPhotoEndpoint(""), "");
 });

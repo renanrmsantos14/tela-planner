@@ -10,6 +10,7 @@ import {
   updateTask as updateMockTask,
 } from "./mockStore.js";
 import { normalizeAssigneeNames } from "./domain.js";
+import { loadGraphPhotoUrls } from "./graphPhotos.js";
 
 const API_VERSION = "v9.2";
 const QUOTE_TABLE = "cr40f_pedidodecotacao";
@@ -25,6 +26,8 @@ const ANNOTATION_TABLE = "annotation";
 const ENVIRONMENT_VARIABLE_DEFINITION_TABLE = "environmentvariabledefinition";
 const ENVIRONMENT_VARIABLE_VALUE_TABLE = "environmentvariablevalue";
 const FLOW_URL_SCHEMA = "new_FlowURLFlowSalvarArquivosOnedrive";
+const GRAPH_CLIENT_ID_SCHEMA = "new_PlannerGraphClientId";
+const GRAPH_TENANT_ID_SCHEMA = "new_PlannerGraphTenantId";
 const DEV_DATAVERSE_URL = "https://org23b93544.crm2.dynamics.com";
 const MAX_ATTACHMENT_SIZE = 5 * 1024 * 1024;
 const ENTITY_SETS = Object.freeze({
@@ -83,16 +86,6 @@ function getXrm() {
 
 function cleanId(value) {
   return String(value || "").replace(/[{}]/g, "");
-}
-
-export function dataverseImageUrl(baseUrl, recordId, entitySet, attribute) {
-  const id = cleanId(recordId);
-  return id ? `${String(baseUrl || "").replace(/\/$/, "")}/api/data/${API_VERSION}/${entitySet}(${id})/${attribute}/$value` : "";
-}
-
-function userAvatarUrl(xrm, user, employee) {
-  if (user?.entityimage_url || user?.photourl) return user.entityimage_url || user.photourl;
-  return employee?.photoId ? dataverseImageUrl(xrm.Utility.getGlobalContext().getClientUrl(), employee.id, entitySetName(EMPLOYEE_TABLE), "cr40f_foto") : "";
 }
 
 function apiUrl(xrm) {
@@ -154,6 +147,16 @@ async function resolveOneDriveFlowUrl(xrm) {
   if (!definition) return String(import.meta.env?.VITE_FLOW_SALVAR_ANEXOS_ONEDRIVE_URL || "").trim();
   const values = await retrieveMany(xrm, ENVIRONMENT_VARIABLE_VALUE_TABLE, `?$select=value&$filter=_environmentvariabledefinitionid_value eq ${definition.environmentvariabledefinitionid}&$top=1`);
   return String(values[0]?.value || definition.defaultvalue || import.meta.env?.VITE_FLOW_SALVAR_ANEXOS_ONEDRIVE_URL || "").trim();
+}
+
+async function resolveEnvironmentValues(xrm, schemaNames) {
+  const filter = schemaNames.map((name) => `schemaname eq '${name}'`).join(" or ");
+  const definitions = await retrieveMany(xrm, ENVIRONMENT_VARIABLE_DEFINITION_TABLE, `?$select=environmentvariabledefinitionid,schemaname,defaultvalue&$filter=${filter}`);
+  const values = await Promise.all(definitions.map(async (definition) => {
+    const current = await retrieveMany(xrm, ENVIRONMENT_VARIABLE_VALUE_TABLE, `?$select=value&$filter=_environmentvariabledefinitionid_value eq ${definition.environmentvariabledefinitionid}&$top=1`);
+    return [definition.schemaname, String(current[0]?.value || definition.defaultvalue || "").trim()];
+  }));
+  return Object.fromEntries(values);
 }
 
 async function resolveLookupNavigation(xrm, entity, attribute, target) {
@@ -281,21 +284,30 @@ async function loadLiveState(xrm) {
     retrieveMany(xrm, ASSIGNEE_RELATION_TABLE, "?$select=cr40f_plannertarearesponsavelid,_cr40f_tarefa_value,_cr40f_funcionario_value,_cr40f_funcionario_value&$filter=statecode eq 0"),
     retrieveMany(xrm, QUALITY_ERROR_TABLE, "?$select=cr40f_errooperacionalid,cr40f_codigo,cr40f_titulo,cr40f_descricao,cr40f_status,cr40f_prazoresolucao,_cr40f_responsavel_value&$filter=statecode eq 0&$orderby=createdon desc"),
     retrieveMany(xrm, QUALITY_ACTION_TABLE, "?$select=cr40f_acaooperacionalid,cr40f_titulo,cr40f_descricao,cr40f_status,cr40f_prazo,_cr40f_responsavel_value&$filter=statecode eq 0&$orderby=createdon desc"),
-    retrieveMany(xrm, EMPLOYEE_TABLE, "?$select=cr40f_funcionariosid,cr40f_nomecompleto,new_apelido,cr40f_fotoid,_cr40f_usuariodataverse_value&$filter=statecode eq 0 and cr40f_status eq 0 and cr40f_funcao eq 202410001&$orderby=cr40f_nomecompleto asc"),
+    retrieveMany(xrm, EMPLOYEE_TABLE, "?$select=cr40f_funcionariosid,cr40f_nomecompleto,new_apelido,_cr40f_usuariodataverse_value&$filter=statecode eq 0 and cr40f_status eq 0 and cr40f_funcao eq 202410001&$orderby=cr40f_nomecompleto asc"),
   ]);
   const annotations = await retrieveMany(xrm, ANNOTATION_TABLE, "?$select=annotationid,_objectid_value,notetext,filename,mimetype,isdocument,createdon,_createdby_value&$filter=isdocument eq false or isdocument eq true&$top=5000");
-  const employeeRecords = employees.map((row) => ({ id: row.cr40f_funcionariosid, name: row.cr40f_nomecompleto || row.new_apelido || "Sem nome", userId: row._cr40f_usuariodataverse_value || "", photoId: row.cr40f_fotoid || "" }));
-  const linkedUserIds = [...new Set(employeeRecords.map((employee) => cleanId(employee.userId)).filter(Boolean))];
+  const employeeRecords = employees.map((row) => ({ id: row.cr40f_funcionariosid, name: row.cr40f_nomecompleto || row.new_apelido || "Sem nome", userId: row._cr40f_usuariodataverse_value || "" }));
+  const currentUserId = cleanId(xrm.Utility.getGlobalContext().userSettings.userId);
+  const linkedUserIds = [...new Set([...employeeRecords.map((employee) => cleanId(employee.userId)), currentUserId].filter(Boolean))];
   let systemUsers = [];
   if (linkedUserIds.length) {
     try {
       const userFilter = linkedUserIds.map((id) => `systemuserid eq ${id}`).join(" or ");
-      systemUsers = await retrieveMany(xrm, "systemuser", `?$select=systemuserid,entityimage_url,photourl&$filter=${userFilter}`);
+      systemUsers = await retrieveMany(xrm, "systemuser", `?$select=systemuserid,azureactivedirectoryobjectid,internalemailaddress&$filter=${userFilter}`);
     } catch (error) {
       console.warn("Não foi possível carregar as fotos dos usuários Dataverse.", error);
     }
   }
   const userById = new Map(systemUsers.map((user) => [cleanId(user.systemuserid).toLowerCase(), user]));
+  let graphPhotos = new Map();
+  try {
+    const config = await resolveEnvironmentValues(xrm, [GRAPH_CLIENT_ID_SCHEMA, GRAPH_TENANT_ID_SCHEMA]);
+    const currentUser = userById.get(currentUserId.toLowerCase());
+    graphPhotos = await loadGraphPhotoUrls({ clientId: config[GRAPH_CLIENT_ID_SCHEMA], tenantId: config[GRAPH_TENANT_ID_SCHEMA], redirectUri: `${xrm.Utility.getGlobalContext().getClientUrl().replace(/\/$/, "")}/WebResources/new_PlannerAuth.html`, loginHint: currentUser?.internalemailaddress || "" }, systemUsers.map((user) => ({ azureObjectId: cleanId(user.azureactivedirectoryobjectid) })).filter((user) => user.azureObjectId));
+  } catch (error) {
+    console.warn("Não foi possível carregar fotos do Microsoft 365.", error);
+  }
   const employeeById = new Map(employeeRecords.map((employee) => [cleanId(employee.id).toLowerCase(), employee]));
   const relationByChild = new Map(relations.map(normalizeRelation).map((item) => [item.childTaskId, item.parentTaskId]));
   const assigneesByTask = new Map();
@@ -303,12 +315,15 @@ async function loadLiveState(xrm) {
     const list = assigneesByTask.get(item._cr40f_tarefa_value) || [];
     const employee = employeeById.get(cleanId(item._cr40f_funcionario_value).toLowerCase());
     const user = userById.get(cleanId(employee?.userId).toLowerCase());
-    list.push({ id: item._cr40f_funcionario_value, name: item["_cr40f_funcionario_value@OData.Community.Display.V1.FormattedValue"] || employee?.name || "Sem nome", userId: employee?.userId || "", avatarUrl: userAvatarUrl(xrm, user, employee) });
+    list.push({ id: item._cr40f_funcionario_value, name: item["_cr40f_funcionario_value@OData.Community.Display.V1.FormattedValue"] || employee?.name || "Sem nome", userId: employee?.userId || "", avatarUrl: graphPhotos.get(cleanId(user?.azureactivedirectoryobjectid)) || "" });
     assigneesByTask.set(item._cr40f_tarefa_value, list);
   });
   const tasks = rows.map((row) => ({ ...normalizeTask(row, annotations.filter((item) => item._objectid_value === row.cr40f_plannertarefaid), events.filter((item) => item._cr40f_tarefa_value === row.cr40f_plannertarefaid), assigneesByTask.get(row.cr40f_plannertarefaid) || []), parentTaskId: relationByChild.get(row.cr40f_plannertarefaid) || null }));
   const quoteById = new Map(quotes.map((row) => [row.cr40f_pedidodecotacaoid, normalizeQuote(row)]));
-  const employeesWithProfiles = employeeRecords.map((employee) => ({ ...employee, avatarUrl: userAvatarUrl(xrm, userById.get(cleanId(employee.userId).toLowerCase()), employee) }));
+  const employeesWithProfiles = employeeRecords.map((employee) => {
+    const user = userById.get(cleanId(employee.userId).toLowerCase());
+    return { ...employee, avatarUrl: graphPhotos.get(cleanId(user?.azureactivedirectoryobjectid)) || "" };
+  });
   const quality = [...qualityErrors.map((row) => normalizeQuality(row, "error")), ...qualityActions.map((row) => normalizeQuality(row, "action"))].map((item) => ({ ...item, assigneeProfiles: employeeById.has(cleanId(item.assigneeId).toLowerCase()) ? [employeesWithProfiles.find((employee) => cleanId(employee.id).toLowerCase() === cleanId(item.assigneeId).toLowerCase())] : [] }));
   const tasksWithProfiles = tasks.map((task) => ({ ...task, assigneeProfiles: task.assigneeProfiles?.length ? task.assigneeProfiles : task.assigneeIds.map((id) => employeesWithProfiles.find((employee) => cleanId(employee.id).toLowerCase() === cleanId(id).toLowerCase())).filter(Boolean), quoteCode: quoteById.get(task.quoteId)?.code || "", quoteTitle: quoteById.get(task.quoteId)?.title || "" }));
   return { quotes: [...quoteById.values()], employees: employeesWithProfiles, quality, tasks: tasksWithProfiles, lastUpdated: new Date().toISOString(), live: true };
