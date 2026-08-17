@@ -19,6 +19,11 @@ test("filtra por texto, status e prioridade", () => {
   assert.equal(filterTasks(tasks, { query: "", status: ["doing", "waiting"], priority: ["medium", "high"] }).length, 1);
 });
 
+test("filtra por um ou mais responsáveis", () => {
+  assert.deepEqual(filterTasks(tasks, { query: "", assignee: ["Marina", "Camila"] }).map((task) => task.id), ["1", "3"]);
+  assert.equal(filterTasks(tasks, { query: "", assignee: "Rafael" }).length, 1);
+});
+
 test("filtra texto ignorando acentos e caixa", () => {
   const accented = [{ ...tasks[0], title: "Revisão de cotação" }];
   assert.equal(filterTasks(accented, { query: "REVISAO COTACAO", status: "", priority: "" }).length, 1);

@@ -129,6 +129,7 @@ export function filterTasks(tasks, filters) {
   const queryTokens = query.split(/\s+/).filter(Boolean);
   const selectedValues = (value) => Array.isArray(value) ? value : value ? [value] : [];
   const statusValues = selectedValues(filters.status);
+  const assigneeValues = selectedValues(filters.assignee);
   const priorityValues = selectedValues(filters.priority);
   const sourceValues = selectedValues(filters.source);
   return tasks.filter((task) => {
@@ -140,7 +141,7 @@ export function filterTasks(tasks, filters) {
     const matchesStatus = !statusValues.length || statusValues.includes(task.status);
     const matchesPriority = !priorityValues.length || priorityValues.includes(task.priority);
     const matchesSource = !sourceValues.length || sourceValues.includes(task.sourceType);
-    const matchesAssignee = !filters.assignee || task.assigneeName === filters.assignee;
+    const matchesAssignee = !assigneeValues.length || assigneeValues.includes(task.assigneeName);
     const matchesTeam = !filters.team || task.teamName === filters.team;
     const matchesBlocked = !filters.blocked || isBlocked(task);
     return matchesQuery && matchesStatus && matchesPriority && matchesSource && matchesAssignee && matchesTeam && matchesBlocked;
