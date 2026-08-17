@@ -27,20 +27,18 @@ function AvatarStack({ profiles, small }) {
   </span>;
 }
 
-export default function AssigneeDisplay({ value, small = false, compact = false }) {
+export default function AssigneeDisplay({ value, small = false }) {
   const profiles = normalizeProfiles(value);
   const names = profiles.map((profile) => profile.name);
   const label = names.join(", ") || "Não atribuído";
   const isUnassigned = profiles.length === 1 && /^não atribuído$/i.test(profiles[0].name);
-  const countLabel = isUnassigned ? "Não atribuído" : `${profiles.length} responsáveis`;
 
   if (names.length === 1) return <span className="assignee-display" title={label} aria-label={`Responsável: ${label}`}>
     <Avatar profile={profiles[0]} small={small} />
     <span className="assignee-name">{label}</span>
   </span>;
 
-  return <span className={`assignee-display assignee-display-multiple ${compact ? "assignee-display-compact" : ""}`} title={label} aria-label={`Responsáveis: ${label}`}>
+  return <span className="assignee-display assignee-display-multiple" title={label} aria-label={`Responsáveis: ${label}`}>
     <AvatarStack profiles={profiles} small={small} />
-    <span className="assignee-copy"><strong>{countLabel}</strong></span>
   </span>;
 }

@@ -131,7 +131,7 @@ function TaskCard({ task: taskItem, onOpen, compact = false, onDrop }) {
     {(taskItem.sourceType || taskItem.quoteId) && <div className="task-source-row"><SourceBadge sourceType={taskItem.sourceType || (taskItem.quoteId ? "quote" : "manual")} /><span>{taskItem.sourceCode || taskItem.quoteCode}</span><em>{taskItem.sourceLabel || taskItem.quoteTitle}</em></div>}
     {isBlocked(taskItem) && <div className="blocked-note"><CircleHelp size={13} />Bloqueada: {taskItem.blockedReason}</div>}
     {!compact && <p className="task-description">{taskItem.description}</p>}
-    <div className="task-card-footer"><AssigneeDisplay value={taskItem.assigneeProfiles?.length ? taskItem.assigneeProfiles : taskItem.assigneeNames || taskItem.assigneeName} small compact />{taskItem.syncStatus === "syncing" ? <span className="sync-chip" role="status">Enviando...</span> : <span className={overdue ? "date-chip overdue" : "date-chip"}><Clock3 size={13} />{formatDate(taskItem.dueDate)}</span>}</div>
+    <div className="task-card-footer"><AssigneeDisplay value={taskItem.assigneeProfiles?.length ? taskItem.assigneeProfiles : taskItem.assigneeNames || taskItem.assigneeName} small />{taskItem.syncStatus === "syncing" ? <span className="sync-chip" role="status">Enviando...</span> : <span className={overdue ? "date-chip overdue" : "date-chip"}><Clock3 size={13} />{formatDate(taskItem.dueDate)}</span>}</div>
     {taskItem.parentTaskId && <div className="subtask-mark"><CheckCircle2 size={13} />Subtarefa</div>}
   </article>;
 }

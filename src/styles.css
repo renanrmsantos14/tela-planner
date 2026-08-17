@@ -127,14 +127,8 @@ button { cursor: pointer; }
 .assignee-display { min-width: 0; display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: 10px; line-height: 1.2; }
 .assignee-display > .avatar { flex: 0 0 auto; }
 .assignee-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.assignee-copy { min-width: 0; display: grid; gap: 2px; }
-.assignee-copy strong, .assignee-copy small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.assignee-copy strong { color: var(--ink); font-size: 10px; font-weight: 800; }
-.assignee-copy small { color: var(--muted); font-size: 9px; }
-.assignee-display-multiple .assignee-copy strong { color: var(--muted); font-weight: 700; }
-.assignee-display-compact .assignee-copy strong { color: var(--muted); font-weight: 700; }
+.assignee-display-multiple { gap: 0; }
 .task-card-footer > .assignee-display { flex: 1 1 auto; }
-.task-card-footer > .assignee-display .assignee-copy { max-width: 125px; }
 .central-row-meta > .assignee-display { min-width: 0; width: 160px; }
 
 .task-source-row { display: flex; align-items: center; gap: 6px; min-width: 0; margin-top: 7px; color: var(--muted); font-size: 9px; }
