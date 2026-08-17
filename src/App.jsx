@@ -4,11 +4,12 @@ import {
   Clock3, FileText, LayoutDashboard, ListFilter, Menu, MessageCircle, Paperclip, PanelLeftClose,
   PanelLeftOpen, Plus, RotateCcw, Search, Settings, ShieldAlert, Sparkles, Target, UserRound, Users, X,
 } from "lucide-react";
-import { addOptimisticAttachment, addOptimisticComment, applyOptimisticTaskPatch, buildOptimisticTask, filterTasks, formatDate, formatLongDate, isBlocked, isDueToday, isOverdue, PRIORITIES, quoteTaskTitle, sortTasks, sourceById, STATUSES, statusById, TASK_SOURCES, taskStats } from "./domain";
+import { addOptimisticAttachment, addOptimisticComment, applyOptimisticTaskPatch, buildOptimisticTask, filterTasks, formatDate, formatLongDate, isBlocked, isDueToday, isOverdue, normalizeText, PRIORITIES, quoteTaskTitle, sortTasks, sourceById, STATUSES, statusById, TASK_SOURCES, taskStats } from "./domain";
 import { createDataStore } from "./dataverse";
 import SearchableSelect, { SearchableMultiSelect } from "./SearchableSelect.jsx";
 import CentralView from "./CentralView.jsx";
 import { filterWorkItems, normalizeWorkItems, workItemStats } from "./workItems.js";
+import { APP_VERSION } from "./version.js";
 
 const CENTRAL_NAV_ITEMS = [
   ["dashboard", "Minhas pendências", LayoutDashboard], ["team", "Equipe", Users], ["board", "Tarefas", ClipboardList], ["calendar", "Agenda", CalendarDays], ["settings", "Configurações", Settings],
@@ -75,7 +76,7 @@ function AppShell({ active, onNavigate, children, onCreate, tasks, live, current
       <div className="brand-block"><div className="brand-mark"><ClipboardList size={20} /></div><div className="brand-copy"><strong>Central de Trabalho</strong><span>Operação Betinhos</span></div></div>
       <div className="sidebar-day-card" aria-label={`Hoje, ${stats.open} pendências e ${stats.overdue} atrasados`}><div className="sidebar-day-title"><span>Hoje</span><strong>{todayLabel}</strong></div><div className="sidebar-day-stats"><span className="sidebar-day-stat"><strong>{stats.open}</strong><small>Pendências</small></span><span className="sidebar-day-stat sidebar-day-stat-overdue"><strong>{stats.overdue}</strong><small>Atrasados</small></span></div></div>
       <nav className="main-nav">{CENTRAL_NAV_ITEMS.map(([id, label, Icon]) => <button key={id} className={active === id ? "nav-item active" : "nav-item"} onClick={() => onNavigate(id)}><Icon size={18} /><span>{label}</span>{id === "board" && <span className="nav-count">{openTaskCount}</span>}</button>)}</nav>
-      <div className="sidebar-bottom"><div className="mock-label"><span className="pulse-dot" />{live ? "Dataverse conectado" : "Modo local · mock"}</div><div className="user-card"><Avatar name={userName} /><div className="user-copy"><strong>{userName}</strong><span>{currentEmployee ? "Administrativo" : "Sem vínculo Dataverse"}</span></div><button className="user-settings-button" type="button" onClick={() => onNavigate("settings")} aria-label="Abrir configurações" title="Configurações"><Settings size={15} /></button></div></div>
+      <div className="sidebar-bottom"><div className="mock-label"><span className="pulse-dot" />{live ? "Dataverse conectado" : "Modo local · mock"}</div><div className="sidebar-version" aria-label={`Versão do aplicativo ${APP_VERSION}`}>Versão {APP_VERSION}</div><div className="user-card"><Avatar name={userName} /><div className="user-copy"><strong>{userName}</strong><span>{currentEmployee ? "Administrativo" : "Sem vínculo Dataverse"}</span></div><button className="user-settings-button" type="button" onClick={() => onNavigate("settings")} aria-label="Abrir configurações" title="Configurações"><Settings size={15} /></button></div></div>
     </aside>
     <main className="main-area"><header className="mobile-header"><button className="icon-button" onClick={() => setExpanded((value) => !value)} aria-label="Abrir navegação" title="Abrir navegação"><Menu size={20} /></button><strong>Central de Trabalho</strong><Avatar name={userName} small /></header>{children}</main>
     <button className="mobile-fab" onClick={onCreate}><Plus size={22} /></button>
@@ -132,19 +133,27 @@ function ListView({ state, onOpen, onCreate, filters, setFilters }) {
   return <div className="page-content"><PageHeader eyebrow="Gestão de tarefas" title="Lista operacional" description="Encontre rapidamente o próximo responsável por cada tarefa." /><FilterBar filters={filters} setFilters={setFilters} onCreate={onCreate} employees={state.employees} /><section className="panel task-table"><div className="table-header"><span>Tarefa</span><span>Vínculo</span><span>Responsável</span><span>Prazo</span><span>Status</span></div>{filtered.map((taskItem) => <button className="table-row" key={taskItem.id} onClick={() => onOpen(taskItem.id)}><div className="table-task"><span className={`table-status status-${taskItem.status}`} /><strong>{taskItem.title}</strong></div><span>{taskItem.quoteCode || "—"}</span><div className="table-person"><Avatar name={taskItem.assigneeName} small />{taskItem.assigneeName}</div><span className={isOverdue(taskItem) ? "danger-text" : ""}>{formatDate(taskItem.dueDate)}</span><StatusBadge status={taskItem.status} /></button>)}</section></div>;
 }
 
-function CalendarView({ state, onOpen, onCreate }) {
+function CalendarView({ state, onOpen, onCreate, filters, setFilters }) {
   const days = Array.from({ length: 7 }, (_, index) => { const date = new Date(); date.setDate(date.getDate() + index - 1); return date; });
-  const openTasks = useMemo(() => sortTasks(state.tasks.filter((taskItem) => taskItem.status !== "done")), [state.tasks]);
-  return <div className="page-content"><PageHeader eyebrow="Prazos e ritmo" title="Agenda operacional" description="Uma visão simples dos compromissos que movem a operação." action={<button className="button button-primary" onClick={onCreate}><Plus size={16} />Novo prazo</button>} /><div className="calendar-strip">{days.map((date) => <div className={`calendar-day ${date.toDateString() === new Date().toDateString() ? "today" : ""}`} key={date.toISOString()}><span>{CALENDAR_WEEKDAY_FORMATTER.format(date).replace(".", "")}</span><strong>{date.getDate()}</strong></div>)}</div><section className="panel agenda-panel"><div className="panel-heading"><div><span className="eyebrow">Esta semana</span><h2>O que acontece em seguida</h2></div></div>{openTasks.map((taskItem) => <button className="agenda-row" key={taskItem.id} onClick={() => onOpen(taskItem.id)}><span className="agenda-time">{formatDate(taskItem.dueDate)}</span><div className="agenda-line" /><div className="agenda-info"><strong>{taskItem.title}</strong><span>{taskItem.quoteCode} · {taskItem.assigneeName}</span></div><StatusBadge status={taskItem.status} /><ChevronRight size={16} /></button>)}</section></div>;
+  const openTasks = useMemo(() => sortTasks(filterTasks(state.tasks.filter((taskItem) => taskItem.status !== "done"), filters)), [state.tasks, filters]);
+  return <div className="page-content"><PageHeader eyebrow="Prazos e ritmo" title="Agenda operacional" description="Uma visão simples dos compromissos que movem a operação." /><FilterBar filters={filters} setFilters={setFilters} onCreate={onCreate} employees={state.employees} /><div className="calendar-strip">{days.map((date) => <div className={`calendar-day ${date.toDateString() === new Date().toDateString() ? "today" : ""}`} key={date.toISOString()}><span>{CALENDAR_WEEKDAY_FORMATTER.format(date).replace(".", "")}</span><strong>{date.getDate()}</strong></div>)}</div><section className="panel agenda-panel"><div className="panel-heading"><div><span className="eyebrow">Esta semana</span><h2>O que acontece em seguida</h2></div></div>{openTasks.map((taskItem) => <button className="agenda-row" key={taskItem.id} onClick={() => onOpen(taskItem.id)}><span className="agenda-time">{formatDate(taskItem.dueDate)}</span><div className="agenda-line" /><div className="agenda-info"><strong>{taskItem.title}</strong><span>{taskItem.quoteCode} · {taskItem.assigneeName}</span></div><StatusBadge status={taskItem.status} /><ChevronRight size={16} /></button>)}</section></div>;
 }
 
-function QualityView({ state, onCreate }) {
+function QualityView({ state, onCreate, onCreateTask, filters, setFilters }) {
   const quality = state.quality || [];
-  return <div className="page-content"><PageHeader eyebrow="Origem operacional" title="Qualidade" description="Transforme erros e ações operacionais em tarefas do Planner interno." /><section className="panel task-table"><div className="table-header"><span>Registro</span><span>Tipo</span><span>Prazo</span><span>Status</span><span>Ação</span></div>{quality.map((item) => { const linked = state.tasks.some((taskItem) => taskItem.sourceId === item.id); return <div className="table-row" key={`${item.type}-${item.id}`}><div className="table-task"><span className="table-status status-waiting" /><strong>{item.code ? `${item.code} · ` : ""}{item.title}</strong></div><span>{item.type === "error" ? "Erro operacional" : "Ação operacional"}</span><span>{formatDate(item.dueDate)}</span><span>{item.status || "Ativo"}</span>{linked ? <span className="linked-label">Tarefa criada</span> : <button className="small-button" onClick={() => onCreate(item)}>Criar tarefa</button>}</div>; })}{!quality.length && <div className="empty-inline">Nenhum erro ou ação operacional disponível.</div>}</section></div>;
+  const filteredQuality = useMemo(() => quality.filter((item) => {
+    const linkedTask = state.tasks.find((taskItem) => taskItem.sourceId === item.id);
+    const query = normalizeText(filters.query);
+    const matchesQuery = !query || [item.code, item.title, item.type, item.status, linkedTask?.title].some((value) => normalizeText(value).includes(query));
+    const taskFilters = { ...filters, query: "" };
+    const matchesTaskFilters = linkedTask ? filterTasks([linkedTask], taskFilters).length > 0 : !filters.assignee?.length && !filters.priority?.length && !filters.source?.length && !filters.blocked;
+    return matchesQuery && matchesTaskFilters;
+  }), [quality, state.tasks, filters]);
+  return <div className="page-content"><PageHeader eyebrow="Origem operacional" title="Qualidade" description="Transforme erros e ações operacionais em tarefas do Planner interno." /><FilterBar filters={filters} setFilters={setFilters} onCreate={onCreateTask} employees={state.employees} /><section className="panel task-table"><div className="table-header"><span>Registro</span><span>Tipo</span><span>Prazo</span><span>Status</span><span>Ação</span></div>{filteredQuality.map((item) => { const linked = state.tasks.some((taskItem) => taskItem.sourceId === item.id); return <div className="table-row" key={`${item.type}-${item.id}`}><div className="table-task"><span className="table-status status-waiting" /><strong>{item.code ? `${item.code} · ` : ""}{item.title}</strong></div><span>{item.type === "error" ? "Erro operacional" : "Ação operacional"}</span><span>{formatDate(item.dueDate)}</span><span>{item.status || "Ativo"}</span>{linked ? <span className="linked-label">Tarefa criada</span> : <button className="small-button" onClick={() => onCreate(item)}>Criar tarefa</button>}</div>; })}{!filteredQuality.length && <div className="empty-inline">Nenhum erro ou ação operacional disponível.</div>}</section></div>;
 }
 
 function SettingsView({ onReset, live }) {
-  return <div className="page-content"><PageHeader eyebrow={live ? "Ambiente Dataverse" : "Execução local"} title="Configurações" description={live ? "Dados operacionais carregados diretamente do ambiente autenticado." : "Dados de demonstração mantidos somente neste navegador."} /><section className="settings-grid"><div className="panel setting-card"><div className="setting-icon"><RotateCcw size={19} /></div><div><h2>{live ? "Recarregar dados" : "Restaurar cenário inicial"}</h2><p>{live ? "Busca novamente cotações, tarefas e registros de qualidade no Dataverse." : "Repõe as cotações e tarefas sintéticas do mock local."}</p><button className="button button-secondary" onClick={onReset}><RotateCcw size={15} />{live ? "Recarregar" : "Restaurar mock"}</button></div></div><div className="panel setting-card"><div className="setting-icon setting-icon-blue"><Target size={19} /></div><div><h2>Fonte de dados</h2><p>{live ? "O Planner usa dados do ambiente autenticado." : "O Planner usa mock data local e não cria registros no Dataverse."}</p><span className="status-note"><span className="pulse-dot" />{live ? "Dataverse conectado" : "Modo local · mock"}</span></div></div></section></div>;
+  return <div className="page-content"><PageHeader eyebrow={live ? "Ambiente Dataverse" : "Execução local"} title="Configurações" description={live ? "Dados operacionais carregados diretamente do ambiente autenticado." : "Dados de demonstração mantidos somente neste navegador."} /><section className="settings-grid"><div className="panel setting-card"><div className="setting-icon"><RotateCcw size={19} /></div><div><h2>{live ? "Recarregar dados" : "Restaurar cenário inicial"}</h2><p>{live ? "Busca novamente cotações, tarefas e registros de qualidade no Dataverse." : "Repõe as cotações e tarefas sintéticas do mock local."}</p><button className="button button-secondary" onClick={onReset}><RotateCcw size={15} />{live ? "Recarregar" : "Restaurar mock"}</button></div></div><div className="panel setting-card"><div className="setting-icon setting-icon-blue"><Target size={19} /></div><div><h2>Fonte de dados</h2><p>{live ? "O Planner usa dados do ambiente autenticado." : "O Planner usa mock data local e não cria registros no Dataverse."}</p><span className="status-note"><span className="pulse-dot" />{live ? "Dataverse conectado" : "Modo local · mock"}</span></div></div><div className="panel setting-card"><div className="setting-icon setting-icon-blue"><span className="version-glyph">v</span></div><div><h2>Versão do aplicativo</h2><p>Identificação da versão publicada neste ambiente.</p><span className="version-value">{APP_VERSION}</span></div></div></section></div>;
 }
 
 function TaskDrawer({ task: taskItem, state, onClose, onSave, onComment, onAttachment, onOpenQuote, onAddSubtask }) {
@@ -154,17 +163,16 @@ function TaskDrawer({ task: taskItem, state, onClose, onSave, onComment, onAttac
     setForm(taskItem ? { ...taskItem } : null); setComment(""); setSaveState("idle"); setShowDiscardPrompt(false);
     if (saveCloseTimerRef.current) window.clearTimeout(saveCloseTimerRef.current);
     return () => { if (saveCloseTimerRef.current) window.clearTimeout(saveCloseTimerRef.current); };
-  }, [taskItem]);
+  }, [taskItem?.id]);
   if (!taskItem || !form) return null;
   const subtasks = state.tasks.filter((item) => item.parentTaskId === taskItem.id); const history = [...(taskItem.history || [])].reverse();
   const set = (key, value) => setForm((current) => ({ ...current, [key]: value }));
   const isDirty = ["title", "status", "priority", "assigneeName", "teamName", "dueDate", "description"].some((key) => (form[key] || "") !== (taskItem[key] || ""));
   const requestClose = () => { if (saveState !== "idle") return; if (isDirty) setShowDiscardPrompt(true); else onClose(); };
-  const handleSave = async () => {
+  const handleSave = () => {
     if (saveState !== "idle") return;
     setSaveState("saving");
-    const result = await onSave(taskItem.id, { title: form.title, status: form.status, priority: form.priority, assigneeName: form.assigneeName, teamName: form.teamName, dueDate: form.dueDate, description: form.description });
-    if (result === false) { setSaveState("idle"); return; }
+    onSave(taskItem.id, { title: form.title, status: form.status, priority: form.priority, assigneeName: form.assigneeName, teamName: form.teamName, dueDate: form.dueDate, description: form.description });
     setSaveState("success");
     saveCloseTimerRef.current = window.setTimeout(onClose, 620);
   };
@@ -189,10 +197,11 @@ function CentralTaskDrawer({ onClose, onSave, employees = [], initialContext = n
 }
 
 export default function App() {
-  const [active, setActive] = useState("dashboard"); const [state, setState] = useState(null); const [store] = useState(() => createDataStore()); const [selectedId, setSelectedId] = useState(""); const [creating, setCreating] = useState(false); const [creatingSubtaskFor, setCreatingSubtaskFor] = useState(""); const [filters, setFilters] = useState({ query: "", status: [], priority: [], source: [] }); const [notice, setNotice] = useState(""); const [error, setError] = useState("");
-  const confirmedStateRef = useRef(null); const pendingMutationsRef = useRef(new Map()); const noticeTimerRef = useRef(null); const launchHandledRef = useRef(false);
+  const [active, setActive] = useState("dashboard"); const [state, setState] = useState(null); const [store] = useState(() => createDataStore()); const [selectedId, setSelectedId] = useState(""); const [creating, setCreating] = useState(false); const [creatingSubtaskFor, setCreatingSubtaskFor] = useState(""); const [filters, setFilters] = useState({ query: "", assignee: [], priority: [], source: [] }); const [notice, setNotice] = useState(""); const [error, setError] = useState(""); const [failedTaskDraft, setFailedTaskDraft] = useState(null);
+  const confirmedStateRef = useRef(null); const pendingMutationsRef = useRef(new Map()); const noticeTimerRef = useRef(null); const launchHandledRef = useRef(false); const failedTaskReopenTimerRef = useRef(null);
   const dismissNotice = useCallback(() => { if (noticeTimerRef.current) window.clearTimeout(noticeTimerRef.current); noticeTimerRef.current = null; setNotice(""); }, []);
   const showNotice = useCallback((message, duration = 2600) => { setNotice(message); if (noticeTimerRef.current) window.clearTimeout(noticeTimerRef.current); noticeTimerRef.current = window.setTimeout(() => { noticeTimerRef.current = null; setNotice(""); }, duration); }, []);
+  useEffect(() => () => { if (failedTaskReopenTimerRef.current) window.clearTimeout(failedTaskReopenTimerRef.current); }, []);
   const applyPendingMutations = useCallback((confirmed) => [...pendingMutationsRef.current.values()].reduce((current, mutation) => mutation.update(current), confirmed), []);
   useEffect(() => { store.load().then((next) => { confirmedStateRef.current = next; setState(applyPendingMutations(next)); }).catch((failure) => setError(failure.message || "Não foi possível carregar as tarefas.")); }, [store, applyPendingMutations]);
   const runMutation = useCallback((operation, message) => operation.then((next) => { confirmedStateRef.current = next; setState(applyPendingMutations(next)); showNotice(message); }).catch((failure) => showNotice(failure.message || "Não foi possível concluir a operação.", 5200)), [applyPendingMutations, showNotice]);
@@ -219,10 +228,28 @@ export default function App() {
     const optimisticTask = buildOptimisticTask(input, parentTaskId);
     runOptimisticMutation((current) => ({ ...current, tasks: [optimisticTask, ...current.tasks] }), operation, store.live ? "Tarefa adicionada. Enviando ao Dataverse..." : "Tarefa adicionada no mock local.", message);
   }, [runOptimisticMutation, store]);
-  const selected = useMemo(() => state?.tasks.find((taskItem) => taskItem.id === selectedId), [state, selectedId]);
+  const selected = useMemo(() => {
+    const taskItem = state?.tasks.find((item) => item.id === selectedId);
+    if (!taskItem) return undefined;
+    return failedTaskDraft?.id === taskItem.id ? { ...taskItem, ...failedTaskDraft.patch, syncStatus: undefined } : taskItem;
+  }, [state, selectedId, failedTaskDraft]);
   const openTask = useCallback((id) => setSelectedId(id), []); const closeTask = useCallback(() => setSelectedId(""), []);
   const moveTask = useCallback((id, status) => runOptimisticMutation((current) => applyOptimisticTaskPatch(current, id, { status }), () => store.updateTask(state, id, { status }), store.live ? "Status alterado. Sincronizando..." : "Status alterado no mock local.", store.live ? "Status sincronizado." : "Status atualizado localmente."), [state, store, runOptimisticMutation]);
-  const saveTask = useCallback((id, patch) => runOptimisticMutation((current) => applyOptimisticTaskPatch(current, id, patch), () => store.updateTask(state, id, patch), store.live ? "Alterações salvas na tela. Sincronizando..." : "Alterações salvas no mock local.", store.live ? "Tarefa sincronizada." : "Tarefa atualizada localmente."), [state, store, runOptimisticMutation]);
+  const saveTask = useCallback((id, patch) => {
+    const shouldReopen = id === selectedId;
+    return runOptimisticMutation((current) => applyOptimisticTaskPatch(current, id, patch), () => store.updateTask(state, id, patch), store.live ? "Alterações salvas na tela. Sincronizando..." : "Alterações salvas no mock local.", store.live ? "Tarefa sincronizada." : "Tarefa atualizada localmente.").then((success) => {
+      if (success) {
+        if (shouldReopen) setFailedTaskDraft((current) => current?.id === id ? null : current);
+        return true;
+      }
+      if (!shouldReopen) return false;
+      setFailedTaskDraft({ id, patch });
+      if (failedTaskReopenTimerRef.current) window.clearTimeout(failedTaskReopenTimerRef.current);
+      setSelectedId("");
+      failedTaskReopenTimerRef.current = window.setTimeout(() => { failedTaskReopenTimerRef.current = null; setSelectedId(id); }, 120);
+      return false;
+    });
+  }, [state, store, runOptimisticMutation, selectedId]);
   const createNewTask = useCallback((input) => { const params = new URLSearchParams(window.location.search); const data = new URLSearchParams((params.get("data") || "").replace(/^\?/, "")); const isQuoteFollowUp = (params.get("source") || data.get("source")) === "quote"; const commonTask = isQuoteFollowUp ? { ...input, sourceType: "quote" } : { ...input, quoteId: undefined, sourceType: "manual", sourceId: undefined, sourceCode: undefined, quoteCode: undefined, quoteTitle: undefined }; runOptimisticCreate(commonTask, () => store.createTask(state, commonTask), store.live ? "Tarefa sincronizada." : "Tarefa salva localmente."); setCreating(false); }, [state, store, runOptimisticCreate]);
   const createNewSubtask = useCallback((input) => { runOptimisticCreate(input, () => store.createSubtask(state, creatingSubtaskFor, input), store.live ? "Subtarefa sincronizada." : "Subtarefa salva localmente.", creatingSubtaskFor); setCreatingSubtaskFor(""); }, [state, store, runOptimisticCreate, creatingSubtaskFor]);
   const createQualityTask = useCallback((item) => { const input = { title: item.title, description: item.description, dueDate: item.dueDate, sourceType: "quality", sourceId: item.id, sourceCode: item.code, sourceLabel: item.type === "error" ? "Erro operacional" : "Ação operacional" }; runOptimisticCreate(input, () => store.createQualityTask(state, item), store.live ? "Tarefa de qualidade sincronizada." : "Tarefa de qualidade salva localmente."); }, [state, store, runOptimisticCreate]);
@@ -243,7 +270,8 @@ export default function App() {
     if (active === "dashboard" || active === "team") return <CentralView state={viewState} mode={active === "dashboard" ? "mine" : "team"} currentEmployee={currentEmployee} onOpenTask={openTask} onOpenSource={(item) => store.openSource?.(item)} onCreate={() => setCreating(true)} />;
     if (active === "board") return <BoardView state={state} onOpen={openTask} onMove={moveTask} onCreate={() => setCreating(true)} filters={filters} setFilters={setFilters} />;
     if (active === "list") return <ListView state={state} onOpen={openTask} onCreate={() => setCreating(true)} filters={filters} setFilters={setFilters} />;
-    if (active === "calendar") return <CalendarView state={state} onOpen={openTask} onCreate={() => setCreating(true)} />;
+    if (active === "calendar") return <CalendarView state={state} onOpen={openTask} onCreate={() => setCreating(true)} filters={filters} setFilters={setFilters} />;
+    if (active === "quality") return <QualityView state={state} onCreate={createQualityTask} onCreateTask={() => setCreating(true)} filters={filters} setFilters={setFilters} />;
     return <SettingsView onReset={reloadData} live={store.live} />;
   };
   return <AppShell active={active} onNavigate={setActive} onCreate={() => setCreating(true)} tasks={state.tasks} live={store.live} currentEmployee={currentEmployee} personalStats={personalStats} openTaskCount={openTaskCount}>{renderPage()}{notice && <div className={`toast ${notice.startsWith("Falha") ? "toast-error" : ""}`} role="status" aria-live="polite"><CheckCircle2 size={17} /><span>{notice}</span><button className="toast-close" type="button" onClick={dismissNotice} aria-label="Fechar notificação" title="Fechar notificação"><X size={15} /></button></div>}{selected && <TaskDrawer task={selected} state={state} onClose={closeTask} onSave={saveTask} onComment={addComment} onAttachment={addAttachment} onOpenQuote={(id) => { setActive("dashboard"); closeTask(); showNotice(`Cotação ${state.quotes.find((quote) => quote.id === id)?.code || ""} vinculada.`); }} onAddSubtask={() => setCreatingSubtaskFor(selected.id)} />}{creating && <NewTaskDrawer quotes={state.quotes} onClose={() => setCreating(false)} onSave={createNewTask} />}{creatingSubtaskFor && <NewTaskDrawer quotes={state.quotes} onClose={() => setCreatingSubtaskFor("")} onSave={createNewSubtask} />}</AppShell>;
