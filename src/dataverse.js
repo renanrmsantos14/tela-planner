@@ -2,6 +2,7 @@ import {
   addAttachment as addMockAttachment,
   addComment as addMockComment,
   createTask as createMockTask,
+  deleteTask as deleteMockTask,
   ensureQuoteTask as ensureMockQuoteTask,
   loadState as loadMockState,
   resetState as resetMockState,
@@ -358,6 +359,16 @@ async function ensureLiveQuoteTask(xrm, state, quote) {
   return createLiveTask(xrm, state, { title: `Acompanhar ${reference || "cotação"}`, quoteId: quote.id, quoteCode: quote.code || "", quoteTitle: quote.title || "", dueDate: quote.deadline, priority: "medium", sourceType: "quote", assigneeName: "Não atribuído", teamName: "Comercial", description: `Acompanhar a cotação ${reference || "selecionada"} até a resposta ao cliente.` });
 }
 
+async function deleteLiveTask(xrm, state, id) {
+  const task = state.tasks.find((item) => item.id === id);
+  if (task?.parentTaskId) {
+    const relations = await retrieveMany(xrm, RELATION_TABLE, `?$select=${RELATION_TABLE}id&$filter=_cr40f_subtarefa_value eq ${cleanId(id)}`);
+    await Promise.all(relations.map((relation) => request(xrm, `/${entitySetName(RELATION_TABLE)}(${cleanId(relation[`${RELATION_TABLE}id`])})`, { method: "DELETE" })));
+  }
+  await request(xrm, `/${entitySetName(TASK_TABLE)}(${cleanId(id)})`, { method: "DELETE" });
+  return loadLiveState(xrm);
+}
+
 function createMockDataStore() {
   const withMode = (state) => ({ ...state, live: false });
   const withoutMode = ({ live: _live, ...state }) => state;
@@ -370,6 +381,7 @@ function createMockDataStore() {
     createSubtask: async (state, parentId, input) => withMode(createMockTask(state, { ...input, parentTaskId: parentId })),
     createQualityTask: async (state, item) => withMode(createMockTask(state, { title: item.title, description: item.description, dueDate: item.dueDate, sourceType: "quality", sourceId: item.id, sourceCode: item.code, sourceLabel: item.type === "error" ? "Erro operacional" : "Ação operacional" })),
     updateTask: async (state, id, patch) => withMode(updateMockTask(state, id, patch)),
+    deleteTask: async (state, id) => withMode(deleteMockTask(state, id)),
     addComment: async (state, id, text) => withMode(addMockComment(state, id, text)),
     addAttachment: async (state, id, file) => withMode(addMockAttachment(state, id, file?.name || "Arquivo")),
     ensureQuoteTask: async (state, quote) => withMode(ensureMockQuoteTask(state, quote)),
@@ -390,6 +402,7 @@ export function createDataStore() {
     createSubtask: (state, parentId, input) => createLiveSubtask(xrm, state, parentId, input),
     createQualityTask: (state, item) => createLiveTask(xrm, state, { title: item.title, description: item.description, dueDate: item.dueDate, sourceType: "quality", sourceCode: item.code, qualityType: item.type, qualityId: item.id }),
     updateTask: (state, id, patch) => updateLiveTask(xrm, state, id, patch),
+    deleteTask: (state, id) => deleteLiveTask(xrm, state, id),
     addComment: (state, id, text) => addLiveComment(xrm, id, text),
     addAttachment: (state, id, file) => addLiveAttachment(xrm, id, file),
     ensureQuoteTask: (state, quote) => ensureLiveQuoteTask(xrm, state, quote),

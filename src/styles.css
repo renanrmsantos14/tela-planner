@@ -81,6 +81,12 @@ button { cursor: pointer; }
 .attachment-row small { margin-left: auto; color: var(--blue); font-size: 9px; font-weight: 800; }
 .toast-error { border-color: #f0bdc5; color: var(--red); background: var(--red-soft); }
 .subtask-row:disabled { cursor: progress; opacity: .72; }
+.subtask-row { grid-template-columns: minmax(0,1fr) 24px; gap: 4px; }
+.subtask-toggle { min-width: 0; width: 100%; display: grid; grid-template-columns: 20px minmax(0,1fr) auto; gap: 8px; align-items: center; padding: 0; border: 0; background: transparent; color: inherit; text-align: left; font: inherit; }
+.subtask-delete { width: 24px; height: 24px; display: grid; place-items: center; border: 0; border-radius: 6px; color: var(--tertiary); background: transparent; opacity: 0; transition: opacity 150ms ease, color 150ms ease, background 150ms ease; }
+.subtask-row:hover .subtask-delete, .subtask-row:focus-within .subtask-delete { opacity: 1; }
+.subtask-delete:hover, .subtask-delete:focus-visible { color: var(--red); background: var(--red-soft); outline: 0; }
+.subtask-delete:disabled { cursor: progress; opacity: .4; }
 .subtask-inline-create { display: grid; grid-template-columns: 20px minmax(0,1fr) 28px; gap: 8px; align-items: center; padding: 7px 0; border-bottom: 1px solid #e3eaf2; animation: subtask-inline-in 160ms ease-out; }
 .subtask-inline-create input { min-width: 0; width: 100%; padding: 7px 8px; border: 1px solid #b9cce4; border-radius: 7px; outline: 0; color: var(--control); background: var(--surface); font: inherit; font-size: 11px; }
 .subtask-inline-create input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(35,108,202,.12); }
@@ -171,13 +177,20 @@ button { cursor: pointer; }
 /* Feedback de salvamento do detalhe: confirma a ação antes do fechamento automático. */
 .task-drawer { position: relative; overflow: hidden; }
 .drawer-save-feedback { position: absolute; inset: 0; z-index: 4; display: grid; place-content: center; justify-items: center; gap: 8px; padding: 24px; color: var(--navy); background: rgba(255,255,255,.96); animation: drawer-save-feedback-in 180ms var(--ease-out); }
+.drawer-delete-feedback { position: fixed; inset: 0 0 0 calc(100vw - min(var(--drawer-width), 100vw)); z-index: 100; display: grid; place-content: center; justify-items: center; gap: 8px; padding: 24px; color: var(--navy); background: rgba(255,255,255,.97); animation: drawer-save-feedback-in 180ms var(--ease-out); }
 .drawer-save-feedback strong { font-size: 15px; }
+.drawer-delete-feedback strong { font-size: 15px; }
 .drawer-save-feedback span { color: var(--muted); font-size: 11px; }
+.drawer-delete-feedback span { color: var(--muted); font-size: 11px; }
 .drawer-save-icon { width: 64px; height: 64px; display: grid; place-items: center; margin-bottom: 3px; border: 1px solid #b9e4ca; border-radius: 50%; color: var(--green); background: var(--green-soft); box-shadow: 0 0 0 8px rgba(22,143,87,.07); animation: drawer-save-check-pop 480ms var(--ease-out); }
+.drawer-delete-icon { width: 64px; height: 64px; display: grid; place-items: center; margin-bottom: 3px; border: 1px solid #f2b8c0; border-radius: 50%; color: var(--red); background: var(--red-soft); box-shadow: 0 0 0 8px rgba(214,57,75,.08); animation: drawer-delete-icon-pop 480ms var(--ease-out); }
 .drawer-save-icon svg { animation: drawer-save-check 320ms 80ms var(--ease-out) both; }
+.drawer-delete-icon svg { animation: drawer-delete-icon-shake 360ms 80ms var(--ease-out) both; }
 @keyframes drawer-save-feedback-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes drawer-save-check-pop { 0% { transform: scale(.72); opacity: 0; } 65% { transform: scale(1.06); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
 @keyframes drawer-save-check { from { transform: scale(.45); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes drawer-delete-icon-pop { 0% { transform: scale(.72); opacity: 0; } 65% { transform: scale(1.06); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+@keyframes drawer-delete-icon-shake { 0% { transform: scale(.45) rotate(-10deg); opacity: 0; } 60% { transform: scale(1.08) rotate(5deg); opacity: 1; } 100% { transform: scale(1) rotate(0); opacity: 1; } }
 .toast span { flex: 1; }
 .toast-close { width: 28px; height: 28px; display: grid; place-items: center; flex: 0 0 auto; padding: 0; border: 0; border-radius: 7px; color: currentColor; background: transparent; }
 .toast-close:hover, .toast-close:focus-visible { background: rgba(15,23,42,.08); outline: none; }
