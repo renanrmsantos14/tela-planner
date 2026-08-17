@@ -71,7 +71,7 @@ function CentralRow({ item, onOpen }) {
   return <article className="central-row">
     <button className="central-row-open" type="button" onClick={() => onOpen(item)} aria-label={`Abrir ${item.title}`}>
       <div className="central-row-main"><SourceBadge source={item.source} /><strong>{item.title}</strong><span>{item.context}</span></div>
-      <div className="central-row-meta"><AssigneeDisplay value={item.assigneeNames || item.assigneeName} small /><span className={item.isOverdue ? "danger-text" : ""}><CalendarDays size={13} aria-hidden="true" />{formatDate(item.dueAt)}</span><span className={`central-status central-${item.statusGroup}`}>{statusLabel}</span><ArrowUpRight size={16} aria-hidden="true" /></div>
+      <div className="central-row-meta"><AssigneeDisplay value={item.assigneeProfiles?.length ? item.assigneeProfiles : item.assigneeNames || item.assigneeName} small /><span className={item.isOverdue ? "danger-text" : ""}><CalendarDays size={13} aria-hidden="true" />{formatDate(item.dueAt)}</span><span className={`central-status central-${item.statusGroup}`}>{statusLabel}</span><ArrowUpRight size={16} aria-hidden="true" /></div>
     </button>
   </article>;
 }

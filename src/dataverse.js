@@ -238,6 +238,7 @@ function normalizeTask(row, annotations = [], events = [], assignees = []) {
     priority,
     dueDate: dateOnly(row.cr40f_prazo),
     assigneeNames: assignees.length ? assignees.map((item) => item.name) : normalizeAssigneeNames(formatLookup(row, EMPLOYEE_ASSIGNEE_FIELD)),
+    assigneeProfiles: assignees.length ? assignees.map((item) => ({ id: item.id, name: item.name, userId: item.userId || "", avatarUrl: item.avatarUrl || "" })) : [],
     assigneeName: assignees.length ? assignees.map((item) => item.name).join(", ") : formatLookup(row, EMPLOYEE_ASSIGNEE_FIELD),
     assigneeIds: assignees.length ? assignees.map((item) => item.id) : [row[`_${EMPLOYEE_ASSIGNEE_FIELD}_value`] || ""].filter(Boolean),
     assigneeId: assignees[0]?.id || row[`_${EMPLOYEE_ASSIGNEE_FIELD}_value`] || "",
@@ -273,16 +274,34 @@ async function loadLiveState(xrm) {
     retrieveMany(xrm, EMPLOYEE_TABLE, "?$select=cr40f_funcionariosid,cr40f_nomecompleto,new_apelido,_cr40f_usuariodataverse_value&$filter=statecode eq 0 and cr40f_status eq 0 and cr40f_funcao eq 202410001&$orderby=cr40f_nomecompleto asc"),
   ]);
   const annotations = await retrieveMany(xrm, ANNOTATION_TABLE, "?$select=annotationid,_objectid_value,notetext,filename,mimetype,isdocument,createdon,_createdby_value&$filter=isdocument eq false or isdocument eq true&$top=5000");
+  const employeeRecords = employees.map((row) => ({ id: row.cr40f_funcionariosid, name: row.cr40f_nomecompleto || row.new_apelido || "Sem nome", userId: row._cr40f_usuariodataverse_value || "" }));
+  const linkedUserIds = [...new Set(employeeRecords.map((employee) => cleanId(employee.userId)).filter(Boolean))];
+  let systemUsers = [];
+  if (linkedUserIds.length) {
+    try {
+      const userFilter = linkedUserIds.map((id) => `systemuserid eq ${id}`).join(" or ");
+      systemUsers = await retrieveMany(xrm, "systemuser", `?$select=systemuserid,entityimage_url,photourl&$filter=${userFilter}`);
+    } catch (error) {
+      console.warn("Não foi possível carregar as fotos dos usuários Dataverse.", error);
+    }
+  }
+  const userById = new Map(systemUsers.map((user) => [cleanId(user.systemuserid).toLowerCase(), user]));
+  const employeeById = new Map(employeeRecords.map((employee) => [cleanId(employee.id).toLowerCase(), employee]));
   const relationByChild = new Map(relations.map(normalizeRelation).map((item) => [item.childTaskId, item.parentTaskId]));
   const assigneesByTask = new Map();
   assigneeRelations.forEach((item) => {
     const list = assigneesByTask.get(item._cr40f_tarefa_value) || [];
-    list.push({ id: item._cr40f_funcionario_value, name: item["_cr40f_funcionario_value@OData.Community.Display.V1.FormattedValue"] || "Sem nome" });
+    const employee = employeeById.get(cleanId(item._cr40f_funcionario_value).toLowerCase());
+    const user = userById.get(cleanId(employee?.userId).toLowerCase());
+    list.push({ id: item._cr40f_funcionario_value, name: item["_cr40f_funcionario_value@OData.Community.Display.V1.FormattedValue"] || employee?.name || "Sem nome", userId: employee?.userId || "", avatarUrl: user?.entityimage_url || user?.photourl || "" });
     assigneesByTask.set(item._cr40f_tarefa_value, list);
   });
   const tasks = rows.map((row) => ({ ...normalizeTask(row, annotations.filter((item) => item._objectid_value === row.cr40f_plannertarefaid), events.filter((item) => item._cr40f_tarefa_value === row.cr40f_plannertarefaid), assigneesByTask.get(row.cr40f_plannertarefaid) || []), parentTaskId: relationByChild.get(row.cr40f_plannertarefaid) || null }));
   const quoteById = new Map(quotes.map((row) => [row.cr40f_pedidodecotacaoid, normalizeQuote(row)]));
-  return { quotes: [...quoteById.values()], employees: employees.map((row) => ({ id: row.cr40f_funcionariosid, name: row.cr40f_nomecompleto || row.new_apelido || "Sem nome", userId: row._cr40f_usuariodataverse_value || "" })), quality: [...qualityErrors.map((row) => normalizeQuality(row, "error")), ...qualityActions.map((row) => normalizeQuality(row, "action"))], tasks: tasks.map((task) => ({ ...task, quoteCode: quoteById.get(task.quoteId)?.code || "", quoteTitle: quoteById.get(task.quoteId)?.title || "" })), lastUpdated: new Date().toISOString(), live: true };
+  const employeesWithProfiles = employeeRecords.map((employee) => ({ ...employee, avatarUrl: userById.get(cleanId(employee.userId).toLowerCase())?.entityimage_url || userById.get(cleanId(employee.userId).toLowerCase())?.photourl || "" }));
+  const quality = [...qualityErrors.map((row) => normalizeQuality(row, "error")), ...qualityActions.map((row) => normalizeQuality(row, "action"))].map((item) => ({ ...item, assigneeProfiles: employeeById.has(cleanId(item.assigneeId).toLowerCase()) ? [employeesWithProfiles.find((employee) => cleanId(employee.id).toLowerCase() === cleanId(item.assigneeId).toLowerCase())] : [] }));
+  const tasksWithProfiles = tasks.map((task) => ({ ...task, assigneeProfiles: task.assigneeProfiles?.length ? task.assigneeProfiles : task.assigneeIds.map((id) => employeesWithProfiles.find((employee) => cleanId(employee.id).toLowerCase() === cleanId(id).toLowerCase())).filter(Boolean), quoteCode: quoteById.get(task.quoteId)?.code || "", quoteTitle: quoteById.get(task.quoteId)?.title || "" }));
+  return { quotes: [...quoteById.values()], employees: employeesWithProfiles, quality, tasks: tasksWithProfiles, lastUpdated: new Date().toISOString(), live: true };
 }
 
 async function createEvent(xrm, taskId, type, description, field = "", previous = "", next = "") {
