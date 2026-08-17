@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { filterWorkItems, normalizeWorkItems, sortWorkItems, workItemStats } from "../src/workItems.js";
+import { filterWorkItems, isAssignedToEmployee, normalizeWorkItems, sortWorkItems, workItemStats } from "../src/workItems.js";
 
 test("normaliza tarefas, ocorrências e ações como itens agregados", () => {
   const items = normalizeWorkItems({ tasks: [{ id: "t1", title: "Cotação", status: "todo", priority: "high", dueDate: "2026-01-01", sourceType: "quote", quoteId: "q1" }], quality: [{ id: "e1", type: "error", title: "Avaria", status: "Em tratamento", dueDate: "2026-01-02" }] });
@@ -41,4 +41,11 @@ test("escopa itens por responsável sem perder itens não atribuídos na equipe"
   ];
   assert.equal(items.filter((item) => item.assigneeEmployeeId === "e1").length, 1);
   assert.equal(filterWorkItems(items).length, 2);
+});
+
+test("inclui tarefa compartilhada nas pendências de cada responsável", () => {
+  const items = normalizeWorkItems({ tasks: [{ id: "shared", title: "Tarefa compartilhada", status: "todo", assigneeIds: ["e1", "e2"], assigneeNames: ["Renan", "Marina"], assigneeName: "Renan, Marina" }] });
+  assert.equal(isAssignedToEmployee(items[0], { id: "e1", name: "Renan" }), true);
+  assert.equal(isAssignedToEmployee(items[0], { id: "e2", name: "Marina" }), true);
+  assert.equal(isAssignedToEmployee(items[0], { id: "e3", name: "Outro" }), false);
 });

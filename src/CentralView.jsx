@@ -2,7 +2,7 @@ import React, { useMemo, useState } from "react";
 import { ArrowUpRight, CalendarDays, CheckCircle2, Clock3, RotateCcw, Search, Users } from "lucide-react";
 import { formatDate } from "./domain";
 import SearchableSelect from "./SearchableSelect.jsx";
-import { filterWorkItems, sortWorkItems, workItemStats } from "./workItems";
+import { filterWorkItems, isAssignedToEmployee, sortWorkItems, workItemStats } from "./workItems";
 
 const SOURCE_LABELS = { task: "Tarefa", quote_followup: "Acompanhamento de cotação", quality_error: "Ocorrência", quality_action: "Ação de qualidade" };
 const STATUS_LABELS = { todo: "A fazer", doing: "Em andamento", waiting: "Aguardando", done: "Concluído", cancelled: "Cancelado" };
@@ -34,7 +34,7 @@ export default function CentralView({ state, mode = "mine", currentEmployee, onO
   const allItems = state.workItems || [];
   const scopedItems = mineOnly
     ? currentEmployee
-      ? allItems.filter((item) => item.assigneeEmployeeId === currentEmployee.id || item.assigneeName === currentEmployee.name)
+      ? allItems.filter((item) => isAssignedToEmployee(item, currentEmployee))
       : []
     : allItems;
   const activeItems = useMemo(() => filterWorkItems(scopedItems), [scopedItems]);

@@ -8,7 +8,7 @@ import { addOptimisticAttachment, addOptimisticComment, applyOptimisticTaskPatch
 import { createDataStore } from "./dataverse";
 import SearchableSelect, { SearchableMultiSelect } from "./SearchableSelect.jsx";
 import CentralView from "./CentralView.jsx";
-import { filterWorkItems, normalizeWorkItems, workItemStats } from "./workItems.js";
+import { filterWorkItems, isAssignedToEmployee, normalizeWorkItems, workItemStats } from "./workItems.js";
 import { APP_VERSION } from "./version.js";
 
 const CENTRAL_NAV_ITEMS = [
@@ -310,7 +310,7 @@ export default function App() {
   if (!state) return <div className="app-loading">Carregando dados operacionais…</div>;
   const viewState = { ...state, workItems };
   const currentEmployee = resolveCurrentEmployee(state.employees, store.live);
-  const personalItems = currentEmployee ? workItems.filter((item) => item.assigneeEmployeeId === currentEmployee.id || item.assigneeName === currentEmployee.name) : [];
+  const personalItems = currentEmployee ? workItems.filter((item) => isAssignedToEmployee(item, currentEmployee)) : [];
   const personalStats = workItemStats(filterWorkItems(personalItems));
   const openTaskCount = state.tasks.filter((task) => !task.parentTaskId && !["done", "cancelled"].includes(task.status)).length;
   ASSIGNEE_OPTIONS.splice(1, ASSIGNEE_OPTIONS.length - 1, ...(state.employees || []).map((item) => item.name));

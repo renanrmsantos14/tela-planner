@@ -72,6 +72,7 @@ export function normalizeWorkItems(state = {}) {
     title: taskTitle(task),
     context: taskContext(task),
     assigneeEmployeeId: task.assigneeId || task.assigneeIds?.[0] || "",
+    assigneeIds: task.assigneeIds || (task.assigneeId ? [task.assigneeId] : []),
     assigneeNames: task.assigneeNames || normalizeAssigneeNames(task.assigneeName),
     assigneeName: cleanText(task.assigneeName, "Não atribuído"),
     dueAt: cleanText(task.dueDate),
@@ -111,6 +112,15 @@ export function filterWorkItems(items = [], filters = {}) {
     if (query && ![item.title, item.context, item.assigneeName, item.sourceCode].join(" ").toLocaleLowerCase("pt-BR").includes(query)) return false;
     return true;
   });
+}
+
+export function isAssignedToEmployee(item, employee) {
+  if (!employee) return false;
+  const employeeId = String(employee.id || "");
+  const employeeName = String(employee.name || "");
+  const assigneeIds = [item.assigneeEmployeeId, ...(item.assigneeIds || [])].filter(Boolean).map(String);
+  const assigneeNames = item.assigneeNames || (item.assigneeName ? [item.assigneeName] : []);
+  return assigneeIds.includes(employeeId) || assigneeNames.includes(employeeName);
 }
 
 export function workItemStats(items = []) {
