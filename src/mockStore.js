@@ -74,6 +74,10 @@ export function updateTask(state, id, patch) {
   } : taskItem) });
 }
 
+export function deleteTask(state, id) {
+  return saveState({ ...state, tasks: state.tasks.filter((taskItem) => taskItem.id !== id) });
+}
+
 export function addComment(state, id, text) {
   const comment = { id: uid("comment"), text: text.trim(), createdAt: new Date().toISOString(), author: "Você" };
   return saveState({ ...state, tasks: state.tasks.map((taskItem) => taskItem.id === id ? { ...taskItem, comments: [...taskItem.comments, comment] } : taskItem) });

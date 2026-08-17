@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { addAttachment, addComment, createTask, ensureQuoteTask, seedState, updateTask } from "../src/mockStore.js";
+import { addAttachment, addComment, createTask, deleteTask, ensureQuoteTask, seedState, updateTask } from "../src/mockStore.js";
 
 function withStorage() {
   const values = new Map();
@@ -26,6 +26,15 @@ test("adiciona comentário e anexo mock", () => {
   const task = attached.tasks.find((item) => item.id === "task-1");
   assert.equal(task.comments.length, 1);
   assert.equal(task.attachments[0].name, "confirmacao.png");
+});
+
+test("exclui somente a tarefa selecionada no mock", () => {
+  withStorage();
+  const initial = seedState();
+  const next = deleteTask(initial, "task-1");
+  assert.equal(next.tasks.some((taskItem) => taskItem.id === "task-1"), false);
+  assert.equal(next.tasks.length, initial.tasks.length - 1);
+  assert.equal(initial.tasks.length, 7);
 });
 
 test("cria tarefa principal para cotação sem duplicar", () => {
