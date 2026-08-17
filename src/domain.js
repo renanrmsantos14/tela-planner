@@ -75,6 +75,14 @@ export function normalizeAssigneeNames(value) {
   return unique.length ? unique : ["Não atribuído"];
 }
 
+export function mentionedEmployees(text, employees = []) {
+  const normalizedText = normalizeText(text);
+  return employees.filter((employee) => {
+    const name = normalizeText(employee?.name);
+    return name && normalizedText.includes(`@${name}`);
+  });
+}
+
 function updateTaskInState(state, taskId, update) {
   return {
     ...state,
