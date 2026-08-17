@@ -120,8 +120,9 @@ button { cursor: pointer; }
 .avatar { position: relative; overflow: hidden; line-height: 1; }
 .avatar-image { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; border-radius: inherit; object-fit: cover; }
 .avatar-initials { position: relative; z-index: 0; display: inline-block; line-height: 1; text-align: center; }
-.avatar-stack { flex-wrap: wrap; max-width: 100%; row-gap: 2px; overflow: visible; }
+.avatar-stack { flex-wrap: nowrap; width: max-content; max-width: none; overflow: visible; }
 .avatar-stack-item { display: inline-grid; place-items: center; flex: 0 0 auto; }
+.avatar-stack-item:first-child { margin-left: 0; }
 .avatar-stack-item .avatar-initials { line-height: 1; }
 .assignee-display { min-width: 0; display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: 10px; line-height: 1.2; }
 .assignee-display > .avatar { flex: 0 0 auto; }
@@ -198,6 +199,7 @@ button { cursor: pointer; }
 .central-row-meta span { display: inline-flex; min-width: 0; align-items: center; gap: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .central-row-meta .avatar { display: inline-grid; place-items: center; line-height: 1; text-align: center; }
 .central-row-meta .avatar-stack { overflow: visible; white-space: normal; }
+.central-row-meta .assignee-display-multiple { overflow: visible; white-space: nowrap; }
 .central-status { justify-self: start; padding: 4px 8px; }
 .central-done { color: var(--green); background: var(--green-soft); }
 .central-empty { display: grid; place-items: center; gap: 7px; min-height: 142px; padding: 24px; color: var(--muted); text-align: center; }
