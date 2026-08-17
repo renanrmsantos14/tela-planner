@@ -772,11 +772,27 @@
       "_origin": "ast"
     },
     {
+      "id": "src_app_currentuserid",
+      "label": "currentUserId()",
+      "file_type": "code",
+      "source_file": "src/App.jsx",
+      "source_location": "L27",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_app_resolvecurrentemployee",
+      "label": "resolveCurrentEmployee()",
+      "file_type": "code",
+      "source_file": "src/App.jsx",
+      "source_location": "L31",
+      "_origin": "ast"
+    },
+    {
       "id": "src_app_avatar",
       "label": "Avatar()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L27",
+      "source_location": "L37",
       "_origin": "ast"
     },
     {
@@ -784,7 +800,7 @@
       "label": "StatusBadge()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L32",
+      "source_location": "L42",
       "_origin": "ast"
     },
     {
@@ -792,7 +808,7 @@
       "label": "PriorityBadge()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L37",
+      "source_location": "L47",
       "_origin": "ast"
     },
     {
@@ -800,7 +816,7 @@
       "label": "SourceBadge()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L42",
+      "source_location": "L52",
       "_origin": "ast"
     },
     {
@@ -808,7 +824,15 @@
       "label": "InputSelect()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L47",
+      "source_location": "L57",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_app_unsavedchangesdialog",
+      "label": "UnsavedChangesDialog()",
+      "file_type": "code",
+      "source_file": "src/App.jsx",
+      "source_location": "L61",
       "_origin": "ast"
     },
     {
@@ -816,7 +840,7 @@
       "label": "AppShell()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L51",
+      "source_location": "L65",
       "_origin": "ast"
     },
     {
@@ -824,7 +848,7 @@
       "label": "PageHeader()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L70",
+      "source_location": "L85",
       "_origin": "ast"
     },
     {
@@ -832,7 +856,7 @@
       "label": "MetricCard()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L74",
+      "source_location": "L89",
       "_origin": "ast"
     },
     {
@@ -840,7 +864,7 @@
       "label": "TaskCard()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L78",
+      "source_location": "L93",
       "_origin": "ast"
     },
     {
@@ -848,7 +872,7 @@
       "label": "Board()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L93",
+      "source_location": "L108",
       "_origin": "ast"
     },
     {
@@ -856,7 +880,7 @@
       "label": "FilterBar()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L97",
+      "source_location": "L112",
       "_origin": "ast"
     },
     {
@@ -864,7 +888,7 @@
       "label": "Dashboard()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L101",
+      "source_location": "L116",
       "_origin": "ast"
     },
     {
@@ -872,7 +896,7 @@
       "label": "BoardView()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L108",
+      "source_location": "L123",
       "_origin": "ast"
     },
     {
@@ -880,7 +904,7 @@
       "label": "ListView()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L114",
+      "source_location": "L129",
       "_origin": "ast"
     },
     {
@@ -888,7 +912,7 @@
       "label": "CalendarView()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L119",
+      "source_location": "L134",
       "_origin": "ast"
     },
     {
@@ -896,7 +920,7 @@
       "label": "QualityView()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L125",
+      "source_location": "L140",
       "_origin": "ast"
     },
     {
@@ -904,7 +928,7 @@
       "label": "SettingsView()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L130",
+      "source_location": "L145",
       "_origin": "ast"
     },
     {
@@ -912,7 +936,7 @@
       "label": "TaskDrawer()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L134",
+      "source_location": "L149",
       "_origin": "ast"
     },
     {
@@ -920,7 +944,7 @@
       "label": "NewTaskDrawer()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L143",
+      "source_location": "L173",
       "_origin": "ast"
     },
     {
@@ -928,7 +952,7 @@
       "label": "CentralTaskDrawer()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L149",
+      "source_location": "L181",
       "_origin": "ast"
     },
     {
@@ -936,7 +960,7 @@
       "label": "App()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L156",
+      "source_location": "L190",
       "_origin": "ast"
     },
     {
@@ -952,7 +976,23 @@
       "label": "SOURCE_LABELS",
       "file_type": "code",
       "source_file": "src/CentralView.jsx",
-      "source_location": "L6",
+      "source_location": "L7",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_centralview_status_labels",
+      "label": "STATUS_LABELS",
+      "file_type": "code",
+      "source_file": "src/CentralView.jsx",
+      "source_location": "L8",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_centralview_source_options",
+      "label": "SOURCE_OPTIONS",
+      "file_type": "code",
+      "source_file": "src/CentralView.jsx",
+      "source_location": "L9",
       "_origin": "ast"
     },
     {
@@ -960,7 +1000,15 @@
       "label": "SourceBadge()",
       "file_type": "code",
       "source_file": "src/CentralView.jsx",
-      "source_location": "L8",
+      "source_location": "L17",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_centralview_hasactivefilters",
+      "label": "hasActiveFilters()",
+      "file_type": "code",
+      "source_file": "src/CentralView.jsx",
+      "source_location": "L21",
       "_origin": "ast"
     },
     {
@@ -968,7 +1016,15 @@
       "label": "CentralView()",
       "file_type": "code",
       "source_file": "src/CentralView.jsx",
-      "source_location": "L10",
+      "source_location": "L25",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_centralview_centralrow",
+      "label": "CentralRow()",
+      "file_type": "code",
+      "source_file": "src/CentralView.jsx",
+      "source_location": "L68",
       "_origin": "ast"
     },
     {
@@ -976,7 +1032,7 @@
       "label": "PageHeader()",
       "file_type": "code",
       "source_file": "src/CentralView.jsx",
-      "source_location": "L29",
+      "source_location": "L78",
       "_origin": "ast"
     },
     {
@@ -984,7 +1040,7 @@
       "label": "Metric()",
       "file_type": "code",
       "source_file": "src/CentralView.jsx",
-      "source_location": "L30",
+      "source_location": "L83",
       "_origin": "ast"
     },
     {
@@ -1940,11 +1996,59 @@
       "_origin": "ast"
     },
     {
+      "id": "src_workitems_task_status_labels",
+      "label": "TASK_STATUS_LABELS",
+      "file_type": "code",
+      "source_file": "src/workItems.js",
+      "source_location": "L4",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_workitems_cleantext",
+      "label": "cleanText()",
+      "file_type": "code",
+      "source_file": "src/workItems.js",
+      "source_location": "L6",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_workitems_foldstatus",
+      "label": "foldStatus()",
+      "file_type": "code",
+      "source_file": "src/workItems.js",
+      "source_location": "L11",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_workitems_isterminalqualitystatus",
+      "label": "isTerminalQualityStatus()",
+      "file_type": "code",
+      "source_file": "src/workItems.js",
+      "source_location": "L15",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_workitems_tasktitle",
+      "label": "taskTitle()",
+      "file_type": "code",
+      "source_file": "src/workItems.js",
+      "source_location": "L19",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_workitems_taskcontext",
+      "label": "taskContext()",
+      "file_type": "code",
+      "source_file": "src/workItems.js",
+      "source_location": "L26",
+      "_origin": "ast"
+    },
+    {
       "id": "src_workitems_qualitystatusgroup",
       "label": "qualityStatusGroup()",
       "file_type": "code",
       "source_file": "src/workItems.js",
-      "source_location": "L5",
+      "source_location": "L30",
       "_origin": "ast"
     },
     {
@@ -1952,7 +2056,7 @@
       "label": "qualityDue()",
       "file_type": "code",
       "source_file": "src/workItems.js",
-      "source_location": "L11",
+      "source_location": "L36",
       "_origin": "ast"
     },
     {
@@ -1960,7 +2064,7 @@
       "label": "qualityWorkItem()",
       "file_type": "code",
       "source_file": "src/workItems.js",
-      "source_location": "L15",
+      "source_location": "L40",
       "_origin": "ast"
     },
     {
@@ -1968,7 +2072,7 @@
       "label": "normalizeWorkItems()",
       "file_type": "code",
       "source_file": "src/workItems.js",
-      "source_location": "L38",
+      "source_location": "L66",
       "_origin": "ast"
     },
     {
@@ -1976,7 +2080,7 @@
       "label": "sortWorkItems()",
       "file_type": "code",
       "source_file": "src/workItems.js",
-      "source_location": "L62",
+      "source_location": "L92",
       "_origin": "ast"
     },
     {
@@ -1984,7 +2088,7 @@
       "label": "filterWorkItems()",
       "file_type": "code",
       "source_file": "src/workItems.js",
-      "source_location": "L73",
+      "source_location": "L103",
       "_origin": "ast"
     },
     {
@@ -1992,7 +2096,7 @@
       "label": "workItemStats()",
       "file_type": "code",
       "source_file": "src/workItems.js",
-      "source_location": "L84",
+      "source_location": "L115",
       "_origin": "ast"
     },
     {
@@ -3625,7 +3729,27 @@
     },
     {
       "source": "src_app",
+      "target": "src_workitems_filterworkitems",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/App.jsx",
+      "source_location": "L11",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
       "target": "src_workitems_normalizeworkitems",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/App.jsx",
+      "source_location": "L11",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "src_workitems_workitemstats",
       "relation": "imports",
       "context": "import",
       "confidence": "EXTRACTED",
@@ -3707,7 +3831,7 @@
     },
     {
       "source": "src_app",
-      "target": "src_app_avatar",
+      "target": "src_app_currentuserid",
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
@@ -3716,16 +3840,16 @@
     },
     {
       "source": "src_app",
-      "target": "src_app_statusbadge",
+      "target": "src_app_resolvecurrentemployee",
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L32",
+      "source_location": "L31",
       "weight": 1.0
     },
     {
       "source": "src_app",
-      "target": "src_app_prioritybadge",
+      "target": "src_app_avatar",
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
@@ -3734,7 +3858,7 @@
     },
     {
       "source": "src_app",
-      "target": "src_app_sourcebadge",
+      "target": "src_app_statusbadge",
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
@@ -3743,7 +3867,7 @@
     },
     {
       "source": "src_app",
-      "target": "src_app_inputselect",
+      "target": "src_app_prioritybadge",
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
@@ -3752,11 +3876,38 @@
     },
     {
       "source": "src_app",
+      "target": "src_app_sourcebadge",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/App.jsx",
+      "source_location": "L52",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "src_app_inputselect",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/App.jsx",
+      "source_location": "L57",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "src_app_unsavedchangesdialog",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/App.jsx",
+      "source_location": "L61",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
       "target": "src_app_appshell",
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L51",
+      "source_location": "L65",
       "weight": 1.0
     },
     {
@@ -3765,7 +3916,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L70",
+      "source_location": "L85",
       "weight": 1.0
     },
     {
@@ -3774,7 +3925,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L74",
+      "source_location": "L89",
       "weight": 1.0
     },
     {
@@ -3783,7 +3934,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L78",
+      "source_location": "L93",
       "weight": 1.0
     },
     {
@@ -3792,7 +3943,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L93",
+      "source_location": "L108",
       "weight": 1.0
     },
     {
@@ -3801,7 +3952,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L97",
+      "source_location": "L112",
       "weight": 1.0
     },
     {
@@ -3810,7 +3961,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L101",
+      "source_location": "L116",
       "weight": 1.0
     },
     {
@@ -3819,7 +3970,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L108",
+      "source_location": "L123",
       "weight": 1.0
     },
     {
@@ -3828,7 +3979,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L114",
+      "source_location": "L129",
       "weight": 1.0
     },
     {
@@ -3837,7 +3988,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L119",
+      "source_location": "L134",
       "weight": 1.0
     },
     {
@@ -3846,7 +3997,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L125",
+      "source_location": "L140",
       "weight": 1.0
     },
     {
@@ -3855,7 +4006,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L130",
+      "source_location": "L145",
       "weight": 1.0
     },
     {
@@ -3864,7 +4015,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L134",
+      "source_location": "L149",
       "weight": 1.0
     },
     {
@@ -3873,7 +4024,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L143",
+      "source_location": "L173",
       "weight": 1.0
     },
     {
@@ -3882,7 +4033,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L149",
+      "source_location": "L181",
       "weight": 1.0
     },
     {
@@ -3891,7 +4042,27 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L156",
+      "source_location": "L190",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app_resolvecurrentemployee",
+      "target": "src_app_currentuserid",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/App.jsx",
+      "source_location": "L33",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app_app",
+      "target": "src_app_resolvecurrentemployee",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/App.jsx",
+      "source_location": "L236",
       "weight": 1.0
     },
     {
@@ -3936,7 +4107,7 @@
     },
     {
       "source": "src_centralview",
-      "target": "src_workitems",
+      "target": "src_searchableselect",
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
@@ -3946,12 +4117,22 @@
     },
     {
       "source": "src_centralview",
+      "target": "src_workitems",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/CentralView.jsx",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "src_centralview",
       "target": "src_workitems_filterworkitems",
       "relation": "imports",
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/CentralView.jsx",
-      "source_location": "L4",
+      "source_location": "L5",
       "weight": 1.0
     },
     {
@@ -3961,7 +4142,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/CentralView.jsx",
-      "source_location": "L4",
+      "source_location": "L5",
       "weight": 1.0
     },
     {
@@ -3971,7 +4152,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/CentralView.jsx",
-      "source_location": "L4",
+      "source_location": "L5",
       "weight": 1.0
     },
     {
@@ -3980,12 +4161,12 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/CentralView.jsx",
-      "source_location": "L6",
+      "source_location": "L7",
       "weight": 1.0
     },
     {
       "source": "src_centralview",
-      "target": "src_centralview_sourcebadge",
+      "target": "src_centralview_status_labels",
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/CentralView.jsx",
@@ -3994,11 +4175,47 @@
     },
     {
       "source": "src_centralview",
+      "target": "src_centralview_source_options",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/CentralView.jsx",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "src_centralview",
+      "target": "src_centralview_sourcebadge",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/CentralView.jsx",
+      "source_location": "L17",
+      "weight": 1.0
+    },
+    {
+      "source": "src_centralview",
+      "target": "src_centralview_hasactivefilters",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/CentralView.jsx",
+      "source_location": "L21",
+      "weight": 1.0
+    },
+    {
+      "source": "src_centralview",
       "target": "src_centralview_centralview",
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/CentralView.jsx",
-      "source_location": "L10",
+      "source_location": "L25",
+      "weight": 1.0
+    },
+    {
+      "source": "src_centralview",
+      "target": "src_centralview_centralrow",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/CentralView.jsx",
+      "source_location": "L68",
       "weight": 1.0
     },
     {
@@ -4007,7 +4224,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/CentralView.jsx",
-      "source_location": "L29",
+      "source_location": "L78",
       "weight": 1.0
     },
     {
@@ -4016,7 +4233,17 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/CentralView.jsx",
-      "source_location": "L30",
+      "source_location": "L83",
+      "weight": 1.0
+    },
+    {
+      "source": "src_centralview_centralview",
+      "target": "src_centralview_hasactivefilters",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/CentralView.jsx",
+      "source_location": "L57",
       "weight": 1.0
     },
     {
@@ -6467,16 +6694,25 @@
     },
     {
       "source": "src_workitems",
-      "target": "src_workitems_qualitystatusgroup",
+      "target": "src_workitems_task_status_labels",
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/workItems.js",
-      "source_location": "L5",
+      "source_location": "L4",
       "weight": 1.0
     },
     {
       "source": "src_workitems",
-      "target": "src_workitems_qualitydue",
+      "target": "src_workitems_cleantext",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/workItems.js",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "src_workitems",
+      "target": "src_workitems_foldstatus",
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/workItems.js",
@@ -6485,7 +6721,7 @@
     },
     {
       "source": "src_workitems",
-      "target": "src_workitems_qualityworkitem",
+      "target": "src_workitems_isterminalqualitystatus",
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/workItems.js",
@@ -6494,11 +6730,56 @@
     },
     {
       "source": "src_workitems",
+      "target": "src_workitems_tasktitle",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/workItems.js",
+      "source_location": "L19",
+      "weight": 1.0
+    },
+    {
+      "source": "src_workitems",
+      "target": "src_workitems_taskcontext",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/workItems.js",
+      "source_location": "L26",
+      "weight": 1.0
+    },
+    {
+      "source": "src_workitems",
+      "target": "src_workitems_qualitystatusgroup",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/workItems.js",
+      "source_location": "L30",
+      "weight": 1.0
+    },
+    {
+      "source": "src_workitems",
+      "target": "src_workitems_qualitydue",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/workItems.js",
+      "source_location": "L36",
+      "weight": 1.0
+    },
+    {
+      "source": "src_workitems",
+      "target": "src_workitems_qualityworkitem",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/workItems.js",
+      "source_location": "L40",
+      "weight": 1.0
+    },
+    {
+      "source": "src_workitems",
       "target": "src_workitems_normalizeworkitems",
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/workItems.js",
-      "source_location": "L38",
+      "source_location": "L66",
       "weight": 1.0
     },
     {
@@ -6507,7 +6788,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/workItems.js",
-      "source_location": "L62",
+      "source_location": "L92",
       "weight": 1.0
     },
     {
@@ -6516,7 +6797,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/workItems.js",
-      "source_location": "L73",
+      "source_location": "L103",
       "weight": 1.0
     },
     {
@@ -6525,7 +6806,77 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/workItems.js",
-      "source_location": "L84",
+      "source_location": "L115",
+      "weight": 1.0
+    },
+    {
+      "source": "src_workitems_foldstatus",
+      "target": "src_workitems_cleantext",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/workItems.js",
+      "source_location": "L12",
+      "weight": 1.0
+    },
+    {
+      "source": "src_workitems_isterminalqualitystatus",
+      "target": "src_workitems_foldstatus",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/workItems.js",
+      "source_location": "L16",
+      "weight": 1.0
+    },
+    {
+      "source": "src_workitems_tasktitle",
+      "target": "src_workitems_cleantext",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/workItems.js",
+      "source_location": "L20",
+      "weight": 1.0
+    },
+    {
+      "source": "src_workitems_taskcontext",
+      "target": "src_workitems_cleantext",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/workItems.js",
+      "source_location": "L27",
+      "weight": 1.0
+    },
+    {
+      "source": "src_workitems_qualitystatusgroup",
+      "target": "src_workitems_isterminalqualitystatus",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/workItems.js",
+      "source_location": "L31",
+      "weight": 1.0
+    },
+    {
+      "source": "src_workitems_qualitystatusgroup",
+      "target": "src_workitems_foldstatus",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/workItems.js",
+      "source_location": "L32",
+      "weight": 1.0
+    },
+    {
+      "source": "src_workitems_qualitydue",
+      "target": "src_workitems_cleantext",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/workItems.js",
+      "source_location": "L37",
       "weight": 1.0
     },
     {
@@ -6535,7 +6886,17 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/workItems.js",
-      "source_location": "L18",
+      "source_location": "L43",
+      "weight": 1.0
+    },
+    {
+      "source": "src_workitems_qualityworkitem",
+      "target": "src_workitems_cleantext",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/workItems.js",
+      "source_location": "L49",
       "weight": 1.0
     },
     {
@@ -6545,7 +6906,37 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/workItems.js",
-      "source_location": "L28",
+      "source_location": "L54",
+      "weight": 1.0
+    },
+    {
+      "source": "src_workitems_normalizeworkitems",
+      "target": "src_workitems_cleantext",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/workItems.js",
+      "source_location": "L71",
+      "weight": 1.0
+    },
+    {
+      "source": "src_workitems_normalizeworkitems",
+      "target": "src_workitems_tasktitle",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/workItems.js",
+      "source_location": "L72",
+      "weight": 1.0
+    },
+    {
+      "source": "src_workitems_normalizeworkitems",
+      "target": "src_workitems_taskcontext",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/workItems.js",
+      "source_location": "L73",
       "weight": 1.0
     },
     {
@@ -6555,7 +6946,7 @@
       "context": "argument",
       "confidence": "INFERRED",
       "source_file": "src/workItems.js",
-      "source_location": "L59",
+      "source_location": "L89",
       "weight": 1.0
     },
     {
@@ -7390,6 +7781,16 @@
       "weight": 1.0
     },
     {
+      "source": "src_centralview",
+      "target": "src_searchableselect_searchableselect",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/CentralView.jsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
       "source": "src_main",
       "target": "src_app_app",
       "relation": "imports",
@@ -7406,7 +7807,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L33",
+      "source_location": "L43",
       "weight": 1.0
     },
     {
@@ -7416,7 +7817,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L43",
+      "source_location": "L53",
       "weight": 1.0
     },
     {
@@ -7426,7 +7827,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L53",
+      "source_location": "L67",
       "weight": 1.0
     },
     {
@@ -7436,7 +7837,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L79",
+      "source_location": "L94",
       "weight": 1.0
     },
     {
@@ -7446,7 +7847,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L86",
+      "source_location": "L101",
       "weight": 1.0
     },
     {
@@ -7456,7 +7857,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L88",
+      "source_location": "L103",
       "weight": 1.0
     },
     {
@@ -7466,7 +7867,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L102",
+      "source_location": "L117",
       "weight": 1.0
     },
     {
@@ -7476,7 +7877,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L103",
+      "source_location": "L118",
       "weight": 1.0
     },
     {
@@ -7486,7 +7887,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L105",
+      "source_location": "L120",
       "weight": 1.0
     },
     {
@@ -7496,7 +7897,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L105",
+      "source_location": "L120",
       "weight": 1.0
     },
     {
@@ -7506,7 +7907,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L109",
+      "source_location": "L124",
       "weight": 1.0
     },
     {
@@ -7516,7 +7917,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L109",
+      "source_location": "L124",
       "weight": 1.0
     },
     {
@@ -7526,7 +7927,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L115",
+      "source_location": "L130",
       "weight": 1.0
     },
     {
@@ -7536,7 +7937,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L115",
+      "source_location": "L130",
       "weight": 1.0
     },
     {
@@ -7546,7 +7947,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L116",
+      "source_location": "L131",
       "weight": 1.0
     },
     {
@@ -7556,7 +7957,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L116",
+      "source_location": "L131",
       "weight": 1.0
     },
     {
@@ -7566,7 +7967,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L121",
+      "source_location": "L136",
       "weight": 1.0
     },
     {
@@ -7576,7 +7977,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L122",
+      "source_location": "L137",
       "weight": 1.0
     },
     {
@@ -7586,7 +7987,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L127",
+      "source_location": "L142",
       "weight": 1.0
     },
     {
@@ -7596,7 +7997,17 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L140",
+      "source_location": "L170",
+      "weight": 1.0
+    },
+    {
+      "source": "src_centralview_centralrow",
+      "target": "src_domain_formatdate",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/CentralView.jsx",
+      "source_location": "L73",
       "weight": 1.0
     },
     {
@@ -7687,18 +8098,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/App.jsx",
-      "source_location": "L157",
-      "weight": 1.0
-    },
-    {
-      "source": "src_app_app",
-      "target": "src_workitems_normalizeworkitems",
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src/App.jsx",
-      "source_location": "L163",
+      "source_location": "L191",
       "weight": 1.0
     },
     {
@@ -7709,7 +8109,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/App.jsx",
-      "source_location": "L182",
+      "source_location": "L218",
       "weight": 1.0
     },
     {
@@ -7720,7 +8120,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/App.jsx",
-      "source_location": "L187",
+      "source_location": "L223",
       "weight": 1.0
     },
     {
@@ -7731,7 +8131,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/App.jsx",
-      "source_location": "L192",
+      "source_location": "L228",
       "weight": 1.0
     },
     {
@@ -7742,7 +8142,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/App.jsx",
-      "source_location": "L194",
+      "source_location": "L230",
       "weight": 1.0
     },
     {
@@ -7753,18 +8153,40 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/App.jsx",
-      "source_location": "L195",
+      "source_location": "L231",
       "weight": 1.0
     },
     {
-      "source": "src_centralview_centralview",
-      "target": "src_workitems_sortworkitems",
+      "source": "src_app_app",
+      "target": "src_workitems_normalizeworkitems",
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
-      "source_file": "src/CentralView.jsx",
-      "source_location": "L15",
+      "source_file": "src/App.jsx",
+      "source_location": "L232",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app_app",
+      "target": "src_workitems_workitemstats",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/App.jsx",
+      "source_location": "L238",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app_app",
+      "target": "src_workitems_filterworkitems",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/App.jsx",
+      "source_location": "L238",
       "weight": 1.0
     },
     {
@@ -7775,7 +8197,18 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/CentralView.jsx",
-      "source_location": "L15",
+      "source_location": "L34",
+      "weight": 1.0
+    },
+    {
+      "source": "src_centralview_centralview",
+      "target": "src_workitems_sortworkitems",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/CentralView.jsx",
+      "source_location": "L35",
       "weight": 1.0
     },
     {
@@ -7786,18 +8219,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/CentralView.jsx",
-      "source_location": "L16",
-      "weight": 1.0
-    },
-    {
-      "source": "src_centralview_centralview",
-      "target": "src_domain_formatdate",
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src/CentralView.jsx",
-      "source_location": "L24",
+      "source_location": "L36",
       "weight": 1.0
     },
     {
@@ -7846,24 +8268,24 @@
     },
     {
       "source": "src_workitems_normalizeworkitems",
-      "target": "src_domain_isoverdue",
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src/workItems.js",
-      "source_location": "L52",
-      "weight": 1.0
-    },
-    {
-      "source": "src_workitems_normalizeworkitems",
       "target": "src_mockstore_task",
       "relation": "indirect_call",
       "context": "argument",
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "src/workItems.js",
-      "source_location": "L52",
+      "source_location": "L72",
+      "weight": 1.0
+    },
+    {
+      "source": "src_workitems_normalizeworkitems",
+      "target": "src_domain_isoverdue",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/workItems.js",
+      "source_location": "L82",
       "weight": 1.0
     },
     {
@@ -7874,7 +8296,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/App.jsx",
-      "source_location": "L38",
+      "source_location": "L48",
       "weight": 1.0
     },
     {
@@ -7885,7 +8307,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/App.jsx",
-      "source_location": "L122",
+      "source_location": "L137",
       "weight": 1.0
     },
     {
@@ -7896,7 +8318,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/App.jsx",
-      "source_location": "L198",
+      "source_location": "L240",
       "weight": 1.0
     },
     {
@@ -7966,25 +8388,14 @@
       "weight": 1.0
     },
     {
-      "source": "src_workitems_qualitystatusgroup",
+      "source": "src_workitems_isterminalqualitystatus",
       "target": "src_workitems_terminal_quality_statuses",
       "relation": "references",
       "context": "call",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/workItems.js",
-      "source_location": "L6",
-      "weight": 1.0
-    },
-    {
-      "source": "src_workitems_qualityworkitem",
-      "target": "src_workitems_terminal_quality_statuses",
-      "relation": "references",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src/workItems.js",
-      "source_location": "L32",
+      "source_location": "L16",
       "weight": 1.0
     }
   ]
