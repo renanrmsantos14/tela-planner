@@ -190,6 +190,7 @@ button { cursor: pointer; }
 .central-row-main > span:not(.source-badge) { color: var(--muted); font-size: 11px; }
 .central-row-meta { display: grid; grid-template-columns: 160px 110px 130px var(--central-action-width); align-items: center; gap: 12px; min-width: 490px; color: var(--muted); font-size: 11px; }.central-row-meta > svg { justify-self: end; }
 .central-row-meta span { display: inline-flex; min-width: 0; align-items: center; gap: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.central-row-meta .avatar { display: inline-grid; place-items: center; line-height: 1; text-align: center; }
 .central-status { justify-self: start; padding: 4px 8px; }
 .central-done { color: var(--green); background: var(--green-soft); }
 .central-empty { display: grid; place-items: center; gap: 7px; min-height: 142px; padding: 24px; color: var(--muted); text-align: center; }
