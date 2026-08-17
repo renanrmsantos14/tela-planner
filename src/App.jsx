@@ -255,7 +255,7 @@ function TaskDrawerContent({ task: taskItem, state, currentEmployee, showCheckli
 function TaskDrawer({ task, onDelete, ...props }) {
   const [showDeletePrompt, setShowDeletePrompt] = useState(false); const [deleteState, setDeleteState] = useState("idle");
   if (!task) return null;
-  const confirmDelete = () => { setShowDeletePrompt(false); setDeleteState("deleting"); window.setTimeout(() => onDelete(task.id), 620); };
+  const confirmDelete = () => { setShowDeletePrompt(false); setDeleteState("deleting"); window.setTimeout(() => { Promise.resolve(onDelete(task.id)).finally(() => setDeleteState("idle")); }, 620); };
   return <TaskDrawerContent task={task} onDelete={onDelete} onRequestDelete={() => setShowDeletePrompt(true)} deleteState={deleteState} showDeletePrompt={showDeletePrompt} onCancelDelete={() => setShowDeletePrompt(false)} onConfirmDelete={confirmDelete} {...props} />;
 }
 
@@ -338,8 +338,9 @@ export default function App() {
     });
   }, [state, store, runOptimisticMutation, selectedId]);
   const deleteTask = useCallback((id) => {
-    runOptimisticMutation((current) => ({ ...current, tasks: current.tasks.filter((taskItem) => taskItem.id !== id) }), () => store.deleteTask(state, id), "", "").then((success) => { if (success) setSelectedId(""); });
-  }, [state, store, runOptimisticMutation]);
+    const shouldCloseDrawer = selectedId === id;
+    return runOptimisticMutation((current) => ({ ...current, tasks: current.tasks.filter((taskItem) => taskItem.id !== id) }), () => store.deleteTask(state, id), "", "").then((success) => { if (success && shouldCloseDrawer) setSelectedId(""); return success; });
+  }, [state, store, runOptimisticMutation, selectedId]);
   const createNewTask = useCallback((input) => { const { subtasks = [], ...taskInput } = input; const params = new URLSearchParams(window.location.search); const data = new URLSearchParams((params.get("data") || "").replace(/^\?/, "")); const isQuoteFollowUp = (params.get("source") || data.get("source")) === "quote"; const commonTask = isQuoteFollowUp ? { ...taskInput, sourceType: "quote" } : { ...taskInput, quoteId: undefined, sourceType: "manual", sourceId: undefined, sourceCode: undefined, quoteCode: undefined, quoteTitle: undefined }; const operation = () => store.createTask(state, commonTask).then((nextState) => { const parent = nextState.tasks.find((taskItem) => taskItem.title === commonTask.title && !taskItem.parentTaskId); if (!parent || !subtasks.length) return nextState; return subtasks.reduce((promise, title) => promise.then((currentState) => store.createSubtask(currentState, parent.id, { title, description: "", priority: "medium", assigneeName: "Não atribuído", teamName: "Operação", dueDate: "" })), Promise.resolve(nextState)); }); return runOptimisticCreate(commonTask, operation, store.live ? "Tarefa sincronizada." : "Tarefa salva localmente.").then(() => setCreating(false)); }, [state, store, runOptimisticCreate]);
   const createSubtask = useCallback((parentId, title) => { const input = { title, description: "", priority: "medium", assigneeName: "Não atribuído", teamName: "Operação", dueDate: "" }; runOptimisticCreate(input, () => store.createSubtask(state, parentId, input), store.live ? "Subtarefa sincronizada." : "Subtarefa salva localmente.", parentId); }, [state, store, runOptimisticCreate]);
   const createQualityTask = useCallback((item) => { const input = { title: item.title, description: item.description, dueDate: item.dueDate, sourceType: "quality", sourceId: item.id, sourceCode: item.code, sourceLabel: item.type === "error" ? "Erro operacional" : "Ação operacional" }; runOptimisticCreate(input, () => store.createQualityTask(state, item), store.live ? "Tarefa de qualidade sincronizada." : "Tarefa de qualidade salva localmente."); }, [state, store, runOptimisticCreate]);
