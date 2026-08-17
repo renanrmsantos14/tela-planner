@@ -8,6 +8,7 @@ import { addOptimisticAttachment, addOptimisticComment, applyOptimisticTaskPatch
 import { createDataStore } from "./dataverse";
 import SearchableSelect, { SearchableMultiSelect } from "./SearchableSelect.jsx";
 import CentralView from "./CentralView.jsx";
+import AssigneeDisplay from "./AssigneeDisplay.jsx";
 import { filterWorkItems, isAssignedToEmployee, normalizeWorkItems, workItemStats } from "./workItems.js";
 import { APP_VERSION } from "./version.js";
 
@@ -130,7 +131,7 @@ function TaskCard({ task: taskItem, onOpen, compact = false, onDrop }) {
     {(taskItem.sourceType || taskItem.quoteId) && <div className="task-source-row"><SourceBadge sourceType={taskItem.sourceType || (taskItem.quoteId ? "quote" : "manual")} /><span>{taskItem.sourceCode || taskItem.quoteCode}</span><em>{taskItem.sourceLabel || taskItem.quoteTitle}</em></div>}
     {isBlocked(taskItem) && <div className="blocked-note"><CircleHelp size={13} />Bloqueada: {taskItem.blockedReason}</div>}
     {!compact && <p className="task-description">{taskItem.description}</p>}
-    <div className="task-card-footer"><div className="task-owner" title={taskItem.assigneeName}><Avatar name={taskItem.assigneeName} small /><span>{shortAssigneeName(taskItem.assigneeName)}</span></div>{taskItem.syncStatus === "syncing" ? <span className="sync-chip" role="status">Enviando...</span> : <span className={overdue ? "date-chip overdue" : "date-chip"}><Clock3 size={13} />{formatDate(taskItem.dueDate)}</span>}</div>
+    <div className="task-card-footer"><AssigneeDisplay value={taskItem.assigneeNames || taskItem.assigneeName} small compact />{taskItem.syncStatus === "syncing" ? <span className="sync-chip" role="status">Enviando...</span> : <span className={overdue ? "date-chip overdue" : "date-chip"}><Clock3 size={13} />{formatDate(taskItem.dueDate)}</span>}</div>
     {taskItem.parentTaskId && <div className="subtask-mark"><CheckCircle2 size={13} />Subtarefa</div>}
   </article>;
 }
@@ -161,7 +162,7 @@ function BoardView({ state, onOpen, onMove, onCreate, filters, setFilters }) {
 
 function ListView({ state, onOpen, onCreate, filters, setFilters }) {
   const filtered = useMemo(() => sortTasks(filterTasks(state.tasks, filters)), [state.tasks, filters]);
-  return <div className="page-content"><PageHeader eyebrow="Gestão de tarefas" title="Lista operacional" description="Encontre rapidamente o próximo responsável por cada tarefa." /><FilterBar filters={filters} setFilters={setFilters} onCreate={onCreate} employees={state.employees} /><section className="panel task-table"><div className="table-header"><span>Tarefa</span><span>Vínculo</span><span>Responsável</span><span>Prazo</span><span>Status</span></div>{filtered.map((taskItem) => <button className="table-row" key={taskItem.id} onClick={() => onOpen(taskItem.id)}><div className="table-task"><span className={`table-status status-${taskItem.status}`} /><strong>{taskItem.title}</strong></div><span>{taskItem.quoteCode || "—"}</span><div className="table-person" title={taskItem.assigneeName}><Avatar name={taskItem.assigneeName} small />{shortAssigneeName(taskItem.assigneeName)}</div><span className={isOverdue(taskItem) ? "danger-text" : ""}>{formatDate(taskItem.dueDate)}</span><div className="table-row-tags"><PriorityBadge priority={taskItem.priority} /><StatusBadge status={taskItem.status} /></div></button>)}</section></div>;
+  return <div className="page-content"><PageHeader eyebrow="Gestão de tarefas" title="Lista operacional" description="Encontre rapidamente o próximo responsável por cada tarefa." /><FilterBar filters={filters} setFilters={setFilters} onCreate={onCreate} employees={state.employees} /><section className="panel task-table"><div className="table-header"><span>Tarefa</span><span>Vínculo</span><span>Responsável</span><span>Prazo</span><span>Status</span></div>{filtered.map((taskItem) => <button className="table-row" key={taskItem.id} onClick={() => onOpen(taskItem.id)}><div className="table-task"><span className={`table-status status-${taskItem.status}`} /><strong>{taskItem.title}</strong></div><span>{taskItem.quoteCode || "—"}</span><AssigneeDisplay value={taskItem.assigneeNames || taskItem.assigneeName} small /><span className={isOverdue(taskItem) ? "danger-text" : ""}>{formatDate(taskItem.dueDate)}</span><div className="table-row-tags"><PriorityBadge priority={taskItem.priority} /><StatusBadge status={taskItem.status} /></div></button>)}</section></div>;
 }
 
 function CalendarView({ state, onOpen, onCreate, filters, setFilters }) {
