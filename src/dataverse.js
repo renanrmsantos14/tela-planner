@@ -10,7 +10,7 @@ import {
   updateTask as updateMockTask,
 } from "./mockStore.js";
 import { normalizeAssigneeNames } from "./domain.js";
-import { loadGraphPhotoUrls } from "./graphPhotos.js";
+import { connectGraphSession, loadGraphPhotoUrls } from "./graphPhotos.js";
 
 const API_VERSION = "v9.2";
 const QUOTE_TABLE = "cr40f_pedidodecotacao";
@@ -301,11 +301,13 @@ async function loadLiveState(xrm) {
   }
   const userById = new Map(systemUsers.map((user) => [cleanId(user.systemuserid).toLowerCase(), user]));
   let graphPhotos = new Map();
+  let graphAuthRequired = false;
   try {
     const config = await resolveEnvironmentValues(xrm, [GRAPH_CLIENT_ID_SCHEMA, GRAPH_TENANT_ID_SCHEMA]);
     const currentUser = userById.get(currentUserId.toLowerCase());
     graphPhotos = await loadGraphPhotoUrls({ clientId: config[GRAPH_CLIENT_ID_SCHEMA], tenantId: config[GRAPH_TENANT_ID_SCHEMA], redirectUri: `${xrm.Utility.getGlobalContext().getClientUrl().replace(/\/$/, "")}/WebResources/new_PlannerAuth.html`, loginHint: currentUser?.internalemailaddress || "" }, systemUsers.map((user) => ({ azureObjectId: cleanId(user.azureactivedirectoryobjectid) })).filter((user) => user.azureObjectId));
   } catch (error) {
+    graphAuthRequired = true;
     console.warn("Não foi possível carregar fotos do Microsoft 365.", error);
   }
   const employeeById = new Map(employeeRecords.map((employee) => [cleanId(employee.id).toLowerCase(), employee]));
@@ -326,7 +328,12 @@ async function loadLiveState(xrm) {
   });
   const quality = [...qualityErrors.map((row) => normalizeQuality(row, "error")), ...qualityActions.map((row) => normalizeQuality(row, "action"))].map((item) => ({ ...item, assigneeProfiles: employeeById.has(cleanId(item.assigneeId).toLowerCase()) ? [employeesWithProfiles.find((employee) => cleanId(employee.id).toLowerCase() === cleanId(item.assigneeId).toLowerCase())] : [] }));
   const tasksWithProfiles = tasks.map((task) => ({ ...task, assigneeProfiles: task.assigneeProfiles?.length ? task.assigneeProfiles : task.assigneeIds.map((id) => employeesWithProfiles.find((employee) => cleanId(employee.id).toLowerCase() === cleanId(id).toLowerCase())).filter(Boolean), quoteCode: quoteById.get(task.quoteId)?.code || "", quoteTitle: quoteById.get(task.quoteId)?.title || "" }));
-  return { quotes: [...quoteById.values()], employees: employeesWithProfiles, quality, tasks: tasksWithProfiles, lastUpdated: new Date().toISOString(), live: true };
+  return { quotes: [...quoteById.values()], employees: employeesWithProfiles, quality, tasks: tasksWithProfiles, graphAuthRequired, lastUpdated: new Date().toISOString(), live: true };
+}
+
+async function connectLiveGraph(xrm) {
+  await connectGraphSession();
+  return loadLiveState(xrm);
 }
 
 async function createEvent(xrm, taskId, type, description, field = "", previous = "", next = "") {
@@ -477,6 +484,7 @@ export function createDataStore() {
   return {
     live: true,
     load: () => loadLiveState(xrm),
+    connectGraph: () => connectLiveGraph(xrm),
     createTask: (state, input) => createLiveTask(xrm, state, input),
     createSubtask: (state, parentId, input) => createLiveSubtask(xrm, state, parentId, input),
     createQualityTask: (state, item) => createLiveTask(xrm, state, { title: item.title, description: item.description, dueDate: item.dueDate, sourceType: "quality", sourceCode: item.code, qualityType: item.type, qualityId: item.id }),

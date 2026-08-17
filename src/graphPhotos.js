@@ -3,6 +3,7 @@ import { InteractionRequiredAuthError, PublicClientApplication } from "@azure/ms
 const PHOTO_SCOPES = ["User.Read", "ProfilePhoto.Read.All"];
 const photoCache = new Map();
 let clientCache = null;
+let lastConfig = null;
 
 export function graphPhotoEndpoint(userId) {
   const normalizedId = String(userId || "").replace(/[{}]/g, "").trim();
@@ -31,8 +32,15 @@ async function accessToken(config) {
   return (await client.ssoSilent({ scopes: PHOTO_SCOPES, loginHint: config.loginHint || undefined })).accessToken;
 }
 
+export async function connectGraphSession() {
+  if (!lastConfig) throw new Error("Configuração do Microsoft Graph ainda não foi carregada.");
+  const client = clientCache?.client || await graphClient(lastConfig);
+  await client.loginPopup({ scopes: PHOTO_SCOPES, loginHint: lastConfig.loginHint || undefined });
+}
+
 export async function loadGraphPhotoUrls(config, users) {
   if (!config?.clientId || !config?.tenantId || !config?.redirectUri) return new Map();
+  lastConfig = config;
   const pending = users.filter((user) => graphPhotoEndpoint(user.azureObjectId) && !photoCache.has(user.azureObjectId));
   if (pending.length) {
     const token = await accessToken(config);
