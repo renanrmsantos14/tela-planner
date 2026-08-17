@@ -158,9 +158,13 @@ button { cursor: pointer; }
 .task-mention-alert { display: inline-flex; align-items: center; gap: 5px; width: fit-content; margin-top: 7px; padding: 4px 7px; border: 1px solid #f1d28a; border-radius: 999px; color: #8a5a00; background: #fff8e7; font-size: 9px; font-weight: 800; }
 .task-mention-alert strong { min-width: 15px; height: 15px; display: grid; place-items: center; border-radius: 999px; color: #fff; background: #c98900; font-size: 8px; }
 .comment-mention-field { position: relative; min-width: 0; }
+.comment-compose textarea:focus-visible { border-color: #6c91e8; box-shadow: 0 0 0 3px rgba(33,89,210,.11); }
+.comment-compose::after { content: "Enter envia · Shift+Enter nova linha · @ menciona · ↑↓ navega · Tab completa"; color: var(--tertiary); font-size: 9px; line-height: 1.35; }
 .mention-suggestions { position: absolute; right: 0; bottom: calc(100% + 7px); left: 0; z-index: 10; overflow: hidden; padding: 5px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); box-shadow: 0 14px 30px rgba(0,26,61,.14); }
 .mention-suggestion { width: 100%; min-height: 36px; display: flex; align-items: center; gap: 8px; padding: 5px 7px; border: 0; border-radius: 7px; color: var(--control); background: transparent; font-size: 11px; text-align: left; }
+.mention-suggestion small { margin-left: auto; color: var(--tertiary); font-size: 9px; }
 .mention-suggestion:hover, .mention-suggestion:focus-visible { outline: 0; color: var(--blue); background: var(--blue-soft); }
+.mention-suggestion.is-active { color: var(--blue); background: var(--blue-soft); }
 
 /* Input components herdados do Módulo Qualidade: portal, busca, teclado e multi-select. */
 .custom-select { position: relative; width: 100%; min-width: 0; max-width: 100%; }
