@@ -133,7 +133,7 @@ button { cursor: pointer; }
 .central-filter { display: grid; min-width: 0; gap: 5px; color: var(--muted); font-size: 10px; font-weight: 800; }
 .central-filter .custom-select-trigger { min-height: 40px; background: var(--surface); }
 .central-clear { min-height: 40px; white-space: nowrap; }
-.central-table-head { display: grid; grid-template-columns: minmax(0, 1fr) 160px 110px 130px 130px; gap: 12px; padding: 8px 20px; border-top: 1px solid #eef1f5; border-bottom: 1px solid #eef1f5; color: var(--tertiary); font-size: 10px; font-weight: 800; letter-spacing: .65px; text-transform: uppercase; }
+.central-table-head { display: grid; grid-template-columns: minmax(0, 1fr) 160px 110px 130px 16px; gap: 12px; padding: 8px 20px; border-top: 1px solid #eef1f5; border-bottom: 1px solid #eef1f5; color: var(--tertiary); font-size: 10px; font-weight: 800; letter-spacing: .65px; text-transform: uppercase; }.central-table-head span:last-child { text-align: right; white-space: nowrap; }
 .central-list { display: grid; gap: 4px; padding: 4px 9px 10px; }
 .central-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: stretch; gap: 6px; width: 100%; padding: 0; border: 1px solid transparent; border-radius: var(--radius-md); background: var(--neutral); overflow: hidden; }
 .central-row:hover, .central-row:focus-within { border-color: transparent; transform: none; }
