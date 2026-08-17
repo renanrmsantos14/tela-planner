@@ -124,6 +124,7 @@ button { cursor: pointer; }
 .assignee-copy strong, .assignee-copy small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .assignee-copy strong { color: var(--ink); font-size: 10px; font-weight: 800; }
 .assignee-copy small { color: var(--muted); font-size: 9px; }
+.assignee-display-multiple .assignee-copy strong { color: var(--muted); font-weight: 700; }
 .assignee-display-compact .assignee-copy strong { color: var(--muted); font-weight: 700; }
 .task-card-footer > .assignee-display { flex: 1 1 auto; }
 .task-card-footer > .assignee-display .assignee-copy { max-width: 125px; }

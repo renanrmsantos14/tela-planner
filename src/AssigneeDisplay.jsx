@@ -10,11 +10,6 @@ function initials(name) {
   return name.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
 }
 
-function compactName(name) {
-  const parts = name.split(/\s+/).filter(Boolean);
-  return parts.length > 1 ? `${parts[0]} ${parts[parts.length - 1][0]}.` : parts[0];
-}
-
 function AvatarStack({ names, small }) {
   const visibleNames = names.slice(0, 2);
   return <span className={`avatar avatar-stack ${small ? "avatar-stack-small" : ""}`} aria-hidden="true">
@@ -27,7 +22,7 @@ export default function AssigneeDisplay({ value, small = false, compact = false 
   const names = normalizeNames(value);
   const label = names.join(", ") || "Não atribuído";
   const isUnassigned = names.length === 1 && /^não atribuído$/i.test(names[0]);
-  const countLabel = isUnassigned ? "Não atribuído" : `${compactName(names[0])}${names.length > 1 ? ` +${names.length - 1}` : ""}`;
+  const countLabel = isUnassigned ? "Não atribuído" : `${names.length} responsáveis`;
 
   if (names.length === 1) return <span className="assignee-display" title={label} aria-label={`Responsável: ${label}`}>
     <span className={`avatar ${small ? "avatar-small" : ""}`}>{initials(names[0])}</span>
