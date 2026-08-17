@@ -213,7 +213,7 @@ export default function App() {
   const openTaskCount = state.tasks.filter((task) => !task.parentTaskId && !["done", "cancelled"].includes(task.status)).length;
   ASSIGNEE_OPTIONS.splice(1, ASSIGNEE_OPTIONS.length - 1, ...(state.employees || []).map((item) => item.name));
   const renderPage = () => {
-    if (active === "dashboard" || active === "team") return <CentralView state={viewState} mode={active === "dashboard" ? "mine" : "team"} currentEmployee={currentEmployee} onOpenTask={openTask} onOpenSource={(item) => store.openSource?.(item)} onTransition={moveTask} onCreate={() => setCreating(true)} />;
+    if (active === "dashboard" || active === "team") return <CentralView state={viewState} mode={active === "dashboard" ? "mine" : "team"} currentEmployee={currentEmployee} onOpenTask={openTask} onOpenSource={(item) => store.openSource?.(item)} onCreate={() => setCreating(true)} />;
     if (active === "board") return <BoardView state={state} onOpen={openTask} onMove={moveTask} onCreate={() => setCreating(true)} filters={filters} setFilters={setFilters} />;
     if (active === "list") return <ListView state={state} onOpen={openTask} onCreate={() => setCreating(true)} filters={filters} setFilters={setFilters} />;
     if (active === "calendar") return <CalendarView state={state} onOpen={openTask} onCreate={() => setCreating(true)} />;
