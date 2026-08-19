@@ -22,7 +22,6 @@ const EMPLOYEE_ASSIGNEE_FIELD = "cr40f_cr40f_funcionarioresponsavel";
 const EVENT_TABLE = "cr40f_plannertarefaevento";
 const RELATION_TABLE = "cr40f_plannertarearelacao";
 const ASSIGNEE_RELATION_TABLE = "cr40f_plannertarearesponsavel";
-const ANNOTATION_TABLE = "annotation";
 const ENVIRONMENT_VARIABLE_DEFINITION_TABLE = "environmentvariabledefinition";
 const ENVIRONMENT_VARIABLE_VALUE_TABLE = "environmentvariablevalue";
 const FLOW_URL_SCHEMA = "new_FlowURLFlowSalvarArquivosOnedrive";
@@ -39,7 +38,6 @@ const ENTITY_SETS = Object.freeze({
   [EVENT_TABLE]: "cr40f_plannertarefaeventos",
   [RELATION_TABLE]: "cr40f_plannertarearelacaos",
   [ASSIGNEE_RELATION_TABLE]: "cr40f_plannertarearesponsavels",
-  [ANNOTATION_TABLE]: "annotations",
   [ENVIRONMENT_VARIABLE_DEFINITION_TABLE]: "environmentvariabledefinitions",
   [ENVIRONMENT_VARIABLE_VALUE_TABLE]: "environmentvariablevalues",
   systemuser: "systemusers",
@@ -236,13 +234,14 @@ function normalizeQuality(row, type) {
   return { id: row[isAction ? "cr40f_acaooperacionalid" : "cr40f_errooperacionalid"], type, code: row.cr40f_codigo || "", title: row.cr40f_titulo || "", description: row.cr40f_descricao || "", status: row[isAction ? "cr40f_status@OData.Community.Display.V1.FormattedValue" : "cr40f_status@OData.Community.Display.V1.FormattedValue"] || "", dueDate: dateOnly(row[isAction ? "cr40f_prazo" : "cr40f_prazoresolucao"]), assigneeId: row._cr40f_responsavel_value || "", assigneeName: row["_cr40f_responsavel_value@OData.Community.Display.V1.FormattedValue"] || "" };
 }
 
-function normalizeTask(row, annotations = [], events = [], assignees = []) {
+function normalizeTask(row, events = [], assignees = []) {
   const status = STATUS_BY_VALUE[row.cr40f_status] || "todo";
   const priority = PRIORITY_BY_VALUE[row.cr40f_prioridade] || "medium";
   const origin = Object.entries(ORIGIN_VALUES).find(([, value]) => value === row.cr40f_origem)?.[0] || "manual";
-  const driveNotes = annotations.filter((item) => item.isdocument !== true && String(item.notetext || "").startsWith("Arquivo salvo no OneDrive:"));
-  const comments = annotations.filter((item) => item.isdocument !== true && !String(item.notetext || "").startsWith("Arquivo salvo no OneDrive:")).map((item) => ({ id: item.annotationid, text: item.notetext || "", createdAt: item.createdon, author: item.createdbyName || "Sistema" }));
-  const attachments = [...annotations.filter((item) => item.isdocument === true), ...driveNotes].map((item) => ({ id: item.annotationid, name: item.filename || "Anexo", link: String(item.notetext || "").replace(/^Arquivo salvo no OneDrive:\s*/, ""), createdAt: item.createdon }));
+  const comments = events.filter((item) => item.cr40f_campo === "comentario").map((item) => ({ id: item.cr40f_plannertarefaeventoid, authorId: cleanId(item._cr40f_autor_value || item._createdby_value), text: item.cr40f_valornovo || item.cr40f_descricao || "", createdAt: item.cr40f_ocorridoem, author: item.authorName || item["_cr40f_autor_value@OData.Community.Display.V1.FormattedValue"] || item["_createdby_value@OData.Community.Display.V1.FormattedValue"] || "Sistema" })).sort((left, right) => String(left.createdAt || "").localeCompare(String(right.createdAt || "")));
+  const attachments = events.filter((item) => item.cr40f_campo === "anexo").map((item) => {
+    try { return { id: item.cr40f_plannertarefaeventoid, ...JSON.parse(item.cr40f_valornovo || "{}"), createdAt: item.cr40f_ocorridoem }; } catch { return { id: item.cr40f_plannertarefaeventoid, name: item.cr40f_valornovo || "Anexo", createdAt: item.cr40f_ocorridoem }; }
+  });
   return {
     id: row.cr40f_plannertarefaid,
     title: row.cr40f_titulo || row.cr40f_name || "Sem título",
@@ -267,7 +266,7 @@ function normalizeTask(row, annotations = [], events = [], assignees = []) {
     blockedReason: row.cr40f_motivobloqueio || "",
     comments,
     attachments,
-    history: events.map((item) => ({ id: item.cr40f_plannertarefaeventoid, text: item.cr40f_descricao, createdAt: item.cr40f_ocorridoem, author: item.authorName || "Sistema" })),
+    history: events.map((item) => ({ id: item.cr40f_plannertarefaeventoid, text: item.cr40f_descricao, createdAt: item.cr40f_ocorridoem, author: item.authorName || item["_cr40f_autor_value@OData.Community.Display.V1.FormattedValue"] || item["_createdby_value@OData.Community.Display.V1.FormattedValue"] || "Sistema" })),
   };
 }
 
@@ -279,14 +278,13 @@ async function loadLiveState(xrm) {
   const [quotes, rows, events, relations, assigneeRelations, qualityErrors, qualityActions, employees] = await Promise.all([
     retrieveMany(xrm, QUOTE_TABLE, "?$select=cr40f_pedidodecotacaoid,cr40f_numerodacotacao,cr40f_titulo,cr40f_clienteempresa,cr40f_statuscotacao,cr40f_prazoresponder,cr40f_valorcotado,cr40f_plannertaskid,cr40f_linktarefaplanner,cr40f_linkmensagemteams&$filter=statecode eq 0&$orderby=modifiedon desc"),
     retrieveMany(xrm, TASK_TABLE, `?$select=cr40f_plannertarefaid,cr40f_name,cr40f_titulo,cr40f_descricao,cr40f_status,cr40f_prioridade,cr40f_prazo,_${EMPLOYEE_ASSIGNEE_FIELD}_value,_cr40f_equipe_value,_cr40f_pedidocotacao_value,_cr40f_errooperacional_value,_cr40f_acaooperacional_value,cr40f_origem,cr40f_codigoorigem,cr40f_motivobloqueio&$filter=statecode eq 0&$orderby=modifiedon desc`),
-    retrieveMany(xrm, EVENT_TABLE, "?$select=cr40f_plannertarefaeventoid,_cr40f_tarefa_value,cr40f_tipo,cr40f_descricao,cr40f_ocorridoem,_cr40f_autor_value&$orderby=cr40f_ocorridoem desc"),
+    retrieveMany(xrm, EVENT_TABLE, "?$select=cr40f_plannertarefaeventoid,_cr40f_tarefa_value,cr40f_tipo,cr40f_campo,cr40f_descricao,cr40f_valornovo,cr40f_ocorridoem,_cr40f_autor_value,_createdby_value&$orderby=cr40f_ocorridoem desc"),
     retrieveMany(xrm, RELATION_TABLE, "?$select=cr40f_plannertarearelacaoid,_cr40f_tarefapai_value,_cr40f_subtarefa_value&$filter=statecode eq 0"),
     retrieveMany(xrm, ASSIGNEE_RELATION_TABLE, "?$select=cr40f_plannertarearesponsavelid,_cr40f_tarefa_value,_cr40f_funcionario_value,_cr40f_funcionario_value&$filter=statecode eq 0"),
     retrieveMany(xrm, QUALITY_ERROR_TABLE, "?$select=cr40f_errooperacionalid,cr40f_codigo,cr40f_titulo,cr40f_descricao,cr40f_status,cr40f_prazoresolucao,_cr40f_responsavel_value&$filter=statecode eq 0&$orderby=createdon desc"),
     retrieveMany(xrm, QUALITY_ACTION_TABLE, "?$select=cr40f_acaooperacionalid,cr40f_titulo,cr40f_descricao,cr40f_status,cr40f_prazo,_cr40f_responsavel_value&$filter=statecode eq 0&$orderby=createdon desc"),
     retrieveMany(xrm, EMPLOYEE_TABLE, "?$select=cr40f_funcionariosid,cr40f_nomecompleto,new_apelido,_cr40f_usuariodataverse_value&$filter=statecode eq 0 and cr40f_status eq 0 and cr40f_funcao eq 202410001&$orderby=cr40f_nomecompleto asc"),
   ]);
-  const annotations = await retrieveMany(xrm, ANNOTATION_TABLE, "?$select=annotationid,_objectid_value,notetext,filename,mimetype,isdocument,createdon,_createdby_value&$filter=isdocument eq false or isdocument eq true&$top=5000");
   const employeeRecords = employees.map((row) => ({ id: row.cr40f_funcionariosid, name: row.cr40f_nomecompleto || row.new_apelido || "Sem nome", userId: row._cr40f_usuariodataverse_value || "" }));
   const currentUserId = cleanId(xrm.Utility.getGlobalContext().userSettings.userId);
   const linkedUserIds = [...new Set([...employeeRecords.map((employee) => cleanId(employee.userId)), currentUserId].filter(Boolean))];
@@ -320,7 +318,7 @@ async function loadLiveState(xrm) {
     list.push({ id: item._cr40f_funcionario_value, name: item["_cr40f_funcionario_value@OData.Community.Display.V1.FormattedValue"] || employee?.name || "Sem nome", userId: employee?.userId || "", avatarUrl: graphPhotos.get(cleanId(user?.azureactivedirectoryobjectid)) || "" });
     assigneesByTask.set(item._cr40f_tarefa_value, list);
   });
-  const tasks = rows.map((row) => ({ ...normalizeTask(row, annotations.filter((item) => item._objectid_value === row.cr40f_plannertarefaid), events.filter((item) => item._cr40f_tarefa_value === row.cr40f_plannertarefaid), assigneesByTask.get(row.cr40f_plannertarefaid) || []), parentTaskId: relationByChild.get(row.cr40f_plannertarefaid) || null }));
+  const tasks = rows.map((row) => ({ ...normalizeTask(row, events.filter((item) => item._cr40f_tarefa_value === row.cr40f_plannertarefaid), assigneesByTask.get(row.cr40f_plannertarefaid) || []), parentTaskId: relationByChild.get(row.cr40f_plannertarefaid) || null }));
   const quoteById = new Map(quotes.map((row) => [row.cr40f_pedidodecotacaoid, normalizeQuote(row)]));
   const employeesWithProfiles = employeeRecords.map((employee) => {
     const user = userById.get(cleanId(employee.userId).toLowerCase());
@@ -388,9 +386,7 @@ async function updateLiveTask(xrm, state, id, patch) {
 }
 
 async function addLiveComment(xrm, taskId, text) {
-  const payload = { subject: "Comentário da tarefa", notetext: text.trim(), isdocument: false };
-  await bindLookup(xrm, payload, ANNOTATION_TABLE, "objectid", TASK_TABLE, taskId);
-  await request(xrm, `/${entitySetName(ANNOTATION_TABLE)}`, { method: "POST", body: JSON.stringify(payload) });
+  await createEvent(xrm, taskId, 100000001, "Comentário adicionado.", "comentario", "", text.trim());
   return loadLiveState(xrm);
 }
 
@@ -411,9 +407,7 @@ async function addLiveAttachment(xrm, taskId, file) {
   const result = extractFlowRecord(responseText) || {};
   const link = getFlowLink(result);
   if (!link) throw new Error("Arquivo salvo no OneDrive, mas o Flow não retornou link.");
-  const payload = { subject: fileName, filename: fileName, mimetype: file.type || "application/octet-stream", notetext: `Arquivo salvo no OneDrive: ${link}`, isdocument: false };
-  await bindLookup(xrm, payload, ANNOTATION_TABLE, "objectid", TASK_TABLE, taskId);
-  await request(xrm, `/${entitySetName(ANNOTATION_TABLE)}`, { method: "POST", body: JSON.stringify(payload) });
+  await createEvent(xrm, taskId, 100000001, "Anexo adicionado.", "anexo", "", JSON.stringify({ name: fileName, link }));
   return loadLiveState(xrm);
 }
 

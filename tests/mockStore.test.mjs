@@ -15,7 +15,19 @@ test("cria e atualiza tarefa sem alterar a referência original", () => {
   const created = next.tasks.at(-1);
   const updated = updateTask(next, created.id, { status: "done" });
   assert.equal(updated.tasks.at(-1).status, "done");
-  assert.equal(initial.tasks.length, 7);
+  assert.equal(initial.tasks.length, 44);
+});
+
+test("mantém subtarefa vinculada à tarefa-pai no mock", () => {
+  withStorage();
+  const initial = seedState();
+  const parent = initial.tasks.find((item) => !item.parentTaskId && initial.tasks.filter((task) => task.parentTaskId === item.id).length === 0);
+  const next = createTask(initial, { title: "Checklist da tarefa", parentTaskId: parent.id });
+  const subtask = next.tasks.at(-1);
+
+  assert.equal(subtask.parentTaskId, parent.id);
+  const countByParent = next.tasks.filter((item) => item.parentTaskId === parent.id).length;
+  assert.equal(countByParent, initial.tasks.filter((item) => item.parentTaskId === parent.id).length + 1);
 });
 
 test("adiciona comentário e anexo mock", () => {
@@ -24,8 +36,9 @@ test("adiciona comentário e anexo mock", () => {
   const commented = addComment(initial, "task-1", "Cliente confirmou o horário.");
   const attached = addAttachment(commented, "task-1", "confirmacao.png");
   const task = attached.tasks.find((item) => item.id === "task-1");
-  assert.equal(task.comments.length, 1);
-  assert.equal(task.attachments[0].name, "confirmacao.png");
+  assert.equal(task.comments.length, 3);
+  assert.equal(task.attachments.length, 3);
+  assert.equal(task.attachments.at(-1).name, "confirmacao.png");
 });
 
 test("exclui somente a tarefa selecionada no mock", () => {
@@ -34,7 +47,7 @@ test("exclui somente a tarefa selecionada no mock", () => {
   const next = deleteTask(initial, "task-1");
   assert.equal(next.tasks.some((taskItem) => taskItem.id === "task-1"), false);
   assert.equal(next.tasks.length, initial.tasks.length - 1);
-  assert.equal(initial.tasks.length, 7);
+  assert.equal(initial.tasks.length, 44);
 });
 
 test("cria tarefa principal para cotação sem duplicar", () => {
@@ -52,4 +65,19 @@ test("preserva origem e bloqueio na tarefa criada", () => {
   assert.equal(task.sourceType, "quality");
   assert.equal(task.sourceId, "quality-1");
   assert.equal(task.blockedReason, "Aguardando evidência");
+});
+
+test("semeia cenário operacional amplo e variado", () => {
+  const state = seedState();
+  assert.equal(state.quotes.length, 17);
+  assert.equal(state.tasks.length, 44);
+  assert.equal(state.employees.length, 7);
+  assert.equal(state.quality.length, 8);
+  assert.ok(state.tasks.some((item) => item.status === "waiting" && item.blockedReason));
+  assert.ok(state.tasks.some((item) => item.sourceType === "quality"));
+  assert.ok(state.tasks.some((item) => item.parentTaskId));
+  assert.ok(state.tasks.some((item) => item.checklist.length >= 3));
+  assert.ok(state.tasks.some((item) => item.assigneeNames.includes("Renan Martins")));
+  assert.ok(new Set(state.tasks.map((item) => item.teamName)).size >= 4);
+  assert.ok(state.tasks.some((item) => item.comments.length > 0 && item.attachments.length > 0 && item.history.length > 1));
 });

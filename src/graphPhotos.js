@@ -49,6 +49,8 @@ export async function loadGraphPhotoUrls(config, users) {
         const response = await fetch(graphPhotoEndpoint(user.azureObjectId), { headers: { Authorization: `Bearer ${token}` } });
         if (response.status === 404) { photoCache.set(user.azureObjectId, ""); return; }
         if (!response.ok) throw new Error(`Graph photo ${response.status}`);
+        const oldUrl = photoCache.get(user.azureObjectId);
+        if (oldUrl && oldUrl.startsWith("blob:")) URL.revokeObjectURL(oldUrl);
         photoCache.set(user.azureObjectId, URL.createObjectURL(await response.blob()));
       } catch (error) {
         photoCache.set(user.azureObjectId, "");
@@ -57,4 +59,11 @@ export async function loadGraphPhotoUrls(config, users) {
     }));
   }
   return new Map(users.map((user) => [user.azureObjectId, photoCache.get(user.azureObjectId) || ""]));
+}
+
+export function clearPhotoCache() {
+  photoCache.forEach((url) => { if (url && url.startsWith("blob:")) URL.revokeObjectURL(url); });
+  photoCache.clear();
+  clientCache = null;
+  lastConfig = null;
 }

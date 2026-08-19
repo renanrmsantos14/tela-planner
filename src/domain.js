@@ -150,7 +150,8 @@ export function filterTasks(tasks, filters) {
   const priorityValues = selectedValues(filters.priority);
   const sourceValues = selectedValues(filters.source);
   return tasks.filter((task) => {
-    const matchesQuery = !query || [task.title, task.quoteTitle, task.assigneeName, task.teamName]
+    const assigneeSearch = [task.assigneeName, ...(Array.isArray(task.assigneeNames) ? task.assigneeNames : [])].filter(Boolean).join(" ");
+    const matchesQuery = !query || [task.title, task.quoteTitle, assigneeSearch, task.teamName]
       .some((value) => {
         const normalizedValue = normalizeText(value);
         return normalizedValue.includes(query) || queryTokens.every((token) => normalizedValue.includes(token));

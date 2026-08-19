@@ -16,6 +16,19 @@ export function seedState() {
     { id: "quote-1007", code: "COT-1007", title: "Van executiva · Evento corporativo", client: "Norte & Sul Eventos", status: "Aguardando fornecedor", deadline: dateFromToday(2), value: "R$ 4.950,00" },
     { id: "quote-1006", code: "COT-1006", title: "Carro blindado · Diretoria", client: "Alvorada Capital", status: "Em análise", deadline: dateFromToday(1), value: "R$ 2.400,00" },
     { id: "quote-1005", code: "COT-1005", title: "Recepção de convidados · Congonhas", client: "Casa 9 Produções", status: "Respondida", deadline: dateFromToday(-1), value: "R$ 860,00" },
+    { id: "quote-1004", code: "COT-1004", title: "Roadshow executivo · São Paulo e Campinas", client: "Vértice Tecnologia", status: "Nova", deadline: dateFromToday(3), value: "R$ 8.740,00" },
+    { id: "quote-1003", code: "COT-1003", title: "Traslado de palestrantes · Expo Center Norte", client: "Mosaico Eventos", status: "Em análise", deadline: dateFromToday(4), value: "R$ 3.260,00" },
+    { id: "quote-1002", code: "COT-1002", title: "Disposição diária · Alphaville", client: "Lumen Energia", status: "Aguardando fornecedor", deadline: dateFromToday(5), value: "R$ 6.180,00" },
+    { id: "quote-1001", code: "COT-1001", title: "Transfer internacional · GRU–Faria Lima", client: "Kairós Health", status: "Nova", deadline: dateFromToday(1), value: "R$ 1.960,00" },
+    { id: "quote-0999", code: "COT-0999", title: "Transporte de equipe · Guarujá", client: "Aurora Produções", status: "Respondida", deadline: dateFromToday(-3), value: "R$ 5.480,00" },
+    { id: "quote-0998", code: "COT-0998", title: "Transfer para conselho · Itaim Bibi", client: "Orbe Consultoria", status: "Em análise", deadline: dateFromToday(0), value: "R$ 2.150,00" },
+    { id: "quote-0997", code: "COT-0997", title: "Operação de embarque · Viracopos", client: "Delta Foods", status: "Nova", deadline: dateFromToday(6), value: "R$ 3.890,00" },
+    { id: "quote-0996", code: "COT-0996", title: "Apoio logístico · Hotel Fasano", client: "Estação 21", status: "Respondida", deadline: dateFromToday(-5), value: "R$ 1.740,00" },
+    { id: "quote-0995", code: "COT-0995", title: "Transfer de executivos · São José dos Campos", client: "Nexa Industrial", status: "Nova", deadline: dateFromToday(7), value: "R$ 4.620,00" },
+    { id: "quote-0994", code: "COT-0994", title: "Frota dedicada · Convenção anual", client: "Pilar Seguros", status: "Em análise", deadline: dateFromToday(8), value: "R$ 12.900,00" },
+    { id: "quote-0993", code: "COT-0993", title: "Recepção VIP · Hotel Unique", client: "Leste Mídia", status: "Aguardando fornecedor", deadline: dateFromToday(2), value: "R$ 2.780,00" },
+    { id: "quote-0992", code: "COT-0992", title: "Transfer noturno · Santos–GRU", client: "Maré Logística", status: "Nova", deadline: dateFromToday(9), value: "R$ 2.340,00" },
+    { id: "quote-0991", code: "COT-0991", title: "Veículo executivo · Diretoria regional", client: "Horizon Bio", status: "Respondida", deadline: dateFromToday(-7), value: "R$ 7.350,00" },
   ];
   const tasks = [
     task("task-1", "Preparar proposta comercial", "quote-1008", "COT-1008", "Transfer executivo · Aeroporto GRU", "doing", "high", "Marina Alves", "Comercial", dateFromToday(0), "Revisar composição de preço e confirmar janela de embarque."),
@@ -25,16 +38,103 @@ export function seedState() {
     task("task-5", "Montar cotação do carro blindado", "quote-1006", "COT-1006", "Carro blindado · Diretoria", "doing", "high", "Marina Alves", "Comercial", dateFromToday(1), "Compor o valor final com deslocamento e espera."),
     task("task-6", "Registrar resposta enviada", "quote-1005", "COT-1005", "Recepção de convidados · Congonhas", "done", "low", "Camila Torres", "Comercial", dateFromToday(-1), "Resposta enviada e registrada no histórico."),
     task("task-7", "Validar causa do erro operacional", null, "QAL-204", "Atraso na confirmação do fornecedor", "waiting", "high", "Rafael Lima", "Qualidade", dateFromToday(1), "Confirmar causa e registrar ação corretiva.", null, { sourceType: "quality", sourceId: "quality-error-204", sourceLabel: "Erro operacional", sourceCode: "QAL-204", blockedReason: "Aguardando retorno do fornecedor" }),
+    task("task-8", "Abrir ordem de serviço do roadshow", "quote-1004", "COT-1004", "Roadshow executivo · São Paulo e Campinas", "todo", "high", "Marina Alves", "Operação", dateFromToday(3), "Criar a OS com as quatro janelas de atendimento e pontos de apoio."),
+    task("task-9", "Conferir rota São Paulo–Campinas", "quote-1004", "COT-1004", "Roadshow executivo · São Paulo e Campinas", "doing", "high", "João Mendes", "Operação", dateFromToday(2), "Validar pedágios, tempo de deslocamento e janela de retorno.", "task-8"),
+    task("task-10", "Solicitar dados dos passageiros", "quote-1004", "COT-1004", "Roadshow executivo · São Paulo e Campinas", "waiting", "medium", "Camila Torres", "Comercial", dateFromToday(1), "Consolidar nomes, celulares e restrições alimentares.", "task-8", { blockedReason: "Aguardando lista do cliente" }),
+    task("task-11", "Confirmar credenciamento dos palestrantes", "quote-1003", "COT-1003", "Traslado de palestrantes · Expo Center Norte", "doing", "medium", "Camila Torres", "Comercial", dateFromToday(3), "Conferir horários de chegada e saída com produção."),
+    task("task-12", "Reservar van de 15 lugares", "quote-1003", "COT-1003", "Traslado de palestrantes · Expo Center Norte", "todo", "high", "Rafael Lima", "Operação", dateFromToday(2), "Bloquear veículo com porta-malas compatível com equipamentos.", "task-11"),
+    task("task-13", "Revisar diária em Alphaville", "quote-1002", "COT-1002", "Disposição diária · Alphaville", "waiting", "medium", "Marina Alves", "Financeiro", dateFromToday(4), "Recalcular hora extra e franquia de quilometragem.", null, { blockedReason: "Aguardando tabela atualizada do parceiro" }),
+    task("task-14", "Validar motorista bilíngue", "quote-1001", "COT-1001", "Transfer internacional · GRU–Faria Lima", "todo", "high", "João Mendes", "Operação", dateFromToday(1), "Confirmar inglês fluente e experiência com passageiros estrangeiros."),
+    task("task-15", "Enviar condições comerciais", "quote-0998", "COT-0998", "Transfer para conselho · Itaim Bibi", "doing", "high", "Marina Alves", "Comercial", dateFromToday(0), "Enviar proposta com política de espera e cancelamento."),
+    task("task-16", "Registrar aceite do cliente", "quote-0999", "COT-0999", "Transporte de equipe · Guarujá", "done", "medium", "Camila Torres", "Comercial", dateFromToday(-2), "Aceite registrado por e-mail e repassado para a operação."),
+    task("task-17", "Conferir placa e documentação", "quote-0999", "COT-0999", "Transporte de equipe · Guarujá", "done", "high", "Rafael Lima", "Operação", dateFromToday(-2), "Documentos conferidos antes do embarque.", "task-16"),
+    task("task-18", "Acompanhar retorno sobre embarque", "quote-0997", "COT-0997", "Operação de embarque · Viracopos", "todo", "medium", "Rafael Lima", "Operação", dateFromToday(5), "Confirmar terminal, acesso e contato do coordenador local."),
+    task("task-19", "Enviar comprovante de serviço", "quote-0996", "COT-0996", "Apoio logístico · Hotel Fasano", "done", "low", "Camila Torres", "Financeiro", dateFromToday(-4), "Comprovante enviado e anexado ao histórico.")
   ];
-  return { quotes, tasks, lastUpdated: new Date().toISOString() };
+  const recurringTasks = [
+    ["20", "Conferir janela de chegada no terminal", "quote-0995", "todo", "medium", "Rafael Lima", "Operação", 7],
+    ["21", "Validar cobrança de pedágios", "quote-0995", "todo", "low", "Camila Torres", "Financeiro", 8],
+    ["22", "Montar escala da convenção", "quote-0994", "doing", "high", "João Mendes", "Operação", 6],
+    ["23", "Confirmar quantidade de veículos", "quote-0994", "waiting", "high", "Rafael Lima", "Operação", 5],
+    ["24", "Revisar contrato de disponibilidade", "quote-0994", "todo", "medium", "Marina Alves", "Comercial", 8],
+    ["25", "Enviar briefing para recepção VIP", "quote-0993", "doing", "medium", "Camila Torres", "Comercial", 1],
+    ["26", "Confirmar equipe de aeroporto", "quote-0993", "waiting", "high", "João Mendes", "Operação", 2],
+    ["27", "Definir protocolo de embarque noturno", "quote-0992", "todo", "high", "Rafael Lima", "Qualidade", 8],
+    ["28", "Checar adicional de madrugada", "quote-0992", "todo", "medium", "Marina Alves", "Financeiro", 9],
+    ["29", "Arquivar aceite da diretoria", "quote-0991", "done", "low", "Camila Torres", "Comercial", -6],
+    ["30", "Atualizar quadro de disponibilidade", null, "doing", "medium", "Rafael Lima", "Operação", 0],
+    ["31", "Conferir certificados dos veículos", null, "waiting", "high", "João Mendes", "Qualidade", 1],
+    ["32", "Revisar tabela de parceiros", null, "todo", "medium", "Marina Alves", "Financeiro", 4],
+    ["33", "Distribuir escala do fim de semana", null, "done", "low", "Camila Torres", "Operação", -1],
+    ["34", "Registrar retorno do cliente", null, "todo", "medium", "Não atribuído", "Comercial", 3],
+    ["35", "Tratar divergência de quilometragem", null, "waiting", "high", "Marina Alves", "Qualidade", -2],
+    ["36", "Solicitar segunda via do comprovante", null, "todo", "low", "Camila Torres", "Financeiro", 5],
+    ["37", "Validar plano de contingência", null, "doing", "high", ["João Mendes", "Rafael Lima"], "Qualidade", 2],
+    ["38", "Confirmar contato de plantão", null, "done", "medium", "Rafael Lima", "Operação", -3],
+    ["39", "Reabrir negociação de horário", "quote-1007", "todo", "high", "Marina Alves", "Comercial", 2],
+  ];
+  recurringTasks.forEach(([id, title, quoteId, status, priority, assignee, team, dueOffset]) => {
+    const quote = quotes.find((item) => item.id === quoteId);
+    tasks.push(task(`task-${id}`, title, quoteId, quote?.code || "OPS", quote?.title || "Rotina operacional interna", status, priority, assignee, team, dateFromToday(dueOffset), `Executar ${title.toLocaleLowerCase("pt-BR")} e registrar evidência no histórico.`));
+  });
+  tasks.push(
+    task("task-40", "Revisar pendências prioritárias do dia", null, "OPS-040", "Rotina operacional interna", "doing", "high", "Renan Martins", "Comercial", dateFromToday(0), "Consolidar pendências críticas, cobrar responsáveis e registrar próximos passos."),
+    task("task-41", "Aprovar mensagem para cliente estratégico", "quote-1004", "COT-1004", "Roadshow executivo · São Paulo e Campinas", "todo", "high", "Renan Martins", "Comercial", dateFromToday(1), "Validar texto final antes do envio ao cliente e registrar a decisão.", "task-40"),
+    task("task-42", "Acompanhar retorno do fornecedor", "quote-1007", "COT-1007", "Van executiva · Evento corporativo", "waiting", "medium", ["Renan Martins", "Rafael Lima"], "Operação", dateFromToday(1), "Cobrar disponibilidade da segunda van e atualizar a equipe.", null, { blockedReason: "Aguardando confirmação do parceiro" }),
+    task("task-43", "Revisar comentário da ocorrência QAL-205", null, "QAL-205", "Divergência de quilometragem faturada", "todo", "medium", "Renan Martins", "Qualidade", dateFromToday(2), "Ler evidências, validar a tratativa e encaminhar decisão.", null, { sourceType: "quality", sourceId: "quality-error-205", sourceLabel: "Erro operacional", sourceCode: "QAL-205" }),
+    task("task-44", "Confirmar fechamento semanal", null, "OPS-044", "Rotina operacional interna", "done", "low", "Renan Martins", "Financeiro", dateFromToday(-1), "Conferir se todas as tarefas críticas têm evidência e responsável."),
+  );
+  const seedNow = new Date().toISOString();
+  const enrichTask = (id, comments = [], attachments = [], history = []) => {
+    const item = tasks.find((taskItem) => taskItem.id === id);
+    if (!item) return;
+    item.comments = comments.map((text, index) => ({ id: `${id}-comment-${index + 1}`, text, createdAt: seedNow, author: index ? "Rafael Lima" : "Camila Torres" }));
+    item.attachments = attachments.map((name, index) => ({ id: `${id}-file-${index + 1}`, name, createdAt: seedNow }));
+    item.history = [...item.history, ...history.map((text, index) => ({ id: `${id}-history-${index + 1}`, text, createdAt: seedNow, author: index ? "Sistema" : "Marina Alves" }))];
+  };
+  enrichTask("task-1", ["Cliente pediu confirmação da janela de embarque antes do envio.", "Margem revisada; falta apenas validar a política de espera."], ["briefing-grupo-horizonte.pdf", "composicao-cotacao-1008.xlsx"], ["Responsável alterado para Marina Alves.", "Cotação vinculada ao Planner."]);
+  enrichTask("task-7", ["Fornecedor informou indisponibilidade do veículo originalmente reservado."], ["registro-contato-fornecedor.msg"], ["Ocorrência QAL-204 convertida em tarefa.", "Tarefa marcada como aguardando."]);
+  enrichTask("task-22", ["Escala inicial aprovada pela coordenação."], ["escala-convencao-v1.xlsx"], ["Tarefa iniciada pela operação."]);
+  enrichTask("task-35", [], ["relatorio-quilometragem.pdf"], ["Prazo ultrapassado; necessário registrar tratativa."]);
+  enrichTask("task-40", ["Vou consolidar este quadro antes da reunião das 16h.", "Rafael, preciso do retorno do parceiro até o fim do dia."], ["pendencias-operacionais-2026-08-17.xlsx"], ["Tarefa atribuída ao usuário do cenário local."]);
+  enrichTask("task-41", ["Mensagem revisada pelo Comercial; aguardando aprovação final."], [], ["Criada como subtarefa da revisão diária."]);
+  enrichTask("task-43", ["Evidência disponível no relatório de quilometragem."], ["relatorio-quilometragem-qal-205.pdf"], ["Vinculada à ocorrência QAL-205."]);
+  const addChecklist = (id, items) => {
+    const item = tasks.find((taskItem) => taskItem.id === id);
+    if (item) item.checklist = items.map((title, index) => ({ id: `${id}-check-${index + 1}`, title, done: index === items.length - 1 }));
+  };
+  addChecklist("task-1", ["Revisar tarifa base", "Confirmar janela de embarque", "Validar margem", "Enviar proposta"]);
+  addChecklist("task-8", ["Criar ordem de serviço", "Conferir quatro janelas", "Validar pontos de apoio"]);
+  addChecklist("task-40", ["Revisar atrasadas", "Cobrar bloqueios", "Atualizar próximos passos"]);
+  addChecklist("task-42", ["Enviar cobrança ao parceiro", "Registrar retorno", "Atualizar status da tarefa"]);
+  const employees = [
+    { id: "employee-marina", name: "Marina Alves", userId: "user-marina" },
+    { id: "employee-rafael", name: "Rafael Lima", userId: "user-rafael" },
+    { id: "employee-camila", name: "Camila Torres", userId: "user-camila" },
+    { id: "employee-joao", name: "João Mendes", userId: "user-joao" },
+    { id: "employee-luiza", name: "Luiza Prado", userId: "user-luiza" },
+    { id: "employee-gustavo", name: "Gustavo Neri", userId: "user-gustavo" },
+    { id: "employee-renan", name: "Renan Martins", userId: "user-renan", isMockCurrentUser: true },
+  ];
+  const quality = [
+    { id: "quality-error-204", type: "error", code: "QAL-204", title: "Atraso na confirmação do fornecedor", description: "Fornecedor respondeu após a janela combinada para o embarque.", status: "Em tratamento", dueDate: dateFromToday(1), assigneeName: "Rafael Lima" },
+    { id: "quality-error-205", type: "error", code: "QAL-205", title: "Divergência de quilometragem faturada", description: "Quilometragem informada não corresponde ao roteiro aprovado.", status: "Aberto", dueDate: dateFromToday(-2), assigneeName: "Marina Alves" },
+    { id: "quality-error-206", type: "error", code: "QAL-206", title: "Veículo sem comprovante de higienização", description: "Evidência não anexada antes do início da operação.", status: "Em análise", dueDate: dateFromToday(3), assigneeName: "João Mendes" },
+    { id: "quality-error-207", type: "error", code: "QAL-207", title: "Passageiro aguardou no terminal incorreto", description: "Ponto de encontro não foi confirmado no briefing final.", status: "Aberto", dueDate: dateFromToday(4), assigneeName: "Camila Torres" },
+    { id: "quality-error-208", type: "error", code: "QAL-208", title: "Nota fiscal enviada sem pedido", description: "Documento fiscal precisa ser associado à cotação correta.", status: "Concluído", dueDate: dateFromToday(-4), assigneeName: "Marina Alves" },
+    { id: "quality-action-301", type: "action", code: "ACT-301", title: "Padronizar checklist de aeroporto", description: "Criar checklist único para GRU, CGH e VCP.", status: "Em andamento", dueDate: dateFromToday(5), assigneeName: "João Mendes" },
+    { id: "quality-action-302", type: "action", code: "ACT-302", title: "Atualizar roteiro de contingência", description: "Documentar alternativas para interdições e atrasos.", status: "Aberto", dueDate: dateFromToday(6), assigneeName: "Rafael Lima" },
+    { id: "quality-action-303", type: "action", code: "ACT-303", title: "Treinar confirmação de passageiros", description: "Reforçar confirmação D-1 e D-0 com a equipe comercial.", status: "Planejado", dueDate: dateFromToday(8), assigneeName: "Camila Torres" },
+  ];
+  return { quotes, tasks, employees, quality, lastUpdated: new Date().toISOString() };
 }
 
 function task(id, title, quoteId, quoteCode, quoteTitle, status, priority, assigneeName, teamName, dueDate, description, parentTaskId = null, context = {}) {
   const assigneeNames = normalizeAssigneeNames(assigneeName);
   return {
     id, title, parentTaskId, quoteId, quoteCode, quoteTitle, status, priority, assigneeNames, assigneeName: assigneeNames.join(", "), teamName, dueDate,
-    description, labels: [quoteCode], sourceType: quoteId ? "quote" : "manual", sourceId: quoteId, sourceLabel: quoteId ? "Pedido de cotação" : "Tarefa manual", sourceCode: quoteCode, blockedReason: "", ...context, comments: [], attachments: [],
-    history: [{ id: uid("history"), text: "Tarefa criada no cenário de demonstração.", createdAt: new Date().toISOString(), author: "Sistema" }],
+    description, checklist: context.checklist || [], labels: [quoteCode], sourceType: quoteId ? "quote" : "manual", sourceId: quoteId, sourceLabel: quoteId ? "Pedido de cotação" : "Tarefa manual", sourceCode: quoteCode, blockedReason: "", ...context, comments: context.comments || [], attachments: context.attachments || [],
+    history: context.history || [{ id: uid("history"), text: "Tarefa criada no cenário de demonstração.", createdAt: new Date().toISOString(), author: "Sistema" }],
   };
 }
 
@@ -61,7 +161,7 @@ export function createTask(state, input) {
     quoteCode: input.quoteCode || "", quoteTitle: input.quoteTitle || "Sem vínculo", title: input.title.trim(),
     status: input.status || STATUSES[0].id, priority: input.priority || "medium", assigneeNames, assigneeName: assigneeNames.join(", "),
     teamName: input.teamName || "Operação", dueDate: input.dueDate || "", description: input.description || "",
-    labels: input.quoteCode ? [input.quoteCode] : [], sourceType, sourceId: input.sourceId || input.quoteId || null, sourceLabel: input.sourceLabel || (sourceType === "quality" ? "Ação de qualidade" : sourceType === "quote" ? "Pedido de cotação" : "Tarefa manual"), sourceCode: input.sourceCode || input.quoteCode || "", blockedReason: input.blockedReason || "", comments: [], attachments: [],
+    checklist: input.checklist || [], labels: input.quoteCode ? [input.quoteCode] : [], sourceType, sourceId: input.sourceId || input.quoteId || null, sourceLabel: input.sourceLabel || (sourceType === "quality" ? "Ação de qualidade" : sourceType === "quote" ? "Pedido de cotação" : "Tarefa manual"), sourceCode: input.sourceCode || input.quoteCode || "", blockedReason: input.blockedReason || "", comments: [], attachments: [],
     history: [{ id: uid("history"), text: "Tarefa criada no mock.", createdAt: new Date().toISOString(), author: "Você" }],
   };
   return saveState({ ...state, tasks: [...state.tasks, nextTask] });

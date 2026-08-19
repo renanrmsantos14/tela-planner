@@ -1,7 +1,7 @@
 {
   "package.json": {
-    "mtime": 1786976262.7578094,
-    "ast_hash": "564f4ab593288fc92c06d4e803e06aed",
+    "mtime": 1787003164.2919445,
+    "ast_hash": "8eab2dbb97f6fef6f55934cc5cee7009",
     "semantic_hash": ""
   },
   "scripts/inline-webresource.mjs": {
@@ -15,8 +15,8 @@
     "semantic_hash": ""
   },
   "src/App.jsx": {
-    "mtime": 1786975912.751549,
-    "ast_hash": "a4c994c2cd6feb8fd9d85b279a08d548",
+    "mtime": 1787002871.750812,
+    "ast_hash": "1b273730e17e21f3bfe9a4121a8dc632",
     "semantic_hash": ""
   },
   "src/SearchableSelect.jsx": {
@@ -25,8 +25,8 @@
     "semantic_hash": ""
   },
   "src/domain.js": {
-    "mtime": 1786974082.8835657,
-    "ast_hash": "5eec88ce9aceb99ef4f1208e6745666c",
+    "mtime": 1786992899.9695418,
+    "ast_hash": "29d95573301b279fcf145b8a7e180f24",
     "semantic_hash": ""
   },
   "src/main.jsx": {
@@ -40,8 +40,8 @@
     "semantic_hash": ""
   },
   "tests/domain.test.mjs": {
-    "mtime": 1786974162.5482976,
-    "ast_hash": "c79a4c4eafbaea5de11639483bfc7667",
+    "mtime": 1786992996.4254937,
+    "ast_hash": "75cede84e085c4cf003257c08b6d9635",
     "semantic_hash": ""
   },
   "vite.config.js": {
@@ -65,8 +65,8 @@
     "semantic_hash": ""
   },
   "scripts/publish-webresource.ps1": {
-    "mtime": 1785780898.4978764,
-    "ast_hash": "6df8a599547eb33879b19d9a79524adf",
+    "mtime": 1786997179.376577,
+    "ast_hash": "e1c4b77489d67c39b9eca2dd02168ed1",
     "semantic_hash": ""
   },
   "scripts/sitemapNavigation.mjs": {
@@ -75,8 +75,8 @@
     "semantic_hash": ""
   },
   "src/dataverse.js": {
-    "mtime": 1786975792.6975834,
-    "ast_hash": "d80bddc6d8a9afdb612f2a5f1a40d67c",
+    "mtime": 1787003085.5403929,
+    "ast_hash": "67ddb7d65021dbce52eb9416c3f871ae",
     "semantic_hash": ""
   },
   "src/mountApp.js": {
@@ -85,8 +85,8 @@
     "semantic_hash": ""
   },
   "tests/dataverseEntitySets.test.mjs": {
-    "mtime": 1785783457.9015465,
-    "ast_hash": "461e19265867f16f8ca572f00f680503",
+    "mtime": 1786995162.9908807,
+    "ast_hash": "0b8d9668ed34b7e2f191629110af6380",
     "semantic_hash": ""
   },
   "tests/mountApp.test.mjs": {
@@ -155,8 +155,8 @@
     "semantic_hash": ""
   },
   "src/mockStore.js": {
-    "mtime": 1786975125.2708182,
-    "ast_hash": "6c884b5e318575c106b25c8f96e49ba5",
+    "mtime": 1786993716.7300599,
+    "ast_hash": "b3bf9ed627feeb8caa0521d76faad4ea",
     "semantic_hash": ""
   },
   "tests/dataStoreMode.test.mjs": {
@@ -165,23 +165,23 @@
     "semantic_hash": ""
   },
   "tests/mockStore.test.mjs": {
-    "mtime": 1786975343.6308208,
-    "ast_hash": "a129416c403e319facd53580be0d3e8f",
+    "mtime": 1786993720.344741,
+    "ast_hash": "1bc8ac885387e8f4f1ee26c032f4974f",
     "semantic_hash": ""
   },
   "src/CentralView.jsx": {
-    "mtime": 1786968781.707378,
-    "ast_hash": "677ff77dfcfd04c58f0979d205ed3f63",
+    "mtime": 1786980921.4284747,
+    "ast_hash": "8e32d5cbd196dc5ad836cb2cf8471487",
     "semantic_hash": ""
   },
   "src/workItems.js": {
-    "mtime": 1786967530.9039967,
-    "ast_hash": "74d8f5c38288fa28dcaadd833750711a",
+    "mtime": 1786980894.0181046,
+    "ast_hash": "faf98ed33a8ea3fc2c591a9957445f77",
     "semantic_hash": ""
   },
   "tests/workItems.test.mjs": {
-    "mtime": 1786967239.9630053,
-    "ast_hash": "306d2ca54d8c38827987edd27608fefe",
+    "mtime": 1786979746.75324,
+    "ast_hash": "1575b5859ceaa96c383198bf09ed2b1e",
     "semantic_hash": ""
   },
   "artifacts/central-identity-migration-2026-08-13.md": {
@@ -195,13 +195,38 @@
     "semantic_hash": ""
   },
   "src/version.js": {
-    "mtime": 1786976262.764812,
-    "ast_hash": "5057f147e3639e587a626d06ddaf1eec",
+    "mtime": 1787003164.294952,
+    "ast_hash": "507186d6577811a014b6f8a7225f5925",
     "semantic_hash": ""
   },
   "tests/versioning.test.mjs": {
     "mtime": 1786973534.9519114,
     "ast_hash": "71ec5d3386ca16b98c766e6527713fef",
+    "semantic_hash": ""
+  },
+  "src/AssigneeDisplay.jsx": {
+    "mtime": 1786981588.262025,
+    "ast_hash": "ec046b4768eff740a0a5b61a9e835d15",
+    "semantic_hash": ""
+  },
+  "tests/assigneeDisplay.test.mjs": {
+    "mtime": 1786981770.6995873,
+    "ast_hash": "6aca7252e4d7e7c3816aaa58655e69ca",
+    "semantic_hash": ""
+  },
+  "tests/profilePhoto.test.mjs": {
+    "mtime": 1786997157.3608773,
+    "ast_hash": "79b02e85b92edd139ba02dfb4f095fb5",
+    "semantic_hash": ""
+  },
+  "src/graphPhotos.js": {
+    "mtime": 1787003083.1522014,
+    "ast_hash": "7e78d2e821d37980e998e3b9036508ae",
+    "semantic_hash": ""
+  },
+  "public/new_PlannerAuth.html": {
+    "mtime": 1786997151.6731195,
+    "ast_hash": "c160ca9626059cd5bbabcf12f63bf48f",
     "semantic_hash": ""
   }
 }
