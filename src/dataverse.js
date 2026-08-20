@@ -208,7 +208,8 @@ async function resolveEmployeeIdByName(xrm, value) {
   if (!value || value === "Não atribuído") return "";
   const escaped = String(value).replace(/'/g, "''");
   const rows = await retrieveMany(xrm, EMPLOYEE_TABLE, `?$select=cr40f_funcionariosid&$filter=cr40f_nomecompleto eq '${escaped}' and statecode eq 0 and cr40f_status eq 0 and cr40f_funcao eq 202410001&$top=2`);
-  if (rows.length !== 1) throw new Error(`Funcionário administrativo ativo não encontrado de forma única: ${value}.`);
+  if (!rows.length) throw new Error(`Funcionário "${value}" não encontrado. Verifique cadastro ativo, statecode=0, cr40f_status=0 e cr40f_funcao=202410001 no Dataverse.`);
+  if (rows.length > 1) throw new Error(`Mais de um funcionário administrativo ativo corresponde a "${value}". Corrija nomes duplicados antes de salvar.`);
   return rows[0].cr40f_funcionariosid;
 }
 

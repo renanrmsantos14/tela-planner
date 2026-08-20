@@ -254,22 +254,13 @@ export default function SearchableSelect({
   }, [disabled, open]);
 
   useEffect(() => {
+    if (!open) return undefined;
     const closeWhenAnotherSelectOpens = (event) => {
       if (event.detail !== panelId) {
         setOpen(false);
         optionRefs.current = [];
       }
     };
-    window.addEventListener(CUSTOM_SELECT_OPEN_EVENT, closeWhenAnotherSelectOpens);
-    return () =>
-      window.removeEventListener(
-        CUSTOM_SELECT_OPEN_EVENT,
-        closeWhenAnotherSelectOpens,
-      );
-  }, [panelId]);
-
-  useEffect(() => {
-    if (!open) return undefined;
     const closeIfOutside = (event) => {
       if (
         rootRef.current?.contains(event.target) ||
@@ -286,6 +277,7 @@ export default function SearchableSelect({
         triggerRef.current?.focus();
       }
     };
+    window.addEventListener(CUSTOM_SELECT_OPEN_EVENT, closeWhenAnotherSelectOpens);
     document.addEventListener("pointerdown", closeIfOutside);
     document.addEventListener("focusin", closeIfOutside);
     document.addEventListener("keydown", closeOnEscape);
@@ -294,6 +286,7 @@ export default function SearchableSelect({
     window.visualViewport?.addEventListener("resize", reposition);
     window.visualViewport?.addEventListener("scroll", reposition);
     return () => {
+      window.removeEventListener(CUSTOM_SELECT_OPEN_EVENT, closeWhenAnotherSelectOpens);
       document.removeEventListener("pointerdown", closeIfOutside);
       document.removeEventListener("focusin", closeIfOutside);
       document.removeEventListener("keydown", closeOnEscape);

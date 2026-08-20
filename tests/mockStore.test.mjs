@@ -10,7 +10,7 @@ function withStorage() {
 test("cria e atualiza tarefa sem alterar a referência original", () => {
   withStorage();
   const initial = seedState();
-  const next = createTask(initial, { title: "Nova etapa", quoteId: "quote-1008", quoteCode: "COT-1008", quoteTitle: "Transfer", dueDate: "2026-08-05" });
+  const next = createTask(initial, { title: "Nova etapa", quoteId: "quote-test", quoteCode: "COT-TEST", quoteTitle: "Transfer", dueDate: "2026-08-05" });
   assert.equal(next.tasks.length, initial.tasks.length + 1);
   const created = next.tasks.at(-1);
   const updated = updateTask(next, created.id, { status: "done" });
@@ -56,6 +56,16 @@ test("cria tarefa principal para cotação sem duplicar", () => {
   const quote = initial.quotes.find((item) => item.id === "quote-1008");
   const same = ensureQuoteTask(initial, quote);
   assert.equal(same.tasks.length, initial.tasks.length);
+});
+
+test("bloqueia segunda tarefa principal ativa para a mesma cotação no mock", () => {
+  withStorage();
+  const initial = seedState();
+
+  assert.throws(
+    () => createTask(initial, { title: "Duplicada", quoteId: "quote-1008", quoteCode: "COT-1008" }),
+    /acompanhamento principal ativo/,
+  );
 });
 
 test("preserva origem e bloqueio na tarefa criada", () => {

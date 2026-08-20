@@ -406,7 +406,7 @@ button { cursor: pointer; }
   .settings-grid { grid-template-columns: 1fr; gap: 10px; }
   .setting-card { padding: 15px; border-radius: 16px; }
 
-  .mobile-bottom-nav { position: fixed; right: 0; bottom: 0; left: 0; z-index: 45; display: grid; grid-template-columns: repeat(5, 1fr); min-height: var(--mobile-nav-height); padding: 8px 8px max(8px, env(safe-area-inset-bottom)); border-top: 1px solid rgba(215, 224, 234, .92); background: rgba(255, 255, 255, .96); box-shadow: 0 -10px 30px rgba(13, 36, 65, .08); backdrop-filter: blur(18px); }
+  .mobile-bottom-nav { position: fixed; right: 0; bottom: 0; left: 0; z-index: 45; display: grid; grid-template-columns: repeat(7, 1fr); min-height: var(--mobile-nav-height); padding: 8px 5px max(8px, env(safe-area-inset-bottom)); border-top: 1px solid rgba(215, 224, 234, .92); background: rgba(255, 255, 255, .96); box-shadow: 0 -10px 30px rgba(13, 36, 65, .08); backdrop-filter: blur(18px); }
   .mobile-nav-item { position: relative; min-width: 0; min-height: 50px; display: grid; place-items: center; align-content: center; gap: 3px; padding: 4px 2px; border: 0; border-radius: 13px; color: #7b8ca0; background: transparent; font-size: 9px; font-weight: 700; }
   .mobile-nav-item.active { color: var(--blue); background: var(--blue-soft); }
   .mobile-nav-item b { position: absolute; top: 2px; right: calc(50% - 20px); min-width: 16px; height: 16px; display: grid; place-items: center; padding: 0 4px; border: 2px solid #fff; border-radius: 99px; color: #fff; background: var(--blue); font-size: 8px; }

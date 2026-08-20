@@ -75,6 +75,15 @@ export function normalizeAssigneeNames(value) {
   return unique.length ? unique : ["Não atribuído"];
 }
 
+export function buildAssigneeOptions(employees = []) {
+  return ["Não atribuído", ...new Set(employees.map((employee) => String(employee?.name || "").trim()).filter(Boolean))];
+}
+
+export function buildTaskCreationInput(input = {}) {
+  if (input.quoteId) return { ...input, sourceType: "quote" };
+  return { ...input, quoteId: undefined, sourceType: "manual", sourceId: undefined, sourceCode: undefined, quoteCode: undefined, quoteTitle: undefined };
+}
+
 export function mentionedEmployees(text, employees = []) {
   const normalizedText = normalizeText(text);
   return employees.filter((employee) => {

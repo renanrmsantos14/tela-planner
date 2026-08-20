@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { addOptimisticAttachment, addOptimisticComment, applyOptimisticTaskPatch, buildOptimisticTask, filterTasks, isBlocked, isOverdue, mentionedEmployees, normalizeAssigneeNames, quoteTaskTitle, sortTasks, taskStats } from "../src/domain.js";
+import { addOptimisticAttachment, addOptimisticComment, applyOptimisticTaskPatch, buildAssigneeOptions, buildOptimisticTask, buildTaskCreationInput, filterTasks, isBlocked, isOverdue, mentionedEmployees, normalizeAssigneeNames, quoteTaskTitle, sortTasks, taskStats } from "../src/domain.js";
 
 const tasks = [
   { id: "1", title: "Atrasada", quoteTitle: "Cotação A", assigneeName: "Marina", status: "todo", priority: "high", dueDate: "2026-08-01" },
@@ -52,6 +52,18 @@ test("filtra origem e bloqueio operacional", () => {
   const qualityTask = { ...tasks[1], sourceType: "quality", sourceLabel: "Erro operacional", blockedReason: "Aguardando terceiro" };
   assert.equal(isBlocked(qualityTask), true);
   assert.equal(filterTasks([tasks[0], qualityTask], { query: "", status: [], priority: [], source: ["quality"], blocked: true }).length, 1);
+});
+
+test("monta responsáveis a partir dos funcionários carregados", () => {
+  assert.deepEqual(buildAssigneeOptions([{ name: "Marina Alves" }, { name: "Marina Alves" }, { name: "" }]), ["Não atribuído", "Marina Alves"]);
+});
+
+test("preserva vínculo manual de cotação sem deep-link", () => {
+  const created = buildTaskCreationInput({ title: "Acompanhar cliente", quoteId: "quote-1008", quoteCode: "COT-1008", quoteTitle: "Transfer executivo" });
+
+  assert.equal(created.quoteId, "quote-1008");
+  assert.equal(created.sourceType, "quote");
+  assert.equal(created.quoteCode, "COT-1008");
 });
 
 test("cria tarefa otimista pronta para aparecer antes do Dataverse responder", () => {

@@ -154,6 +154,10 @@ export function saveState(state) {
 }
 
 export function createTask(state, input) {
+  if (input.quoteId && !input.parentTaskId) {
+    const activeMain = state.tasks.find((taskItem) => taskItem.quoteId === input.quoteId && !taskItem.parentTaskId && !["done", "cancelled"].includes(taskItem.status));
+    if (activeMain) throw new Error("Esta cotação já possui um acompanhamento principal ativo.");
+  }
   const sourceType = input.sourceType || (input.quoteId ? "quote" : "manual");
   const assigneeNames = normalizeAssigneeNames(input.assigneeNames || input.assigneeName);
   const nextTask = {
