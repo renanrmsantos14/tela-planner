@@ -378,7 +378,7 @@ async function updateLiveTask(xrm, state, id, patch) {
   if (patch.status !== undefined) payload.cr40f_status = STATUS_VALUES[patch.status];
   if (patch.priority !== undefined) payload.cr40f_prioridade = PRIORITY_VALUES[patch.priority];
   if (patch.dueDate !== undefined) payload.cr40f_prazo = patch.dueDate ? `${patch.dueDate}T12:00:00Z` : null;
-  if (patch.blockedReason !== undefined) payload.cr40f_motivobloqueio = patch.blockedReason;
+  if (patch.blockedReason !== undefined || (patch.status !== undefined && patch.status !== "waiting" && previousStatus === "waiting")) payload.cr40f_motivobloqueio = nextBlockedReason;
   if (patch.assigneeId !== undefined || patch.assigneeName !== undefined || patch.assigneeNames !== undefined) {
     const navigation = await resolveLookupNavigation(xrm, TASK_TABLE, EMPLOYEE_ASSIGNEE_FIELD, EMPLOYEE_TABLE);
     const assigneeIds = await resolveAssigneeIds(xrm, patch);
