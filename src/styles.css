@@ -1,9 +1,5 @@
 @import "design-tokens.css";
-@import "@fontsource/manrope/latin-400.css";
-@import "@fontsource/manrope/latin-500.css";
-@import "@fontsource/manrope/latin-600.css";
-@import "@fontsource/manrope/latin-700.css";
-@import "@fontsource/manrope/latin-800.css";
+@import "@fontsource-variable/manrope";
 
 /* Passe de acabamento: feedback claro sem alterar o contrato visual da tela. */
 button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px solid rgba(33, 89, 210, .2); outline-offset: 2px; }

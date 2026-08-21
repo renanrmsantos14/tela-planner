@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState, lazy, Suspense, memo } from "react";
 import {
   ArrowUpRight, BellRing, CalendarDays, Check, CheckCircle2, ChevronDown, ChevronRight, CircleHelp, ClipboardList, ListChecks, Trash2,
   Clock3, FileText, LayoutDashboard, ListFilter, Menu, MessageCircle, Paperclip, PanelLeftClose,
@@ -9,6 +9,7 @@ import { createDataStore } from "./dataverse";
 import SearchableSelect, { SearchableMultiSelect } from "./SearchableSelect.jsx";
 import CentralView from "./CentralView.jsx";
 import AssigneeDisplay from "./AssigneeDisplay.jsx";
+import LoadingFallback from "./LoadingFallback.jsx";
 import { filterWorkItems, isAssignedToEmployee, normalizeWorkItems, workItemStats } from "./workItems.js";
 import { APP_VERSION } from "./version.js";
 
@@ -125,7 +126,7 @@ function PageHeader({ eyebrow, title, description, action, children }) {
   return <div className="page-header"><div><span className="eyebrow">{eyebrow}</span><h1>{title}</h1>{description && <p>{description}</p>}</div><div className="header-actions">{children}{action}</div></div>;
 }
 
-function TaskCard({ task: taskItem, subtasks = [], currentEmployee, showChecklistOnCard = false, onOpen, onToggleSubtask, compact = false, onDrop }) {
+const TaskCard = memo(function TaskCard({ task: taskItem, subtasks = [], currentEmployee, showChecklistOnCard = false, onOpen, onToggleSubtask, compact = false, onDrop }) {
   const overdue = isOverdue(taskItem);
   const canOpen = !taskItem.id.startsWith("optimistic-");
   const completedSubtasks = subtasks.filter((subtask) => subtask.status === "done").length;
@@ -141,19 +142,19 @@ function TaskCard({ task: taskItem, subtasks = [], currentEmployee, showChecklis
     <div className="task-card-footer"><AssigneeDisplay value={taskItem.assigneeProfiles?.length ? taskItem.assigneeProfiles : taskItem.assigneeNames || taskItem.assigneeName} small />{taskItem.syncStatus === "syncing" ? <span className="sync-chip" role="status">Enviando...</span> : <span className={overdue ? "date-chip overdue" : "date-chip"}><Clock3 size={13} />{formatDate(taskItem.dueDate)}</span>}</div>
     {taskItem.parentTaskId && <div className="subtask-mark"><CheckCircle2 size={13} />Subtarefa</div>}
   </article>;
-}
+});
 
-function Board({ tasks, allTasks, currentEmployee, checklistVisibility, onOpen, onToggleSubtask, onMove, onCreate }) {
+const Board = memo(function Board({ tasks, allTasks, currentEmployee, checklistVisibility, onOpen, onToggleSubtask, onMove, onCreate }) {
   return <div className="board-grid">{STATUSES.map((status) => { const items = tasks.filter((taskItem) => taskItem.status === status.id); return <section className="board-column" key={status.id} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { const id = event.dataTransfer.getData("text/task-id"); if (id && !id.startsWith("optimistic-")) onMove(id, status.id); }}><div className="column-header"><div><span className={`column-marker marker-${status.tone}`} /><h2>{status.label}</h2><span className="column-count">{items.length}</span></div><button className="icon-button" type="button" onClick={onCreate} aria-label={`Criar tarefa em ${status.label}`}><Plus size={16} /></button></div><div className="column-body">{items.map((taskItem) => <TaskCard key={taskItem.id} task={taskItem} subtasks={allTasks.filter((item) => item.parentTaskId === taskItem.id)} currentEmployee={currentEmployee} showChecklistOnCard={checklistVisibility[taskItem.id]} onOpen={onOpen} onToggleSubtask={onToggleSubtask} />)}{!items.length && <div className="drop-placeholder"><Plus size={17} /><span>Arraste tarefas para cá</span></div>}</div></section>; })}</div>;
-}
+});
 
-function FilterBar({ filters, setFilters, onCreate, employees = [] }) {
+const FilterBar = memo(function FilterBar({ filters, setFilters, onCreate, employees = [] }) {
   const [expanded, setExpanded] = useState(false);
   const assigneeOptions = useMemo(() => buildAssigneeOptions(employees), [employees]);
   const teamOptions = useMemo(() => TEAM_OPTIONS.map((team) => ({ value: team, label: team })), []);
   const activeFilterCount = [filters.query, filters.assignee?.length, filters.priority?.length, filters.source?.length, filters.team, filters.blocked].filter(Boolean).length;
   return <div className={`filter-bar ${expanded ? "is-expanded" : "is-collapsed"}`}><button className="filter-toggle" type="button" onClick={() => setExpanded((value) => !value)} aria-expanded={expanded}><ListFilter size={15} /><span>Filtros</span>{activeFilterCount > 0 && <b>{activeFilterCount}</b>}<ChevronDown size={15} /></button><div className="filter-bar-content"><div className="search-field"><Search size={16} /><input value={filters.query} onChange={(event) => setFilters((current) => ({ ...current, query: event.target.value }))} placeholder="Buscar tarefas, cotações, qualidade ou pessoas" /></div><SearchableMultiSelect value={filters.assignee} onChange={(value) => setFilters((current) => ({ ...current, assignee: value }))} placeholder="Todos os responsáveis" options={assigneeOptions.map((name) => ({ value: name, label: name }))} /><SearchableMultiSelect value={filters.priority} onChange={(value) => setFilters((current) => ({ ...current, priority: value }))} placeholder="Todas as prioridades" options={PRIORITY_OPTIONS} /><SearchableMultiSelect value={filters.source} onChange={(value) => setFilters((current) => ({ ...current, source: value }))} placeholder="Todas as origens" options={SOURCE_OPTIONS} /><SearchableSelect value={filters.team || ""} onChange={(value) => setFilters((current) => ({ ...current, team: value }))} placeholder="Todas as equipes" options={teamOptions} /><button className={`button ${filters.blocked ? "button-secondary" : "button-quiet"}`} onClick={() => setFilters((current) => ({ ...current, blocked: !current.blocked }))}><CircleHelp size={15} />Bloqueadas</button><button className="button button-primary" onClick={onCreate}><Plus size={16} />Nova tarefa</button></div></div>;
-}
+});
 
 
 function BoardView({ state, currentEmployee, checklistVisibility, onOpen, onToggleSubtask, onMove, onCreate, filters, setFilters }) {
@@ -268,6 +269,11 @@ function NewTaskDrawer({ quotes, employees = [], onClose, onSave }) {
   return <div className="drawer-layer" onMouseDown={(event) => { if (event.target === event.currentTarget) requestClose(); }}><aside className="task-drawer new-task-drawer"><header className="drawer-header"><div><span className="eyebrow">Nova tarefa</span><span className="drawer-code">CRIAÇÃO MANUAL</span></div><button className="icon-button" onClick={requestClose}><X size={19} /></button></header><div className="drawer-body"><div className="drawer-title"><input autoFocus value={form.title} onChange={(event) => set("title", event.target.value)} placeholder="O que precisa ser feito?" aria-label="Título da tarefa" /><PriorityBadge priority={form.priority} /></div><div className="linked-record"><FileText size={16} /><label><small>Vincular a uma cotação</small><InputSelect value={form.quoteId} onChange={(value) => set("quoteId", value)} options={quoteOptions} /></label></div><div className="drawer-field-grid"><label>Status<InputSelect value="todo" disabled options={[{ value: "todo", label: "A fazer" }]} /></label><label>Prioridade<InputSelect value={form.priority} onChange={(value) => set("priority", value)} options={PRIORITY_OPTIONS} /></label><label>Responsável<InputSelect value={form.assigneeName} onChange={(value) => set("assigneeName", value)} options={assigneeOptions} /></label><label>Equipe<InputSelect value={form.teamName} onChange={(value) => set("teamName", value)} options={TEAM_OPTIONS} /></label><label>Prazo<input type="date" value={form.dueDate} onChange={(event) => set("dueDate", event.target.value)} /></label></div><label className="drawer-description">Descrição<textarea value={form.description} onChange={(event) => set("description", event.target.value)} rows="5" placeholder="Adicione contexto para quem vai executar..." /></label><div className="creation-note"><Sparkles size={16} /><span>Esta tarefa ficará disponível no quadro central e poderá receber subtarefas depois.</span></div></div><footer className="drawer-footer"><button className="button button-quiet" onClick={requestClose}>Cancelar</button><button className="button button-primary" disabled={!form.title.trim()} onClick={() => onSave({ ...form, quoteCode: quote?.code, quoteTitle: quote?.title })}><Plus size={16} />Criar tarefa</button></footer>{showDiscardPrompt && <UnsavedChangesDialog onContinue={() => setShowDiscardPrompt(false)} onDiscard={onClose} />}</aside></div>;
 }
 
+// Lazy-loaded wrappers for non-critical views (Quality & Settings)
+// These are code-split to reduce the critical bundle size
+const LazyQualityView = lazy(() => Promise.resolve({ default: QualityView }));
+const LazySettingsView = lazy(() => Promise.resolve({ default: SettingsView }));
+
 export default function App() {
   const [active, setActive] = useState("dashboard"); const [state, setState] = useState(null); const [store] = useState(() => createDataStore()); const [selectedId, setSelectedId] = useState(""); const [creating, setCreating] = useState(false); const [filters, setFilters] = useState({ query: "", assignee: [], priority: [], source: [], team: "" }); const [checklistVisibility, setChecklistVisibility] = useState(readChecklistVisibility); const [notice, setNotice] = useState(""); const [noticeAction, setNoticeAction] = useState(null); const [error, setError] = useState(""); const [failedTaskDraft, setFailedTaskDraft] = useState(null);
   const confirmedStateRef = useRef(null); const pendingMutationsRef = useRef(new Map()); const noticeTimerRef = useRef(null); const launchHandledRef = useRef(false); const failedTaskReopenTimerRef = useRef(null);
@@ -375,8 +381,8 @@ export default function App() {
     if (active === "board") return <BoardView state={state} currentEmployee={currentEmployee} checklistVisibility={checklistVisibility} onOpen={openTask} onToggleSubtask={saveTask} onMove={moveTask} onCreate={() => setCreating(true)} filters={filters} setFilters={setFilters} />;
     if (active === "list") return <ListView state={state} onOpen={openTask} onCreate={() => setCreating(true)} filters={filters} setFilters={setFilters} />;
     if (active === "calendar") return <CalendarView state={state} onOpen={openTask} onCreate={() => setCreating(true)} filters={filters} setFilters={setFilters} />;
-    if (active === "quality") return <QualityView state={state} onCreate={createQualityTask} onCreateTask={() => setCreating(true)} filters={filters} setFilters={setFilters} />;
-    return <SettingsView onReset={reloadData} onConnectGraph={connectGraph} graphAuthRequired={Boolean(state.graphAuthRequired)} live={store.live} />;
+    if (active === "quality") return <Suspense fallback={<LoadingFallback />}><LazyQualityView state={state} onCreate={createQualityTask} onCreateTask={() => setCreating(true)} filters={filters} setFilters={setFilters} /></Suspense>;
+    return <Suspense fallback={<LoadingFallback />}><LazySettingsView onReset={reloadData} onConnectGraph={connectGraph} graphAuthRequired={Boolean(state.graphAuthRequired)} live={store.live} /></Suspense>;
   };
   return <AppShell active={active} onNavigate={setActive} onCreate={() => setCreating(true)} tasks={state.tasks} live={store.live} currentEmployee={currentEmployee} personalStats={personalStats} openTaskCount={openTaskCount}>{renderPage()}{notice && <div className={`toast ${notice.startsWith("Falha") ? "toast-error" : ""}`} role="status" aria-live="polite"><CheckCircle2 size={17} /><span>{notice}</span>{noticeAction && <button className="toast-action" type="button" onClick={() => { const action = noticeAction; dismissNotice(); action.onClick(); }}>{noticeAction.label}</button>}<button className="toast-close" type="button" onClick={dismissNotice} aria-label="Fechar notificação" title="Fechar notificação"><X size={15} /></button></div>}{selected && <TaskDrawer task={selected} state={state} currentEmployee={currentEmployee} showChecklistOnCard={Boolean(checklistVisibility[selected.id])} onToggleChecklistOnCard={(visible) => setChecklistVisibilityForTask(selected.id, visible)} onClose={closeTask} onSave={saveTask} onDelete={deleteTask} onComment={addComment} onAttachment={addAttachment} onOpenQuote={(id) => { setActive("dashboard"); closeTask(); showNotice(`Cotação ${state.quotes.find((quote) => quote.id === id)?.code || ""} vinculada.`); }} onAddSubtask={createSubtask} />}{creating && <NewTaskDrawer quotes={state.quotes} employees={state.employees} onClose={() => setCreating(false)} onSave={createNewTask} />}</AppShell>;
 }

@@ -372,19 +372,11 @@
       "_origin": "ast"
     },
     {
-      "id": "package_dependencies_class_variance_authority",
-      "label": "class-variance-authority",
-      "file_type": "code",
-      "source_file": "package.json",
-      "source_location": "L20",
-      "_origin": "ast"
-    },
-    {
       "id": "package_dependencies_clsx",
       "label": "clsx",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L21",
+      "source_location": "L20",
       "_origin": "ast"
     },
     {
@@ -392,15 +384,7 @@
       "label": "lucide-react",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L22",
-      "_origin": "ast"
-    },
-    {
-      "id": "package_dependencies_radix_ui",
-      "label": "radix-ui",
-      "file_type": "code",
-      "source_file": "package.json",
-      "source_location": "L23",
+      "source_location": "L21",
       "_origin": "ast"
     },
     {
@@ -408,7 +392,7 @@
       "label": "react",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L24",
+      "source_location": "L22",
       "_origin": "ast"
     },
     {
@@ -416,31 +400,7 @@
       "label": "react-dom",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L25",
-      "_origin": "ast"
-    },
-    {
-      "id": "package_dependencies_shadcn",
-      "label": "shadcn",
-      "file_type": "code",
-      "source_file": "package.json",
-      "source_location": "L26",
-      "_origin": "ast"
-    },
-    {
-      "id": "package_dependencies_tailwind_merge",
-      "label": "tailwind-merge",
-      "file_type": "code",
-      "source_file": "package.json",
-      "source_location": "L27",
-      "_origin": "ast"
-    },
-    {
-      "id": "package_dependencies_tw_animate_css",
-      "label": "tw-animate-css",
-      "file_type": "code",
-      "source_file": "package.json",
-      "source_location": "L28",
+      "source_location": "L23",
       "_origin": "ast"
     },
     {
@@ -448,7 +408,7 @@
       "label": "vite",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L29",
+      "source_location": "L24",
       "_origin": "ast"
     },
     {
@@ -456,23 +416,7 @@
       "label": "devDependencies",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L31",
-      "_origin": "ast"
-    },
-    {
-      "id": "package_devdependencies_tailwindcss_vite",
-      "label": "@tailwindcss/vite",
-      "file_type": "code",
-      "source_file": "package.json",
-      "source_location": "L32",
-      "_origin": "ast"
-    },
-    {
-      "id": "package_devdependencies_tailwindcss",
-      "label": "tailwindcss",
-      "file_type": "code",
-      "source_file": "package.json",
-      "source_location": "L33",
+      "source_location": "L26",
       "_origin": "ast"
     },
     {
@@ -812,19 +756,11 @@
       "_origin": "ast"
     },
     {
-      "id": "src_app_navitems",
-      "label": "navItems",
-      "file_type": "code",
-      "source_file": "src/App.jsx",
-      "source_location": "L23",
-      "_origin": "ast"
-    },
-    {
       "id": "src_app_status_options",
       "label": "STATUS_OPTIONS",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L26",
+      "source_location": "L23",
       "_origin": "ast"
     },
     {
@@ -832,7 +768,7 @@
       "label": "PRIORITY_OPTIONS",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L27",
+      "source_location": "L24",
       "_origin": "ast"
     },
     {
@@ -840,15 +776,7 @@
       "label": "SOURCE_OPTIONS",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L28",
-      "_origin": "ast"
-    },
-    {
-      "id": "src_app_assignee_options",
-      "label": "ASSIGNEE_OPTIONS",
-      "file_type": "code",
-      "source_file": "src/App.jsx",
-      "source_location": "L29",
+      "source_location": "L25",
       "_origin": "ast"
     },
     {
@@ -856,7 +784,7 @@
       "label": "TEAM_OPTIONS",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L30",
+      "source_location": "L26",
       "_origin": "ast"
     },
     {
@@ -864,7 +792,15 @@
       "label": "CALENDAR_WEEKDAY_FORMATTER",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L31",
+      "source_location": "L27",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_app_today_label_formatter",
+      "label": "TODAY_LABEL_FORMATTER",
+      "file_type": "code",
+      "source_file": "src/App.jsx",
+      "source_location": "L28",
       "_origin": "ast"
     },
     {
@@ -872,7 +808,7 @@
       "label": "readChecklistVisibility()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L34",
+      "source_location": "L31",
       "_origin": "ast"
     },
     {
@@ -880,7 +816,15 @@
       "label": "currentUserId()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L38",
+      "source_location": "L35",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_app_launchquoteid",
+      "label": "launchQuoteId()",
+      "file_type": "code",
+      "source_file": "src/App.jsx",
+      "source_location": "L39",
       "_origin": "ast"
     },
     {
@@ -888,7 +832,7 @@
       "label": "resolveCurrentEmployee()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L42",
+      "source_location": "L45",
       "_origin": "ast"
     },
     {
@@ -896,7 +840,7 @@
       "label": "Avatar()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L48",
+      "source_location": "L51",
       "_origin": "ast"
     },
     {
@@ -904,7 +848,7 @@
       "label": "shortAssigneeName()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L59",
+      "source_location": "L62",
       "_origin": "ast"
     },
     {
@@ -912,7 +856,7 @@
       "label": "StatusBadge()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L69",
+      "source_location": "L72",
       "_origin": "ast"
     },
     {
@@ -920,7 +864,7 @@
       "label": "PriorityBadge()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L74",
+      "source_location": "L77",
       "_origin": "ast"
     },
     {
@@ -928,7 +872,7 @@
       "label": "SourceBadge()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L79",
+      "source_location": "L82",
       "_origin": "ast"
     },
     {
@@ -936,7 +880,7 @@
       "label": "InputSelect()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L84",
+      "source_location": "L87",
       "_origin": "ast"
     },
     {
@@ -944,7 +888,7 @@
       "label": "UnsavedChangesDialog()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L91",
+      "source_location": "L94",
       "_origin": "ast"
     },
     {
@@ -952,7 +896,7 @@
       "label": "DeleteTaskDialog()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L95",
+      "source_location": "L98",
       "_origin": "ast"
     },
     {
@@ -960,7 +904,7 @@
       "label": "AppShell()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L99",
+      "source_location": "L102",
       "_origin": "ast"
     },
     {
@@ -968,15 +912,7 @@
       "label": "PageHeader()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L121",
-      "_origin": "ast"
-    },
-    {
-      "id": "src_app_metriccard",
-      "label": "MetricCard()",
-      "file_type": "code",
-      "source_file": "src/App.jsx",
-      "source_location": "L125",
+      "source_location": "L124",
       "_origin": "ast"
     },
     {
@@ -984,7 +920,7 @@
       "label": "TaskCard()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L129",
+      "source_location": "L128",
       "_origin": "ast"
     },
     {
@@ -992,7 +928,7 @@
       "label": "Board()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L147",
+      "source_location": "L146",
       "_origin": "ast"
     },
     {
@@ -1000,15 +936,7 @@
       "label": "FilterBar()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L151",
-      "_origin": "ast"
-    },
-    {
-      "id": "src_app_dashboard",
-      "label": "Dashboard()",
-      "file_type": "code",
-      "source_file": "src/App.jsx",
-      "source_location": "L158",
+      "source_location": "L150",
       "_origin": "ast"
     },
     {
@@ -1016,7 +944,7 @@
       "label": "BoardView()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L165",
+      "source_location": "L159",
       "_origin": "ast"
     },
     {
@@ -1024,7 +952,7 @@
       "label": "ListView()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L171",
+      "source_location": "L165",
       "_origin": "ast"
     },
     {
@@ -1032,7 +960,7 @@
       "label": "CalendarView()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L176",
+      "source_location": "L170",
       "_origin": "ast"
     },
     {
@@ -1040,7 +968,7 @@
       "label": "QualityView()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L182",
+      "source_location": "L176",
       "_origin": "ast"
     },
     {
@@ -1048,7 +976,7 @@
       "label": "SettingsView()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L195",
+      "source_location": "L189",
       "_origin": "ast"
     },
     {
@@ -1056,7 +984,7 @@
       "label": "TaskDrawerContent()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L199",
+      "source_location": "L193",
       "_origin": "ast"
     },
     {
@@ -1064,15 +992,7 @@
       "label": "TaskDrawer()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L259",
-      "_origin": "ast"
-    },
-    {
-      "id": "src_app_inlinesubtaskseditor",
-      "label": "InlineSubtasksEditor()",
-      "file_type": "code",
-      "source_file": "src/App.jsx",
-      "source_location": "L266",
+      "source_location": "L256",
       "_origin": "ast"
     },
     {
@@ -1080,15 +1000,7 @@
       "label": "NewTaskDrawer()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L272",
-      "_origin": "ast"
-    },
-    {
-      "id": "src_app_centraltaskdrawer",
-      "label": "CentralTaskDrawer()",
-      "file_type": "code",
-      "source_file": "src/App.jsx",
-      "source_location": "L280",
+      "source_location": "L263",
       "_origin": "ast"
     },
     {
@@ -1096,7 +1008,7 @@
       "label": "App()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L289",
+      "source_location": "L271",
       "_origin": "ast"
     },
     {
@@ -1208,7 +1120,7 @@
       "label": "CentralRow()",
       "file_type": "code",
       "source_file": "src/CentralView.jsx",
-      "source_location": "L69",
+      "source_location": "L84",
       "_origin": "ast"
     },
     {
@@ -1216,7 +1128,7 @@
       "label": "PageHeader()",
       "file_type": "code",
       "source_file": "src/CentralView.jsx",
-      "source_location": "L79",
+      "source_location": "L96",
       "_origin": "ast"
     },
     {
@@ -1224,7 +1136,7 @@
       "label": "Metric()",
       "file_type": "code",
       "source_file": "src/CentralView.jsx",
-      "source_location": "L84",
+      "source_location": "L101",
       "_origin": "ast"
     },
     {
@@ -1304,167 +1216,7 @@
       "label": "SearchableMultiSelect()",
       "file_type": "code",
       "source_file": "src/SearchableSelect.jsx",
-      "source_location": "L680",
-      "_origin": "ast"
-    },
-    {
-      "id": "src_components_ui_badge",
-      "label": "badge.jsx",
-      "file_type": "code",
-      "source_file": "src/components/ui/badge.jsx",
-      "source_location": "L1",
-      "_origin": "ast"
-    },
-    {
-      "id": "src_components_ui_badge_badgevariants",
-      "label": "badgeVariants",
-      "file_type": "code",
-      "source_file": "src/components/ui/badge.jsx",
-      "source_location": "L7",
-      "_origin": "ast"
-    },
-    {
-      "id": "src_components_ui_badge_badge",
-      "label": "Badge()",
-      "file_type": "code",
-      "source_file": "src/components/ui/badge.jsx",
-      "source_location": "L30",
-      "_origin": "ast"
-    },
-    {
-      "id": "src_components_ui_button",
-      "label": "button.jsx",
-      "file_type": "code",
-      "source_file": "src/components/ui/button.jsx",
-      "source_location": "L1",
-      "_origin": "ast"
-    },
-    {
-      "id": "src_components_ui_button_buttonvariants",
-      "label": "buttonVariants",
-      "file_type": "code",
-      "source_file": "src/components/ui/button.jsx",
-      "source_location": "L7",
-      "_origin": "ast"
-    },
-    {
-      "id": "src_components_ui_button_button",
-      "label": "Button()",
-      "file_type": "code",
-      "source_file": "src/components/ui/button.jsx",
-      "source_location": "L42",
-      "_origin": "ast"
-    },
-    {
-      "id": "src_components_ui_card",
-      "label": "card.jsx",
-      "file_type": "code",
-      "source_file": "src/components/ui/card.jsx",
-      "source_location": "L1",
-      "_origin": "ast"
-    },
-    {
-      "id": "src_components_ui_card_card",
-      "label": "Card()",
-      "file_type": "code",
-      "source_file": "src/components/ui/card.jsx",
-      "source_location": "L5",
-      "_origin": "ast"
-    },
-    {
-      "id": "src_components_ui_card_cardheader",
-      "label": "CardHeader()",
-      "file_type": "code",
-      "source_file": "src/components/ui/card.jsx",
-      "source_location": "L22",
-      "_origin": "ast"
-    },
-    {
-      "id": "src_components_ui_card_cardtitle",
-      "label": "CardTitle()",
-      "file_type": "code",
-      "source_file": "src/components/ui/card.jsx",
-      "source_location": "L37",
-      "_origin": "ast"
-    },
-    {
-      "id": "src_components_ui_card_carddescription",
-      "label": "CardDescription()",
-      "file_type": "code",
-      "source_file": "src/components/ui/card.jsx",
-      "source_location": "L49",
-      "_origin": "ast"
-    },
-    {
-      "id": "src_components_ui_card_cardaction",
-      "label": "CardAction()",
-      "file_type": "code",
-      "source_file": "src/components/ui/card.jsx",
-      "source_location": "L61",
-      "_origin": "ast"
-    },
-    {
-      "id": "src_components_ui_card_cardcontent",
-      "label": "CardContent()",
-      "file_type": "code",
-      "source_file": "src/components/ui/card.jsx",
-      "source_location": "L76",
-      "_origin": "ast"
-    },
-    {
-      "id": "src_components_ui_card_cardfooter",
-      "label": "CardFooter()",
-      "file_type": "code",
-      "source_file": "src/components/ui/card.jsx",
-      "source_location": "L88",
-      "_origin": "ast"
-    },
-    {
-      "id": "src_components_ui_input",
-      "label": "input.jsx",
-      "file_type": "code",
-      "source_file": "src/components/ui/input.jsx",
-      "source_location": "L1",
-      "_origin": "ast"
-    },
-    {
-      "id": "src_components_ui_input_input",
-      "label": "Input()",
-      "file_type": "code",
-      "source_file": "src/components/ui/input.jsx",
-      "source_location": "L5",
-      "_origin": "ast"
-    },
-    {
-      "id": "src_components_ui_separator",
-      "label": "separator.jsx",
-      "file_type": "code",
-      "source_file": "src/components/ui/separator.jsx",
-      "source_location": "L1",
-      "_origin": "ast"
-    },
-    {
-      "id": "src_components_ui_separator_separator",
-      "label": "Separator()",
-      "file_type": "code",
-      "source_file": "src/components/ui/separator.jsx",
-      "source_location": "L6",
-      "_origin": "ast"
-    },
-    {
-      "id": "src_components_ui_textarea",
-      "label": "textarea.jsx",
-      "file_type": "code",
-      "source_file": "src/components/ui/textarea.jsx",
-      "source_location": "L1",
-      "_origin": "ast"
-    },
-    {
-      "id": "src_components_ui_textarea_textarea",
-      "label": "Textarea()",
-      "file_type": "code",
-      "source_file": "src/components/ui/textarea.jsx",
-      "source_location": "L5",
+      "source_location": "L673",
       "_origin": "ast"
     },
     {
@@ -1688,7 +1440,7 @@
       "label": "resolveAssigneeIds()",
       "file_type": "code",
       "source_file": "src/dataverse.js",
-      "source_location": "L215",
+      "source_location": "L216",
       "_origin": "ast"
     },
     {
@@ -1696,7 +1448,7 @@
       "label": "replaceTaskAssignees()",
       "file_type": "code",
       "source_file": "src/dataverse.js",
-      "source_location": "L220",
+      "source_location": "L221",
       "_origin": "ast"
     },
     {
@@ -1704,7 +1456,7 @@
       "label": "normalizeQuality()",
       "file_type": "code",
       "source_file": "src/dataverse.js",
-      "source_location": "L232",
+      "source_location": "L233",
       "_origin": "ast"
     },
     {
@@ -1712,7 +1464,7 @@
       "label": "normalizeTask()",
       "file_type": "code",
       "source_file": "src/dataverse.js",
-      "source_location": "L237",
+      "source_location": "L238",
       "_origin": "ast"
     },
     {
@@ -1720,7 +1472,7 @@
       "label": "normalizeRelation()",
       "file_type": "code",
       "source_file": "src/dataverse.js",
-      "source_location": "L273",
+      "source_location": "L274",
       "_origin": "ast"
     },
     {
@@ -1728,7 +1480,7 @@
       "label": "loadLiveState()",
       "file_type": "code",
       "source_file": "src/dataverse.js",
-      "source_location": "L277",
+      "source_location": "L278",
       "_origin": "ast"
     },
     {
@@ -1736,7 +1488,7 @@
       "label": "connectLiveGraph()",
       "file_type": "code",
       "source_file": "src/dataverse.js",
-      "source_location": "L332",
+      "source_location": "L333",
       "_origin": "ast"
     },
     {
@@ -1744,7 +1496,7 @@
       "label": "createEvent()",
       "file_type": "code",
       "source_file": "src/dataverse.js",
-      "source_location": "L337",
+      "source_location": "L338",
       "_origin": "ast"
     },
     {
@@ -1752,7 +1504,7 @@
       "label": "createLiveTask()",
       "file_type": "code",
       "source_file": "src/dataverse.js",
-      "source_location": "L343",
+      "source_location": "L344",
       "_origin": "ast"
     },
     {
@@ -1760,7 +1512,7 @@
       "label": "updateLiveTask()",
       "file_type": "code",
       "source_file": "src/dataverse.js",
-      "source_location": "L365",
+      "source_location": "L366",
       "_origin": "ast"
     },
     {
@@ -1768,7 +1520,7 @@
       "label": "addLiveComment()",
       "file_type": "code",
       "source_file": "src/dataverse.js",
-      "source_location": "L388",
+      "source_location": "L400",
       "_origin": "ast"
     },
     {
@@ -1776,7 +1528,7 @@
       "label": "addLiveAttachment()",
       "file_type": "code",
       "source_file": "src/dataverse.js",
-      "source_location": "L393",
+      "source_location": "L405",
       "_origin": "ast"
     },
     {
@@ -1784,7 +1536,7 @@
       "label": "createLiveSubtask()",
       "file_type": "code",
       "source_file": "src/dataverse.js",
-      "source_location": "L414",
+      "source_location": "L426",
       "_origin": "ast"
     },
     {
@@ -1792,7 +1544,7 @@
       "label": "fileToBase64()",
       "file_type": "code",
       "source_file": "src/dataverse.js",
-      "source_location": "L425",
+      "source_location": "L437",
       "_origin": "ast"
     },
     {
@@ -1800,7 +1552,7 @@
       "label": "ensureLiveQuoteTask()",
       "file_type": "code",
       "source_file": "src/dataverse.js",
-      "source_location": "L433",
+      "source_location": "L445",
       "_origin": "ast"
     },
     {
@@ -1808,7 +1560,7 @@
       "label": "deleteLiveTask()",
       "file_type": "code",
       "source_file": "src/dataverse.js",
-      "source_location": "L440",
+      "source_location": "L452",
       "_origin": "ast"
     },
     {
@@ -1816,7 +1568,7 @@
       "label": "createMockDataStore()",
       "file_type": "code",
       "source_file": "src/dataverse.js",
-      "source_location": "L452",
+      "source_location": "L464",
       "_origin": "ast"
     },
     {
@@ -1824,7 +1576,7 @@
       "label": "createDataStore()",
       "file_type": "code",
       "source_file": "src/dataverse.js",
-      "source_location": "L475",
+      "source_location": "L487",
       "_origin": "ast"
     },
     {
@@ -1876,11 +1628,19 @@
       "_origin": "ast"
     },
     {
+      "id": "src_domain_date_part_formatter",
+      "label": "DATE_PART_FORMATTER",
+      "file_type": "code",
+      "source_file": "src/domain.js",
+      "source_location": "L19",
+      "_origin": "ast"
+    },
+    {
       "id": "src_domain_normalizetext",
       "label": "normalizeText()",
       "file_type": "code",
       "source_file": "src/domain.js",
-      "source_location": "L19",
+      "source_location": "L21",
       "_origin": "ast"
     },
     {
@@ -1888,7 +1648,7 @@
       "label": "TASK_SOURCES",
       "file_type": "code",
       "source_file": "src/domain.js",
-      "source_location": "L27",
+      "source_location": "L29",
       "_origin": "ast"
     },
     {
@@ -1896,7 +1656,7 @@
       "label": "statusById()",
       "file_type": "code",
       "source_file": "src/domain.js",
-      "source_location": "L33",
+      "source_location": "L35",
       "_origin": "ast"
     },
     {
@@ -1904,7 +1664,7 @@
       "label": "priorityById()",
       "file_type": "code",
       "source_file": "src/domain.js",
-      "source_location": "L34",
+      "source_location": "L36",
       "_origin": "ast"
     },
     {
@@ -1912,7 +1672,7 @@
       "label": "sourceById()",
       "file_type": "code",
       "source_file": "src/domain.js",
-      "source_location": "L35",
+      "source_location": "L37",
       "_origin": "ast"
     },
     {
@@ -1920,7 +1680,7 @@
       "label": "quoteTaskTitle()",
       "file_type": "code",
       "source_file": "src/domain.js",
-      "source_location": "L37",
+      "source_location": "L39",
       "_origin": "ast"
     },
     {
@@ -1928,7 +1688,7 @@
       "label": "buildOptimisticTask()",
       "file_type": "code",
       "source_file": "src/domain.js",
-      "source_location": "L42",
+      "source_location": "L44",
       "_origin": "ast"
     },
     {
@@ -1936,7 +1696,23 @@
       "label": "normalizeAssigneeNames()",
       "file_type": "code",
       "source_file": "src/domain.js",
-      "source_location": "L71",
+      "source_location": "L73",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_domain_buildassigneeoptions",
+      "label": "buildAssigneeOptions()",
+      "file_type": "code",
+      "source_file": "src/domain.js",
+      "source_location": "L80",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_domain_buildtaskcreationinput",
+      "label": "buildTaskCreationInput()",
+      "file_type": "code",
+      "source_file": "src/domain.js",
+      "source_location": "L84",
       "_origin": "ast"
     },
     {
@@ -1944,7 +1720,31 @@
       "label": "mentionedEmployees()",
       "file_type": "code",
       "source_file": "src/domain.js",
-      "source_location": "L78",
+      "source_location": "L89",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_domain_datekeyinapptimezone",
+      "label": "dateKeyInAppTimeZone()",
+      "file_type": "code",
+      "source_file": "src/domain.js",
+      "source_location": "L97",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_domain_shiftdatekey",
+      "label": "shiftDateKey()",
+      "file_type": "code",
+      "source_file": "src/domain.js",
+      "source_location": "L102",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_domain_getduebucket",
+      "label": "getDueBucket()",
+      "file_type": "code",
+      "source_file": "src/domain.js",
+      "source_location": "L108",
       "_origin": "ast"
     },
     {
@@ -1952,7 +1752,7 @@
       "label": "updateTaskInState()",
       "file_type": "code",
       "source_file": "src/domain.js",
-      "source_location": "L86",
+      "source_location": "L119",
       "_origin": "ast"
     },
     {
@@ -1960,7 +1760,7 @@
       "label": "applyOptimisticTaskPatch()",
       "file_type": "code",
       "source_file": "src/domain.js",
-      "source_location": "L93",
+      "source_location": "L126",
       "_origin": "ast"
     },
     {
@@ -1968,7 +1768,7 @@
       "label": "addOptimisticComment()",
       "file_type": "code",
       "source_file": "src/domain.js",
-      "source_location": "L97",
+      "source_location": "L130",
       "_origin": "ast"
     },
     {
@@ -1976,7 +1776,7 @@
       "label": "addOptimisticAttachment()",
       "file_type": "code",
       "source_file": "src/domain.js",
-      "source_location": "L108",
+      "source_location": "L141",
       "_origin": "ast"
     },
     {
@@ -1984,7 +1784,7 @@
       "label": "isOverdue()",
       "file_type": "code",
       "source_file": "src/domain.js",
-      "source_location": "L119",
+      "source_location": "L152",
       "_origin": "ast"
     },
     {
@@ -1992,7 +1792,7 @@
       "label": "isDueToday()",
       "file_type": "code",
       "source_file": "src/domain.js",
-      "source_location": "L124",
+      "source_location": "L156",
       "_origin": "ast"
     },
     {
@@ -2000,7 +1800,7 @@
       "label": "isBlocked()",
       "file_type": "code",
       "source_file": "src/domain.js",
-      "source_location": "L130",
+      "source_location": "L160",
       "_origin": "ast"
     },
     {
@@ -2008,7 +1808,7 @@
       "label": "formatDate()",
       "file_type": "code",
       "source_file": "src/domain.js",
-      "source_location": "L134",
+      "source_location": "L164",
       "_origin": "ast"
     },
     {
@@ -2016,7 +1816,7 @@
       "label": "formatLongDate()",
       "file_type": "code",
       "source_file": "src/domain.js",
-      "source_location": "L139",
+      "source_location": "L169",
       "_origin": "ast"
     },
     {
@@ -2024,7 +1824,7 @@
       "label": "filterTasks()",
       "file_type": "code",
       "source_file": "src/domain.js",
-      "source_location": "L144",
+      "source_location": "L174",
       "_origin": "ast"
     },
     {
@@ -2032,7 +1832,7 @@
       "label": "sortTasks()",
       "file_type": "code",
       "source_file": "src/domain.js",
-      "source_location": "L169",
+      "source_location": "L200",
       "_origin": "ast"
     },
     {
@@ -2040,7 +1840,7 @@
       "label": "taskStats()",
       "file_type": "code",
       "source_file": "src/domain.js",
-      "source_location": "L177",
+      "source_location": "L208",
       "_origin": "ast"
     },
     {
@@ -2105,6 +1905,14 @@
       "file_type": "code",
       "source_file": "src/graphPhotos.js",
       "source_location": "L41",
+      "_origin": "ast"
+    },
+    {
+      "id": "src_graphphotos_clearphotocache",
+      "label": "clearPhotoCache()",
+      "file_type": "code",
+      "source_file": "src/graphPhotos.js",
+      "source_location": "L64",
       "_origin": "ast"
     },
     {
@@ -2208,7 +2016,7 @@
       "label": "updateTask()",
       "file_type": "code",
       "source_file": "src/mockStore.js",
-      "source_location": "L170",
+      "source_location": "L174",
       "_origin": "ast"
     },
     {
@@ -2216,7 +2024,7 @@
       "label": "deleteTask()",
       "file_type": "code",
       "source_file": "src/mockStore.js",
-      "source_location": "L179",
+      "source_location": "L191",
       "_origin": "ast"
     },
     {
@@ -2224,7 +2032,7 @@
       "label": "addComment()",
       "file_type": "code",
       "source_file": "src/mockStore.js",
-      "source_location": "L183",
+      "source_location": "L195",
       "_origin": "ast"
     },
     {
@@ -2232,7 +2040,7 @@
       "label": "addAttachment()",
       "file_type": "code",
       "source_file": "src/mockStore.js",
-      "source_location": "L188",
+      "source_location": "L200",
       "_origin": "ast"
     },
     {
@@ -2240,7 +2048,7 @@
       "label": "ensureQuoteTask()",
       "file_type": "code",
       "source_file": "src/mockStore.js",
-      "source_location": "L193",
+      "source_location": "L205",
       "_origin": "ast"
     },
     {
@@ -2248,7 +2056,7 @@
       "label": "resetState()",
       "file_type": "code",
       "source_file": "src/mockStore.js",
-      "source_location": "L199",
+      "source_location": "L211",
       "_origin": "ast"
     },
     {
@@ -2392,7 +2200,7 @@
       "label": "normalizeWorkItems()",
       "file_type": "code",
       "source_file": "src/workItems.js",
-      "source_location": "L67",
+      "source_location": "L68",
       "_origin": "ast"
     },
     {
@@ -2400,7 +2208,7 @@
       "label": "sortWorkItems()",
       "file_type": "code",
       "source_file": "src/workItems.js",
-      "source_location": "L96",
+      "source_location": "L98",
       "_origin": "ast"
     },
     {
@@ -2408,7 +2216,7 @@
       "label": "filterWorkItems()",
       "file_type": "code",
       "source_file": "src/workItems.js",
-      "source_location": "L107",
+      "source_location": "L109",
       "_origin": "ast"
     },
     {
@@ -2416,7 +2224,7 @@
       "label": "isAssignedToEmployee()",
       "file_type": "code",
       "source_file": "src/workItems.js",
-      "source_location": "L119",
+      "source_location": "L121",
       "_origin": "ast"
     },
     {
@@ -2424,7 +2232,7 @@
       "label": "workItemStats()",
       "file_type": "code",
       "source_file": "src/workItems.js",
-      "source_location": "L128",
+      "source_location": "L130",
       "_origin": "ast"
     },
     {
@@ -2481,6 +2289,14 @@
       "file_type": "code",
       "source_file": "tests/mockStore.test.mjs",
       "source_location": "L5",
+      "_origin": "ast"
+    },
+    {
+      "id": "tests_mockstore_test_blockedstate",
+      "label": "blockedState()",
+      "file_type": "code",
+      "source_file": "tests/mockStore.test.mjs",
+      "source_location": "L99",
       "_origin": "ast"
     },
     {
@@ -2569,6 +2385,174 @@
       "file_type": "document",
       "source_file": "README.md",
       "source_location": "L5",
+      "_origin": "ast"
+    },
+    {
+      "id": "revisao_2026_08_20",
+      "label": "REVISAO_2026-08-20.md",
+      "file_type": "document",
+      "source_file": "REVISAO_2026-08-20.md",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "revisao_2026_08_20_revisão_do_tela_planner_2026_08_20",
+      "label": "Revisão do Tela Planner — 2026-08-20",
+      "file_type": "document",
+      "source_file": "REVISAO_2026-08-20.md",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "revisao_2026_08_20_1_o_que_o_app_faz_hoje",
+      "label": "1. O que o app faz hoje",
+      "file_type": "document",
+      "source_file": "REVISAO_2026-08-20.md",
+      "source_location": "L5",
+      "_origin": "ast"
+    },
+    {
+      "id": "revisao_2026_08_20_2_problemas_de_fluxo_lógica_encontrados",
+      "label": "2. Problemas de fluxo / lógica encontrados",
+      "file_type": "document",
+      "source_file": "REVISAO_2026-08-20.md",
+      "source_location": "L13",
+      "_origin": "ast"
+    },
+    {
+      "id": "revisao_2026_08_20_2_1_responsável_não_pode_ser_escolhido_ao_editar_ou_criar_tarefa_bug_funcional_prioridade_alta",
+      "label": "2.1 Responsável não pode ser escolhido ao editar ou criar tarefa (bug funcional — prioridade alta)",
+      "file_type": "document",
+      "source_file": "REVISAO_2026-08-20.md",
+      "source_location": "L15",
+      "_origin": "ast"
+    },
+    {
+      "id": "revisao_2026_08_20_2_2_rota_qualidade_inacessível_pela_navegação",
+      "label": "2.2 Rota \"Qualidade\" inacessível pela navegação",
+      "file_type": "document",
+      "source_file": "REVISAO_2026-08-20.md",
+      "source_location": "L19",
+      "_origin": "ast"
+    },
+    {
+      "id": "revisao_2026_08_20_2_3_lista_só_existe_no_menu_mobile",
+      "label": "2.3 \"Lista\" só existe no menu mobile",
+      "file_type": "document",
+      "source_file": "REVISAO_2026-08-20.md",
+      "source_location": "L22",
+      "_origin": "ast"
+    },
+    {
+      "id": "revisao_2026_08_20_2_4_componente_dashboard_morto",
+      "label": "2.4 Componente `Dashboard` morto",
+      "file_type": "document",
+      "source_file": "REVISAO_2026-08-20.md",
+      "source_location": "L25",
+      "_origin": "ast"
+    },
+    {
+      "id": "revisao_2026_08_20_2_5_usuário_mock_fixo_em_renan_martins",
+      "label": "2.5 Usuário mock fixo em \"Renan Martins\"",
+      "file_type": "document",
+      "source_file": "REVISAO_2026-08-20.md",
+      "source_location": "L28",
+      "_origin": "ast"
+    },
+    {
+      "id": "revisao_2026_08_20_2_6_plano_de_correção_de_performance_já_mapeado_aparentemente_não_executado",
+      "label": "2.6 Plano de correção de performance já mapeado, aparentemente não executado",
+      "file_type": "document",
+      "source_file": "REVISAO_2026-08-20.md",
+      "source_location": "L31",
+      "_origin": "ast"
+    },
+    {
+      "id": "revisao_2026_08_20_2_7_filtro_de_equipe_existe_na_lógica_mas_não_na_ui",
+      "label": "2.7 Filtro de \"Equipe\" existe na lógica mas não na UI",
+      "file_type": "document",
+      "source_file": "REVISAO_2026-08-20.md",
+      "source_location": "L34",
+      "_origin": "ast"
+    },
+    {
+      "id": "revisao_2026_08_20_2_8_vínculo_manual_de_cotação_pode_ser_descartado_silenciosamente_ao_criar_tarefa",
+      "label": "2.8 Vínculo manual de cotação pode ser descartado silenciosamente ao criar tarefa",
+      "file_type": "document",
+      "source_file": "REVISAO_2026-08-20.md",
+      "source_location": "L37",
+      "_origin": "ast"
+    },
+    {
+      "id": "revisao_2026_08_20_2_9_sinalização_de_reautenticação_do_microsoft_graph_nunca_chega_à_ui",
+      "label": "2.9 Sinalização de reautenticação do Microsoft Graph nunca chega à UI",
+      "file_type": "document",
+      "source_file": "REVISAO_2026-08-20.md",
+      "source_location": "L40",
+      "_origin": "ast"
+    },
+    {
+      "id": "revisao_2026_08_20_3_riscos_na_integração_dataverse_visíveis_no_código_não_testáveis_localmente",
+      "label": "3. Riscos na integração Dataverse (visíveis no código, não testáveis localmente)",
+      "file_type": "document",
+      "source_file": "REVISAO_2026-08-20.md",
+      "source_location": "L43",
+      "_origin": "ast"
+    },
+    {
+      "id": "revisao_2026_08_20_4_pontos_positivos_a_preservar",
+      "label": "4. Pontos positivos a preservar",
+      "file_type": "document",
+      "source_file": "REVISAO_2026-08-20.md",
+      "source_location": "L50",
+      "_origin": "ast"
+    },
+    {
+      "id": "revisao_2026_08_20_plano_de_ação_resolutivo",
+      "label": "Plano de ação resolutivo",
+      "file_type": "document",
+      "source_file": "REVISAO_2026-08-20.md",
+      "source_location": "L59",
+      "_origin": "ast"
+    },
+    {
+      "id": "revisao_2026_08_20_fase_1_correção_de_bugs_funcionais_bloqueiam_o_mvp",
+      "label": "Fase 1 — Correção de bugs funcionais (bloqueiam o MVP)",
+      "file_type": "document",
+      "source_file": "REVISAO_2026-08-20.md",
+      "source_location": "L63",
+      "_origin": "ast"
+    },
+    {
+      "id": "revisao_2026_08_20_fase_2_navegação_e_limpeza_de_código_morto",
+      "label": "Fase 2 — Navegação e limpeza de código morto",
+      "file_type": "document",
+      "source_file": "REVISAO_2026-08-20.md",
+      "source_location": "L77",
+      "_origin": "ast"
+    },
+    {
+      "id": "revisao_2026_08_20_fase_3_robustez_da_integração_dataverse_graph",
+      "label": "Fase 3 — Robustez da integração Dataverse/Graph",
+      "file_type": "document",
+      "source_file": "REVISAO_2026-08-20.md",
+      "source_location": "L90",
+      "_origin": "ast"
+    },
+    {
+      "id": "revisao_2026_08_20_fase_4_performance_já_mapeada_no_implementation_plan_md_retomar",
+      "label": "Fase 4 — Performance (já mapeada no `implementation_plan.md`, retomar)",
+      "file_type": "document",
+      "source_file": "REVISAO_2026-08-20.md",
+      "source_location": "L98",
+      "_origin": "ast"
+    },
+    {
+      "id": "revisao_2026_08_20_fase_5_validação_final",
+      "label": "Fase 5 — Validação final",
+      "file_type": "document",
+      "source_file": "REVISAO_2026-08-20.md",
+      "source_location": "L107",
       "_origin": "ast"
     },
     {
@@ -2777,6 +2761,38 @@
       "file_type": "document",
       "source_file": "implementation_plan.md",
       "source_location": "L169",
+      "_origin": "ast"
+    },
+    {
+      "id": "skill_observations_cross_cutting_principles",
+      "label": "cross-cutting-principles.md",
+      "file_type": "document",
+      "source_file": "skill-observations/cross-cutting-principles.md",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "skill_observations_cross_cutting_principles_cross_cutting_principles",
+      "label": "Cross-cutting principles",
+      "file_type": "document",
+      "source_file": "skill-observations/cross-cutting-principles.md",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "skill_observations_log",
+      "label": "log.md",
+      "file_type": "document",
+      "source_file": "skill-observations/log.md",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "skill_observations_log_skill_observations",
+      "label": "Skill observations",
+      "file_type": "document",
+      "source_file": "skill-observations/log.md",
+      "source_location": "L1",
       "_origin": "ast"
     }
   ],
@@ -3230,30 +3246,11 @@
     },
     {
       "source": "package_dependencies",
-      "target": "package_dependencies_class_variance_authority",
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "package.json",
-      "source_location": "L20",
-      "weight": 1.0
-    },
-    {
-      "source": "package_dependencies_class_variance_authority",
-      "target": "class_variance_authority",
-      "relation": "imports",
-      "confidence": "EXTRACTED",
-      "source_file": "package.json",
-      "source_location": "L20",
-      "weight": 1.0,
-      "context": "import"
-    },
-    {
-      "source": "package_dependencies",
       "target": "package_dependencies_clsx",
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L21",
+      "source_location": "L20",
       "weight": 1.0
     },
     {
@@ -3262,7 +3259,7 @@
       "relation": "imports",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L21",
+      "source_location": "L20",
       "weight": 1.0,
       "context": "import"
     },
@@ -3272,7 +3269,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L22",
+      "source_location": "L21",
       "weight": 1.0
     },
     {
@@ -3281,26 +3278,7 @@
       "relation": "imports",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L22",
-      "weight": 1.0,
-      "context": "import"
-    },
-    {
-      "source": "package_dependencies",
-      "target": "package_dependencies_radix_ui",
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "package.json",
-      "source_location": "L23",
-      "weight": 1.0
-    },
-    {
-      "source": "package_dependencies_radix_ui",
-      "target": "radix_ui",
-      "relation": "imports",
-      "confidence": "EXTRACTED",
-      "source_file": "package.json",
-      "source_location": "L23",
+      "source_location": "L21",
       "weight": 1.0,
       "context": "import"
     },
@@ -3310,7 +3288,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L24",
+      "source_location": "L22",
       "weight": 1.0
     },
     {
@@ -3319,7 +3297,7 @@
       "relation": "imports",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L24",
+      "source_location": "L22",
       "weight": 1.0,
       "context": "import"
     },
@@ -3329,7 +3307,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L25",
+      "source_location": "L23",
       "weight": 1.0
     },
     {
@@ -3338,64 +3316,7 @@
       "relation": "imports",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L25",
-      "weight": 1.0,
-      "context": "import"
-    },
-    {
-      "source": "package_dependencies",
-      "target": "package_dependencies_shadcn",
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "package.json",
-      "source_location": "L26",
-      "weight": 1.0
-    },
-    {
-      "source": "package_dependencies_shadcn",
-      "target": "shadcn",
-      "relation": "imports",
-      "confidence": "EXTRACTED",
-      "source_file": "package.json",
-      "source_location": "L26",
-      "weight": 1.0,
-      "context": "import"
-    },
-    {
-      "source": "package_dependencies",
-      "target": "package_dependencies_tailwind_merge",
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "package.json",
-      "source_location": "L27",
-      "weight": 1.0
-    },
-    {
-      "source": "package_dependencies_tailwind_merge",
-      "target": "tailwind_merge",
-      "relation": "imports",
-      "confidence": "EXTRACTED",
-      "source_file": "package.json",
-      "source_location": "L27",
-      "weight": 1.0,
-      "context": "import"
-    },
-    {
-      "source": "package_dependencies",
-      "target": "package_dependencies_tw_animate_css",
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "package.json",
-      "source_location": "L28",
-      "weight": 1.0
-    },
-    {
-      "source": "package_dependencies_tw_animate_css",
-      "target": "tw_animate_css",
-      "relation": "imports",
-      "confidence": "EXTRACTED",
-      "source_file": "package.json",
-      "source_location": "L28",
+      "source_location": "L23",
       "weight": 1.0,
       "context": "import"
     },
@@ -3405,7 +3326,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L29",
+      "source_location": "L24",
       "weight": 1.0
     },
     {
@@ -3414,7 +3335,7 @@
       "relation": "imports",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L29",
+      "source_location": "L24",
       "weight": 1.0,
       "context": "import"
     },
@@ -3424,46 +3345,8 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L31",
+      "source_location": "L26",
       "weight": 1.0
-    },
-    {
-      "source": "package_devdependencies",
-      "target": "package_devdependencies_tailwindcss_vite",
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "package.json",
-      "source_location": "L32",
-      "weight": 1.0
-    },
-    {
-      "source": "package_devdependencies_tailwindcss_vite",
-      "target": "tailwindcss_vite",
-      "relation": "imports",
-      "confidence": "EXTRACTED",
-      "source_file": "package.json",
-      "source_location": "L32",
-      "weight": 1.0,
-      "context": "import"
-    },
-    {
-      "source": "package_devdependencies",
-      "target": "package_devdependencies_tailwindcss",
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "package.json",
-      "source_location": "L33",
-      "weight": 1.0
-    },
-    {
-      "source": "package_devdependencies_tailwindcss",
-      "target": "tailwindcss",
-      "relation": "imports",
-      "confidence": "EXTRACTED",
-      "source_file": "package.json",
-      "source_location": "L33",
-      "weight": 1.0,
-      "context": "import"
     },
     {
       "source": "scripts_dev",
@@ -4031,7 +3914,27 @@
     },
     {
       "source": "src_app",
+      "target": "src_domain_buildassigneeoptions",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/App.jsx",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
       "target": "src_domain_buildoptimistictask",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/App.jsx",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "src_domain_buildtaskcreationinput",
       "relation": "imports",
       "context": "import",
       "confidence": "EXTRACTED",
@@ -4359,7 +4262,7 @@
     },
     {
       "source": "src_app",
-      "target": "src_app_navitems",
+      "target": "src_app_status_options",
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
@@ -4368,20 +4271,11 @@
     },
     {
       "source": "src_app",
-      "target": "src_app_status_options",
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "src/App.jsx",
-      "source_location": "L26",
-      "weight": 1.0
-    },
-    {
-      "source": "src_app",
       "target": "src_app_priority_options",
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L27",
+      "source_location": "L24",
       "weight": 1.0
     },
     {
@@ -4390,16 +4284,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L28",
-      "weight": 1.0
-    },
-    {
-      "source": "src_app",
-      "target": "src_app_assignee_options",
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "src/App.jsx",
-      "source_location": "L29",
+      "source_location": "L25",
       "weight": 1.0
     },
     {
@@ -4408,7 +4293,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L30",
+      "source_location": "L26",
       "weight": 1.0
     },
     {
@@ -4417,7 +4302,16 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L31",
+      "source_location": "L27",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "src_app_today_label_formatter",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/App.jsx",
+      "source_location": "L28",
       "weight": 1.0
     },
     {
@@ -4426,7 +4320,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L34",
+      "source_location": "L31",
       "weight": 1.0
     },
     {
@@ -4435,7 +4329,16 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L38",
+      "source_location": "L35",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app",
+      "target": "src_app_launchquoteid",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/App.jsx",
+      "source_location": "L39",
       "weight": 1.0
     },
     {
@@ -4444,7 +4347,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L42",
+      "source_location": "L45",
       "weight": 1.0
     },
     {
@@ -4453,7 +4356,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L48",
+      "source_location": "L51",
       "weight": 1.0
     },
     {
@@ -4462,7 +4365,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L59",
+      "source_location": "L62",
       "weight": 1.0
     },
     {
@@ -4471,7 +4374,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L69",
+      "source_location": "L72",
       "weight": 1.0
     },
     {
@@ -4480,7 +4383,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L74",
+      "source_location": "L77",
       "weight": 1.0
     },
     {
@@ -4489,7 +4392,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L79",
+      "source_location": "L82",
       "weight": 1.0
     },
     {
@@ -4498,7 +4401,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L84",
+      "source_location": "L87",
       "weight": 1.0
     },
     {
@@ -4507,7 +4410,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L91",
+      "source_location": "L94",
       "weight": 1.0
     },
     {
@@ -4516,7 +4419,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L95",
+      "source_location": "L98",
       "weight": 1.0
     },
     {
@@ -4525,7 +4428,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L99",
+      "source_location": "L102",
       "weight": 1.0
     },
     {
@@ -4534,16 +4437,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L121",
-      "weight": 1.0
-    },
-    {
-      "source": "src_app",
-      "target": "src_app_metriccard",
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "src/App.jsx",
-      "source_location": "L125",
+      "source_location": "L124",
       "weight": 1.0
     },
     {
@@ -4552,7 +4446,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L129",
+      "source_location": "L128",
       "weight": 1.0
     },
     {
@@ -4561,7 +4455,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L147",
+      "source_location": "L146",
       "weight": 1.0
     },
     {
@@ -4570,16 +4464,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L151",
-      "weight": 1.0
-    },
-    {
-      "source": "src_app",
-      "target": "src_app_dashboard",
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "src/App.jsx",
-      "source_location": "L158",
+      "source_location": "L150",
       "weight": 1.0
     },
     {
@@ -4588,7 +4473,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L165",
+      "source_location": "L159",
       "weight": 1.0
     },
     {
@@ -4597,7 +4482,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L171",
+      "source_location": "L165",
       "weight": 1.0
     },
     {
@@ -4606,7 +4491,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L176",
+      "source_location": "L170",
       "weight": 1.0
     },
     {
@@ -4615,7 +4500,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L182",
+      "source_location": "L176",
       "weight": 1.0
     },
     {
@@ -4624,7 +4509,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L195",
+      "source_location": "L189",
       "weight": 1.0
     },
     {
@@ -4633,7 +4518,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L199",
+      "source_location": "L193",
       "weight": 1.0
     },
     {
@@ -4642,16 +4527,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L259",
-      "weight": 1.0
-    },
-    {
-      "source": "src_app",
-      "target": "src_app_inlinesubtaskseditor",
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "src/App.jsx",
-      "source_location": "L266",
+      "source_location": "L256",
       "weight": 1.0
     },
     {
@@ -4660,16 +4536,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L272",
-      "weight": 1.0
-    },
-    {
-      "source": "src_app",
-      "target": "src_app_centraltaskdrawer",
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "src/App.jsx",
-      "source_location": "L280",
+      "source_location": "L263",
       "weight": 1.0
     },
     {
@@ -4678,7 +4545,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L289",
+      "source_location": "L271",
       "weight": 1.0
     },
     {
@@ -4688,7 +4555,17 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L44",
+      "source_location": "L47",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app_newtaskdrawer",
+      "target": "src_app_launchquoteid",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/App.jsx",
+      "source_location": "L264",
       "weight": 1.0
     },
     {
@@ -4698,7 +4575,7 @@
       "context": "argument",
       "confidence": "INFERRED",
       "source_file": "src/App.jsx",
-      "source_location": "L290",
+      "source_location": "L272",
       "weight": 1.0
     },
     {
@@ -4708,7 +4585,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L359",
+      "source_location": "L369",
       "weight": 1.0
     },
     {
@@ -4956,7 +4833,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/CentralView.jsx",
-      "source_location": "L69",
+      "source_location": "L84",
       "weight": 1.0
     },
     {
@@ -4965,7 +4842,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/CentralView.jsx",
-      "source_location": "L79",
+      "source_location": "L96",
       "weight": 1.0
     },
     {
@@ -4974,7 +4851,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/CentralView.jsx",
-      "source_location": "L84",
+      "source_location": "L101",
       "weight": 1.0
     },
     {
@@ -4984,7 +4861,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/CentralView.jsx",
-      "source_location": "L58",
+      "source_location": "L67",
       "weight": 1.0
     },
     {
@@ -5105,7 +4982,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/SearchableSelect.jsx",
-      "source_location": "L680",
+      "source_location": "L673",
       "weight": 1.0
     },
     {
@@ -5185,7 +5062,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/SearchableSelect.jsx",
-      "source_location": "L329",
+      "source_location": "L322",
       "weight": 1.0
     },
     {
@@ -5195,323 +5072,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/SearchableSelect.jsx",
-      "source_location": "L453",
-      "weight": 1.0
-    },
-    {
-      "source": "src_components_ui_badge",
-      "target": "ref_react",
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "src/components/ui/badge.jsx",
-      "source_location": "L1",
-      "weight": 1.0
-    },
-    {
-      "source": "src_components_ui_badge",
-      "target": "ref_class_variance_authority",
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "src/components/ui/badge.jsx",
-      "source_location": "L2",
-      "weight": 1.0
-    },
-    {
-      "source": "src_components_ui_badge",
-      "target": "ref_radix_ui",
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "src/components/ui/badge.jsx",
-      "source_location": "L3",
-      "weight": 1.0
-    },
-    {
-      "source": "src_components_ui_badge",
-      "target": "ref_lib_utils",
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "src/components/ui/badge.jsx",
-      "source_location": "L5",
-      "weight": 1.0
-    },
-    {
-      "source": "src_components_ui_badge",
-      "target": "src_components_ui_badge_badgevariants",
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "src/components/ui/badge.jsx",
-      "source_location": "L7",
-      "weight": 1.0
-    },
-    {
-      "source": "src_components_ui_badge",
-      "target": "src_components_ui_badge_badge",
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "src/components/ui/badge.jsx",
-      "source_location": "L30",
-      "weight": 1.0
-    },
-    {
-      "source": "src_components_ui_badge_badge",
-      "target": "src_components_ui_badge_badgevariants",
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "src/components/ui/badge.jsx",
-      "source_location": "L42",
-      "weight": 1.0
-    },
-    {
-      "source": "src_components_ui_button",
-      "target": "ref_react",
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "src/components/ui/button.jsx",
-      "source_location": "L1",
-      "weight": 1.0
-    },
-    {
-      "source": "src_components_ui_button",
-      "target": "ref_class_variance_authority",
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "src/components/ui/button.jsx",
-      "source_location": "L2",
-      "weight": 1.0
-    },
-    {
-      "source": "src_components_ui_button",
-      "target": "ref_radix_ui",
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "src/components/ui/button.jsx",
-      "source_location": "L3",
-      "weight": 1.0
-    },
-    {
-      "source": "src_components_ui_button",
-      "target": "ref_lib_utils",
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "src/components/ui/button.jsx",
-      "source_location": "L5",
-      "weight": 1.0
-    },
-    {
-      "source": "src_components_ui_button",
-      "target": "src_components_ui_button_buttonvariants",
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "src/components/ui/button.jsx",
-      "source_location": "L7",
-      "weight": 1.0
-    },
-    {
-      "source": "src_components_ui_button",
-      "target": "src_components_ui_button_button",
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "src/components/ui/button.jsx",
-      "source_location": "L42",
-      "weight": 1.0
-    },
-    {
-      "source": "src_components_ui_button_button",
-      "target": "src_components_ui_button_buttonvariants",
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "src/components/ui/button.jsx",
-      "source_location": "L56",
-      "weight": 1.0
-    },
-    {
-      "source": "src_components_ui_card",
-      "target": "ref_react",
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "src/components/ui/card.jsx",
-      "source_location": "L1",
-      "weight": 1.0
-    },
-    {
-      "source": "src_components_ui_card",
-      "target": "ref_lib_utils",
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "src/components/ui/card.jsx",
-      "source_location": "L3",
-      "weight": 1.0
-    },
-    {
-      "source": "src_components_ui_card",
-      "target": "src_components_ui_card_card",
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "src/components/ui/card.jsx",
-      "source_location": "L5",
-      "weight": 1.0
-    },
-    {
-      "source": "src_components_ui_card",
-      "target": "src_components_ui_card_cardheader",
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "src/components/ui/card.jsx",
-      "source_location": "L22",
-      "weight": 1.0
-    },
-    {
-      "source": "src_components_ui_card",
-      "target": "src_components_ui_card_cardtitle",
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "src/components/ui/card.jsx",
-      "source_location": "L37",
-      "weight": 1.0
-    },
-    {
-      "source": "src_components_ui_card",
-      "target": "src_components_ui_card_carddescription",
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "src/components/ui/card.jsx",
-      "source_location": "L49",
-      "weight": 1.0
-    },
-    {
-      "source": "src_components_ui_card",
-      "target": "src_components_ui_card_cardaction",
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "src/components/ui/card.jsx",
-      "source_location": "L61",
-      "weight": 1.0
-    },
-    {
-      "source": "src_components_ui_card",
-      "target": "src_components_ui_card_cardcontent",
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "src/components/ui/card.jsx",
-      "source_location": "L76",
-      "weight": 1.0
-    },
-    {
-      "source": "src_components_ui_card",
-      "target": "src_components_ui_card_cardfooter",
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "src/components/ui/card.jsx",
-      "source_location": "L88",
-      "weight": 1.0
-    },
-    {
-      "source": "src_components_ui_input",
-      "target": "ref_react",
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "src/components/ui/input.jsx",
-      "source_location": "L1",
-      "weight": 1.0
-    },
-    {
-      "source": "src_components_ui_input",
-      "target": "ref_lib_utils",
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "src/components/ui/input.jsx",
-      "source_location": "L3",
-      "weight": 1.0
-    },
-    {
-      "source": "src_components_ui_input",
-      "target": "src_components_ui_input_input",
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "src/components/ui/input.jsx",
-      "source_location": "L5",
-      "weight": 1.0
-    },
-    {
-      "source": "src_components_ui_separator",
-      "target": "ref_react",
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "src/components/ui/separator.jsx",
-      "source_location": "L1",
-      "weight": 1.0
-    },
-    {
-      "source": "src_components_ui_separator",
-      "target": "ref_radix_ui",
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "src/components/ui/separator.jsx",
-      "source_location": "L2",
-      "weight": 1.0
-    },
-    {
-      "source": "src_components_ui_separator",
-      "target": "ref_lib_utils",
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "src/components/ui/separator.jsx",
-      "source_location": "L4",
-      "weight": 1.0
-    },
-    {
-      "source": "src_components_ui_separator",
-      "target": "src_components_ui_separator_separator",
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "src/components/ui/separator.jsx",
-      "source_location": "L6",
-      "weight": 1.0
-    },
-    {
-      "source": "src_components_ui_textarea",
-      "target": "ref_react",
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "src/components/ui/textarea.jsx",
-      "source_location": "L1",
-      "weight": 1.0
-    },
-    {
-      "source": "src_components_ui_textarea",
-      "target": "ref_lib_utils",
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "src/components/ui/textarea.jsx",
-      "source_location": "L3",
-      "weight": 1.0
-    },
-    {
-      "source": "src_components_ui_textarea",
-      "target": "src_components_ui_textarea_textarea",
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "src/components/ui/textarea.jsx",
-      "source_location": "L5",
+      "source_location": "L446",
       "weight": 1.0
     },
     {
@@ -5627,6 +5188,16 @@
     {
       "source": "src_dataverse",
       "target": "src_domain_normalizeassigneenames",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/dataverse.js",
+      "source_location": "L12",
+      "weight": 1.0
+    },
+    {
+      "source": "src_dataverse",
+      "target": "src_domain_statuses",
       "relation": "imports",
       "context": "import",
       "confidence": "EXTRACTED",
@@ -5904,7 +5475,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L215",
+      "source_location": "L216",
       "weight": 1.0
     },
     {
@@ -5913,7 +5484,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L220",
+      "source_location": "L221",
       "weight": 1.0
     },
     {
@@ -5922,7 +5493,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L232",
+      "source_location": "L233",
       "weight": 1.0
     },
     {
@@ -5931,7 +5502,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L237",
+      "source_location": "L238",
       "weight": 1.0
     },
     {
@@ -5940,7 +5511,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L273",
+      "source_location": "L274",
       "weight": 1.0
     },
     {
@@ -5949,7 +5520,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L277",
+      "source_location": "L278",
       "weight": 1.0
     },
     {
@@ -5958,7 +5529,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L332",
+      "source_location": "L333",
       "weight": 1.0
     },
     {
@@ -5967,7 +5538,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L337",
+      "source_location": "L338",
       "weight": 1.0
     },
     {
@@ -5976,7 +5547,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L343",
+      "source_location": "L344",
       "weight": 1.0
     },
     {
@@ -5985,7 +5556,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L365",
+      "source_location": "L366",
       "weight": 1.0
     },
     {
@@ -5994,7 +5565,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L388",
+      "source_location": "L400",
       "weight": 1.0
     },
     {
@@ -6003,7 +5574,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L393",
+      "source_location": "L405",
       "weight": 1.0
     },
     {
@@ -6012,7 +5583,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L414",
+      "source_location": "L426",
       "weight": 1.0
     },
     {
@@ -6021,7 +5592,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L425",
+      "source_location": "L437",
       "weight": 1.0
     },
     {
@@ -6030,7 +5601,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L433",
+      "source_location": "L445",
       "weight": 1.0
     },
     {
@@ -6039,7 +5610,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L440",
+      "source_location": "L452",
       "weight": 1.0
     },
     {
@@ -6048,7 +5619,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L452",
+      "source_location": "L464",
       "weight": 1.0
     },
     {
@@ -6057,7 +5628,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L475",
+      "source_location": "L487",
       "weight": 1.0
     },
     {
@@ -6227,7 +5798,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L217",
+      "source_location": "L218",
       "weight": 1.0
     },
     {
@@ -6237,7 +5808,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L221",
+      "source_location": "L222",
       "weight": 1.0
     },
     {
@@ -6247,7 +5818,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L222",
+      "source_location": "L223",
       "weight": 1.0
     },
     {
@@ -6257,7 +5828,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L222",
+      "source_location": "L223",
       "weight": 1.0
     },
     {
@@ -6267,7 +5838,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L223",
+      "source_location": "L224",
       "weight": 1.0
     },
     {
@@ -6277,7 +5848,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L223",
+      "source_location": "L224",
       "weight": 1.0
     },
     {
@@ -6287,7 +5858,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L226",
+      "source_location": "L227",
       "weight": 1.0
     },
     {
@@ -6297,7 +5868,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L234",
+      "source_location": "L235",
       "weight": 1.0
     },
     {
@@ -6307,7 +5878,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L241",
+      "source_location": "L242",
       "weight": 1.0
     },
     {
@@ -6317,7 +5888,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L251",
+      "source_location": "L252",
       "weight": 1.0
     },
     {
@@ -6327,7 +5898,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L252",
+      "source_location": "L253",
       "weight": 1.0
     },
     {
@@ -6337,7 +5908,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L279",
+      "source_location": "L280",
       "weight": 1.0
     },
     {
@@ -6347,7 +5918,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L289",
+      "source_location": "L290",
       "weight": 1.0
     },
     {
@@ -6357,7 +5928,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L304",
+      "source_location": "L305",
       "weight": 1.0
     },
     {
@@ -6367,7 +5938,7 @@
       "context": "argument",
       "confidence": "INFERRED",
       "source_file": "src/dataverse.js",
-      "source_location": "L312",
+      "source_location": "L313",
       "weight": 1.0
     },
     {
@@ -6377,7 +5948,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L321",
+      "source_location": "L322",
       "weight": 1.0
     },
     {
@@ -6387,7 +5958,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L322",
+      "source_location": "L323",
       "weight": 1.0
     },
     {
@@ -6397,7 +5968,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L327",
+      "source_location": "L328",
       "weight": 1.0
     },
     {
@@ -6407,7 +5978,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L334",
+      "source_location": "L335",
       "weight": 1.0
     },
     {
@@ -6417,7 +5988,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L339",
+      "source_location": "L340",
       "weight": 1.0
     },
     {
@@ -6427,7 +5998,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L340",
+      "source_location": "L341",
       "weight": 1.0
     },
     {
@@ -6437,22 +6008,12 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L340",
+      "source_location": "L341",
       "weight": 1.0
     },
     {
       "source": "src_dataverse_createlivetask",
       "target": "src_dataverse_resolveidbyname",
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "src/dataverse.js",
-      "source_location": "L349",
-      "weight": 1.0
-    },
-    {
-      "source": "src_dataverse_createlivetask",
-      "target": "src_dataverse_bindlookup",
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
@@ -6462,12 +6023,22 @@
     },
     {
       "source": "src_dataverse_createlivetask",
+      "target": "src_dataverse_bindlookup",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/dataverse.js",
+      "source_location": "L351",
+      "weight": 1.0
+    },
+    {
+      "source": "src_dataverse_createlivetask",
       "target": "src_dataverse_resolveassigneeids",
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L353",
+      "source_location": "L354",
       "weight": 1.0
     },
     {
@@ -6477,7 +6048,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L356",
+      "source_location": "L357",
       "weight": 1.0
     },
     {
@@ -6487,22 +6058,12 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L356",
+      "source_location": "L357",
       "weight": 1.0
     },
     {
       "source": "src_dataverse_createlivetask",
       "target": "src_dataverse_replacetaskassignees",
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "src/dataverse.js",
-      "source_location": "L359",
-      "weight": 1.0
-    },
-    {
-      "source": "src_dataverse_createlivetask",
-      "target": "src_dataverse_markquoteorigin",
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
@@ -6512,7 +6073,7 @@
     },
     {
       "source": "src_dataverse_createlivetask",
-      "target": "src_dataverse_createevent",
+      "target": "src_dataverse_markquoteorigin",
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
@@ -6522,12 +6083,22 @@
     },
     {
       "source": "src_dataverse_createlivetask",
-      "target": "src_dataverse_loadlivestate",
+      "target": "src_dataverse_createevent",
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
       "source_location": "L362",
+      "weight": 1.0
+    },
+    {
+      "source": "src_dataverse_createlivetask",
+      "target": "src_dataverse_loadlivestate",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/dataverse.js",
+      "source_location": "L363",
       "weight": 1.0
     },
     {
@@ -6537,7 +6108,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L374",
+      "source_location": "L383",
       "weight": 1.0
     },
     {
@@ -6547,7 +6118,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L375",
+      "source_location": "L384",
       "weight": 1.0
     },
     {
@@ -6557,7 +6128,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L377",
+      "source_location": "L386",
       "weight": 1.0
     },
     {
@@ -6567,7 +6138,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L377",
+      "source_location": "L386",
       "weight": 1.0
     },
     {
@@ -6577,7 +6148,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L378",
+      "source_location": "L387",
       "weight": 1.0
     },
     {
@@ -6587,7 +6158,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L380",
+      "source_location": "L389",
       "weight": 1.0
     },
     {
@@ -6597,7 +6168,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L380",
+      "source_location": "L389",
       "weight": 1.0
     },
     {
@@ -6607,7 +6178,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L381",
+      "source_location": "L390",
       "weight": 1.0
     },
     {
@@ -6617,52 +6188,12 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L383",
+      "source_location": "L391",
       "weight": 1.0
     },
     {
       "source": "src_dataverse_updatelivetask",
       "target": "src_dataverse_createevent",
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "src/dataverse.js",
-      "source_location": "L384",
-      "weight": 1.0
-    },
-    {
-      "source": "src_dataverse_updatelivetask",
-      "target": "src_dataverse_loadlivestate",
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "src/dataverse.js",
-      "source_location": "L385",
-      "weight": 1.0
-    },
-    {
-      "source": "src_dataverse_addlivecomment",
-      "target": "src_dataverse_createevent",
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "src/dataverse.js",
-      "source_location": "L389",
-      "weight": 1.0
-    },
-    {
-      "source": "src_dataverse_addlivecomment",
-      "target": "src_dataverse_loadlivestate",
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "src/dataverse.js",
-      "source_location": "L390",
-      "weight": 1.0
-    },
-    {
-      "source": "src_dataverse_addliveattachment",
-      "target": "src_dataverse_loadlivestate",
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
@@ -6671,48 +6202,18 @@
       "weight": 1.0
     },
     {
-      "source": "src_dataverse_addliveattachment",
-      "target": "src_dataverse_retrievemany",
+      "source": "src_dataverse_updatelivetask",
+      "target": "src_dataverse_loadlivestate",
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L396",
+      "source_location": "L397",
       "weight": 1.0
     },
     {
-      "source": "src_dataverse_addliveattachment",
-      "target": "src_dataverse_cleanid",
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "src/dataverse.js",
-      "source_location": "L396",
-      "weight": 1.0
-    },
-    {
-      "source": "src_dataverse_addliveattachment",
-      "target": "src_dataverse_sanitizepathsegment",
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "src/dataverse.js",
-      "source_location": "L398",
-      "weight": 1.0
-    },
-    {
-      "source": "src_dataverse_addliveattachment",
-      "target": "src_dataverse_apiurl",
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "src/dataverse.js",
-      "source_location": "L400",
-      "weight": 1.0
-    },
-    {
-      "source": "src_dataverse_addliveattachment",
-      "target": "src_dataverse_resolveonedriveflowurl",
+      "source": "src_dataverse_addlivecomment",
+      "target": "src_dataverse_createevent",
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
@@ -6721,28 +6222,28 @@
       "weight": 1.0
     },
     {
-      "source": "src_dataverse_addliveattachment",
-      "target": "src_dataverse_filetobase64",
+      "source": "src_dataverse_addlivecomment",
+      "target": "src_dataverse_loadlivestate",
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L403",
+      "source_location": "L402",
       "weight": 1.0
     },
     {
       "source": "src_dataverse_addliveattachment",
-      "target": "src_dataverse_extractflowrecord",
+      "target": "src_dataverse_loadlivestate",
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L407",
+      "source_location": "L406",
       "weight": 1.0
     },
     {
       "source": "src_dataverse_addliveattachment",
-      "target": "src_dataverse_getflowlink",
+      "target": "src_dataverse_retrievemany",
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
@@ -6752,12 +6253,82 @@
     },
     {
       "source": "src_dataverse_addliveattachment",
-      "target": "src_dataverse_createevent",
+      "target": "src_dataverse_cleanid",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/dataverse.js",
+      "source_location": "L408",
+      "weight": 1.0
+    },
+    {
+      "source": "src_dataverse_addliveattachment",
+      "target": "src_dataverse_sanitizepathsegment",
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
       "source_location": "L410",
+      "weight": 1.0
+    },
+    {
+      "source": "src_dataverse_addliveattachment",
+      "target": "src_dataverse_apiurl",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/dataverse.js",
+      "source_location": "L412",
+      "weight": 1.0
+    },
+    {
+      "source": "src_dataverse_addliveattachment",
+      "target": "src_dataverse_resolveonedriveflowurl",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/dataverse.js",
+      "source_location": "L413",
+      "weight": 1.0
+    },
+    {
+      "source": "src_dataverse_addliveattachment",
+      "target": "src_dataverse_filetobase64",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/dataverse.js",
+      "source_location": "L415",
+      "weight": 1.0
+    },
+    {
+      "source": "src_dataverse_addliveattachment",
+      "target": "src_dataverse_extractflowrecord",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/dataverse.js",
+      "source_location": "L419",
+      "weight": 1.0
+    },
+    {
+      "source": "src_dataverse_addliveattachment",
+      "target": "src_dataverse_getflowlink",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/dataverse.js",
+      "source_location": "L420",
+      "weight": 1.0
+    },
+    {
+      "source": "src_dataverse_addliveattachment",
+      "target": "src_dataverse_createevent",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/dataverse.js",
+      "source_location": "L422",
       "weight": 1.0
     },
     {
@@ -6767,7 +6338,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L415",
+      "source_location": "L427",
       "weight": 1.0
     },
     {
@@ -6777,7 +6348,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L419",
+      "source_location": "L431",
       "weight": 1.0
     },
     {
@@ -6787,7 +6358,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L421",
+      "source_location": "L433",
       "weight": 1.0
     },
     {
@@ -6797,7 +6368,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L421",
+      "source_location": "L433",
       "weight": 1.0
     },
     {
@@ -6807,7 +6378,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L422",
+      "source_location": "L434",
       "weight": 1.0
     },
     {
@@ -6817,7 +6388,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L437",
+      "source_location": "L449",
       "weight": 1.0
     },
     {
@@ -6827,7 +6398,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L442",
+      "source_location": "L454",
       "weight": 1.0
     },
     {
@@ -6837,7 +6408,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L442",
+      "source_location": "L454",
       "weight": 1.0
     },
     {
@@ -6847,7 +6418,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L443",
+      "source_location": "L455",
       "weight": 1.0
     },
     {
@@ -6857,7 +6428,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L443",
+      "source_location": "L455",
       "weight": 1.0
     },
     {
@@ -6867,7 +6438,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L449",
+      "source_location": "L461",
       "weight": 1.0
     },
     {
@@ -6877,7 +6448,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L476",
+      "source_location": "L488",
       "weight": 1.0
     },
     {
@@ -6887,7 +6458,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L477",
+      "source_location": "L489",
       "weight": 1.0
     },
     {
@@ -6897,7 +6468,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L480",
+      "source_location": "L492",
       "weight": 1.0
     },
     {
@@ -6907,7 +6478,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L481",
+      "source_location": "L493",
       "weight": 1.0
     },
     {
@@ -6917,7 +6488,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L482",
+      "source_location": "L494",
       "weight": 1.0
     },
     {
@@ -6927,7 +6498,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L483",
+      "source_location": "L495",
       "weight": 1.0
     },
     {
@@ -6937,7 +6508,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L485",
+      "source_location": "L497",
       "weight": 1.0
     },
     {
@@ -6947,7 +6518,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L486",
+      "source_location": "L498",
       "weight": 1.0
     },
     {
@@ -6957,7 +6528,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L487",
+      "source_location": "L499",
       "weight": 1.0
     },
     {
@@ -6967,7 +6538,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L488",
+      "source_location": "L500",
       "weight": 1.0
     },
     {
@@ -6977,7 +6548,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L489",
+      "source_location": "L501",
       "weight": 1.0
     },
     {
@@ -6987,7 +6558,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L492",
+      "source_location": "L504",
       "weight": 1.0
     },
     {
@@ -7037,7 +6608,7 @@
     },
     {
       "source": "src_domain",
-      "target": "src_domain_normalizetext",
+      "target": "src_domain_date_part_formatter",
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/domain.js",
@@ -7046,11 +6617,20 @@
     },
     {
       "source": "src_domain",
+      "target": "src_domain_normalizetext",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/domain.js",
+      "source_location": "L21",
+      "weight": 1.0
+    },
+    {
+      "source": "src_domain",
       "target": "src_domain_task_sources",
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/domain.js",
-      "source_location": "L27",
+      "source_location": "L29",
       "weight": 1.0
     },
     {
@@ -7059,7 +6639,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/domain.js",
-      "source_location": "L33",
+      "source_location": "L35",
       "weight": 1.0
     },
     {
@@ -7068,7 +6648,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/domain.js",
-      "source_location": "L34",
+      "source_location": "L36",
       "weight": 1.0
     },
     {
@@ -7077,7 +6657,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/domain.js",
-      "source_location": "L35",
+      "source_location": "L37",
       "weight": 1.0
     },
     {
@@ -7086,7 +6666,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/domain.js",
-      "source_location": "L37",
+      "source_location": "L39",
       "weight": 1.0
     },
     {
@@ -7095,7 +6675,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/domain.js",
-      "source_location": "L42",
+      "source_location": "L44",
       "weight": 1.0
     },
     {
@@ -7104,7 +6684,25 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/domain.js",
-      "source_location": "L71",
+      "source_location": "L73",
+      "weight": 1.0
+    },
+    {
+      "source": "src_domain",
+      "target": "src_domain_buildassigneeoptions",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/domain.js",
+      "source_location": "L80",
+      "weight": 1.0
+    },
+    {
+      "source": "src_domain",
+      "target": "src_domain_buildtaskcreationinput",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/domain.js",
+      "source_location": "L84",
       "weight": 1.0
     },
     {
@@ -7113,30 +6711,12 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/domain.js",
-      "source_location": "L78",
+      "source_location": "L89",
       "weight": 1.0
     },
     {
       "source": "src_domain",
-      "target": "src_domain_updatetaskinstate",
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "src/domain.js",
-      "source_location": "L86",
-      "weight": 1.0
-    },
-    {
-      "source": "src_domain",
-      "target": "src_domain_applyoptimistictaskpatch",
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "src/domain.js",
-      "source_location": "L93",
-      "weight": 1.0
-    },
-    {
-      "source": "src_domain",
-      "target": "src_domain_addoptimisticcomment",
+      "target": "src_domain_datekeyinapptimezone",
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/domain.js",
@@ -7145,7 +6725,16 @@
     },
     {
       "source": "src_domain",
-      "target": "src_domain_addoptimisticattachment",
+      "target": "src_domain_shiftdatekey",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/domain.js",
+      "source_location": "L102",
+      "weight": 1.0
+    },
+    {
+      "source": "src_domain",
+      "target": "src_domain_getduebucket",
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/domain.js",
@@ -7154,7 +6743,7 @@
     },
     {
       "source": "src_domain",
-      "target": "src_domain_isoverdue",
+      "target": "src_domain_updatetaskinstate",
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/domain.js",
@@ -7163,16 +6752,16 @@
     },
     {
       "source": "src_domain",
-      "target": "src_domain_isduetoday",
+      "target": "src_domain_applyoptimistictaskpatch",
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/domain.js",
-      "source_location": "L124",
+      "source_location": "L126",
       "weight": 1.0
     },
     {
       "source": "src_domain",
-      "target": "src_domain_isblocked",
+      "target": "src_domain_addoptimisticcomment",
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/domain.js",
@@ -7181,11 +6770,47 @@
     },
     {
       "source": "src_domain",
+      "target": "src_domain_addoptimisticattachment",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/domain.js",
+      "source_location": "L141",
+      "weight": 1.0
+    },
+    {
+      "source": "src_domain",
+      "target": "src_domain_isoverdue",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/domain.js",
+      "source_location": "L152",
+      "weight": 1.0
+    },
+    {
+      "source": "src_domain",
+      "target": "src_domain_isduetoday",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/domain.js",
+      "source_location": "L156",
+      "weight": 1.0
+    },
+    {
+      "source": "src_domain",
+      "target": "src_domain_isblocked",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/domain.js",
+      "source_location": "L160",
+      "weight": 1.0
+    },
+    {
+      "source": "src_domain",
       "target": "src_domain_formatdate",
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/domain.js",
-      "source_location": "L134",
+      "source_location": "L164",
       "weight": 1.0
     },
     {
@@ -7194,7 +6819,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/domain.js",
-      "source_location": "L139",
+      "source_location": "L169",
       "weight": 1.0
     },
     {
@@ -7203,7 +6828,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/domain.js",
-      "source_location": "L144",
+      "source_location": "L174",
       "weight": 1.0
     },
     {
@@ -7212,7 +6837,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/domain.js",
-      "source_location": "L169",
+      "source_location": "L200",
       "weight": 1.0
     },
     {
@@ -7221,7 +6846,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/domain.js",
-      "source_location": "L177",
+      "source_location": "L208",
       "weight": 1.0
     },
     {
@@ -7231,7 +6856,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/domain.js",
-      "source_location": "L44",
+      "source_location": "L46",
       "weight": 1.0
     },
     {
@@ -7241,7 +6866,27 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/domain.js",
-      "source_location": "L79",
+      "source_location": "L90",
+      "weight": 1.0
+    },
+    {
+      "source": "src_domain_getduebucket",
+      "target": "src_domain_datekeyinapptimezone",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/domain.js",
+      "source_location": "L112",
+      "weight": 1.0
+    },
+    {
+      "source": "src_domain_getduebucket",
+      "target": "src_domain_shiftdatekey",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/domain.js",
+      "source_location": "L115",
       "weight": 1.0
     },
     {
@@ -7251,7 +6896,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/domain.js",
-      "source_location": "L94",
+      "source_location": "L127",
       "weight": 1.0
     },
     {
@@ -7261,7 +6906,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/domain.js",
-      "source_location": "L105",
+      "source_location": "L138",
       "weight": 1.0
     },
     {
@@ -7271,7 +6916,27 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/domain.js",
-      "source_location": "L116",
+      "source_location": "L149",
+      "weight": 1.0
+    },
+    {
+      "source": "src_domain_isoverdue",
+      "target": "src_domain_getduebucket",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/domain.js",
+      "source_location": "L153",
+      "weight": 1.0
+    },
+    {
+      "source": "src_domain_isduetoday",
+      "target": "src_domain_getduebucket",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/domain.js",
+      "source_location": "L157",
       "weight": 1.0
     },
     {
@@ -7281,7 +6946,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/domain.js",
-      "source_location": "L145",
+      "source_location": "L175",
       "weight": 1.0
     },
     {
@@ -7291,7 +6956,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/domain.js",
-      "source_location": "L161",
+      "source_location": "L192",
       "weight": 1.0
     },
     {
@@ -7301,7 +6966,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/domain.js",
-      "source_location": "L164",
+      "source_location": "L195",
       "weight": 1.0
     },
     {
@@ -7311,7 +6976,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/domain.js",
-      "source_location": "L180",
+      "source_location": "L211",
       "weight": 1.0
     },
     {
@@ -7321,7 +6986,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/domain.js",
-      "source_location": "L181",
+      "source_location": "L212",
       "weight": 1.0
     },
     {
@@ -7395,6 +7060,15 @@
       "confidence": "EXTRACTED",
       "source_file": "src/graphPhotos.js",
       "source_location": "L41",
+      "weight": 1.0
+    },
+    {
+      "source": "src_graphphotos",
+      "target": "src_graphphotos_clearphotocache",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/graphPhotos.js",
+      "source_location": "L64",
       "weight": 1.0
     },
     {
@@ -7644,7 +7318,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/mockStore.js",
-      "source_location": "L170",
+      "source_location": "L174",
       "weight": 1.0
     },
     {
@@ -7653,7 +7327,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/mockStore.js",
-      "source_location": "L179",
+      "source_location": "L191",
       "weight": 1.0
     },
     {
@@ -7662,7 +7336,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/mockStore.js",
-      "source_location": "L183",
+      "source_location": "L195",
       "weight": 1.0
     },
     {
@@ -7671,7 +7345,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/mockStore.js",
-      "source_location": "L188",
+      "source_location": "L200",
       "weight": 1.0
     },
     {
@@ -7680,7 +7354,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/mockStore.js",
-      "source_location": "L193",
+      "source_location": "L205",
       "weight": 1.0
     },
     {
@@ -7689,7 +7363,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/mockStore.js",
-      "source_location": "L199",
+      "source_location": "L211",
       "weight": 1.0
     },
     {
@@ -7739,21 +7413,11 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/mockStore.js",
-      "source_location": "L160",
+      "source_location": "L164",
       "weight": 1.0
     },
     {
       "source": "src_mockstore_createtask",
-      "target": "src_mockstore_savestate",
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "src/mockStore.js",
-      "source_location": "L167",
-      "weight": 1.0
-    },
-    {
-      "source": "src_mockstore_updatetask",
       "target": "src_mockstore_savestate",
       "relation": "calls",
       "context": "call",
@@ -7764,12 +7428,22 @@
     },
     {
       "source": "src_mockstore_updatetask",
+      "target": "src_mockstore_savestate",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/mockStore.js",
+      "source_location": "L175",
+      "weight": 1.0
+    },
+    {
+      "source": "src_mockstore_updatetask",
       "target": "src_mockstore_uid",
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/mockStore.js",
-      "source_location": "L174",
+      "source_location": "L185",
       "weight": 1.0
     },
     {
@@ -7779,7 +7453,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/mockStore.js",
-      "source_location": "L180",
+      "source_location": "L192",
       "weight": 1.0
     },
     {
@@ -7789,7 +7463,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/mockStore.js",
-      "source_location": "L184",
+      "source_location": "L196",
       "weight": 1.0
     },
     {
@@ -7799,7 +7473,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/mockStore.js",
-      "source_location": "L185",
+      "source_location": "L197",
       "weight": 1.0
     },
     {
@@ -7809,7 +7483,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/mockStore.js",
-      "source_location": "L189",
+      "source_location": "L201",
       "weight": 1.0
     },
     {
@@ -7819,7 +7493,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/mockStore.js",
-      "source_location": "L190",
+      "source_location": "L202",
       "weight": 1.0
     },
     {
@@ -7829,7 +7503,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/mockStore.js",
-      "source_location": "L196",
+      "source_location": "L208",
       "weight": 1.0
     },
     {
@@ -7839,7 +7513,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/mockStore.js",
-      "source_location": "L200",
+      "source_location": "L212",
       "weight": 1.0
     },
     {
@@ -7881,7 +7555,7 @@
     },
     {
       "source": "src_workitems",
-      "target": "src_domain_isoverdue",
+      "target": "src_domain_getduebucket",
       "relation": "imports",
       "context": "import",
       "confidence": "EXTRACTED",
@@ -7995,7 +7669,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/workItems.js",
-      "source_location": "L67",
+      "source_location": "L68",
       "weight": 1.0
     },
     {
@@ -8004,7 +7678,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/workItems.js",
-      "source_location": "L96",
+      "source_location": "L98",
       "weight": 1.0
     },
     {
@@ -8013,7 +7687,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/workItems.js",
-      "source_location": "L107",
+      "source_location": "L109",
       "weight": 1.0
     },
     {
@@ -8022,7 +7696,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/workItems.js",
-      "source_location": "L119",
+      "source_location": "L121",
       "weight": 1.0
     },
     {
@@ -8031,7 +7705,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/workItems.js",
-      "source_location": "L128",
+      "source_location": "L130",
       "weight": 1.0
     },
     {
@@ -8141,7 +7815,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/workItems.js",
-      "source_location": "L72",
+      "source_location": "L73",
       "weight": 1.0
     },
     {
@@ -8151,7 +7825,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/workItems.js",
-      "source_location": "L73",
+      "source_location": "L74",
       "weight": 1.0
     },
     {
@@ -8161,7 +7835,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/workItems.js",
-      "source_location": "L74",
+      "source_location": "L75",
       "weight": 1.0
     },
     {
@@ -8171,7 +7845,7 @@
       "context": "argument",
       "confidence": "INFERRED",
       "source_file": "src/workItems.js",
-      "source_location": "L93",
+      "source_location": "L95",
       "weight": 1.0
     },
     {
@@ -8346,6 +8020,16 @@
     },
     {
       "source": "tests_domain_test",
+      "target": "src_domain_buildassigneeoptions",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/domain.test.mjs",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_domain_test",
       "target": "src_domain_buildoptimistictask",
       "relation": "imports",
       "context": "import",
@@ -8356,7 +8040,27 @@
     },
     {
       "source": "tests_domain_test",
+      "target": "src_domain_buildtaskcreationinput",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/domain.test.mjs",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_domain_test",
       "target": "src_domain_filtertasks",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/domain.test.mjs",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_domain_test",
+      "target": "src_domain_getduebucket",
       "relation": "imports",
       "context": "import",
       "confidence": "EXTRACTED",
@@ -8550,6 +8254,15 @@
       "confidence": "EXTRACTED",
       "source_file": "tests/mockStore.test.mjs",
       "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_mockstore_test",
+      "target": "tests_mockstore_test_blockedstate",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/mockStore.test.mjs",
+      "source_location": "L99",
       "weight": 1.0
     },
     {
@@ -8883,7 +8596,7 @@
     },
     {
       "source": "vite_config",
-      "target": "ref_tailwindcss_vite",
+      "target": "ref_node_path",
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
@@ -8893,22 +8606,12 @@
     },
     {
       "source": "vite_config",
-      "target": "ref_node_path",
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "vite.config.js",
-      "source_location": "L4",
-      "weight": 1.0
-    },
-    {
-      "source": "vite_config",
       "target": "ref_node_url",
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "vite.config.js",
-      "source_location": "L5",
+      "source_location": "L4",
       "weight": 1.0
     },
     {
@@ -8927,6 +8630,195 @@
       "confidence": "EXTRACTED",
       "source_file": "README.md",
       "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "revisao_2026_08_20",
+      "target": "revisao_2026_08_20_revisão_do_tela_planner_2026_08_20",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "REVISAO_2026-08-20.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "revisao_2026_08_20_revisão_do_tela_planner_2026_08_20",
+      "target": "revisao_2026_08_20_1_o_que_o_app_faz_hoje",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "REVISAO_2026-08-20.md",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "revisao_2026_08_20_revisão_do_tela_planner_2026_08_20",
+      "target": "revisao_2026_08_20_2_problemas_de_fluxo_lógica_encontrados",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "REVISAO_2026-08-20.md",
+      "source_location": "L13",
+      "weight": 1.0
+    },
+    {
+      "source": "revisao_2026_08_20_2_problemas_de_fluxo_lógica_encontrados",
+      "target": "revisao_2026_08_20_2_1_responsável_não_pode_ser_escolhido_ao_editar_ou_criar_tarefa_bug_funcional_prioridade_alta",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "REVISAO_2026-08-20.md",
+      "source_location": "L15",
+      "weight": 1.0
+    },
+    {
+      "source": "revisao_2026_08_20_2_problemas_de_fluxo_lógica_encontrados",
+      "target": "revisao_2026_08_20_2_2_rota_qualidade_inacessível_pela_navegação",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "REVISAO_2026-08-20.md",
+      "source_location": "L19",
+      "weight": 1.0
+    },
+    {
+      "source": "revisao_2026_08_20_2_problemas_de_fluxo_lógica_encontrados",
+      "target": "revisao_2026_08_20_2_3_lista_só_existe_no_menu_mobile",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "REVISAO_2026-08-20.md",
+      "source_location": "L22",
+      "weight": 1.0
+    },
+    {
+      "source": "revisao_2026_08_20_2_problemas_de_fluxo_lógica_encontrados",
+      "target": "revisao_2026_08_20_2_4_componente_dashboard_morto",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "REVISAO_2026-08-20.md",
+      "source_location": "L25",
+      "weight": 1.0
+    },
+    {
+      "source": "revisao_2026_08_20_2_problemas_de_fluxo_lógica_encontrados",
+      "target": "revisao_2026_08_20_2_5_usuário_mock_fixo_em_renan_martins",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "REVISAO_2026-08-20.md",
+      "source_location": "L28",
+      "weight": 1.0
+    },
+    {
+      "source": "revisao_2026_08_20_2_problemas_de_fluxo_lógica_encontrados",
+      "target": "revisao_2026_08_20_2_6_plano_de_correção_de_performance_já_mapeado_aparentemente_não_executado",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "REVISAO_2026-08-20.md",
+      "source_location": "L31",
+      "weight": 1.0
+    },
+    {
+      "source": "revisao_2026_08_20",
+      "target": "implementation_plan",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "source_file": "REVISAO_2026-08-20.md",
+      "source_location": "L32",
+      "weight": 1.0
+    },
+    {
+      "source": "revisao_2026_08_20_2_problemas_de_fluxo_lógica_encontrados",
+      "target": "revisao_2026_08_20_2_7_filtro_de_equipe_existe_na_lógica_mas_não_na_ui",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "REVISAO_2026-08-20.md",
+      "source_location": "L34",
+      "weight": 1.0
+    },
+    {
+      "source": "revisao_2026_08_20_2_problemas_de_fluxo_lógica_encontrados",
+      "target": "revisao_2026_08_20_2_8_vínculo_manual_de_cotação_pode_ser_descartado_silenciosamente_ao_criar_tarefa",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "REVISAO_2026-08-20.md",
+      "source_location": "L37",
+      "weight": 1.0
+    },
+    {
+      "source": "revisao_2026_08_20_2_problemas_de_fluxo_lógica_encontrados",
+      "target": "revisao_2026_08_20_2_9_sinalização_de_reautenticação_do_microsoft_graph_nunca_chega_à_ui",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "REVISAO_2026-08-20.md",
+      "source_location": "L40",
+      "weight": 1.0
+    },
+    {
+      "source": "revisao_2026_08_20_revisão_do_tela_planner_2026_08_20",
+      "target": "revisao_2026_08_20_3_riscos_na_integração_dataverse_visíveis_no_código_não_testáveis_localmente",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "REVISAO_2026-08-20.md",
+      "source_location": "L43",
+      "weight": 1.0
+    },
+    {
+      "source": "revisao_2026_08_20_revisão_do_tela_planner_2026_08_20",
+      "target": "revisao_2026_08_20_4_pontos_positivos_a_preservar",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "REVISAO_2026-08-20.md",
+      "source_location": "L50",
+      "weight": 1.0
+    },
+    {
+      "source": "revisao_2026_08_20",
+      "target": "revisao_2026_08_20_plano_de_ação_resolutivo",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "REVISAO_2026-08-20.md",
+      "source_location": "L59",
+      "weight": 1.0
+    },
+    {
+      "source": "revisao_2026_08_20_plano_de_ação_resolutivo",
+      "target": "revisao_2026_08_20_fase_1_correção_de_bugs_funcionais_bloqueiam_o_mvp",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "REVISAO_2026-08-20.md",
+      "source_location": "L63",
+      "weight": 1.0
+    },
+    {
+      "source": "revisao_2026_08_20_plano_de_ação_resolutivo",
+      "target": "revisao_2026_08_20_fase_2_navegação_e_limpeza_de_código_morto",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "REVISAO_2026-08-20.md",
+      "source_location": "L77",
+      "weight": 1.0
+    },
+    {
+      "source": "revisao_2026_08_20_plano_de_ação_resolutivo",
+      "target": "revisao_2026_08_20_fase_3_robustez_da_integração_dataverse_graph",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "REVISAO_2026-08-20.md",
+      "source_location": "L90",
+      "weight": 1.0
+    },
+    {
+      "source": "revisao_2026_08_20_plano_de_ação_resolutivo",
+      "target": "revisao_2026_08_20_fase_4_performance_já_mapeada_no_implementation_plan_md_retomar",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "REVISAO_2026-08-20.md",
+      "source_location": "L98",
+      "weight": 1.0
+    },
+    {
+      "source": "revisao_2026_08_20_plano_de_ação_resolutivo",
+      "target": "revisao_2026_08_20_fase_5_validação_final",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "REVISAO_2026-08-20.md",
+      "source_location": "L107",
       "weight": 1.0
     },
     {
@@ -9146,6 +9038,24 @@
       "weight": 1.0
     },
     {
+      "source": "skill_observations_cross_cutting_principles",
+      "target": "skill_observations_cross_cutting_principles_cross_cutting_principles",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "skill-observations/cross-cutting-principles.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "skill_observations_log",
+      "target": "skill_observations_log_skill_observations",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "skill-observations/log.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
       "source": "src_app",
       "target": "src_searchableselect_searchableselect",
       "relation": "imports",
@@ -9212,7 +9122,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L70",
+      "source_location": "L73",
       "weight": 1.0
     },
     {
@@ -9222,7 +9132,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L80",
+      "source_location": "L83",
       "weight": 1.0
     },
     {
@@ -9232,7 +9142,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L101",
+      "source_location": "L104",
       "weight": 1.0
     },
     {
@@ -9242,7 +9152,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L130",
+      "source_location": "L129",
       "weight": 1.0
     },
     {
@@ -9252,7 +9162,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L134",
+      "source_location": "L133",
       "weight": 1.0
     },
     {
@@ -9262,7 +9172,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L139",
+      "source_location": "L138",
       "weight": 1.0
     },
     {
@@ -9272,21 +9182,21 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L142",
+      "source_location": "L141",
       "weight": 1.0
     },
     {
-      "source": "src_app_dashboard",
-      "target": "src_domain_taskstats",
+      "source": "src_app_filterbar",
+      "target": "src_domain_buildassigneeoptions",
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L159",
+      "source_location": "L152",
       "weight": 1.0
     },
     {
-      "source": "src_app_dashboard",
+      "source": "src_app_boardview",
       "target": "src_domain_sorttasks",
       "relation": "calls",
       "context": "call",
@@ -9296,27 +9206,17 @@
       "weight": 1.0
     },
     {
-      "source": "src_app_dashboard",
-      "target": "src_domain_isoverdue",
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "src/App.jsx",
-      "source_location": "L162",
-      "weight": 1.0
-    },
-    {
-      "source": "src_app_dashboard",
-      "target": "src_domain_formatdate",
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "src/App.jsx",
-      "source_location": "L162",
-      "weight": 1.0
-    },
-    {
       "source": "src_app_boardview",
+      "target": "src_domain_filtertasks",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/App.jsx",
+      "source_location": "L160",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app_listview",
       "target": "src_domain_sorttasks",
       "relation": "calls",
       "context": "call",
@@ -9326,7 +9226,7 @@
       "weight": 1.0
     },
     {
-      "source": "src_app_boardview",
+      "source": "src_app_listview",
       "target": "src_domain_filtertasks",
       "relation": "calls",
       "context": "call",
@@ -9337,32 +9237,12 @@
     },
     {
       "source": "src_app_listview",
-      "target": "src_domain_sorttasks",
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "src/App.jsx",
-      "source_location": "L172",
-      "weight": 1.0
-    },
-    {
-      "source": "src_app_listview",
-      "target": "src_domain_filtertasks",
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "src/App.jsx",
-      "source_location": "L172",
-      "weight": 1.0
-    },
-    {
-      "source": "src_app_listview",
       "target": "src_domain_isoverdue",
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L173",
+      "source_location": "L167",
       "weight": 1.0
     },
     {
@@ -9372,7 +9252,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L173",
+      "source_location": "L167",
       "weight": 1.0
     },
     {
@@ -9382,7 +9262,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L178",
+      "source_location": "L172",
       "weight": 1.0
     },
     {
@@ -9392,7 +9272,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L178",
+      "source_location": "L172",
       "weight": 1.0
     },
     {
@@ -9402,7 +9282,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L179",
+      "source_location": "L173",
       "weight": 1.0
     },
     {
@@ -9412,7 +9292,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L186",
+      "source_location": "L180",
       "weight": 1.0
     },
     {
@@ -9422,7 +9302,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L189",
+      "source_location": "L183",
       "weight": 1.0
     },
     {
@@ -9432,7 +9312,17 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L192",
+      "source_location": "L186",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app_taskdrawercontent",
+      "target": "src_domain_buildassigneeoptions",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/App.jsx",
+      "source_location": "L194",
       "weight": 1.0
     },
     {
@@ -9442,7 +9332,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L203",
+      "source_location": "L197",
       "weight": 1.0
     },
     {
@@ -9452,7 +9342,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L239",
+      "source_location": "L233",
       "weight": 1.0
     },
     {
@@ -9462,7 +9352,17 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L256",
+      "source_location": "L253",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app_newtaskdrawer",
+      "target": "src_domain_buildassigneeoptions",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/App.jsx",
+      "source_location": "L264",
       "weight": 1.0
     },
     {
@@ -9472,7 +9372,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/CentralView.jsx",
-      "source_location": "L74",
+      "source_location": "L90",
       "weight": 1.0
     },
     {
@@ -9482,7 +9382,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L217",
+      "source_location": "L218",
       "weight": 1.0
     },
     {
@@ -9492,7 +9392,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L252",
+      "source_location": "L253",
       "weight": 1.0
     },
     {
@@ -9502,7 +9402,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L306",
+      "source_location": "L307",
       "weight": 1.0
     },
     {
@@ -9512,7 +9412,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L333",
+      "source_location": "L334",
       "weight": 1.0
     },
     {
@@ -9522,7 +9422,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L455",
+      "source_location": "L467",
       "weight": 1.0
     },
     {
@@ -9532,7 +9432,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L459",
+      "source_location": "L471",
       "weight": 1.0
     },
     {
@@ -9542,7 +9442,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L460",
+      "source_location": "L472",
       "weight": 1.0
     },
     {
@@ -9552,7 +9452,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L463",
+      "source_location": "L475",
       "weight": 1.0
     },
     {
@@ -9562,7 +9462,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L464",
+      "source_location": "L476",
       "weight": 1.0
     },
     {
@@ -9572,7 +9472,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L465",
+      "source_location": "L477",
       "weight": 1.0
     },
     {
@@ -9582,7 +9482,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L466",
+      "source_location": "L478",
       "weight": 1.0
     },
     {
@@ -9592,7 +9492,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L467",
+      "source_location": "L479",
       "weight": 1.0
     },
     {
@@ -9602,7 +9502,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/dataverse.js",
-      "source_location": "L469",
+      "source_location": "L481",
       "weight": 1.0
     },
     {
@@ -9616,6 +9516,16 @@
       "weight": 1.0
     },
     {
+      "source": "src_workitems_qualityworkitem",
+      "target": "src_domain_getduebucket",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/workItems.js",
+      "source_location": "L56",
+      "weight": 1.0
+    },
+    {
       "source": "src_app_avatar",
       "target": "src_assigneedisplay_initials",
       "relation": "calls",
@@ -9623,7 +9533,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/App.jsx",
-      "source_location": "L51",
+      "source_location": "L54",
       "weight": 1.0
     },
     {
@@ -9634,7 +9544,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/App.jsx",
-      "source_location": "L290",
+      "source_location": "L272",
       "weight": 1.0
     },
     {
@@ -9645,7 +9555,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/App.jsx",
-      "source_location": "L318",
+      "source_location": "L300",
       "weight": 1.0
     },
     {
@@ -9656,7 +9566,18 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/App.jsx",
-      "source_location": "L328",
+      "source_location": "L319",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app_app",
+      "target": "src_domain_buildtaskcreationinput",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/App.jsx",
+      "source_location": "L357",
       "weight": 1.0
     },
     {
@@ -9667,7 +9588,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/App.jsx",
-      "source_location": "L351",
+      "source_location": "L360",
       "weight": 1.0
     },
     {
@@ -9678,7 +9599,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/App.jsx",
-      "source_location": "L353",
+      "source_location": "L363",
       "weight": 1.0
     },
     {
@@ -9689,7 +9610,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/App.jsx",
-      "source_location": "L354",
+      "source_location": "L364",
       "weight": 1.0
     },
     {
@@ -9700,7 +9621,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/App.jsx",
-      "source_location": "L355",
+      "source_location": "L365",
       "weight": 1.0
     },
     {
@@ -9711,7 +9632,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/App.jsx",
-      "source_location": "L360",
+      "source_location": "L370",
       "weight": 1.0
     },
     {
@@ -9722,7 +9643,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/App.jsx",
-      "source_location": "L361",
+      "source_location": "L371",
       "weight": 1.0
     },
     {
@@ -9733,7 +9654,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/App.jsx",
-      "source_location": "L361",
+      "source_location": "L371",
       "weight": 1.0
     },
     {
@@ -9777,7 +9698,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/CentralView.jsx",
-      "source_location": "L37",
+      "source_location": "L38",
       "weight": 1.0
     },
     {
@@ -9788,7 +9709,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/SearchableSelect.jsx",
-      "source_location": "L363",
+      "source_location": "L356",
       "weight": 1.0
     },
     {
@@ -9799,7 +9720,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "src/domain.js",
-      "source_location": "L89",
+      "source_location": "L122",
       "weight": 1.0
     },
     {
@@ -9810,7 +9731,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "src/domain.js",
-      "source_location": "L164",
+      "source_location": "L195",
       "weight": 1.0
     },
     {
@@ -9821,7 +9742,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "src/domain.js",
-      "source_location": "L180",
+      "source_location": "L211",
       "weight": 1.0
     },
     {
@@ -9832,7 +9753,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/mockStore.js",
-      "source_location": "L158",
+      "source_location": "L162",
       "weight": 1.0
     },
     {
@@ -9843,7 +9764,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "src/workItems.js",
-      "source_location": "L73",
+      "source_location": "L74",
       "weight": 1.0
     },
     {
@@ -9854,18 +9775,18 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/workItems.js",
-      "source_location": "L77",
+      "source_location": "L78",
       "weight": 1.0
     },
     {
       "source": "src_workitems_normalizeworkitems",
-      "target": "src_domain_isoverdue",
+      "target": "src_domain_getduebucket",
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/workItems.js",
-      "source_location": "L86",
+      "source_location": "L82",
       "weight": 1.0
     },
     {
@@ -9876,7 +9797,18 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/App.jsx",
-      "source_location": "L75",
+      "source_location": "L78",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app_appshell",
+      "target": "src_app_today_label_formatter",
+      "relation": "references",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/App.jsx",
+      "source_location": "L105",
       "weight": 1.0
     },
     {
@@ -9887,7 +9819,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/App.jsx",
-      "source_location": "L104",
+      "source_location": "L107",
       "weight": 1.0
     },
     {
@@ -9898,18 +9830,18 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/App.jsx",
-      "source_location": "L179",
+      "source_location": "L173",
       "weight": 1.0
     },
     {
-      "source": "src_app_app",
-      "target": "src_app_assignee_options",
+      "source": "src_dataverse_updatelivetask",
+      "target": "src_domain_statuses",
       "relation": "references",
       "context": "call",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
-      "source_file": "src/App.jsx",
-      "source_location": "L363",
+      "source_file": "src/dataverse.js",
+      "source_location": "L394",
       "weight": 1.0
     },
     {
@@ -9920,7 +9852,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/domain.js",
-      "source_location": "L33",
+      "source_location": "L35",
       "weight": 1.0
     },
     {
@@ -9931,7 +9863,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/domain.js",
-      "source_location": "L34",
+      "source_location": "L36",
       "weight": 1.0
     },
     {
@@ -9942,7 +9874,18 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/domain.js",
-      "source_location": "L35",
+      "source_location": "L37",
+      "weight": 1.0
+    },
+    {
+      "source": "src_domain_datekeyinapptimezone",
+      "target": "src_domain_date_part_formatter",
+      "relation": "references",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/domain.js",
+      "source_location": "L98",
       "weight": 1.0
     },
     {
@@ -9953,7 +9896,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/domain.js",
-      "source_location": "L136",
+      "source_location": "L166",
       "weight": 1.0
     },
     {
@@ -9964,7 +9907,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/domain.js",
-      "source_location": "L141",
+      "source_location": "L171",
       "weight": 1.0
     },
     {
@@ -9975,7 +9918,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/mockStore.js",
-      "source_location": "L174",
+      "source_location": "L185",
       "weight": 1.0
     },
     {
