@@ -1,4 +1,4 @@
-import { isOverdue, normalizeAssigneeNames } from "./domain.js";
+import { getDueBucket, normalizeAssigneeNames } from "./domain.js";
 
 const TERMINAL_QUALITY_STATUSES = new Set(["resolvido", "encerrado", "cancelado", "concluida", "cancelada"]);
 const TASK_STATUS_LABELS = Object.freeze({ todo: "A fazer", doing: "Em andamento", waiting: "Aguardando", done: "Concluído", cancelled: "Cancelado" });
@@ -53,12 +53,13 @@ function qualityWorkItem(item) {
     assigneeName: cleanText(item.assigneeName, "Não atribuído"),
     assigneeProfiles: item.assigneeProfiles || [],
     dueAt: qualityDue(item),
+    dueBucket: qualityDue(item) && !isTerminal ? getDueBucket({ dueDate: qualityDue(item), status: statusGroup }) : "none",
     priorityRank: Number(item.priorityRank || 1),
     sourceStatus: cleanText(item.status),
     statusGroup,
     statusLabel: cleanText(item.status, TASK_STATUS_LABELS[statusGroup]),
     isTerminal,
-    isOverdue: Boolean(qualityDue(item)) && !isTerminal && new Date(`${qualityDue(item)}T23:59:59`) < new Date(),
+    isOverdue: Boolean(qualityDue(item)) && !isTerminal && getDueBucket({ dueDate: qualityDue(item), status: statusGroup }) === "overdue",
     quickTransitions: isTerminal ? [] : ["doing", "waiting"],
     openTarget: { resource: "new_gestao_erros_operacionais.html", params: isAction ? { actionId: item.id } : { errorId: item.id } },
   };
@@ -78,12 +79,13 @@ export function normalizeWorkItems(state = {}) {
     assigneeName: cleanText(task.assigneeName, "Não atribuído"),
     assigneeProfiles: task.assigneeProfiles || [],
     dueAt: cleanText(task.dueDate),
+    dueBucket: getDueBucket(task),
     priorityRank: ({ urgent: 0, high: 1, medium: 2, low: 3 }[task.priority] ?? 2),
     sourceStatus: cleanText(task.status),
     statusGroup: task.status,
     statusLabel: TASK_STATUS_LABELS[task.status] || cleanText(task.status, "A fazer"),
     isTerminal: ["done", "cancelled"].includes(task.status),
-    isOverdue: !["done", "cancelled"].includes(task.status) && isOverdue(task),
+    isOverdue: getDueBucket(task) === "overdue",
     quickTransitions: ["done", "cancelled"].includes(task.status) ? [] : ["doing", "waiting", "done"],
     openTarget: task.quoteId
       ? { resource: "cr40f_TelaPedirCotacao.html", params: { view: "recent", recordId: task.quoteId } }
@@ -130,8 +132,11 @@ export function workItemStats(items = []) {
     if (item.isTerminal) return stats;
     stats.open += 1;
     if (item.isOverdue) stats.overdue += 1;
+    if (item.dueBucket === "today") stats.today += 1;
+    if (item.dueBucket === "tomorrow") stats.tomorrow += 1;
+    if (item.isOverdue || ["today", "tomorrow"].includes(item.dueBucket)) stats.alertCount += 1;
     if (item.statusGroup === "doing") stats.doing += 1;
     if (item.statusGroup === "waiting") stats.waiting += 1;
     return stats;
-  }, { open: 0, overdue: 0, doing: 0, waiting: 0 });
+  }, { open: 0, overdue: 0, today: 0, tomorrow: 0, doing: 0, waiting: 0, alertCount: 0 });
 }

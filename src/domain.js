@@ -15,6 +15,8 @@ export const QUOTE_STATUSES = ["Nova", "Em análise", "Aguardando fornecedor", "
 
 const SHORT_DATE_FORMATTER = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short" });
 const LONG_DATE_FORMATTER = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
+const APP_TIME_ZONE = "America/Sao_Paulo";
+const DATE_PART_FORMATTER = new Intl.DateTimeFormat("en-US", { timeZone: APP_TIME_ZONE, year: "numeric", month: "2-digit", day: "2-digit" });
 
 export function normalizeText(value) {
   return String(value || "")
@@ -92,6 +94,28 @@ export function mentionedEmployees(text, employees = []) {
   });
 }
 
+function dateKeyInAppTimeZone(value = new Date()) {
+  const parts = DATE_PART_FORMATTER.formatToParts(value).reduce((result, part) => ({ ...result, [part.type]: part.value }), {});
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+function shiftDateKey(dateKey, days) {
+  const date = new Date(`${dateKey}T12:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+export function getDueBucket(task, today = new Date()) {
+  if (!task?.dueDate || ["done", "cancelled"].includes(task.status)) return "none";
+  const dueDate = String(task.dueDate).slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) return "none";
+  const todayKey = dateKeyInAppTimeZone(today);
+  if (dueDate < todayKey) return "overdue";
+  if (dueDate === todayKey) return "today";
+  if (dueDate === shiftDateKey(todayKey, 1)) return "tomorrow";
+  return "upcoming";
+}
+
 function updateTaskInState(state, taskId, update) {
   return {
     ...state,
@@ -126,18 +150,15 @@ export function addOptimisticAttachment(state, taskId, file) {
 }
 
 export function isOverdue(task, today = new Date()) {
-  if (!task.dueDate || task.status === "done") return false;
-  return new Date(`${task.dueDate}T23:59:59`) < today;
+  return getDueBucket(task, today) === "overdue";
 }
 
 export function isDueToday(task, today = new Date()) {
-  if (!task.dueDate || task.status === "done") return false;
-  const date = new Date(`${task.dueDate}T12:00:00`);
-  return date.toDateString() === today.toDateString();
+  return getDueBucket(task, today) === "today";
 }
 
 export function isBlocked(task) {
-  return task.status !== "done" && Boolean(String(task.blockedReason || "").trim());
+  return task.status === "waiting" && Boolean(String(task.blockedReason || "").trim());
 }
 
 export function formatDate(value) {

@@ -23,7 +23,7 @@ function hasActiveFilters(filters) {
   return Boolean(filters.query.trim()) || filters.source !== "all" || filters.assignee !== "all" || filters.statusGroup !== "all";
 }
 
-export default function CentralView({ state, mode = "mine", currentEmployee, onOpenTask, onOpenSource, onCreate }) {
+export default function CentralView({ state, mode = "mine", currentEmployee, onOpenTask, onOpenSource, onCompleteTask, onCreate }) {
   const [filters, setFilters] = useState({ query: "", source: "all", assignee: "all", statusGroup: "all" });
   const mineOnly = mode === "mine";
   const allItems = state.workItems || [];
@@ -33,8 +33,15 @@ export default function CentralView({ state, mode = "mine", currentEmployee, onO
       : []
     : allItems;
   const activeItems = useMemo(() => filterWorkItems(scopedItems), [scopedItems]);
-  const items = useMemo(() => sortWorkItems(filterWorkItems(scopedItems, filters)), [scopedItems, filters]);
+  const filteredItems = useMemo(() => sortWorkItems(filterWorkItems(scopedItems, filters)), [scopedItems, filters]);
+  const items = useMemo(() => mineOnly ? filteredItems.filter((item) => item.dueBucket !== "none") : filteredItems, [filteredItems, mineOnly]);
   const stats = useMemo(() => workItemStats(activeItems), [activeItems]);
+  const deadlineSections = useMemo(() => [
+    { key: "overdue", label: "Atrasadas", items: items.filter((item) => item.dueBucket === "overdue") },
+    { key: "today", label: "Vencem hoje", items: items.filter((item) => item.dueBucket === "today") },
+    { key: "tomorrow", label: "Vencem amanhã", items: items.filter((item) => item.dueBucket === "tomorrow") },
+    { key: "upcoming", label: "Próximas tarefas", items: items.filter((item) => item.dueBucket === "upcoming") },
+  ], [items]);
   const assignees = useMemo(() => [...new Map((state.employees || []).map((employee) => [employee.id || employee.name, employee])).values()], [state.employees]);
   const assigneeOptions = useMemo(() => [{ value: "all", label: "Toda a equipe" }, ...assignees.map((employee) => ({ value: employee.id || employee.name, label: employee.name }))], [assignees]);
   const open = (item) => item.source === "task" || item.source === "quote_followup" ? onOpenTask(item.sourceRecordId) : onOpenSource(item);
@@ -42,6 +49,8 @@ export default function CentralView({ state, mode = "mine", currentEmployee, onO
   const clearFilters = () => setFilters({ query: "", source: "all", assignee: "all", statusGroup: "all" });
   const emptyMessage = !currentEmployee && mineOnly
     ? { title: "Usuário sem vínculo", detail: "Seu usuário Dataverse ainda não está associado a um funcionário administrativo." }
+    : mineOnly && !items.length && activeItems.length
+      ? { title: "Nenhuma tarefa com prazo", detail: "Tarefas sem prazo continuam disponíveis no Quadro e na Lista." }
     : !activeItems.length
       ? { title: "Nenhuma pendência ativa", detail: "Quando surgir uma nova obrigação, ela aparecerá aqui." }
       : { title: "Nenhum resultado", detail: "Tente remover um filtro ou buscar por outro termo." };
@@ -58,21 +67,29 @@ export default function CentralView({ state, mode = "mine", currentEmployee, onO
         {hasActiveFilters(filters) && <button className="button button-quiet central-clear" type="button" onClick={clearFilters}><RotateCcw size={14} />Limpar filtros</button>}
       </div>
       {items.length > 0 && <div className="central-table-head" aria-hidden="true"><span>Item</span><span>Responsável</span><span>Prazo</span><span>Status</span><span>Ações</span></div>}
-      <div className="central-list">
-        {items.map((item) => <CentralRow key={item.id} item={item} onOpen={open} />)}
+      {mineOnly ? <div className="central-deadline-sections">
+        {deadlineSections.filter((section) => section.items.length > 0).map((section) => <section className={`central-deadline-section central-deadline-${section.key}`} key={section.key}>
+          <div className="central-section-heading"><h3>{section.label}</h3><span className="section-count">{section.items.length}</span></div>
+          <div className="central-list">{section.items.map((item) => <CentralRow key={item.id} item={item} onOpen={open} onComplete={onCompleteTask} />)}</div>
+        </section>)}
         {!items.length && <div className="central-empty"><strong>{emptyMessage.title}</strong><span>{emptyMessage.detail}</span>{hasActiveFilters(filters) && <button className="button button-secondary" type="button" onClick={clearFilters}>Limpar filtros</button>}</div>}
-      </div>
+      </div> : <div className="central-list">
+        {items.map((item) => <CentralRow key={item.id} item={item} onOpen={open} onComplete={onCompleteTask} />)}
+        {!items.length && <div className="central-empty"><strong>{emptyMessage.title}</strong><span>{emptyMessage.detail}</span>{hasActiveFilters(filters) && <button className="button button-secondary" type="button" onClick={clearFilters}>Limpar filtros</button>}</div>}
+      </div>}
     </section>
   </div>;
 }
 
-function CentralRow({ item, onOpen }) {
+function CentralRow({ item, onOpen, onComplete }) {
   const statusLabel = item.statusLabel || STATUS_LABELS[item.statusGroup] || item.sourceStatus || "A fazer";
+  const canComplete = Boolean(onComplete) && ["task", "quote_followup"].includes(item.source) && !item.isTerminal;
   return <article className="central-row">
     <button className="central-row-open" type="button" onClick={() => onOpen(item)} aria-label={`Abrir ${item.title}`}>
       <div className="central-row-main"><SourceBadge source={item.source} /><strong>{item.title}</strong><span>{item.context}</span></div>
       <div className="central-row-meta"><AssigneeDisplay value={item.assigneeProfiles?.length ? item.assigneeProfiles : item.assigneeNames || item.assigneeName} small /><span className={item.isOverdue ? "danger-text" : ""}><CalendarDays size={13} aria-hidden="true" />{formatDate(item.dueAt)}</span><span className={`central-status central-${item.statusGroup}`}>{statusLabel}</span><ArrowUpRight size={16} aria-hidden="true" /></div>
     </button>
+    {canComplete && <button className="central-row-complete" type="button" onClick={() => onComplete(item.sourceRecordId)} aria-label={`Concluir ${item.title}`}><CheckCircle2 size={15} />Concluir</button>}
   </article>;
 }
 

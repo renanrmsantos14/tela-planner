@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { addOptimisticAttachment, addOptimisticComment, applyOptimisticTaskPatch, buildAssigneeOptions, buildOptimisticTask, buildTaskCreationInput, filterTasks, isBlocked, isOverdue, mentionedEmployees, normalizeAssigneeNames, quoteTaskTitle, sortTasks, taskStats } from "../src/domain.js";
+import { addOptimisticAttachment, addOptimisticComment, applyOptimisticTaskPatch, buildAssigneeOptions, buildOptimisticTask, buildTaskCreationInput, filterTasks, getDueBucket, isBlocked, isOverdue, mentionedEmployees, normalizeAssigneeNames, quoteTaskTitle, sortTasks, taskStats } from "../src/domain.js";
 
 const tasks = [
   { id: "1", title: "Atrasada", quoteTitle: "Cotação A", assigneeName: "Marina", status: "todo", priority: "high", dueDate: "2026-08-01" },
@@ -12,6 +12,16 @@ test("identifica atraso sem marcar tarefa concluída", () => {
   const today = new Date("2026-08-03T12:00:00");
   assert.equal(isOverdue(tasks[0], today), true);
   assert.equal(isOverdue(tasks[2], today), false);
+});
+
+test("classifica prazos em atraso, hoje, amanhã e próximos no fuso do app", () => {
+  const today = new Date("2026-08-03T12:00:00-03:00");
+  assert.equal(getDueBucket({ status: "todo", dueDate: "2026-08-02" }, today), "overdue");
+  assert.equal(getDueBucket({ status: "todo", dueDate: "2026-08-03" }, today), "today");
+  assert.equal(getDueBucket({ status: "todo", dueDate: "2026-08-04" }, today), "tomorrow");
+  assert.equal(getDueBucket({ status: "todo", dueDate: "2026-08-05" }, today), "upcoming");
+  assert.equal(getDueBucket({ status: "done", dueDate: "2026-08-02" }, today), "none");
+  assert.equal(getDueBucket({ status: "todo" }, today), "none");
 });
 
 test("filtra por texto, status e prioridade", () => {
@@ -49,7 +59,7 @@ test("ordena tarefas abertas antes das concluídas", () => {
 });
 
 test("filtra origem e bloqueio operacional", () => {
-  const qualityTask = { ...tasks[1], sourceType: "quality", sourceLabel: "Erro operacional", blockedReason: "Aguardando terceiro" };
+  const qualityTask = { ...tasks[1], status: "waiting", sourceType: "quality", sourceLabel: "Erro operacional", blockedReason: "Aguardando terceiro" };
   assert.equal(isBlocked(qualityTask), true);
   assert.equal(filterTasks([tasks[0], qualityTask], { query: "", status: [], priority: [], source: ["quality"], blocked: true }).length, 1);
 });

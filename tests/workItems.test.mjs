@@ -16,7 +16,7 @@ test("ordena vencidos antes de prazo e prioridade", () => {
 test("filtra origem e calcula pendências", () => {
   const items = [{ id: "a", source: "task", title: "A", context: "", assigneeName: "Renan", statusGroup: "todo", isOverdue: true }, { id: "b", source: "quality_action", title: "B", context: "", assigneeName: "Outro", statusGroup: "waiting", isOverdue: false }];
   assert.equal(filterWorkItems(items, { source: "task" }).length, 1);
-  assert.deepEqual(workItemStats(items), { open: 2, overdue: 1, doing: 0, waiting: 1 });
+  assert.deepEqual(workItemStats(items), { open: 2, overdue: 1, today: 0, tomorrow: 0, doing: 0, waiting: 1, alertCount: 1 });
 });
 
 test("remove estados terminais e traduz status", () => {

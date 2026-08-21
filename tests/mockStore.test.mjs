@@ -77,6 +77,29 @@ test("preserva origem e bloqueio na tarefa criada", () => {
   assert.equal(task.blockedReason, "Aguardando evidência");
 });
 
+test("registra bloqueio, desbloqueio e conclusão no histórico mock", () => {
+  withStorage();
+  const initial = seedState();
+  const task = initial.tasks.find((item) => item.status === "todo");
+  const blocked = updateTask(initial, task.id, { status: "waiting", blockedReason: "Aguardando retorno" }).tasks.find((item) => item.id === task.id);
+  const unblocked = updateTask(blockedState(blocked), task.id, { status: "doing", blockedReason: "" }).tasks.find((item) => item.id === task.id);
+  const completed = updateTask(blockedState(unblocked), task.id, { status: "done", blockedReason: "" }).tasks.find((item) => item.id === task.id);
+  assert.ok(blocked.history.some((item) => item.text.includes("Bloqueio registrado")));
+  assert.ok(unblocked.history.some((item) => item.text === "Bloqueio removido."));
+  assert.ok(completed.history.some((item) => item.text === "Tarefa concluída."));
+});
+
+test("não salva aguardando sem motivo no mock", () => {
+  withStorage();
+  const initial = seedState();
+  const task = initial.tasks.find((item) => item.status === "todo");
+  assert.throws(() => updateTask(initial, task.id, { status: "waiting" }), /motivo do bloqueio/);
+});
+
+function blockedState(task) {
+  return { tasks: [task], quotes: [], employees: [], quality: [] };
+}
+
 test("semeia cenário operacional amplo e variado", () => {
   const state = seedState();
   assert.equal(state.quotes.length, 17);

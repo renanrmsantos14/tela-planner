@@ -9,7 +9,7 @@ import {
   saveState as saveMockState,
   updateTask as updateMockTask,
 } from "./mockStore.js";
-import { normalizeAssigneeNames } from "./domain.js";
+import { normalizeAssigneeNames, STATUSES } from "./domain.js";
 import { connectGraphSession, loadGraphPhotoUrls } from "./graphPhotos.js";
 
 const API_VERSION = "v9.2";
@@ -364,6 +364,14 @@ async function createLiveTask(xrm, state, input) {
 }
 
 async function updateLiveTask(xrm, state, id, patch) {
+  const existing = state.tasks.find((item) => item.id === id);
+  const previousStatus = existing?.status || "";
+  const previousBlockedReason = String(existing?.blockedReason || "").trim();
+  const nextStatus = patch.status ?? previousStatus;
+  const nextBlockedReason = patch.blockedReason !== undefined
+    ? String(patch.blockedReason || "").trim()
+    : (nextStatus === "waiting" ? previousBlockedReason : "");
+  if (nextStatus === "waiting" && !nextBlockedReason) throw new Error("Informe o motivo do bloqueio antes de salvar.");
   const payload = {};
   if (patch.title !== undefined) payload.cr40f_titulo = patch.title.trim();
   if (patch.description !== undefined) payload.cr40f_descricao = patch.description;
@@ -380,9 +388,12 @@ async function updateLiveTask(xrm, state, id, patch) {
   }
   if (patch.teamId !== undefined || patch.teamName !== undefined) await bindLookup(xrm, payload, TASK_TABLE, "cr40f_equipe", "team", patch.teamId || await resolveIdByName(xrm, "team", "name", patch.teamName));
   await request(xrm, `/${entitySetName(TASK_TABLE)}(${cleanId(id)})`, { method: "PATCH", body: JSON.stringify(payload) });
-  const existing = state.tasks.find((item) => item.id === id);
   await markQuoteOrigin(xrm, existing?.quoteId);
-  await createEvent(xrm, id, patch.status !== undefined ? 100000002 : 100000001, "Tarefa atualizada.");
+  const statusChanged = patch.status !== undefined && nextStatus !== previousStatus;
+  const blockChanged = nextBlockedReason !== previousBlockedReason;
+  if (statusChanged) await createEvent(xrm, id, 100000002, nextStatus === "done" ? "Tarefa concluída." : `Status alterado para ${STATUSES.find((item) => item.id === nextStatus)?.label || nextStatus}.`, "status", previousStatus, nextStatus);
+  if (blockChanged) await createEvent(xrm, id, 100000002, nextBlockedReason ? "Bloqueio registrado." : "Bloqueio removido.", "cr40f_motivobloqueio", previousBlockedReason, nextBlockedReason);
+  if (!statusChanged && !blockChanged) await createEvent(xrm, id, patch.status !== undefined ? 100000002 : 100000001, "Tarefa atualizada.");
   return loadLiveState(xrm);
 }
 

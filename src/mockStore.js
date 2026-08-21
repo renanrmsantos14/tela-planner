@@ -172,12 +172,20 @@ export function createTask(state, input) {
 }
 
 export function updateTask(state, id, patch) {
-  return saveState({ ...state, tasks: state.tasks.map((taskItem) => taskItem.id === id ? {
-    ...taskItem, ...patch,
-    history: patch.status && patch.status !== taskItem.status
-      ? [...taskItem.history, { id: uid("history"), text: `Status alterado para ${STATUSES.find((item) => item.id === patch.status)?.label || patch.status}.`, createdAt: new Date().toISOString(), author: "Você" }]
-      : taskItem.history,
-  } : taskItem) });
+  return saveState({ ...state, tasks: state.tasks.map((taskItem) => {
+    if (taskItem.id !== id) return taskItem;
+    const nextStatus = patch.status ?? taskItem.status;
+    const nextBlockedReason = patch.blockedReason !== undefined
+      ? String(patch.blockedReason || "").trim()
+      : (nextStatus === "waiting" ? taskItem.blockedReason || "" : "");
+    if (nextStatus === "waiting" && !nextBlockedReason) throw new Error("Informe o motivo do bloqueio antes de salvar.");
+    const statusChanged = patch.status !== undefined && patch.status !== taskItem.status;
+    const blockChanged = nextBlockedReason !== String(taskItem.blockedReason || "").trim();
+    const history = [...(taskItem.history || [])];
+    if (statusChanged) history.push({ id: uid("history"), text: nextStatus === "done" ? "Tarefa concluída." : `Status alterado para ${STATUSES.find((item) => item.id === nextStatus)?.label || nextStatus}.`, createdAt: new Date().toISOString(), author: "Você" });
+    if (blockChanged) history.push({ id: uid("history"), text: nextBlockedReason ? `Bloqueio registrado: ${nextBlockedReason}` : "Bloqueio removido.", createdAt: new Date().toISOString(), author: "Você" });
+    return { ...taskItem, ...patch, status: nextStatus, blockedReason: nextBlockedReason, history };
+  }) });
 }
 
 export function deleteTask(state, id) {
