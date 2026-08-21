@@ -235,14 +235,20 @@ function normalizeQuality(row, type) {
   return { id: row[isAction ? "cr40f_acaooperacionalid" : "cr40f_errooperacionalid"], type, code: row.cr40f_codigo || "", title: row.cr40f_titulo || "", description: row.cr40f_descricao || "", status: row[isAction ? "cr40f_status@OData.Community.Display.V1.FormattedValue" : "cr40f_status@OData.Community.Display.V1.FormattedValue"] || "", dueDate: dateOnly(row[isAction ? "cr40f_prazo" : "cr40f_prazoresolucao"]), assigneeId: row._cr40f_responsavel_value || "", assigneeName: row["_cr40f_responsavel_value@OData.Community.Display.V1.FormattedValue"] || "" };
 }
 
-function normalizeTask(row, events = [], assignees = []) {
-  const status = STATUS_BY_VALUE[row.cr40f_status] || "todo";
-  const priority = PRIORITY_BY_VALUE[row.cr40f_prioridade] || "medium";
-  const origin = Object.entries(ORIGIN_VALUES).find(([, value]) => value === row.cr40f_origem)?.[0] || "manual";
+function normalizeEventDetails(events = []) {
   const comments = events.filter((item) => item.cr40f_campo === "comentario").map((item) => ({ id: item.cr40f_plannertarefaeventoid, authorId: cleanId(item._cr40f_autor_value || item._createdby_value), text: item.cr40f_valornovo || item.cr40f_descricao || "", createdAt: item.cr40f_ocorridoem, author: item.authorName || item["_cr40f_autor_value@OData.Community.Display.V1.FormattedValue"] || item["_createdby_value@OData.Community.Display.V1.FormattedValue"] || "Sistema" })).sort((left, right) => String(left.createdAt || "").localeCompare(String(right.createdAt || "")));
   const attachments = events.filter((item) => item.cr40f_campo === "anexo").map((item) => {
     try { return { id: item.cr40f_plannertarefaeventoid, ...JSON.parse(item.cr40f_valornovo || "{}"), createdAt: item.cr40f_ocorridoem }; } catch { return { id: item.cr40f_plannertarefaeventoid, name: item.cr40f_valornovo || "Anexo", createdAt: item.cr40f_ocorridoem }; }
   });
+  const history = events.map((item) => ({ id: item.cr40f_plannertarefaeventoid, text: item.cr40f_descricao, createdAt: item.cr40f_ocorridoem, author: item.authorName || item["_cr40f_autor_value@OData.Community.Display.V1.FormattedValue"] || item["_createdby_value@OData.Community.Display.V1.FormattedValue"] || "Sistema" }));
+  return { comments, attachments, history };
+}
+
+function normalizeTask(row, events = [], assignees = []) {
+  const status = STATUS_BY_VALUE[row.cr40f_status] || "todo";
+  const priority = PRIORITY_BY_VALUE[row.cr40f_prioridade] || "medium";
+  const origin = Object.entries(ORIGIN_VALUES).find(([, value]) => value === row.cr40f_origem)?.[0] || "manual";
+  const { comments, attachments, history } = normalizeEventDetails(events);
   return {
     id: row.cr40f_plannertarefaid,
     title: row.cr40f_titulo || row.cr40f_name || "Sem título",
@@ -267,12 +273,88 @@ function normalizeTask(row, events = [], assignees = []) {
     blockedReason: row.cr40f_motivobloqueio || "",
     comments,
     attachments,
-    history: events.map((item) => ({ id: item.cr40f_plannertarefaeventoid, text: item.cr40f_descricao, createdAt: item.cr40f_ocorridoem, author: item.authorName || item["_cr40f_autor_value@OData.Community.Display.V1.FormattedValue"] || item["_createdby_value@OData.Community.Display.V1.FormattedValue"] || "Sistema" })),
+    history,
   };
 }
 
 function normalizeRelation(row) {
   return { id: row.cr40f_plannertarearelacaoid, parentTaskId: row._cr40f_tarefapai_value || "", childTaskId: row._cr40f_subtarefa_value || "" };
+}
+
+function measureStage(name, operation) {
+  const startedAt = globalThis.performance?.now?.() || Date.now();
+  return Promise.resolve().then(operation).then((result) => {
+    const elapsed = Math.round((globalThis.performance?.now?.() || Date.now()) - startedAt);
+    console.info(`[Planner] ${name}: ${elapsed} ms`);
+    return result;
+  }, (error) => {
+    const elapsed = Math.round((globalThis.performance?.now?.() || Date.now()) - startedAt);
+    console.warn(`[Planner] ${name}: falhou após ${elapsed} ms`, error);
+    throw error;
+  });
+}
+
+function buildCoreState(xrm, rows, relations, assigneeRelations, employees) {
+  const employeeRecords = employees.map((row) => ({ id: row.cr40f_funcionariosid, name: row.cr40f_nomecompleto || row.new_apelido || "Sem nome", userId: row._cr40f_usuariodataverse_value || "" }));
+  const employeeById = new Map(employeeRecords.map((employee) => [cleanId(employee.id).toLowerCase(), employee]));
+  const relationByChild = new Map(relations.map(normalizeRelation).map((item) => [item.childTaskId, item.parentTaskId]));
+  const assigneesByTask = new Map();
+  assigneeRelations.forEach((item) => {
+    const list = assigneesByTask.get(item._cr40f_tarefa_value) || [];
+    const employee = employeeById.get(cleanId(item._cr40f_funcionario_value).toLowerCase());
+    list.push({ id: item._cr40f_funcionario_value, name: item["_cr40f_funcionario_value@OData.Community.Display.V1.FormattedValue"] || employee?.name || "Sem nome", userId: employee?.userId || "" });
+    assigneesByTask.set(item._cr40f_tarefa_value, list);
+  });
+  const tasks = rows.map((row) => ({ ...normalizeTask(row, [], assigneesByTask.get(row.cr40f_plannertarefaid) || []), parentTaskId: relationByChild.get(row.cr40f_plannertarefaid) || null, detailsLoaded: false }));
+  return { quotes: [], employees: employeeRecords, quality: [], tasks, lastUpdated: new Date().toISOString(), live: true, loading: { core: false, quotes: true, quality: true } };
+}
+
+export async function loadCoreState(xrm) {
+  const [rows, relations, assigneeRelations, employees] = await Promise.all([
+    measureStage("tarefas", () => retrieveMany(xrm, TASK_TABLE, `?$select=cr40f_plannertarefaid,cr40f_name,cr40f_titulo,cr40f_descricao,cr40f_status,cr40f_prioridade,cr40f_prazo,_${EMPLOYEE_ASSIGNEE_FIELD}_value,_cr40f_equipe_value,_cr40f_pedidocotacao_value,_cr40f_errooperacional_value,_cr40f_acaooperacional_value,cr40f_origem,cr40f_codigoorigem,cr40f_motivobloqueio&$filter=statecode eq 0&$orderby=modifiedon desc`)),
+    measureStage("relações", () => retrieveMany(xrm, RELATION_TABLE, "?$select=cr40f_plannertarearelacaoid,_cr40f_tarefapai_value,_cr40f_subtarefa_value&$filter=statecode eq 0")),
+    measureStage("responsáveis", () => retrieveMany(xrm, ASSIGNEE_RELATION_TABLE, "?$select=cr40f_plannertarearesponsavelid,_cr40f_tarefa_value,_cr40f_funcionario_value&$filter=statecode eq 0")),
+    measureStage("funcionários", () => retrieveMany(xrm, EMPLOYEE_TABLE, "?$select=cr40f_funcionariosid,cr40f_nomecompleto,new_apelido,_cr40f_usuariodataverse_value&$filter=statecode eq 0 and cr40f_status eq 0 and cr40f_funcao eq 202410001&$orderby=cr40f_nomecompleto asc")),
+  ]);
+  return buildCoreState(xrm, rows, relations, assigneeRelations, employees);
+}
+
+export async function loadSupplementalState(xrm, state) {
+  const quoteIds = [...new Set((state.tasks || []).map((task) => cleanId(task.quoteId)).filter(Boolean))];
+  const quoteChunks = Array.from({ length: Math.ceil(quoteIds.length / 50) }, (_, index) => quoteIds.slice(index * 50, index * 50 + 50));
+  const loadLinkedQuotes = () => {
+    if (!quoteIds.length) return retrieveMany(xrm, QUOTE_TABLE, "?$select=cr40f_pedidodecotacaoid,cr40f_numerodacotacao,cr40f_titulo,cr40f_clienteempresa,cr40f_statuscotacao,cr40f_prazoresponder,cr40f_valorcotado,cr40f_plannertaskid,cr40f_linktarefaplanner,cr40f_linkmensagemteams&$filter=statecode eq 0&$orderby=modifiedon desc&$top=25");
+    return Promise.all(quoteChunks.map((chunk) => {
+    const filter = chunk.map((id) => `cr40f_pedidodecotacaoid eq ${id}`).join(" or ");
+    return retrieveMany(xrm, QUOTE_TABLE, `?$select=cr40f_pedidodecotacaoid,cr40f_numerodacotacao,cr40f_titulo,cr40f_clienteempresa,cr40f_statuscotacao,cr40f_prazoresponder,cr40f_valorcotado,cr40f_plannertaskid,cr40f_linktarefaplanner,cr40f_linkmensagemteams&$filter=statecode eq 0 and (${filter})`);
+    })).then((pages) => pages.flat());
+  };
+  const [quotes, qualityErrors, qualityActions] = await Promise.all([
+    measureStage("cotações vinculadas", loadLinkedQuotes),
+    measureStage("erros operacionais", () => retrieveMany(xrm, QUALITY_ERROR_TABLE, "?$select=cr40f_errooperacionalid,cr40f_codigo,cr40f_titulo,cr40f_descricao,cr40f_status,cr40f_prazoresolucao,_cr40f_responsavel_value&$filter=statecode eq 0&$orderby=createdon desc")),
+    measureStage("ações operacionais", () => retrieveMany(xrm, QUALITY_ACTION_TABLE, "?$select=cr40f_acaooperacionalid,cr40f_titulo,cr40f_descricao,cr40f_status,cr40f_prazo,_cr40f_responsavel_value&$filter=statecode eq 0&$orderby=createdon desc")),
+  ]);
+  const quoteRecords = quotes.map(normalizeQuote);
+  const quoteById = new Map(quoteRecords.map((quote) => [quote.id, quote]));
+  const employees = state.employees || [];
+  const employeeById = new Map(employees.map((employee) => [cleanId(employee.id).toLowerCase(), employee]));
+  const quality = [...qualityErrors.map((row) => normalizeQuality(row, "error")), ...qualityActions.map((row) => normalizeQuality(row, "action"))].map((item) => ({ ...item, assigneeProfiles: employeeById.has(cleanId(item.assigneeId).toLowerCase()) ? [employeeById.get(cleanId(item.assigneeId).toLowerCase())] : [] }));
+  const tasks = state.tasks.map((task) => ({ ...task, quoteCode: quoteById.get(task.quoteId)?.code || "", quoteTitle: quoteById.get(task.quoteId)?.title || "" }));
+  return { quotes: quoteRecords, quality, tasks, loading: { ...(state.loading || {}), quotes: false, quality: false } };
+}
+
+export async function loadTaskDetails(xrm, taskId) {
+  const events = await measureStage(`detalhes ${cleanId(taskId).slice(0, 8)}`, () => retrieveMany(xrm, EVENT_TABLE, `?$select=cr40f_plannertarefaeventoid,_cr40f_tarefa_value,cr40f_tipo,cr40f_campo,cr40f_descricao,cr40f_valornovo,cr40f_ocorridoem,_cr40f_autor_value,_createdby_value&$filter=_cr40f_tarefa_value eq ${cleanId(taskId)}&$orderby=cr40f_ocorridoem desc`));
+  const details = normalizeEventDetails(events);
+  return { taskId, ...details };
+}
+
+export async function searchQuotes(xrm, query) {
+  const escaped = String(query || "").trim().replace(/'/g, "''");
+  if (!escaped) return [];
+  const filter = `contains(cr40f_numerodacotacao,'${escaped}') or contains(cr40f_titulo,'${escaped}') or contains(cr40f_clienteempresa,'${escaped}')`;
+  const rows = await measureStage("busca de cotações", () => retrieveMany(xrm, QUOTE_TABLE, `?$select=cr40f_pedidodecotacaoid,cr40f_numerodacotacao,cr40f_titulo,cr40f_clienteempresa,cr40f_statuscotacao,cr40f_prazoresponder,cr40f_valorcotado,cr40f_plannertaskid,cr40f_linktarefaplanner,cr40f_linkmensagemteams&$filter=statecode eq 0 and (${filter})&$orderby=modifiedon desc&$top=25`));
+  return rows.map(normalizeQuote);
 }
 
 async function loadLiveState(xrm) {
@@ -319,7 +401,9 @@ async function loadLiveState(xrm) {
     list.push({ id: item._cr40f_funcionario_value, name: item["_cr40f_funcionario_value@OData.Community.Display.V1.FormattedValue"] || employee?.name || "Sem nome", userId: employee?.userId || "", avatarUrl: graphPhotos.get(cleanId(user?.azureactivedirectoryobjectid)) || "" });
     assigneesByTask.set(item._cr40f_tarefa_value, list);
   });
-  const tasks = rows.map((row) => ({ ...normalizeTask(row, events.filter((item) => item._cr40f_tarefa_value === row.cr40f_plannertarefaid), assigneesByTask.get(row.cr40f_plannertarefaid) || []), parentTaskId: relationByChild.get(row.cr40f_plannertarefaid) || null }));
+  const eventsByTask = new Map();
+  events.forEach((event) => { const list = eventsByTask.get(event._cr40f_tarefa_value) || []; list.push(event); eventsByTask.set(event._cr40f_tarefa_value, list); });
+  const tasks = rows.map((row) => ({ ...normalizeTask(row, eventsByTask.get(row.cr40f_plannertarefaid) || [], assigneesByTask.get(row.cr40f_plannertarefaid) || []), parentTaskId: relationByChild.get(row.cr40f_plannertarefaid) || null }));
   const quoteById = new Map(quotes.map((row) => [row.cr40f_pedidodecotacaoid, normalizeQuote(row)]));
   const employeesWithProfiles = employeeRecords.map((employee) => {
     const user = userById.get(cleanId(employee.userId).toLowerCase());
@@ -469,6 +553,11 @@ function createMockDataStore() {
   return {
     live: false,
     load: async () => withMode(loadMockState()),
+    loadCore: async () => ({ ...withMode(loadMockState()), loading: { core: false, quotes: false, quality: false, photos: false } }),
+    loadSupplemental: async (state) => ({ ...state, loading: { ...(state.loading || {}), quotes: false, quality: false } }),
+    loadTaskDetails: async (taskId) => ({ taskId, comments: [], attachments: [], history: [] }),
+    loadPhotos: async () => ({ loading: { photos: false } }),
+    searchQuotes: async () => [],
     createTask: async (state, input) => withMode(createMockTask(state, input)),
     createSubtask: async (state, parentId, input) => withMode(createMockTask(state, { ...input, parentTaskId: parentId })),
     createQualityTask: async (state, item) => withMode(createMockTask(state, { title: item.title, description: item.description, dueDate: item.dueDate, sourceType: "quality", sourceId: item.id, sourceCode: item.code, sourceLabel: item.type === "error" ? "Erro operacional" : "Ação operacional" })),
@@ -490,7 +579,11 @@ export function createDataStore() {
   return {
     live: true,
     load: () => loadLiveState(xrm),
-    connectGraph: () => connectLiveGraph(xrm),
+    loadCore: () => loadCoreState(xrm),
+    loadSupplemental: (state) => loadSupplementalState(xrm, state),
+    loadTaskDetails: (taskId) => loadTaskDetails(xrm, taskId),
+    loadPhotos: async () => ({ loading: { photos: false } }),
+    searchQuotes: (query) => searchQuotes(xrm, query),
     createTask: (state, input) => createLiveTask(xrm, state, input),
     createSubtask: (state, parentId, input) => createLiveSubtask(xrm, state, parentId, input),
     createQualityTask: (state, item) => createLiveTask(xrm, state, { title: item.title, description: item.description, dueDate: item.dueDate, sourceType: "quality", sourceCode: item.code, qualityType: item.type, qualityId: item.id }),

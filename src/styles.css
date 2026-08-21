@@ -1,6 +1,19 @@
 @import "design-tokens.css";
 @import "@fontsource-variable/manrope";
 
+.data-loading-view { min-height: 520px; display: grid; align-content: center; justify-items: center; gap: 18px; padding: 48px 24px; color: var(--muted); text-align: center; }
+.loading-orbit { width: 42px; height: 42px; border: 3px solid var(--line); border-top-color: var(--blue); border-radius: 50%; animation: planner-loading-spin .9s linear infinite; }
+.loading-orbit span { display: block; width: 8px; height: 8px; margin: 5px auto; border-radius: 50%; background: var(--blue); }
+.loading-copy { display: grid; gap: 6px; max-width: 380px; }
+.loading-copy strong { color: var(--ink); font-size: 15px; }
+.loading-copy span { font-size: 13px; line-height: 1.5; }
+.loading-skeleton-grid { display: grid; grid-template-columns: repeat(3, minmax(90px, 150px)); gap: 10px; width: min(100%, 480px); }
+.loading-skeleton-grid span { height: 76px; border: 1px solid var(--line); border-radius: 14px; background: linear-gradient(100deg, var(--surface) 35%, #f1f4f7 50%, var(--surface) 65%); background-size: 220% 100%; animation: planner-loading-shimmer 1.6s ease-in-out infinite; }
+.data-sync-chip { position: fixed; right: 22px; bottom: 20px; z-index: 20; padding: 9px 12px; border: 1px solid var(--line); border-radius: 999px; background: rgba(255,255,255,.94); color: var(--muted); box-shadow: 0 8px 24px rgba(20, 30, 45, .08); font-size: 12px; }
+@keyframes planner-loading-spin { to { transform: rotate(360deg); } }
+@keyframes planner-loading-shimmer { to { background-position: -220% 0; } }
+@media (prefers-reduced-motion: reduce) { .loading-orbit, .loading-skeleton-grid span { animation: none; } }
+
 /* Passe de acabamento: feedback claro sem alterar o contrato visual da tela. */
 button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px solid rgba(33, 89, 210, .2); outline-offset: 2px; }
 .metric-card { transition: transform 180ms var(--ease-out), box-shadow 180ms var(--ease-out), border-color 180ms ease; }

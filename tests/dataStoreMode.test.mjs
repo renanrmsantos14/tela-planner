@@ -23,6 +23,25 @@ test("fora do Model-driven app usa mock local sem chamar Dataverse", async () =>
   }
 });
 
+test("modo local expõe bootstrap por etapas sem bloquear dados essenciais", async () => {
+  const originalWindow = globalThis.window;
+  try {
+    delete globalThis.window;
+    const store = createDataStore();
+    const core = await store.loadCore();
+    assert.equal(core.loading.core, false);
+    assert.equal(core.loading.quotes, false);
+    assert.ok(core.tasks.length > 0);
+    const supplemental = await store.loadSupplemental(core);
+    assert.equal(supplemental.loading.quality, false);
+    const details = await store.loadTaskDetails(core.tasks[0].id);
+    assert.equal(details.taskId, core.tasks[0].id);
+  } finally {
+    if (originalWindow === undefined) delete globalThis.window;
+    else globalThis.window = originalWindow;
+  }
+});
+
 test("com Xrm disponível mantém adapter live", () => {
   const originalWindow = globalThis.window;
   globalThis.window = { Xrm: { Utility: { getGlobalContext: () => ({ getClientUrl: () => "https://org.crm.dynamics.com" }) }, WebApi: {} } };

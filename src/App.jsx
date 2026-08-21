@@ -28,6 +28,7 @@ const TEAM_OPTIONS = ["Comercial", "Operação", "Financeiro", "Qualidade"];
 const CALENDAR_WEEKDAY_FORMATTER = new Intl.DateTimeFormat("pt-BR", { weekday: "short" });
 const TODAY_LABEL_FORMATTER = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short" });
 const CHECKLIST_VISIBILITY_STORAGE_KEY = "betinhos-tela-planner-checklist-visibility-v1";
+let plannerQuoteSearch = null;
 
 function readChecklistVisibility() {
   try { return JSON.parse(localStorage.getItem(CHECKLIST_VISIBILITY_STORAGE_KEY) || "{}"); } catch { return {}; }
@@ -87,9 +88,10 @@ function SourceBadge({ sourceType }) {
 
 function InputSelect({ value, onChange, options, placeholder = "Selecione", disabled = false, multiple = Array.isArray(value) }) {
   const normalizedOptions = useMemo(() => options.map((option) => typeof option === "string" ? { value: option, label: option } : option), [options]);
+  const remoteSearch = options.find((option) => typeof option?._remoteSearch === "function")?._remoteSearch;
   return multiple
     ? <SearchableMultiSelect value={value} onChange={onChange} disabled={disabled} placeholder={placeholder} options={normalizedOptions} />
-    : <SearchableSelect value={value} onChange={onChange} disabled={disabled} placeholder={placeholder} options={normalizedOptions} />;
+    : <SearchableSelect value={value} onChange={onChange} disabled={disabled} placeholder={placeholder} options={normalizedOptions} onQueryChange={remoteSearch} />;
 }
 
 function UnsavedChangesDialog({ onContinue, onDiscard }) {
@@ -124,6 +126,11 @@ function AppShell({ active, onNavigate, children, onCreate, tasks, live, current
 
 function PageHeader({ eyebrow, title, description, action, children }) {
   return <div className="page-header"><div><span className="eyebrow">{eyebrow}</span><h1>{title}</h1>{description && <p>{description}</p>}</div><div className="header-actions">{children}{action}</div></div>;
+}
+
+function DataLoadingView({ loading, error }) {
+  const stage = loading?.core ? "Carregando tarefas e responsáveis" : loading?.quotes || loading?.quality ? "Preparando dados complementares" : "Finalizando conexão";
+  return <div className="data-loading-view" role="status" aria-live="polite"><div className="loading-orbit" aria-hidden="true"><span /></div><div className="loading-copy"><strong>{stage}</strong><span>{error || "A operação continua disponível enquanto os dados são preparados."}</span></div><div className="loading-skeleton-grid" aria-hidden="true"><span /><span /><span /></div></div>;
 }
 
 const TaskCard = memo(function TaskCard({ task: taskItem, subtasks = [], currentEmployee, showChecklistOnCard = false, onOpen, onToggleSubtask, compact = false, onDrop }) {
@@ -261,8 +268,8 @@ function TaskDrawer({ task, onDelete, ...props }) {
   return <TaskDrawerContent task={task} onDelete={onDelete} onRequestDelete={() => setShowDeletePrompt(true)} deleteState={deleteState} showDeletePrompt={showDeletePrompt} onCancelDelete={() => setShowDeletePrompt(false)} onConfirmDelete={confirmDelete} {...props} />;
 }
 
-function NewTaskDrawer({ quotes, employees = [], onClose, onSave }) {
-  const [form, setForm] = useState(() => { const linkedQuoteId = launchQuoteId(); return { title: "", quoteId: quotes.some((item) => item.id === linkedQuoteId) ? linkedQuoteId : quotes[0]?.id || "", priority: "medium", assigneeName: ["Não atribuído"], teamName: "Comercial", dueDate: "", description: "" }; }); const [subtasks, setSubtasks] = useState([]); const initialFormRef = useRef(form); const [showDiscardPrompt, setShowDiscardPrompt] = useState(false); const assigneeOptions = useMemo(() => buildAssigneeOptions(employees), [employees]); const quoteOptions = useMemo(() => quotes.map((item) => ({ value: item.id, label: `${item.code} · ${item.title}`, search: item.client })), [quotes]); const quote = quotes.find((item) => item.id === form.quoteId);
+function NewTaskDrawer({ quotes, employees = [], onClose, onSave, onSearchQuotes = (query) => plannerQuoteSearch?.(query) }) {
+  const [form, setForm] = useState(() => { const linkedQuoteId = launchQuoteId(); return { title: "", quoteId: quotes.some((item) => item.id === linkedQuoteId) ? linkedQuoteId : quotes[0]?.id || "", priority: "medium", assigneeName: ["Não atribuído"], teamName: "Comercial", dueDate: "", description: "" }; }); const [subtasks, setSubtasks] = useState([]); const initialFormRef = useRef(form); const [showDiscardPrompt, setShowDiscardPrompt] = useState(false); const assigneeOptions = useMemo(() => buildAssigneeOptions(employees), [employees]); const quoteOptions = useMemo(() => quotes.map((item) => ({ value: item.id, label: `${item.code} · ${item.title}`, search: item.client, _remoteSearch: onSearchQuotes })), [quotes, onSearchQuotes]); const quote = quotes.find((item) => item.id === form.quoteId);
   const isDirty = Object.keys(initialFormRef.current).some((key) => form[key] !== initialFormRef.current[key]);
   const requestClose = () => { if (isDirty) setShowDiscardPrompt(true); else onClose(); };
   const set = (key, value) => setForm((current) => ({ ...current, [key]: value }));
@@ -275,13 +282,31 @@ const LazyQualityView = lazy(() => Promise.resolve({ default: QualityView }));
 const LazySettingsView = lazy(() => Promise.resolve({ default: SettingsView }));
 
 export default function App() {
-  const [active, setActive] = useState("dashboard"); const [state, setState] = useState(null); const [store] = useState(() => createDataStore()); const [selectedId, setSelectedId] = useState(""); const [creating, setCreating] = useState(false); const [filters, setFilters] = useState({ query: "", assignee: [], priority: [], source: [], team: "" }); const [checklistVisibility, setChecklistVisibility] = useState(readChecklistVisibility); const [notice, setNotice] = useState(""); const [noticeAction, setNoticeAction] = useState(null); const [error, setError] = useState(""); const [failedTaskDraft, setFailedTaskDraft] = useState(null);
+  const [active, setActive] = useState("dashboard"); const [store] = useState(() => createDataStore()); const [state, setState] = useState(() => ({ tasks: [], quotes: [], employees: [], quality: [], live: store.live, loading: { core: true, quotes: true, quality: true, photos: true }, loadErrors: {} })); const [selectedId, setSelectedId] = useState(""); const [creating, setCreating] = useState(false); const [filters, setFilters] = useState({ query: "", assignee: [], priority: [], source: [], team: "" }); const [checklistVisibility, setChecklistVisibility] = useState(readChecklistVisibility); const [notice, setNotice] = useState(""); const [noticeAction, setNoticeAction] = useState(null); const [error, setError] = useState(""); const [failedTaskDraft, setFailedTaskDraft] = useState(null);
   const confirmedStateRef = useRef(null); const pendingMutationsRef = useRef(new Map()); const noticeTimerRef = useRef(null); const launchHandledRef = useRef(false); const failedTaskReopenTimerRef = useRef(null);
   const dismissNotice = useCallback(() => { if (noticeTimerRef.current) window.clearTimeout(noticeTimerRef.current); noticeTimerRef.current = null; setNotice(""); setNoticeAction(null); }, []);
   const showNotice = useCallback((message, duration = 2600, action = null) => { setNotice(message); setNoticeAction(action); if (noticeTimerRef.current) window.clearTimeout(noticeTimerRef.current); noticeTimerRef.current = window.setTimeout(() => { noticeTimerRef.current = null; setNotice(""); setNoticeAction(null); }, duration); }, []);
   useEffect(() => () => { if (failedTaskReopenTimerRef.current) window.clearTimeout(failedTaskReopenTimerRef.current); }, []);
   const applyPendingMutations = useCallback((confirmed) => [...pendingMutationsRef.current.values()].reduce((current, mutation) => mutation.update(current), confirmed), []);
-  useEffect(() => { store.load().then((next) => { confirmedStateRef.current = next; setState(applyPendingMutations(next)); }).catch((failure) => setError(failure.message || "Não foi possível carregar as tarefas.")); }, [store, applyPendingMutations]);
+  const mergeConfirmed = useCallback((patch) => { const current = confirmedStateRef.current || {}; const next = { ...current, ...patch, loading: { ...(current.loading || {}), ...(patch.loading || {}) } }; confirmedStateRef.current = next; setState(applyPendingMutations(next)); }, [applyPendingMutations]);
+  const searchQuotes = useCallback((query) => store.searchQuotes ? store.searchQuotes(query).then((found) => setState((current) => ({ ...current, quotes: [...new Map([...current.quotes, ...found].map((quote) => [quote.id, quote])).values()] }))).catch(() => undefined) : Promise.resolve([]), [store]);
+  plannerQuoteSearch = searchQuotes;
+  useEffect(() => {
+    let activeRequest = true;
+    store.loadCore().then((core) => {
+      if (!activeRequest) return;
+      mergeConfirmed(core);
+      store.loadSupplemental(core).then((supplemental) => { if (activeRequest) mergeConfirmed(supplemental); }).catch((failure) => { if (activeRequest) setState((current) => ({ ...current, loadErrors: { ...current.loadErrors, supplemental: failure.message || "Dados complementares indisponíveis." }, loading: { ...current.loading, quotes: false, quality: false } })); });
+      store.loadPhotos(core).then((photos) => { if (activeRequest) mergeConfirmed(photos); }).catch((failure) => { if (activeRequest) setState((current) => ({ ...current, loadErrors: { ...current.loadErrors, photos: failure.message || "Fotos indisponíveis." }, loading: { ...current.loading, photos: false } })); });
+    }).catch((failure) => { if (activeRequest) setError(failure.message || "Não foi possível carregar as tarefas."); });
+    return () => { activeRequest = false; };
+  }, [store, mergeConfirmed]);
+  useEffect(() => {
+    const task = state.tasks.find((item) => item.id === selectedId);
+    if (!selectedId || !task || task.detailsLoaded || task.detailsLoading || !store.loadTaskDetails) return;
+    setState((current) => ({ ...current, tasks: current.tasks.map((item) => item.id === selectedId ? { ...item, detailsLoading: true } : item) }));
+    store.loadTaskDetails(selectedId).then((details) => setState((current) => ({ ...current, tasks: current.tasks.map((item) => item.id === selectedId ? { ...item, ...details, detailsLoaded: true, detailsLoading: false } : item) }))).catch((failure) => { setState((current) => ({ ...current, tasks: current.tasks.map((item) => item.id === selectedId ? { ...item, detailsLoading: false, detailsError: failure.message || "Não foi possível carregar o histórico." } : item) })); });
+  }, [selectedId, state.tasks, store]);
   const runMutation = useCallback((operation, message) => operation.then((next) => { confirmedStateRef.current = next; setState(applyPendingMutations(next)); showNotice(message); }).catch((failure) => showNotice(failure.message || "Não foi possível concluir a operação.", 5200)), [applyPendingMutations, showNotice]);
   useEffect(() => { if (!state || launchHandledRef.current) return; launchHandledRef.current = true; const params = new URLSearchParams(window.location.search); const data = new URLSearchParams((params.get("data") || "").replace(/^\?/, "")); const taskId = params.get("taskId") || data.get("taskId") || ""; const mode = params.get("mode") || data.get("mode") || ""; if (taskId) setSelectedId(taskId); if (mode === "create") setCreating(true); }, [state]);
   const runOptimisticMutation = useCallback((update, operation, pendingMessage, successMessage) => {
@@ -370,7 +395,7 @@ export default function App() {
   const addAttachment = useCallback((id, file) => runOptimisticMutation((current) => addOptimisticAttachment(current, id, file), () => store.addAttachment(state, id, file), store.live ? "Anexo em envio..." : "Anexo adicionado no mock local.", store.live ? "Anexo salvo no OneDrive." : "Anexo salvo localmente."), [state, store, runOptimisticMutation]);
   const workItems = useMemo(() => normalizeWorkItems(state || {}), [state?.tasks, state?.quality]);
   if (error) return <div className="app-error"><strong>Não foi possível carregar o Planner.</strong><span>{error}</span><button className="button button-secondary" onClick={() => { setError(""); store.load().then(setState).catch((failure) => setError(failure.message)); }}>Tentar novamente</button></div>;
-  if (!state) return <div className="app-loading">Carregando dados operacionais…</div>;
+  if (state.loading?.core) return <AppShell active={active} onNavigate={setActive} onCreate={() => setCreating(true)} tasks={state.tasks} live={store.live} currentEmployee={null} personalStats={taskStats([])} openTaskCount={0}><DataLoadingView loading={state.loading} error={state.loadErrors?.core} /></AppShell>;
   const viewState = { ...state, workItems };
   const currentEmployee = resolveCurrentEmployee(state.employees, store.live);
   const personalItems = currentEmployee ? workItems.filter((item) => isAssignedToEmployee(item, currentEmployee)) : [];
@@ -384,5 +409,5 @@ export default function App() {
     if (active === "quality") return <Suspense fallback={<LoadingFallback />}><LazyQualityView state={state} onCreate={createQualityTask} onCreateTask={() => setCreating(true)} filters={filters} setFilters={setFilters} /></Suspense>;
     return <Suspense fallback={<LoadingFallback />}><LazySettingsView onReset={reloadData} onConnectGraph={connectGraph} graphAuthRequired={Boolean(state.graphAuthRequired)} live={store.live} /></Suspense>;
   };
-  return <AppShell active={active} onNavigate={setActive} onCreate={() => setCreating(true)} tasks={state.tasks} live={store.live} currentEmployee={currentEmployee} personalStats={personalStats} openTaskCount={openTaskCount}>{renderPage()}{notice && <div className={`toast ${notice.startsWith("Falha") ? "toast-error" : ""}`} role="status" aria-live="polite"><CheckCircle2 size={17} /><span>{notice}</span>{noticeAction && <button className="toast-action" type="button" onClick={() => { const action = noticeAction; dismissNotice(); action.onClick(); }}>{noticeAction.label}</button>}<button className="toast-close" type="button" onClick={dismissNotice} aria-label="Fechar notificação" title="Fechar notificação"><X size={15} /></button></div>}{selected && <TaskDrawer task={selected} state={state} currentEmployee={currentEmployee} showChecklistOnCard={Boolean(checklistVisibility[selected.id])} onToggleChecklistOnCard={(visible) => setChecklistVisibilityForTask(selected.id, visible)} onClose={closeTask} onSave={saveTask} onDelete={deleteTask} onComment={addComment} onAttachment={addAttachment} onOpenQuote={(id) => { setActive("dashboard"); closeTask(); showNotice(`Cotação ${state.quotes.find((quote) => quote.id === id)?.code || ""} vinculada.`); }} onAddSubtask={createSubtask} />}{creating && <NewTaskDrawer quotes={state.quotes} employees={state.employees} onClose={() => setCreating(false)} onSave={createNewTask} />}</AppShell>;
+  return <AppShell active={active} onNavigate={setActive} onCreate={() => setCreating(true)} tasks={state.tasks} live={store.live} currentEmployee={currentEmployee} personalStats={personalStats} openTaskCount={openTaskCount}>{renderPage()}{(state.loading?.quotes || state.loading?.quality) && <div className="data-sync-chip" role="status" aria-live="polite">Preparando dados complementares…</div>}{notice && <div className={`toast ${notice.startsWith("Falha") ? "toast-error" : ""}`} role="status" aria-live="polite"><CheckCircle2 size={17} /><span>{notice}</span>{noticeAction && <button className="toast-action" type="button" onClick={() => { const action = noticeAction; dismissNotice(); action.onClick(); }}>{noticeAction.label}</button>}<button className="toast-close" type="button" onClick={dismissNotice} aria-label="Fechar notificação" title="Fechar notificação"><X size={15} /></button></div>}{selected && <TaskDrawer task={selected} state={state} currentEmployee={currentEmployee} showChecklistOnCard={Boolean(checklistVisibility[selected.id])} onToggleChecklistOnCard={(visible) => setChecklistVisibilityForTask(selected.id, visible)} onClose={closeTask} onSave={saveTask} onDelete={deleteTask} onComment={addComment} onAttachment={addAttachment} onOpenQuote={(id) => { setActive("dashboard"); closeTask(); showNotice(`Cotação ${state.quotes.find((quote) => quote.id === id)?.code || ""} vinculada.`); }} onAddSubtask={createSubtask} />}{creating && <NewTaskDrawer quotes={state.quotes} employees={state.employees} onClose={() => setCreating(false)} onSave={createNewTask} />}</AppShell>;
 }
