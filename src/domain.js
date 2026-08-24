@@ -138,11 +138,14 @@ export function addOptimisticComment(state, taskId, text) {
   return updateTaskInState(state, taskId, (task) => ({ ...task, comments: [...(task.comments || []), comment] }));
 }
 
-export function addOptimisticAttachment(state, taskId, file) {
+export function addOptimisticAttachment(state, taskId, file, previewUrl = "") {
   const attachment = {
     id: `optimistic-attachment-${Date.now()}-${Math.random().toString(16).slice(2)}`,
     name: file?.name || "Arquivo",
     link: "",
+    mimeType: file?.type || "",
+    size: file?.size || 0,
+    previewUrl,
     createdAt: new Date().toISOString(),
     syncStatus: "syncing",
   };

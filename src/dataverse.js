@@ -27,6 +27,9 @@ const FLOW_URL_SCHEMA = "new_URLFlowsalvararquivosSharePoint";
 const READ_FLOW_URL_SCHEMA = "new_URLFlowConsultarArquivosSharePoint";
 const DEV_DATAVERSE_URL = "https://org23b93544.crm2.dynamics.com";
 const MAX_ATTACHMENT_SIZE = 5 * 1024 * 1024;
+const MAX_IMAGE_EDGE = 1600;
+const IMAGE_QUALITY = 0.82;
+const OPTIMIZABLE_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const ENTITY_SETS = Object.freeze({
   [QUOTE_TABLE]: "cr40f_pedidodecotacaos",
   [QUALITY_ERROR_TABLE]: "cr40f_errooperacionals",
@@ -462,24 +465,25 @@ async function addLiveComment(xrm, taskId, text) {
 
 async function addLiveAttachment(xrm, taskId, file) {
   if (!file) return loadLiveState(xrm);
-  if (file.size > MAX_ATTACHMENT_SIZE) throw new Error("O anexo deve ter no máximo 5 MB.");
+  const uploadFile = await optimizeAttachmentFile(file);
+  if (uploadFile.size > MAX_ATTACHMENT_SIZE) throw new Error("O anexo deve ter no máximo 5 MB após a compressão.");
   const taskRows = await retrieveMany(xrm, TASK_TABLE, `?$select=cr40f_titulo,cr40f_codigoorigem&$filter=cr40f_plannertarefaid eq ${cleanId(taskId)}&$top=1`);
   const task = taskRows[0] || {};
-  const fileName = sanitizePathSegment(file.name, "arquivo");
+  const fileName = sanitizePathSegment(uploadFile.name, "arquivo");
   const taskKey = sanitizePathSegment(task.cr40f_codigoorigem || taskId);
   const path = `Tarefas Planner/${String(apiUrl(xrm)).toLowerCase().includes(DEV_DATAVERSE_URL) ? "DEV/" : ""}${taskKey}/Anexos`;
   const flowUrl = await resolveSharePointFlowUrl(xrm);
   if (!flowUrl) throw new Error(`URL do Flow não configurada: ${FLOW_URL_SCHEMA}.`);
-  const base64 = file.base64 || await fileToBase64(file);
-  const response = await fetch(flowUrl, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ caminhoCompleto: path, nomeArquivo: fileName, conteudoBase64: base64, mimeType: file.type || "application/octet-stream", metadados: { tarefaId: taskId, tarefa: task.cr40f_titulo || "", origem: "PLANNER_INTERNO" } }) });
+  const base64 = uploadFile.base64 || await fileToBase64(uploadFile);
+  const response = await fetch(flowUrl, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ caminhoCompleto: path, nomeArquivo: fileName, conteudoBase64: base64, mimeType: uploadFile.type || "application/octet-stream", metadados: { tarefaId: taskId, tarefa: task.cr40f_titulo || "", origem: "PLANNER_INTERNO" } }) });
   const responseText = await response.text();
   const result = extractFlowRecord(responseText) || {};
   if (!response.ok || result.sucesso !== true) throw new Error(result.erro || `Flow SharePoint falhou: HTTP ${response.status}.`);
   const sharePointId = result.id || result.itemId || result.ItemId || "";
-  const attachment = { name: result.nomeArquivo || result.Name || fileName, id: sharePointId, sharePointId, fileLocator: result.fileLocator || result.identificador || result.Identifier || "", path: result.caminhoSharePoint || result.caminhoCompleto || result.Path || "", mimeType: result.mimeType || result.MediaType || file.type || "application/octet-stream", size: result.tamanho ?? result.Size ?? file.size };
+  const attachment = { name: result.nomeArquivo || result.Name || fileName, id: sharePointId, sharePointId, fileLocator: result.fileLocator || result.identificador || result.Identifier || "", path: result.caminhoSharePoint || result.caminhoCompleto || result.Path || "", mimeType: result.mimeType || result.MediaType || uploadFile.type || "application/octet-stream", size: result.tamanho ?? result.Size ?? uploadFile.size };
   if (!attachment.id && !attachment.fileLocator && !attachment.path) throw new Error("Flow SharePoint não retornou identificador ou caminho do arquivo.");
   await createEvent(xrm, taskId, 100000001, "Anexo adicionado.", "anexo", "", JSON.stringify(attachment));
-  return loadLiveState(xrm);
+  return loadTaskDetails(xrm, taskId);
 }
 
 async function loadLiveAttachmentContent(xrm, attachment) {
@@ -505,12 +509,37 @@ async function createLiveSubtask(xrm, state, parentId, input) {
   return loadLiveState(xrm);
 }
 
+async function optimizeAttachmentFile(file) {
+  if (!file?.type || !OPTIMIZABLE_IMAGE_TYPES.has(file.type) || typeof document === "undefined" || typeof globalThis.createImageBitmap !== "function") return file;
+  try {
+    const bitmap = await globalThis.createImageBitmap(file);
+    const scale = Math.min(1, MAX_IMAGE_EDGE / Math.max(bitmap.width, bitmap.height));
+    if (scale === 1 && file.size <= 900 * 1024) {
+      bitmap.close?.();
+      return file;
+    }
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    canvas.getContext("2d").drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, file.type, file.type === "image/png" ? undefined : IMAGE_QUALITY));
+    bitmap.close?.();
+    if (!blob || blob.size >= file.size * 0.95) return file;
+    return new File([blob], file.name, { type: file.type, lastModified: file.lastModified });
+  } catch {
+    return file;
+  }
+}
+
 async function fileToBase64(file) {
-  if (!file?.arrayBuffer) throw new Error("Arquivo inválido para anexar.");
-  const bytes = new Uint8Array(await file.arrayBuffer());
-  let binary = "";
-  for (let index = 0; index < bytes.length; index += 1) binary += String.fromCharCode(bytes[index]);
-  return btoa(binary);
+  if (!file) throw new Error("Arquivo inválido para anexar.");
+  if (file.base64) return file.base64;
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || "").split(",").slice(1).join(","));
+    reader.onerror = () => reject(new Error("Não foi possível preparar o arquivo para envio."));
+    reader.readAsDataURL(file);
+  });
 }
 
 async function ensureLiveQuoteTask(xrm, state, quote) {

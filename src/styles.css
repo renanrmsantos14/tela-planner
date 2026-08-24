@@ -532,6 +532,7 @@ button { cursor: pointer; }
 .task-checklist-item .task-checklist-box { pointer-events: auto; cursor: pointer; }
 
 .attachment-item { display: grid; gap: 4px; }
+.attachment-preview-slot { min-height: 1px; }
 .attachment-preview { overflow: hidden; width: min(100%, 300px); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--neutral); }
 .attachment-preview img { display: block; width: 100%; max-height: 220px; object-fit: contain; }
 .attachment-preview-state { color: var(--tertiary); font-size: 9px; }
