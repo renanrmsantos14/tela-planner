@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, lazy, Suspense, memo } from "react";
 import {
   ArrowUpRight, BellRing, CalendarDays, Check, CheckCircle2, ChevronDown, ChevronRight, CircleHelp, ClipboardList, ListChecks, Trash2,
-  Clock3, FileText, LayoutDashboard, ListFilter, Menu, MessageCircle, Paperclip, PanelLeftClose,
+  Clock3, FileText, LayoutDashboard, ListFilter, LoaderCircle, Menu, MessageCircle, Paperclip, PanelLeftClose,
   PanelLeftOpen, Plus, RotateCcw, Search, Settings, ShieldAlert, Sparkles, Target, UserRound, Users, X,
 } from "lucide-react";
 import { addOptimisticAttachment, addOptimisticComment, applyOptimisticTaskPatch, buildAssigneeOptions, buildEmployeeAssigneeOptions, buildOptimisticTask, buildTaskCreationInput, filterTasks, formatDate, formatLongDate, isBlocked, isDueToday, isOverdue, mentionedEmployees, normalizeAssigneeNames, normalizeText, PRIORITIES, quoteTaskTitle, sortTasks, sourceById, STATUSES, statusById, TASK_SOURCES, taskStats } from "./domain";
@@ -191,7 +191,7 @@ function DataLoadingView({ loading, error }) {
   return <div className="data-loading-view" role="status" aria-live="polite"><div className="loading-orbit" aria-hidden="true"><span /></div><div className="loading-copy"><strong>{stage}</strong><span>{error || "A operação continua disponível enquanto os dados são preparados."}</span></div><div className="loading-skeleton-grid" aria-hidden="true"><span /><span /><span /></div></div>;
 }
 
-const TaskCard = memo(function TaskCard({ task: taskItem, subtasks = [], currentEmployee, showChecklistOnCard = false, onOpen, onToggleSubtask, onComplete, showQuickComplete = false, compact = false, enableDrag = true, isDragging = false, onDragStart, onDragEnd }) {
+const TaskCard = memo(function TaskCard({ task: taskItem, subtasks = [], currentEmployee, showChecklistOnCard = false, onOpen, onToggleSubtask, onComplete, showQuickComplete = false, compact = false, enableDrag = true, isDragging = false, dropFeedback = "", onDragStart, onDragEnd }) {
   const overdue = isOverdue(taskItem);
   const canOpen = !taskItem.id.startsWith("optimistic-");
   const completedSubtasks = subtasks.filter((subtask) => subtask.status === "done").length;
@@ -206,6 +206,8 @@ const TaskCard = memo(function TaskCard({ task: taskItem, subtasks = [], current
     {showChecklistOnCard && subtasks.length > 0 && <div className="task-checklist" aria-label={`Checklist: ${completedSubtasks} de ${subtasks.length} concluídas`}><div className="task-checklist-heading"><span><ListChecks size={13} />Checklist</span><strong>{completedSubtasks}/{subtasks.length}</strong></div><div className="task-checklist-items">{visibleSubtasks.map((subtask) => { const completed = subtask.status === "done"; return <button className={`task-checklist-item ${completed ? "is-complete" : ""}`} key={subtask.id} type="button" aria-pressed={completed} disabled={subtask.syncStatus === "syncing"} onClick={(event) => { event.stopPropagation(); onToggleSubtask?.(subtask.id, { status: completed ? "todo" : "done" }); }}><span className="task-checklist-box">{completed && <Check size={10} strokeWidth={3} />}</span><span>{subtask.title}</span></button>; })}</div>{subtasks.length > visibleSubtasks.length && <span className="task-checklist-more">+{subtasks.length - visibleSubtasks.length} itens</span>}</div>}
     <div className="task-card-footer"><AssigneeDisplay value={taskItem.assigneeProfiles?.length ? taskItem.assigneeProfiles : taskItem.assigneeNames || taskItem.assigneeName} small />{taskItem.syncStatus === "syncing" ? <span className="sync-chip" role="status">Enviando...</span> : <span className={overdue ? "date-chip overdue" : "date-chip"}><Clock3 size={13} />{formatDate(taskItem.dueDate)}</span>}{showQuickComplete && !["done", "cancelled"].includes(taskItem.status) && <button className="task-quick-action" type="button" onClick={(event) => { event.stopPropagation(); onComplete?.(taskItem.id); }}>Concluir</button>}</div>
     {taskItem.parentTaskId && <div className="subtask-mark"><CheckCircle2 size={13} />Subtarefa</div>}
+    {dropFeedback === "loading" && <div className="task-drop-feedback task-drop-feedback-loading" role="status" aria-label="Salvando mudança de coluna"><LoaderCircle size={22} aria-hidden="true" /></div>}
+    {dropFeedback === "success" && <div className="task-drop-feedback task-drop-feedback-success" role="status" aria-label="Mudança de coluna concluída"><Check size={22} strokeWidth={2.6} aria-hidden="true" /></div>}
   </article>;
 });
 
@@ -232,11 +234,21 @@ function translateBetween(previous, next) {
 const Board = memo(function Board({ tasks, subtasksByParent, currentEmployee, checklistVisibility, onOpen, onToggleSubtask, onMove, onCreate }) {
   const [dragState, setDragState] = useState(null);
   const [dropExit, setDropExit] = useState(null);
+  const [dropFeedback, setDropFeedback] = useState(null);
   const boardRef = useRef(null);
   const cardRectsRef = useRef(new Map());
   const animateLayoutRef = useRef(false);
   const layoutAnimationsRef = useRef(new Map());
   const pendingTransferRef = useRef(null);
+  const feedbackTimerRef = useRef(null);
+  const feedbackClearTimerRef = useRef(null);
+  const clearFeedbackTimers = useCallback(() => {
+    if (feedbackTimerRef.current) window.clearTimeout(feedbackTimerRef.current);
+    if (feedbackClearTimerRef.current) window.clearTimeout(feedbackClearTimerRef.current);
+    feedbackTimerRef.current = null;
+    feedbackClearTimerRef.current = null;
+  }, []);
+  useEffect(() => () => clearFeedbackTimers(), [clearFeedbackTimers]);
   useLayoutEffect(() => {
     const cards = [...(boardRef.current?.querySelectorAll(".task-card[data-task-id]") || [])];
     layoutAnimationsRef.current.forEach((animation) => animation.cancel());
@@ -246,7 +258,8 @@ const Board = memo(function Board({ tasks, subtasksByParent, currentEmployee, ch
     if (pendingTransfer) {
       const movedCard = cards.find((card) => card.dataset.taskId === pendingTransfer.id);
       const movedNext = movedCard && nextRects.get(pendingTransfer.id);
-      if (movedCard && movedNext && pendingTransfer.slotRect) {
+      const movedStatusId = movedCard?.closest(".board-column")?.dataset.statusId;
+      if (movedCard && movedNext && pendingTransfer.slotRect && movedStatusId === pendingTransfer.statusId) {
         const transferOffset = DRAG_TRANSFER_DURATION / DRAG_TOTAL_DURATION;
         const reorderOffset = (DRAG_TRANSFER_DURATION + DRAG_SETTLE_DURATION) / DRAG_TOTAL_DURATION;
         cards.forEach((card) => {
@@ -283,8 +296,10 @@ const Board = memo(function Board({ tasks, subtasksByParent, currentEmployee, ch
         });
         pendingTransferRef.current = null;
         animateLayoutRef.current = false;
-      } else {
+      } else if (!movedCard || !movedNext || movedStatusId === pendingTransfer.statusId) {
         pendingTransferRef.current = null;
+      } else {
+        return;
       }
     } else if (animateLayoutRef.current) {
       cards.forEach((card) => {
@@ -308,9 +323,11 @@ const Board = memo(function Board({ tasks, subtasksByParent, currentEmployee, ch
   }, [dropExit]);
   const handleDragStart = useCallback((taskId, event) => {
     const task = tasks.find((item) => item.id === taskId);
+    clearFeedbackTimers();
+    setDropFeedback(null);
     setDropExit(null);
     setDragState({ id: taskId, sourceStatusId: task?.status || "", statusId: task?.status || "", insertAt: 0, height: event.currentTarget.getBoundingClientRect().height });
-  }, [tasks]);
+  }, [clearFeedbackTimers, tasks]);
   const handleDragOver = useCallback((statusId, event) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = "move";
@@ -341,11 +358,36 @@ const Board = memo(function Board({ tasks, subtasksByParent, currentEmployee, ch
     const canMove = shouldAttemptMove && !moveRequiresReason;
     const slotRect = getExitMetrics();
     if (canMove) animateLayoutRef.current = true;
-    if (canMove && dragState) pendingTransferRef.current = { id, statusId, slotRect };
-    if (dragState) setDropExit({ ...dragState, isMove: Boolean(canMove), slotRect });
+    if (canMove && dragState) {
+      pendingTransferRef.current = { id, statusId, slotRect };
+      setDropFeedback({ id, statusId, phase: "loading" });
+      setDropExit(null);
+    } else if (dragState) {
+      setDropExit({ ...dragState, isMove: false, slotRect });
+    }
     setDragState(null);
-    if (shouldAttemptMove) onMove(id, statusId);
-  }, [dragState, getExitMetrics, onMove, tasks]);
+    if (shouldAttemptMove) {
+      const startedAt = performance.now();
+      Promise.resolve(onMove(id, statusId)).then((success) => {
+        const finish = () => {
+          feedbackTimerRef.current = null;
+          if (!success) {
+            pendingTransferRef.current = null;
+            animateLayoutRef.current = true;
+            setDropFeedback((current) => current?.id === id ? null : current);
+            return;
+          }
+          setDropFeedback((current) => current?.id === id ? { ...current, phase: "success" } : current);
+          feedbackClearTimerRef.current = window.setTimeout(() => {
+            feedbackClearTimerRef.current = null;
+            setDropFeedback((current) => current?.id === id ? null : current);
+          }, 520);
+        };
+        const waitForAnimation = Math.max(0, DRAG_TOTAL_DURATION - (performance.now() - startedAt));
+        feedbackTimerRef.current = window.setTimeout(finish, success ? waitForAnimation : 0);
+      });
+    }
+  }, [clearFeedbackTimers, dragState, getExitMetrics, onMove, tasks]);
   const clearDrag = useCallback(() => {
     if (dragState) setDropExit({ ...dragState, isMove: false, slotRect: getExitMetrics() });
     setDragState((current) => {
@@ -354,7 +396,7 @@ const Board = memo(function Board({ tasks, subtasksByParent, currentEmployee, ch
       return null;
     });
   }, [dragState, getExitMetrics]);
-  return <div className="board-grid" ref={boardRef}>{STATUSES.map((status) => { const items = tasks.filter((taskItem) => taskItem.status === status.id); const visibleDropState = dragState || dropExit; const isExiting = !dragState && Boolean(dropExit); const hasExitMetrics = isExiting && visibleDropState.slotRect; const showDropSlot = Boolean(visibleDropState && visibleDropState.sourceStatusId !== status.id && visibleDropState.statusId === status.id); const dropSlot = showDropSlot ? <div className={`drop-placeholder card-drop-placeholder ${hasExitMetrics ? "is-exiting" : ""}`} style={{ "--drop-slot-height": `${Math.max(76, visibleDropState.height || 96)}px`, ...(hasExitMetrics ? { "--drop-slot-top": `${visibleDropState.slotRect.localTop}px`, "--drop-slot-left": `${visibleDropState.slotRect.localLeft}px`, "--drop-slot-width": `${visibleDropState.slotRect.width}px` } : {}) }} aria-label={`Espaço para soltar em ${status.label}`}><Plus size={17} aria-hidden="true" /><span>Solte aqui</span></div> : null; return <section className={`board-column ${showDropSlot ? "is-drop-target" : ""}`} data-status-id={status.id} key={status.id} onDragOver={(event) => handleDragOver(status.id, event)} onDrop={(event) => handleDrop(status.id, event)} onDragEnd={clearDrag}><div className="column-header"><div><span className={`column-marker marker-${status.tone}`} /><h2>{status.label}</h2><span className="column-count">{items.length}</span></div><button className="icon-button" type="button" onClick={onCreate} aria-label={`Criar tarefa em ${status.label}`}><Plus size={16} /></button></div><div className="column-body">{items.map((taskItem, index) => <React.Fragment key={taskItem.id}>{showDropSlot && visibleDropState.insertAt === index && dropSlot}<TaskCard task={taskItem} subtasks={subtasksByParent.get(taskItem.id) || []} currentEmployee={currentEmployee} showChecklistOnCard={checklistVisibility[taskItem.id]} onOpen={onOpen} onToggleSubtask={onToggleSubtask} isDragging={dragState?.id === taskItem.id} onDragStart={handleDragStart} onDragEnd={clearDrag} /></React.Fragment>)}{showDropSlot && visibleDropState.insertAt >= items.length && dropSlot}{!items.length && !showDropSlot && <div className="drop-placeholder"><Plus size={17} /><span>Arraste tarefas para cá</span></div>}</div></section>; })}</div>;
+  return <div className="board-grid" ref={boardRef}>{STATUSES.map((status) => { const items = tasks.filter((taskItem) => taskItem.status === status.id); const visibleDropState = dragState || dropExit; const isExiting = !dragState && Boolean(dropExit); const hasExitMetrics = isExiting && visibleDropState.slotRect; const showDropSlot = Boolean(visibleDropState && (!visibleDropState.isMove || dragState) && visibleDropState.sourceStatusId !== status.id && visibleDropState.statusId === status.id); const dropSlot = showDropSlot ? <div className={`drop-placeholder card-drop-placeholder ${hasExitMetrics ? "is-exiting" : ""}`} style={{ "--drop-slot-height": `${Math.max(76, visibleDropState.height || 96)}px`, ...(hasExitMetrics ? { "--drop-slot-top": `${visibleDropState.slotRect.localTop}px`, "--drop-slot-left": `${visibleDropState.slotRect.localLeft}px`, "--drop-slot-width": `${visibleDropState.slotRect.width}px` } : {}) }} aria-label={`Espaço para soltar em ${status.label}`}><Plus size={17} aria-hidden="true" /><span>Solte aqui</span></div> : null; return <section className={`board-column ${showDropSlot ? "is-drop-target" : ""}`} data-status-id={status.id} key={status.id} onDragOver={(event) => handleDragOver(status.id, event)} onDrop={(event) => handleDrop(status.id, event)} onDragEnd={clearDrag}><div className="column-header"><div><span className={`column-marker marker-${status.tone}`} /><h2>{status.label}</h2><span className="column-count">{items.length}</span></div><button className="icon-button" type="button" onClick={onCreate} aria-label={`Criar tarefa em ${status.label}`}><Plus size={16} /></button></div><div className="column-body">{items.map((taskItem, index) => <React.Fragment key={taskItem.id}>{showDropSlot && visibleDropState.insertAt === index && dropSlot}<TaskCard task={taskItem} subtasks={subtasksByParent.get(taskItem.id) || []} currentEmployee={currentEmployee} showChecklistOnCard={checklistVisibility[taskItem.id]} onOpen={onOpen} onToggleSubtask={onToggleSubtask} isDragging={dragState?.id === taskItem.id} dropFeedback={dropFeedback?.id === taskItem.id ? dropFeedback.phase : ""} onDragStart={handleDragStart} onDragEnd={clearDrag} /></React.Fragment>)}{showDropSlot && visibleDropState.insertAt >= items.length && dropSlot}{!items.length && !showDropSlot && <div className="drop-placeholder"><Plus size={17} /><span>Arraste tarefas para cá</span></div>}</div></section>; })}</div>;
 });
 
 function ActiveFilterChips({ filters, setFilters, assigneeOptions }) {
