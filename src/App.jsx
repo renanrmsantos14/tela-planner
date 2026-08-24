@@ -512,6 +512,8 @@ function AppShell({
   onOpenNotification,
   onMarkNotificationRead,
   onMarkAllNotificationsRead,
+  onRefresh,
+  refreshing = false,
 }) {
   const [expanded, setExpanded] = useState(true);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -558,17 +560,6 @@ function AppShell({
             <strong>Central de Trabalho</strong>
             <span>Operação Betinhos</span>
           </div>
-          <button
-            className="notification-trigger"
-            type="button"
-            onClick={() => setNotificationsOpen(true)}
-            aria-label={`Abrir notificações${unreadCount(notifications) ? `, ${unreadCount(notifications)} não lidas` : ""}`}
-          >
-            <BellRing size={18} />
-            {unreadCount(notifications) > 0 && (
-              <b>{unreadCount(notifications)}</b>
-            )}
-          </button>
         </div>
         <div
           className="sidebar-day-card"
@@ -643,6 +634,28 @@ function AppShell({
         </div>
       </aside>
       <main className="main-area">
+        <div className="app-topbar" aria-label="Ações do aplicativo">
+          <button
+            className="notification-trigger"
+            type="button"
+            onClick={() => setNotificationsOpen(true)}
+            aria-label={`Abrir notificações${unreadCount(notifications) ? `, ${unreadCount(notifications)} não lidas` : ""}`}
+            title="Notificações"
+          >
+            <BellRing size={17} />
+            {unreadCount(notifications) > 0 && <b>{unreadCount(notifications)}</b>}
+          </button>
+          <button
+            className={`refresh-trigger${refreshing ? " is-refreshing" : ""}`}
+            type="button"
+            onClick={onRefresh}
+            disabled={refreshing}
+            aria-label={refreshing ? "Atualizando dados" : "Atualizar dados"}
+            title={refreshing ? "Atualizando dados" : "Atualizar dados"}
+          >
+            <RotateCcw size={16} />
+          </button>
+        </div>
         <header className="mobile-header">
           <div className="mobile-header-copy">
             <strong>{activeLabel}</strong>
@@ -665,6 +678,16 @@ function AppShell({
             {unreadCount(notifications) > 0 && (
               <b>{unreadCount(notifications)}</b>
             )}
+          </button>
+          <button
+            className={`refresh-trigger mobile-refresh-trigger${refreshing ? " is-refreshing" : ""}`}
+            type="button"
+            onClick={onRefresh}
+            disabled={refreshing}
+            aria-label={refreshing ? "Atualizando dados" : "Atualizar dados"}
+            title={refreshing ? "Atualizando dados" : "Atualizar dados"}
+          >
+            <RotateCcw size={16} />
           </button>
           <Avatar name={userName} small />
         </header>
@@ -3715,8 +3738,10 @@ export default function App() {
   const [noticeAction, setNoticeAction] = useState(null);
   const [error, setError] = useState("");
   const [failedTaskDraft, setFailedTaskDraft] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
   const confirmedStateRef = useRef(null);
   const pendingMutationsRef = useRef(new Map());
+  const refreshInFlightRef = useRef(false);
   const noticeTimerRef = useRef(null);
   const launchHandledRef = useRef(false);
   const failedTaskReopenTimerRef = useRef(null);
@@ -3783,6 +3808,46 @@ export default function App() {
     },
     [applyPendingMutations],
   );
+  const refreshInBackground = useCallback(async () => {
+    if (refreshInFlightRef.current || state.loading?.core) return;
+    refreshInFlightRef.current = true;
+    setRefreshing(true);
+    try {
+      const core = await store.loadCore();
+      mergeConfirmed(core);
+      const [supplemental, photos] = await Promise.allSettled([
+        store.loadSupplemental(core),
+        store.loadPhotos(core),
+      ]);
+      if (supplemental.status === "fulfilled") mergeConfirmed(supplemental.value);
+      if (photos.status === "fulfilled") mergeConfirmed(photos.value);
+      setState((current) => ({
+        ...current,
+        loadErrors: {
+          ...current.loadErrors,
+          ...(supplemental.status === "rejected"
+            ? { supplemental: supplemental.reason?.message || "Dados complementares indisponíveis." }
+            : { supplemental: undefined }),
+          ...(photos.status === "rejected"
+            ? { photos: photos.reason?.message || "Fotos indisponíveis." }
+            : { photos: undefined }),
+        },
+      }));
+    } catch {
+      // Atualização automática é silenciosa; os dados atuais permanecem disponíveis.
+    } finally {
+      refreshInFlightRef.current = false;
+      setRefreshing(false);
+    }
+  }, [mergeConfirmed, state.loading?.core, store]);
+
+  useEffect(() => {
+    if (state.loading?.core) return undefined;
+    const timer = window.setInterval(() => {
+      if (document.visibilityState !== "hidden") refreshInBackground();
+    }, 60000);
+    return () => window.clearInterval(timer);
+  }, [refreshInBackground, state.loading?.core]);
   const searchQuotes = useCallback(
     (query) =>
       store.searchQuotes
@@ -4437,6 +4502,8 @@ export default function App() {
         currentEmployee={null}
         personalStats={taskStats([])}
         openTaskCount={0}
+        onRefresh={refreshInBackground}
+        refreshing={refreshing}
       >
         <DataLoadingView
           loading={state.loading}
@@ -4558,6 +4625,8 @@ export default function App() {
       onOpenNotification={openNotification}
       onMarkNotificationRead={markNotificationRead}
       onMarkAllNotificationsRead={markAllNotificationsRead}
+      onRefresh={refreshInBackground}
+      refreshing={refreshing}
     >
       {renderPage()}
       {(state.loading?.quotes || state.loading?.quality) && (
