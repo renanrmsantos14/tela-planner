@@ -887,6 +887,7 @@ const TaskCard = memo(function TaskCard({
   task: taskItem,
   subtasks = [],
   currentEmployee,
+  hasUnreadMention = false,
   showChecklistOnCard = false,
   onOpen,
   onToggleSubtask,
@@ -905,14 +906,6 @@ const TaskCard = memo(function TaskCard({
     (subtask) => subtask.status === "done",
   ).length;
   const visibleSubtasks = subtasks.slice(0, 3);
-  const mentionCount = currentEmployee
-    ? (taskItem.comments || []).reduce(
-        (count, comment) =>
-          count +
-          (mentionedEmployees(comment.text, [currentEmployee]).length ? 1 : 0),
-        0,
-      )
-    : 0;
   return (
     <article
       className={`task-card ${compact ? "task-card-compact" : ""} ${overdue ? "task-overdue" : ""} ${taskItem.syncStatus === "syncing" ? "task-syncing" : ""} ${isDragging ? "task-card-dragging" : ""}`}
@@ -963,11 +956,10 @@ const TaskCard = memo(function TaskCard({
           <em>{taskItem.sourceLabel || taskItem.quoteTitle}</em>
         </div>
       )}
-      {mentionCount > 0 && (
+      {hasUnreadMention && (
         <div className="task-mention-alert">
           <BellRing size={13} />
-          <span>Você foi acionado</span>
-          {mentionCount > 1 && <strong>{mentionCount}</strong>}
+          <span>Você foi mencionado</span>
         </div>
       )}
       {showChecklistOnCard && subtasks.length > 0 && (
@@ -1105,6 +1097,7 @@ const Board = memo(function Board({
   subtasksByParent,
   currentEmployee,
   checklistVisibility,
+  unreadMentionTaskIds,
   onOpen,
   onToggleSubtask,
   onMove,
@@ -1484,6 +1477,7 @@ const Board = memo(function Board({
                     task={taskItem}
                     subtasks={subtasksByParent.get(taskItem.id) || []}
                     currentEmployee={currentEmployee}
+                    hasUnreadMention={unreadMentionTaskIds.has(taskItem.id)}
                     showChecklistOnCard={checklistVisibility[taskItem.id]}
                     onOpen={onOpen}
                     onToggleSubtask={onToggleSubtask}
@@ -1629,6 +1623,7 @@ function MobileBoardList({
   subtasksByParent,
   currentEmployee,
   checklistVisibility,
+  unreadMentionTaskIds,
   onOpen,
   onToggleSubtask,
   onComplete,
@@ -1650,6 +1645,7 @@ function MobileBoardList({
               task={taskItem}
               subtasks={subtasksByParent.get(taskItem.id) || []}
               currentEmployee={currentEmployee}
+              hasUnreadMention={unreadMentionTaskIds.has(taskItem.id)}
               showChecklistOnCard={checklistVisibility[taskItem.id]}
               onOpen={onOpen}
               onToggleSubtask={onToggleSubtask}
@@ -1680,6 +1676,10 @@ function BoardView({
   taskScope,
   onScopeChange,
 }) {
+  const unreadMentionTaskIds = useMemo(
+    () => new Set((state.notifications || []).filter((item) => item.type === "mention" && !item.readAt && item.taskId).map((item) => item.taskId)),
+    [state.notifications],
+  );
   const filtered = useMemo(
     () =>
       sortTasks(
@@ -1744,6 +1744,7 @@ function BoardView({
           subtasksByParent={subtasksByParent}
           currentEmployee={currentEmployee}
           checklistVisibility={checklistVisibility}
+          unreadMentionTaskIds={unreadMentionTaskIds}
           onOpen={onOpen}
           onToggleSubtask={onToggleSubtask}
           onComplete={onComplete}
@@ -1754,6 +1755,7 @@ function BoardView({
           subtasksByParent={subtasksByParent}
           currentEmployee={currentEmployee}
           checklistVisibility={checklistVisibility}
+          unreadMentionTaskIds={unreadMentionTaskIds}
           onOpen={onOpen}
           onToggleSubtask={onToggleSubtask}
           onMove={onMove}
@@ -4111,7 +4113,17 @@ export default function App() {
   );
   const saveTask = useCallback(
     (id, patch) => {
-      const nextPatch = patch;
+      const existingTask = state.tasks.find((taskItem) => taskItem.id === id);
+      const mentionText = [
+        patch.title !== existingTask?.title ? patch.title : "",
+        patch.description !== existingTask?.description ? patch.description : "",
+      ].filter((value) => typeof value === "string").join(" ");
+      const nextPatch = {
+        ...patch,
+        actorEmployeeId: currentEmployee?.id || "",
+        actorUserId: currentEmployee?.userId || "",
+        mentionedEmployeeIds: mentionText ? mentionedEmployees(mentionText, state.employees).map((employee) => employee.id) : [],
+      };
       const shouldReopen = id === selectedId;
       return runOptimisticMutation(
         (current) => applyOptimisticTaskPatch(current, id, nextPatch),
@@ -4138,7 +4150,7 @@ export default function App() {
         return false;
       });
     },
-    [state, store, runOptimisticMutation, selectedId, showNotice],
+    [currentEmployee, state, store, runOptimisticMutation, selectedId, showNotice],
   );
   const completeTask = useCallback(
     (id) => {
@@ -4466,6 +4478,20 @@ export default function App() {
     if (!store.markNotificationRead) return;
     store.markNotificationRead(state, notificationId).then(setState).catch((failure) => showNotice(`Falha ao atualizar notificação: ${failure.message}`));
   }, [state, store, showNotice]);
+  const markTaskNotificationsRead = useCallback((taskId) => {
+    if (!taskId || !store.markNotificationRead) return;
+    const unread = (state.notifications || []).filter((item) => item.taskId === taskId && !item.readAt);
+    if (!unread.length) return;
+    Promise.all(unread.map((item) => store.markNotificationRead(state, item.id)))
+      .then(() => setState((current) => ({
+        ...current,
+        notifications: (current.notifications || []).map((item) => unread.some((entry) => entry.id === item.id) ? { ...item, readAt: item.readAt || new Date().toISOString() } : item),
+      })))
+      .catch((failure) => showNotice(`Falha ao atualizar notificações: ${failure.message}`));
+  }, [state, store, showNotice]);
+  useEffect(() => {
+    if (selectedId) markTaskNotificationsRead(selectedId);
+  }, [selectedId, markTaskNotificationsRead]);
   const markAllNotificationsRead = useCallback(() => {
     if (!currentEmployee?.id || !store.markAllNotificationsRead) return;
     store.markAllNotificationsRead(state, currentEmployee.id).then(setState).catch((failure) => showNotice(`Falha ao atualizar notificações: ${failure.message}`));

@@ -206,6 +206,10 @@ export function updateTask(state, id, patch) {
     const eventId = uid("event");
     notifications.unshift({ id: uid("notification"), taskId: id, recipientEmployeeId, type, title: type === "deadline" ? "Prazo alterado" : type === "status" ? "Status alterado" : "Responsáveis alterados", message: next.title, occurredAt: new Date().toISOString(), readAt: "", dedupeKey: notificationDedupeKey({ recipientId: recipientEmployeeId, taskId: id, type, eventId }) });
   }));
+  (patch.mentionedEmployeeIds || []).filter((employeeId) => employeeId !== patch.actorEmployeeId).forEach((recipientEmployeeId) => {
+    const eventId = uid("event");
+    notifications.unshift({ id: uid("notification"), taskId: id, recipientEmployeeId, type: "mention", title: "Você foi mencionado", message: next.title, occurredAt: new Date().toISOString(), readAt: "", dedupeKey: notificationDedupeKey({ recipientId: recipientEmployeeId, taskId: id, type: "mention", eventId }) });
+  });
   return saveState({ ...state, tasks, notifications });
 }
 
