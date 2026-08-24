@@ -11,6 +11,15 @@ function mentionSearchText(employee) {
   return [employee?.name, employee?.apelido, employee?.mentionSearchText].filter(Boolean).join(" ");
 }
 
+function mentionLabel(employee) {
+  return employee?.apelido || employee?.name || "Sem nome";
+}
+
+function mentionSubtitle(employee) {
+  if (employee?.apelido && employee?.name && employee.apelido !== employee.name) return employee.name;
+  return employee?.subtitle || "Mencionar";
+}
+
 export function getMentionContext(value, caret = String(value || "").length) {
   const beforeCaret = String(value || "").slice(0, caret);
   const match = beforeCaret.match(/(?:^|[^\p{L}\p{N}_])@([^\s@]*)$/u);
@@ -43,7 +52,7 @@ export function MentionableField({ value, onChange, employees = [], multiline = 
 
   const insertMention = (mention) => {
     if (!context) return;
-    const token = mention.token || mention.name;
+    const token = mention.token || mentionLabel(mention);
     const nextValue = `${String(value).slice(0, context.start)}@${token} ${String(value).slice(caret)}`;
     onChange(nextValue);
     const nextCaret = context.start + token.length + 2;
@@ -65,7 +74,7 @@ export function MentionableField({ value, onChange, employees = [], multiline = 
   const Field = multiline ? "textarea" : "input";
   return <div className={`mentionable-field ${className}`}>
     <Field ref={inputRef} value={value} onChange={updateCaret} onClick={(event) => setCaret(event.target.selectionStart ?? value.length)} onKeyUp={(event) => setCaret(event.target.selectionStart ?? value.length)} onKeyDown={handleKeyDown} placeholder={placeholder} aria-label={ariaLabel} aria-autocomplete="list" aria-expanded={suggestions.length > 0} rows={rows} {...props} />
-    {suggestions.length > 0 && <div className="mention-suggestions" role="listbox" aria-label="Pessoas para mencionar">{suggestions.map((mention, index) => <button type="button" className={`mention-suggestion ${index === activeIndex ? "is-active" : ""}`} key={mention.id || mention.name} aria-selected={index === activeIndex} onMouseDown={(event) => event.preventDefault()} onClick={() => insertMention(mention)}><MentionAvatar name={mention.name} small /><span>{mention.name}</span><small>{mention.subtitle || "Mencionar"}</small></button>)}</div>}
+    {suggestions.length > 0 && <div className="mention-suggestions" role="listbox" aria-label="Pessoas para mencionar">{suggestions.map((mention, index) => <button type="button" className={`mention-suggestion ${index === activeIndex ? "is-active" : ""}`} key={mention.id || mention.name} aria-selected={index === activeIndex} onMouseDown={(event) => event.preventDefault()} onClick={() => insertMention(mention)}><MentionAvatar name={mentionLabel(mention)} small /><span>{mentionLabel(mention)}</span><small>{mentionSubtitle(mention)}</small></button>)}</div>}
   </div>;
 }
 
@@ -94,12 +103,12 @@ export function GlobalMentionController({ employees = [] }) {
     const onKeyDown = (event) => {
       if (!active?.suggestions.length || event.target !== active.element) return;
       if (event.key === "ArrowDown" || event.key === "ArrowUp") { event.preventDefault(); setIndex((current) => (current + (event.key === "ArrowDown" ? 1 : -1) + active.suggestions.length) % active.suggestions.length); }
-      if (event.key === "Enter" || event.key === "Tab") { event.preventDefault(); const mention = active.suggestions[index] || active.suggestions[0]; const { element, context } = active; const caret = element.selectionStart ?? element.value.length; const next = `${element.value.slice(0, context.start)}@${mention.token || mention.name} ${element.value.slice(caret)}`; const setter = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(element), "value")?.set; setter?.call(element, next); element.dispatchEvent(new Event("input", { bubbles: true })); element.focus(); const nextCaret = context.start + (mention.token || mention.name).length + 2; element.setSelectionRange(nextCaret, nextCaret); setActive(null); }
+      if (event.key === "Enter" || event.key === "Tab") { event.preventDefault(); const mention = active.suggestions[index] || active.suggestions[0]; const { element, context } = active; const caret = element.selectionStart ?? element.value.length; const token = mention.token || mentionLabel(mention); const next = `${element.value.slice(0, context.start)}@${token} ${element.value.slice(caret)}`; const setter = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(element), "value")?.set; setter?.call(element, next); element.dispatchEvent(new Event("input", { bubbles: true })); element.focus(); const nextCaret = context.start + token.length + 2; element.setSelectionRange(nextCaret, nextCaret); setActive(null); }
     };
     document.addEventListener("keydown", onKeyDown, true); return () => document.removeEventListener("keydown", onKeyDown, true);
   }, [active, index]);
   if (!active?.suggestions.length || typeof document === "undefined") return null;
-  return createPortal(<div className="mention-suggestions mention-suggestions-global" style={{ top: active.rect.bottom + 7, left: active.rect.left, width: active.rect.width }} role="listbox" aria-label="Pessoas para mencionar">{active.suggestions.map((mention, itemIndex) => <button type="button" className={`mention-suggestion ${itemIndex === index ? "is-active" : ""}`} key={mention.id || mention.name} onMouseDown={(event) => event.preventDefault()} onClick={() => { active.element.focus(); active.element.setSelectionRange(active.context.start, active.context.start + active.context.query.length + 1); active.element.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true })); }}><MentionAvatar name={mention.name} small /><span>{mention.name}</span><small>{mention.subtitle || "Mencionar"}</small></button>)}</div>, document.body);
+  return createPortal(<div className="mention-suggestions mention-suggestions-global" style={{ top: active.rect.bottom + 7, left: active.rect.left, width: active.rect.width }} role="listbox" aria-label="Pessoas para mencionar">{active.suggestions.map((mention, itemIndex) => <button type="button" className={`mention-suggestion ${itemIndex === index ? "is-active" : ""}`} key={mention.id || mention.name} onMouseDown={(event) => event.preventDefault()} onClick={() => { active.element.focus(); active.element.setSelectionRange(active.context.start, active.context.start + active.context.query.length + 1); active.element.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true })); }}><MentionAvatar name={mentionLabel(mention)} small /><span>{mentionLabel(mention)}</span><small>{mentionSubtitle(mention)}</small></button>)}</div>, document.body);
 }
 
 export function useMentionController(employees = []) {
@@ -122,9 +131,9 @@ export function useMentionController(employees = []) {
       if (!suggestions.length) return close();
       active = { element, context, suggestions }; index = Math.min(index, suggestions.length - 1); menu.hidden = false;
       const rect = element.getBoundingClientRect(); menu.style.top = `${rect.bottom + 7}px`; menu.style.left = `${rect.left}px`; menu.style.width = `${rect.width}px`;
-      menu.replaceChildren(...suggestions.map((mention, itemIndex) => { const button = document.createElement("button"); button.type = "button"; button.className = `mention-suggestion ${itemIndex === index ? "is-active" : ""}`; button.textContent = `${mention.name} · ${mention.subtitle || "Mencionar"}`; button.onmousedown = (event) => event.preventDefault(); button.onclick = () => choose(mention); return button; }));
+      menu.replaceChildren(...suggestions.map((mention, itemIndex) => { const button = document.createElement("button"); button.type = "button"; button.className = `mention-suggestion ${itemIndex === index ? "is-active" : ""}`; button.textContent = `${mentionLabel(mention)} · ${mentionSubtitle(mention)}`; button.onmousedown = (event) => event.preventDefault(); button.onclick = () => choose(mention); return button; }));
     };
-    const choose = (mention) => { if (!active) return; const { element, context } = active; const caret = element.selectionStart ?? element.value.length; const next = `${element.value.slice(0, context.start)}@${mention.token || mention.name} ${element.value.slice(caret)}`; const setter = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(element), "value")?.set; setter?.call(element, next); element.dispatchEvent(new Event("input", { bubbles: true })); element.focus(); const nextCaret = context.start + (mention.token || mention.name).length + 2; element.setSelectionRange(nextCaret, nextCaret); close(); };
+    const choose = (mention) => { if (!active) return; const { element, context } = active; const caret = element.selectionStart ?? element.value.length; const token = mention.token || mentionLabel(mention); const next = `${element.value.slice(0, context.start)}@${token} ${element.value.slice(caret)}`; const setter = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(element), "value")?.set; setter?.call(element, next); element.dispatchEvent(new Event("input", { bubbles: true })); element.focus(); const nextCaret = context.start + token.length + 2; element.setSelectionRange(nextCaret, nextCaret); close(); };
     const onKeyDown = (event) => { if (!active || event.target !== active.element || !active.suggestions.length) return; if (event.key === "ArrowDown" || event.key === "ArrowUp") { event.preventDefault(); index = (index + (event.key === "ArrowDown" ? 1 : -1) + active.suggestions.length) % active.suggestions.length; refresh(); } else if (event.key === "Enter" || event.key === "Tab") { event.preventDefault(); choose(active.suggestions[index]); } };
     document.addEventListener("input", refresh, true); document.addEventListener("keyup", refresh, true); document.addEventListener("click", refresh, true); document.addEventListener("keydown", onKeyDown, true);
     return () => { document.removeEventListener("input", refresh, true); document.removeEventListener("keyup", refresh, true); document.removeEventListener("click", refresh, true); document.removeEventListener("keydown", onKeyDown, true); menu.remove(); };

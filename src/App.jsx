@@ -3269,8 +3269,9 @@ function TaskDrawerContent({
                         onMouseDown={(event) => event.preventDefault()}
                         onClick={() => insertMention(employee)}
                       >
-                        <Avatar name={employee.name} small />
-                        <span>{employee.name}</span>
+                        <Avatar name={employee.apelido || employee.name} small />
+                        <span>{employee.apelido || employee.name}</span>
+                        {employee.apelido && employee.name !== employee.apelido && <small>{employee.name}</small>}
                       </button>
                     ))}
                   </div>
