@@ -542,6 +542,7 @@ button { cursor: pointer; }
 .attachment-section { position: relative; }
 .attachment-heading-copy { display: inline-flex; align-items: center; gap: 8px; }
 .attachment-section .section-hint { color: var(--tertiary); font-size: 10px; font-weight: 700; }
+.attachment-helper { margin: -4px 0 10px; color: var(--muted); font-size: 10px; line-height: 1.45; }
 .attachment-dropzone { min-height: 92px; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 14px; border: 1px dashed #b8c9df; border-radius: 12px; color: var(--blue); background: linear-gradient(135deg, #f7faff 0%, #f0f5ff 100%); cursor: pointer; transition: border-color 160ms ease, background-color 160ms ease, transform 160ms ease; }
 .attachment-dropzone:hover, .attachment-dropzone:focus-within, .attachment-dropzone.is-dragging { border-color: var(--blue); background: #eaf1ff; }
 .attachment-dropzone:active { transform: scale(.99); }
@@ -577,6 +578,7 @@ button { cursor: pointer; }
 .attachment-file-main span { overflow: hidden; color: var(--muted); text-overflow: ellipsis; white-space: nowrap; font-size: 10px; }
 .attachment-status { display: inline-flex; align-items: center; gap: 4px; flex: 0 0 auto; color: var(--green); font-size: 9px; font-weight: 800; }
 .attachment-status.is-syncing { color: var(--blue); }
+.attachment-status.is-pending { color: var(--amber); }
 .attachment-empty { display: flex; align-items: center; gap: 9px; margin-top: 10px; padding: 12px; border: 1px solid #eef1f5; border-radius: 10px; color: var(--tertiary); background: var(--neutral); }
 .attachment-empty > span { display: grid; gap: 2px; }
 .attachment-empty strong { color: var(--muted); font-size: 10px; }
@@ -625,6 +627,7 @@ button { cursor: pointer; }
 }
 
 .new-task-quick-fields { margin-bottom: 10px; }
+.new-task-quick-fields label:last-child { grid-column: auto; }
 .drawer-advanced-toggle { width: 100%; min-height: 42px; display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 2px 0 14px; padding: 0 2px; border: 0; border-bottom: 1px solid var(--line); color: var(--blue); background: transparent; font: inherit; font-size: 11px; font-weight: 800; text-align: left; }
 .drawer-advanced-toggle svg { transition: transform 160ms var(--ease-out); }
 .drawer-advanced-toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
