@@ -1,8 +1,9 @@
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, lazy, Suspense, memo } from "react";
+import React, { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, lazy, Suspense, memo } from "react";
 import {
   ArrowUpRight, BellRing, CalendarDays, Check, CheckCircle2, ChevronDown, ChevronRight, CircleHelp, ClipboardList, ListChecks, Trash2,
-  Clock3, FileText, LayoutDashboard, ListFilter, LoaderCircle, Menu, MessageCircle, Paperclip, PanelLeftClose,
+  Clock3, File, FileArchive, FileImage, FileSpreadsheet, FileText, LayoutDashboard, ListFilter, LoaderCircle, Menu, MessageCircle, Paperclip, PanelLeftClose,
   PanelLeftOpen, Plus, RotateCcw, Search, Settings, ShieldAlert, Sparkles, Target, UserRound, Users, X,
+  UploadCloud,
 } from "lucide-react";
 import { addOptimisticAttachment, addOptimisticComment, applyOptimisticTaskPatch, buildAssigneeOptions, buildEmployeeAssigneeOptions, buildOptimisticTask, buildTaskCreationInput, filterTasks, formatDate, formatLongDate, isBlocked, isDueToday, isOverdue, mentionedEmployees, normalizeAssigneeNames, normalizeText, PRIORITIES, quoteTaskTitle, sortTasks, sourceById, STATUSES, statusById, TASK_SOURCES, taskStats } from "./domain";
 import { createDataStore } from "./dataverse";
@@ -482,11 +483,71 @@ function isImageAttachment(attachment) {
   return String(attachment?.mimeType || "").toLowerCase().startsWith("image/") || /\.(avif|bmp|gif|jpe?g|png|svg|webp)$/i.test(String(attachment?.name || ""));
 }
 
-function AttachmentPreview({ attachment, loadAttachmentContent }) {
+function toAttachmentFiles(value) {
+  if (!value) return [];
+  if (Array.isArray(value)) return value.filter(Boolean);
+  if (typeof value.length === "number" && !value.name) return Array.from(value).filter(Boolean);
+  return [value];
+}
+
+function mergeAttachmentDetailsIntoState(state, taskId, details) {
+  if (!details?.taskId) return details;
+  return {
+    ...state,
+    tasks: state.tasks.map((item) => item.id === taskId ? { ...item, ...details, detailsLoaded: true, detailsLoading: false, detailsError: "" } : item),
+  };
+}
+
+function formatAttachmentSize(size) {
+  const bytes = Number(size || 0);
+  if (!bytes) return "Tamanho não informado";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(bytes >= 10 * 1024 * 1024 ? 0 : 1)} MB`;
+}
+
+function attachmentTypeLabel(attachment) {
+  const mimeType = String(attachment?.mimeType || "").toLowerCase();
+  const name = String(attachment?.name || "").toLowerCase();
+  if (mimeType.startsWith("image/") || /\.(avif|bmp|gif|jpe?g|png|svg|webp)$/.test(name)) return "Imagem";
+  if (mimeType === "application/pdf" || name.endsWith(".pdf")) return "PDF";
+  if (/spreadsheet|excel/.test(mimeType) || /\.(csv|xls|xlsx)$/.test(name)) return "Planilha";
+  if (/presentation|powerpoint/.test(mimeType) || /\.(ppt|pptx)$/.test(name)) return "Apresentação";
+  if (/zip|compressed/.test(mimeType) || /\.(7z|rar|zip)$/.test(name)) return "Arquivo compactado";
+  return "Arquivo";
+}
+
+function AttachmentTypeIcon({ attachment }) {
+  const type = attachmentTypeLabel(attachment);
+  const Icon = type === "Imagem" ? FileImage : type === "Planilha" ? FileSpreadsheet : type === "Arquivo compactado" ? FileArchive : type === "PDF" ? FileText : File;
+  return <span className={`attachment-file-icon attachment-file-icon-${type.toLowerCase().replace(/\s/g, "-")}`} aria-hidden="true"><Icon size={17} /></span>;
+}
+
+function AttachmentPreview({ attachment, loadAttachmentContent, onOpen }) {
   const cacheKey = attachment?.sharePointId || attachment?.fileLocator || attachment?.path || attachment?.name;
-  const [state, setState] = useState(() => ({ dataUrl: attachmentPreviewCache.get(cacheKey) || "", loading: false, error: "" }));
+  const slotRef = useRef(null);
+  const [visible, setVisible] = useState(Boolean(attachment?.previewUrl));
+  const [state, setState] = useState(() => ({ dataUrl: attachment?.previewUrl || attachmentPreviewCache.get(cacheKey) || "", loading: false, error: "" }));
+  useEffect(() => () => {
+    if (attachment?.previewUrl?.startsWith("blob:") && globalThis.URL?.revokeObjectURL) globalThis.URL.revokeObjectURL(attachment.previewUrl);
+  }, [attachment?.previewUrl]);
   useEffect(() => {
-    if (!isImageAttachment(attachment) || !loadAttachmentContent || !cacheKey || (!attachment?.sharePointId && !attachment?.fileLocator && !attachment?.path) || attachmentPreviewCache.has(cacheKey)) return undefined;
+    if (attachment?.previewUrl || typeof window === "undefined" || typeof window.IntersectionObserver !== "function") {
+      setVisible(true);
+      return undefined;
+    }
+    const node = slotRef.current;
+    if (!node) return undefined;
+    const observer = new window.IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) return;
+      setVisible(true);
+      observer.disconnect();
+    }, { rootMargin: "160px" });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [attachment?.previewUrl, cacheKey]);
+  useEffect(() => {
+    if (!visible || attachment?.previewUrl || !isImageAttachment(attachment) || !loadAttachmentContent || !cacheKey || (!attachment?.sharePointId && !attachment?.fileLocator && !attachment?.path) || attachmentPreviewCache.has(cacheKey)) return undefined;
     let active = true;
     setState({ dataUrl: "", loading: true, error: "" });
     loadAttachmentContent(attachment).then((result) => {
