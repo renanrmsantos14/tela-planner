@@ -198,8 +198,13 @@ export function addComment(state, id, text) {
 }
 
 export function addAttachment(state, id, name) {
-  const attachment = { id: uid("file"), name, createdAt: new Date().toISOString() };
+  const input = typeof name === "object" ? name : { name };
+  const attachment = { id: uid("file"), name: input.name || "Arquivo", mimeType: input.mimeType || "", size: input.size || 0, previewUrl: input.previewUrl || "", createdAt: new Date().toISOString() };
   return saveState({ ...state, tasks: state.tasks.map((taskItem) => taskItem.id === id ? { ...taskItem, attachments: [...taskItem.attachments, attachment] } : taskItem) });
+}
+
+export function deleteAttachment(state, taskId, attachmentId) {
+  return saveState({ ...state, tasks: state.tasks.map((taskItem) => taskItem.id === taskId ? { ...taskItem, attachments: taskItem.attachments.filter((attachment) => attachment.id !== attachmentId) } : taskItem) });
 }
 
 export function ensureQuoteTask(state, quote) {

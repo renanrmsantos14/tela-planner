@@ -483,6 +483,14 @@ function isImageAttachment(attachment) {
   return String(attachment?.mimeType || "").toLowerCase().startsWith("image/") || /\.(avif|bmp|gif|jpe?g|png|svg|webp)$/i.test(String(attachment?.name || ""));
 }
 
+function isPdfAttachment(attachment) {
+  return String(attachment?.mimeType || "").toLowerCase() === "application/pdf" || /\.pdf$/i.test(String(attachment?.name || ""));
+}
+
+function attachmentCacheKey(attachment) {
+  return attachment?.sharePointId || attachment?.fileLocator || attachment?.path || attachment?.name;
+}
+
 function toAttachmentFiles(value) {
   if (!value) return [];
   if (Array.isArray(value)) return value.filter(Boolean);
@@ -524,12 +532,13 @@ function AttachmentTypeIcon({ attachment }) {
 }
 
 function AttachmentPreview({ attachment, loadAttachmentContent, onOpen }) {
-  const cacheKey = attachment?.sharePointId || attachment?.fileLocator || attachment?.path || attachment?.name;
+  const cacheKey = attachmentCacheKey(attachment);
+  const canPreview = isImageAttachment(attachment) || isPdfAttachment(attachment);
   const slotRef = useRef(null);
   const [visible, setVisible] = useState(Boolean(attachment?.previewUrl));
   const [state, setState] = useState(() => ({ dataUrl: attachment?.previewUrl || attachmentPreviewCache.get(cacheKey) || "", loading: false, error: "" }));
   useEffect(() => () => {
-    if (attachment?.previewUrl?.startsWith("blob:") && globalThis.URL?.revokeObjectURL) globalThis.URL.revokeObjectURL(attachment.previewUrl);
+    if (attachment?.previewUrl?.startsWith("blob:") && globalThis.URL?.revokeObjectURL) globalThis.setTimeout(() => globalThis.URL.revokeObjectURL(attachment.previewUrl), 60000);
   }, [attachment?.previewUrl]);
   useEffect(() => {
     if (attachment?.previewUrl || typeof window === "undefined" || typeof window.IntersectionObserver !== "function") {
@@ -547,7 +556,7 @@ function AttachmentPreview({ attachment, loadAttachmentContent, onOpen }) {
     return () => observer.disconnect();
   }, [attachment?.previewUrl, cacheKey]);
   useEffect(() => {
-    if (!visible || attachment?.previewUrl || !isImageAttachment(attachment) || !loadAttachmentContent || !cacheKey || (!attachment?.sharePointId && !attachment?.fileLocator && !attachment?.path) || attachmentPreviewCache.has(cacheKey)) return undefined;
+    if (!visible || attachment?.previewUrl || !canPreview || !loadAttachmentContent || !cacheKey || (!attachment?.sharePointId && !attachment?.fileLocator && !attachment?.path) || attachmentPreviewCache.has(cacheKey)) return undefined;
     let active = true;
     setState({ dataUrl: "", loading: true, error: "" });
     loadAttachmentContent(attachment).then((result) => {
@@ -558,16 +567,100 @@ function AttachmentPreview({ attachment, loadAttachmentContent, onOpen }) {
       if (active) setState({ dataUrl: "", loading: false, error: error.message || "Prévia indisponível." });
     });
     return () => { active = false; };
-  }, [attachment, cacheKey, loadAttachmentContent, visible]);
-  if (!isImageAttachment(attachment)) return null;
-  return <div className="attachment-preview-slot" ref={slotRef}>{state.dataUrl ? <div className="attachment-preview"><img src={state.dataUrl} alt={attachment.name || "Imagem anexada"} loading="lazy" decoding="async" /></div> : state.loading ? <small className="attachment-preview-state">Carregando imagem...</small> : state.error ? <small className="attachment-preview-state attachment-preview-error">Prévia indisponível</small> : null}</div>;
+  }, [attachment, cacheKey, canPreview, loadAttachmentContent, visible]);
+  if (!canPreview) return null;
+  const openPreview = () => onOpen?.({ ...attachment, previewUrl: state.dataUrl });
+  return <div className="attachment-preview-slot" ref={slotRef}>{state.dataUrl ? isPdfAttachment(attachment) ? <div className="attachment-preview attachment-preview-pdf" role="button" tabIndex="0" onClick={openPreview} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openPreview(); } }} aria-label={`Abrir prévia de ${attachment.name || "PDF anexado"}`}><iframe src={state.dataUrl} title={attachment.name || "Prévia do PDF"} /></div> : <button className="attachment-preview" type="button" onClick={openPreview} aria-label={`Abrir prévia de ${attachment.name || "imagem anexada"}`}><img src={state.dataUrl} alt={attachment.name || "Imagem anexada"} loading="lazy" decoding="async" /></button> : state.loading ? <div className="attachment-preview-placeholder"><LoaderCircle size={15} className="spin" /><span>Preparando prévia…</span></div> : state.error ? <div className="attachment-preview-placeholder attachment-preview-error"><AttachmentTypeIcon attachment={attachment} /><span>Prévia indisponível</span></div> : <div className="attachment-preview-placeholder"><AttachmentTypeIcon attachment={attachment} /><span>{isPdfAttachment(attachment) ? "PDF anexado" : "Imagem anexada"}</span></div>}</div>;
+}
+
+function AttachmentSection({ taskId, attachments = [], loadAttachmentContent, onAttachment, onDeleteAttachment }) {
+  const inputId = useId();
+  const [isDragging, setIsDragging] = useState(false);
+  const [previewAttachment, setPreviewAttachment] = useState(null);
+  const [openingId, setOpeningId] = useState("");
+  const [pendingDeleteId, setPendingDeleteId] = useState("");
+  const [deletingId, setDeletingId] = useState("");
+  const [openError, setOpenError] = useState("");
+  const addFiles = (value) => {
+    const files = toAttachmentFiles(value);
+    if (files.length) onAttachment(taskId, files);
+  };
+  const handleDrop = (event) => {
+    event.preventDefault();
+    setIsDragging(false);
+    addFiles(event.dataTransfer.files);
+  };
+  const previewUrl = previewAttachment?.previewUrl || attachmentPreviewCache.get(attachmentCacheKey(previewAttachment));
+  const openAttachment = async (attachment) => {
+    if (typeof window === "undefined") return;
+    setOpenError("");
+    const popup = window.open("", "_blank");
+    if (!popup) {
+      setOpenError("O navegador bloqueou a nova aba. Permita pop-ups para abrir anexos.");
+      return;
+    }
+    popup.opener = null;
+    popup.document.title = attachment.name || "Anexo";
+    setOpeningId(attachment.id);
+    try {
+      let source = attachment.previewUrl || attachmentPreviewCache.get(attachmentCacheKey(attachment));
+      if (!source && loadAttachmentContent) {
+        const result = await loadAttachmentContent(attachment);
+        source = result?.dataUrl || result?.previewUrl || "";
+        if (source) attachmentPreviewCache.set(attachmentCacheKey(attachment), source);
+      }
+      if (!source) throw new Error("Não foi possível carregar o conteúdo deste anexo.");
+      const response = await fetch(source);
+      if (!response.ok) throw new Error("O conteúdo do anexo não respondeu corretamente.");
+      const blobUrl = URL.createObjectURL(await response.blob());
+      popup.location.href = blobUrl;
+      window.setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+    } catch (error) {
+      popup.close();
+      setOpenError(error.message || "Não foi possível abrir o anexo.");
+    } finally {
+      setOpeningId("");
+    }
+  };
+  const confirmDelete = (attachment) => {
+    setPendingDeleteId("");
+    setDeletingId(attachment.id);
+    Promise.resolve(onDeleteAttachment?.(taskId, attachment)).finally(() => setDeletingId(""));
+  };
+  return <section className="drawer-section attachment-section">
+    <div className="drawer-section-heading">
+      <div className="attachment-heading-copy"><h3>Anexos</h3><span className="section-count">{attachments.length}</span></div>
+      <span className="section-hint">Até 5 MB por arquivo</span>
+    </div>
+    <label className={`attachment-dropzone ${isDragging ? "is-dragging" : ""}`} htmlFor={inputId} onDragEnter={(event) => { event.preventDefault(); setIsDragging(true); }} onDragOver={(event) => { event.preventDefault(); setIsDragging(true); }} onDragLeave={(event) => { if (event.currentTarget === event.target) setIsDragging(false); }} onDrop={handleDrop}>
+      <span className="attachment-upload-icon"><UploadCloud size={19} /></span>
+      <span className="attachment-dropzone-copy"><strong>{isDragging ? "Solte os arquivos aqui" : "Adicione evidências à tarefa"}</strong><small>Clique para escolher ou arraste arquivos para cá</small></span>
+      <span className="attachment-dropzone-action">Escolher arquivos</span>
+      <input id={inputId} type="file" multiple onChange={(event) => { addFiles(event.target.files); event.target.value = ""; }} />
+    </label>
+    {openError && <div className="attachment-feedback attachment-feedback-error" role="alert">{openError}</div>}
+    {attachments.length ? <div className="attachment-list">{attachments.map((item) => <article className={`attachment-item ${item.syncStatus === "syncing" ? "item-syncing" : ""}`} key={item.id}>
+      <AttachmentPreview attachment={item} loadAttachmentContent={loadAttachmentContent} onOpen={setPreviewAttachment} />
+      <div className="attachment-card">
+        <button className="attachment-open-button" type="button" onClick={() => openAttachment(item)} disabled={openingId === item.id || deletingId === item.id} aria-label={`Abrir ${item.name || "anexo"} em nova aba`}>
+          <AttachmentTypeIcon attachment={item} />
+          <span className="attachment-file-main"><strong title={item.name}>{item.name || "Arquivo sem nome"}</strong><span>{attachmentTypeLabel(item)} · {formatAttachmentSize(item.size)} · Abrir em nova aba</span></span>
+        </button>
+        <div className="attachment-card-actions">
+          <span className={`attachment-status ${item.syncStatus === "syncing" ? "is-syncing" : ""}`}>{item.syncStatus === "syncing" ? <><LoaderCircle size={13} className="spin" />Enviando</> : <><CheckCircle2 size={13} />Salvo</>}</span>
+          {onDeleteAttachment && (pendingDeleteId === item.id ? <div className="attachment-remove-confirm" role="alert"><span>Remover?</span><button className="button button-danger" type="button" onClick={() => confirmDelete(item)} disabled={deletingId === item.id}>{deletingId === item.id ? "Removendo…" : "Remover"}</button><button className="button button-quiet" type="button" onClick={() => setPendingDeleteId("")} disabled={deletingId === item.id}>Cancelar</button></div> : <button className="attachment-delete-button" type="button" onClick={() => setPendingDeleteId(item.id)} disabled={item.syncStatus === "syncing" || deletingId === item.id} aria-label={`Remover ${item.name || "anexo"}`} title="Remover anexo"><Trash2 size={15} /></button>)}
+        </div>
+      </div>
+    </article>)}</div> : <div className="attachment-empty"><Paperclip size={16} /><span><strong>Nenhum anexo ainda</strong><small>Inclua briefing, evidência ou qualquer arquivo útil para a execução.</small></span></div>}
+    {previewAttachment && previewUrl && <div className="attachment-lightbox" role="dialog" aria-modal="true" aria-label={`Prévia de ${previewAttachment.name || "arquivo anexado"}`} onMouseDown={(event) => { if (event.target === event.currentTarget) setPreviewAttachment(null); }}><button className="icon-button attachment-lightbox-close" type="button" onClick={() => setPreviewAttachment(null)} aria-label="Fechar prévia"><X size={19} /></button>{isPdfAttachment(previewAttachment) ? <iframe src={previewUrl} title={previewAttachment.name || "Prévia do PDF"} /> : <img src={previewUrl} alt={previewAttachment.name || "Imagem anexada"} />}</div>}
+  </section>;
 }
 
 function MoreView({ onNavigate }) {
   return <div className="page-content more-page-content"><PageHeader eyebrow="Atalhos" title="Mais" description="Acesse origens e configurações sem tirar o foco das tarefas." /><section className="more-actions"><button className="panel more-action" type="button" onClick={() => onNavigate("quality")}><span className="more-action-icon more-action-icon-warning"><ShieldAlert size={19} /></span><span><strong>Qualidade</strong><small>Transforme erros e ações em tarefas</small></span><ChevronRight size={17} /></button><button className="panel more-action" type="button" onClick={() => onNavigate("settings")}><span className="more-action-icon"><Settings size={19} /></span><span><strong>Configurações</strong><small>Dados, recarregamento e versão</small></span><ChevronRight size={17} /></button></section></div>;
 }
 
-function TaskDrawerContent({ task: taskItem, state, currentEmployee, loadAttachmentContent, showChecklistOnCard, onToggleChecklistOnCard, onClose, onSave, onDelete, onComment, onAttachment, onOpenQuote, onAddSubtask, onRequestDelete, deleteState, showDeletePrompt, onCancelDelete, onConfirmDelete }) {
+function TaskDrawerContent({ task: taskItem, state, currentEmployee, loadAttachmentContent, showChecklistOnCard, onToggleChecklistOnCard, onClose, onSave, onDelete, onComment, onAttachment, onDeleteAttachment, onOpenQuote, onAddSubtask, onRequestDelete, deleteState, showDeletePrompt, onCancelDelete, onConfirmDelete }) {
   const [form, setForm] = useState(taskItem ? { ...taskItem } : null); const [comment, setComment] = useState(""); const [mentionActiveIndex, setMentionActiveIndex] = useState(0); const [newSubtaskTitle, setNewSubtaskTitle] = useState(""); const [isAddingSubtask, setIsAddingSubtask] = useState(false); const [subtaskToDelete, setSubtaskToDelete] = useState(null); const [saveState, setSaveState] = useState("idle"); const [validationError, setValidationError] = useState(""); const [showDiscardPrompt, setShowDiscardPrompt] = useState(false); const assigneeOptions = useMemo(() => buildEmployeeAssigneeOptions(state.employees), [state.employees]);
   const saveCloseTimerRef = useRef(null);
   useEffect(() => {
@@ -627,7 +720,7 @@ function TaskDrawerContent({ task: taskItem, state, currentEmployee, loadAttachm
     setSaveState("success");
     saveCloseTimerRef.current = window.setTimeout(onClose, 620);
   };
-  return <div className="drawer-layer" onMouseDown={(event) => { if (event.target === event.currentTarget) requestClose(); }}><aside className="task-drawer"><header className="drawer-header"><div><span className="eyebrow">Detalhe da tarefa</span><span className="drawer-code">{taskItem.quoteCode || "TAREFA"}</span></div><button className="icon-button" onClick={requestClose} aria-label="Fechar detalhe" disabled={saveState !== "idle"}><X size={19} /></button></header><div className="drawer-body"><div className="drawer-title"><input value={form.title} onChange={(event) => set("title", event.target.value)} aria-label="Título da tarefa" /><PriorityBadge priority={form.priority} /></div>{taskItem.quoteId && <button className="linked-record" onClick={() => onOpenQuote(taskItem.quoteId)}><FileText size={16} /><span><small>Cotação vinculada</small><strong>{taskItem.quoteCode} · {taskItem.quoteTitle}</strong></span><ArrowUpRight size={15} /></button>}<div className="drawer-field-grid"><label>Status<InputSelect value={form.status} onChange={(value) => set("status", value)} options={STATUS_OPTIONS} /></label><label>Prioridade<InputSelect value={form.priority} onChange={(value) => set("priority", value)} options={PRIORITY_OPTIONS} /></label><label>Responsável<InputSelect value={form.assigneeName} onChange={(value) => set("assigneeName", value)} options={assigneeOptions} placeholder="Não atribuído" /></label><label>Equipe<InputSelect value={form.teamName} onChange={(value) => set("teamName", value)} options={TEAM_OPTIONS} /></label><label>Prazo<input type="date" value={form.dueDate || ""} onChange={(event) => set("dueDate", event.target.value)} /></label></div>{form.status === "waiting" && <label className="drawer-blocked-field">Motivo do bloqueio<textarea value={form.blockedReason || ""} onChange={(event) => { set("blockedReason", event.target.value); setValidationError(""); }} rows="3" placeholder="O que está impedindo o avanço?" aria-label="Motivo do bloqueio" required /><small>Obrigatório enquanto tarefa estiver aguardando.</small></label>}{validationError && <div className="field-error" role="alert">{validationError}</div>}<label className="drawer-description">Descrição<textarea value={form.description} onChange={(event) => set("description", event.target.value)} rows="4" /></label><section className="drawer-section"><div className="drawer-section-heading"><h3>Subtarefas</h3><div className="drawer-heading-actions"><label className="checklist-visibility-toggle"><input type="checkbox" checked={showChecklistOnCard} onChange={(event) => onToggleChecklistOnCard(event.target.checked)} /><span>No quadro</span></label><button className="text-button" type="button" onClick={() => setIsAddingSubtask(true)}><Plus size={14} />Adicionar</button></div></div>{isAddingSubtask && <div className="subtask-inline-create"><span className="subtask-check" aria-hidden="true" /><input autoFocus value={newSubtaskTitle} onChange={(event) => setNewSubtaskTitle(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") submitSubtask(); if (event.key === "Escape") { setNewSubtaskTitle(""); setIsAddingSubtask(false); } }} placeholder="Digite o título da subtarefa" aria-label="Título da subtarefa" /><button className="subtask-inline-action" type="button" onClick={submitSubtask} disabled={!newSubtaskTitle.trim()} aria-label="Salvar subtarefa"><Check size={15} /></button></div>}{subtasks.length ? subtasks.map((subtask) => <div className="subtask-row" key={subtask.id}><button className="subtask-toggle" type="button" disabled={subtask.syncStatus === "syncing"} onClick={() => onSave(subtask.id, { status: subtask.status === "done" ? "todo" : "done" })}><span className={`subtask-check ${subtask.status === "done" ? "checked" : ""}`}>{subtask.status === "done" && <Check size={13} />}</span><span>{subtask.title}</span><small>{subtask.syncStatus === "syncing" ? "Sincronizando..." : formatDate(subtask.dueDate)}</small></button><button className="subtask-delete" type="button" disabled={subtask.syncStatus === "syncing"} onClick={(event) => { event.stopPropagation(); setSubtaskToDelete(subtask); }} aria-label="Excluir subtarefa" title="Excluir subtarefa"><Trash2 size={13} /></button></div>) : !isAddingSubtask && <div className="empty-inline">Nenhuma subtarefa adicionada.</div>}</section><section className="drawer-section"><div className="drawer-section-heading"><h3>Comentários</h3><span className="section-count">{taskItem.comments.length}</span></div>{taskItem.comments.map((item) => <div className={`comment-row ${isOwnComment(item) ? "comment-own" : ""} ${item.syncStatus === "syncing" ? "item-syncing" : ""}`} key={item.id}><Avatar name={item.author} small /><div><strong>{item.author}{item.syncStatus === "syncing" ? " · Enviando..." : ""}</strong><p>{item.text}</p></div></div>)}<div className="comment-compose"><div className="comment-mention-field"><textarea value={comment} onChange={(event) => setComment(event.target.value)} onKeyDown={(event) => { if (event.ctrlKey && event.key === "Enter") { event.preventDefault(); submitComment(); } if (event.key === "Escape") setComment((value) => value.replace(/(?:^|\s)@[^\s@]*$/, "")); }} placeholder="Adicione um comentário ou use @ para mencionar alguém..." rows="2" />{mentionSuggestions.length > 0 && <div className="mention-suggestions" role="listbox" aria-label="Responsáveis para mencionar">{mentionSuggestions.map((employee) => <button type="button" className="mention-suggestion" key={employee.id || employee.name} onMouseDown={(event) => event.preventDefault()} onClick={() => insertMention(employee)}><Avatar name={employee.name} small /><span>{employee.name}</span></button>)}</div>}</div><button className="button button-secondary" disabled={!comment.trim()} onClick={submitComment}><MessageCircle size={15} />Comentar</button></div></section><section className="drawer-section"><div className="drawer-section-heading"><h3>Anexos</h3><span className="section-count">{taskItem.attachments.length}</span></div>{taskItem.attachments.map((item) => <div className="attachment-item" key={item.id}><AttachmentPreview attachment={item} loadAttachmentContent={loadAttachmentContent} /><div className={`attachment-row ${item.syncStatus === "syncing" ? "item-syncing" : ""}`}><Paperclip size={15} /><span>{item.name}</span>{item.syncStatus === "syncing" && <small>Enviando...</small>}</div></div>)}<label className="upload-mock"><Paperclip size={15} />Adicionar anexos<input type="file" multiple onChange={(event) => { const files = Array.from(event.target.files || []); if (files.length) onAttachment(taskItem.id, files); event.target.value = ""; }} /></label></section><section className="drawer-section history-section"><div className="drawer-section-heading"><h3>Histórico</h3></div>{history.slice(0, 5).map((item) => <div className="history-row" key={item.id}><span className="history-dot" /><div><strong>{item.text}</strong><small>{item.author} · agora</small></div></div>)}</section></div><footer className="drawer-footer"><button className="button button-danger task-delete-button" type="button" onClick={onRequestDelete} disabled={deleteState !== "idle" || saveState !== "idle"}><Trash2 size={15} />Excluir</button><button className="button button-quiet" onClick={requestClose} disabled={saveState !== "idle"}>Cancelar</button><button className="button button-primary" disabled={saveState !== "idle"} onClick={handleSave}>{saveState === "saving" ? "Salvando..." : <><Check size={16} />Salvar tarefa</>}</button></footer>{saveState === "success" && <div className="drawer-save-feedback" role="status" aria-live="polite"><div className="drawer-save-icon"><Check size={30} strokeWidth={2.5} /></div><strong>Tarefa salva</strong><span>Fechando detalhe…</span></div>}{deleteState === "deleting" && <div className="drawer-delete-feedback" role="status" aria-live="polite"><div className="drawer-delete-icon"><Trash2 size={30} strokeWidth={2.5} /></div><strong>Tarefa excluída</strong><span>Removendo do Planner…</span></div>}{showDiscardPrompt && <UnsavedChangesDialog onContinue={() => setShowDiscardPrompt(false)} onDiscard={onClose} />}{showDeletePrompt && <DeleteTaskDialog taskTitle={taskItem.title} onCancel={onCancelDelete} onConfirm={onConfirmDelete} />}{subtaskToDelete && <DeleteTaskDialog taskTitle={subtaskToDelete.title} subject="subtarefa" onCancel={() => setSubtaskToDelete(null)} onConfirm={() => { setSubtaskToDelete(null); onDelete(subtaskToDelete.id); }} />}</aside></div>;
+ return <div className="drawer-layer" onMouseDown={(event) => { if (event.target === event.currentTarget) requestClose(); }}><aside className="task-drawer"><header className="drawer-header"><div><span className="eyebrow">Detalhe da tarefa</span><span className="drawer-code">{taskItem.quoteCode || "TAREFA"}</span></div><button className="icon-button" onClick={requestClose} aria-label="Fechar detalhe" disabled={saveState !== "idle"}><X size={19} /></button></header><div className="drawer-body"><div className="drawer-title"><input value={form.title} onChange={(event) => set("title", event.target.value)} aria-label="Título da tarefa" /><PriorityBadge priority={form.priority} /></div>{taskItem.quoteId && <button className="linked-record" onClick={() => onOpenQuote(taskItem.quoteId)}><FileText size={16} /><span><small>Cotação vinculada</small><strong>{taskItem.quoteCode} · {taskItem.quoteTitle}</strong></span><ArrowUpRight size={15} /></button>}<div className="drawer-field-grid"><label>Status<InputSelect value={form.status} onChange={(value) => set("status", value)} options={STATUS_OPTIONS} /></label><label>Prioridade<InputSelect value={form.priority} onChange={(value) => set("priority", value)} options={PRIORITY_OPTIONS} /></label><label>Responsável<InputSelect value={form.assigneeName} onChange={(value) => set("assigneeName", value)} options={assigneeOptions} placeholder="Não atribuído" /></label><label>Equipe<InputSelect value={form.teamName} onChange={(value) => set("teamName", value)} options={TEAM_OPTIONS} /></label><label>Prazo<input type="date" value={form.dueDate || ""} onChange={(event) => set("dueDate", event.target.value)} /></label></div>{form.status === "waiting" && <label className="drawer-blocked-field">Motivo do bloqueio<textarea value={form.blockedReason || ""} onChange={(event) => { set("blockedReason", event.target.value); setValidationError(""); }} rows="3" placeholder="O que está impedindo o avanço?" aria-label="Motivo do bloqueio" required /><small>Obrigatório enquanto tarefa estiver aguardando.</small></label>}{validationError && <div className="field-error" role="alert">{validationError}</div>}<label className="drawer-description">Descrição<textarea value={form.description} onChange={(event) => set("description", event.target.value)} rows="4" /></label><section className="drawer-section"><div className="drawer-section-heading"><h3>Subtarefas</h3><div className="drawer-heading-actions"><label className="checklist-visibility-toggle"><input type="checkbox" checked={showChecklistOnCard} onChange={(event) => onToggleChecklistOnCard(event.target.checked)} /><span>No quadro</span></label><button className="text-button" type="button" onClick={() => setIsAddingSubtask(true)}><Plus size={14} />Adicionar</button></div></div>{isAddingSubtask && <div className="subtask-inline-create"><span className="subtask-check" aria-hidden="true" /><input autoFocus value={newSubtaskTitle} onChange={(event) => setNewSubtaskTitle(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") submitSubtask(); if (event.key === "Escape") { setNewSubtaskTitle(""); setIsAddingSubtask(false); } }} placeholder="Digite o título da subtarefa" aria-label="Título da subtarefa" /><button className="subtask-inline-action" type="button" onClick={submitSubtask} disabled={!newSubtaskTitle.trim()} aria-label="Salvar subtarefa"><Check size={15} /></button></div>}{subtasks.length ? subtasks.map((subtask) => <div className="subtask-row" key={subtask.id}><button className="subtask-toggle" type="button" disabled={subtask.syncStatus === "syncing"} onClick={() => onSave(subtask.id, { status: subtask.status === "done" ? "todo" : "done" })}><span className={`subtask-check ${subtask.status === "done" ? "checked" : ""}`}>{subtask.status === "done" && <Check size={13} />}</span><span>{subtask.title}</span><small>{subtask.syncStatus === "syncing" ? "Sincronizando..." : formatDate(subtask.dueDate)}</small></button><button className="subtask-delete" type="button" disabled={subtask.syncStatus === "syncing"} onClick={(event) => { event.stopPropagation(); setSubtaskToDelete(subtask); }} aria-label="Excluir subtarefa" title="Excluir subtarefa"><Trash2 size={13} /></button></div>) : !isAddingSubtask && <div className="empty-inline">Nenhuma subtarefa adicionada.</div>}</section><section className="drawer-section"><div className="drawer-section-heading"><h3>Comentários</h3><span className="section-count">{taskItem.comments.length}</span></div>{taskItem.comments.map((item) => <div className={`comment-row ${isOwnComment(item) ? "comment-own" : ""} ${item.syncStatus === "syncing" ? "item-syncing" : ""}`} key={item.id}><Avatar name={item.author} small /><div><strong>{item.author}{item.syncStatus === "syncing" ? " · Enviando..." : ""}</strong><p>{item.text}</p></div></div>)}<div className="comment-compose"><div className="comment-mention-field"><textarea value={comment} onChange={(event) => setComment(event.target.value)} onKeyDown={(event) => { if (event.ctrlKey && event.key === "Enter") { event.preventDefault(); submitComment(); } if (event.key === "Escape") setComment((value) => value.replace(/(?:^|\s)@[^\s@]*$/, "")); }} placeholder="Adicione um comentário ou use @ para mencionar alguém..." rows="2" />{mentionSuggestions.length > 0 && <div className="mention-suggestions" role="listbox" aria-label="Responsáveis para mencionar">{mentionSuggestions.map((employee) => <button type="button" className="mention-suggestion" key={employee.id || employee.name} onMouseDown={(event) => event.preventDefault()} onClick={() => insertMention(employee)}><Avatar name={employee.name} small /><span>{employee.name}</span></button>)}</div>}</div><button className="button button-secondary" disabled={!comment.trim()} onClick={submitComment}><MessageCircle size={15} />Comentar</button></div></section><AttachmentSection taskId={taskItem.id} attachments={taskItem.attachments} loadAttachmentContent={loadAttachmentContent} onAttachment={onAttachment} onDeleteAttachment={onDeleteAttachment} /><section className="drawer-section history-section"><div className="drawer-section-heading"><h3>Histórico</h3></div>{history.slice(0, 5).map((item) => <div className="history-row" key={item.id}><span className="history-dot" /><div><strong>{item.text}</strong><small>{item.author} · agora</small></div></div>)}</section></div><footer className="drawer-footer"><button className="button button-danger task-delete-button" type="button" onClick={onRequestDelete} disabled={deleteState !== "idle" || saveState !== "idle"}><Trash2 size={15} />Excluir</button><button className="button button-quiet" onClick={requestClose} disabled={saveState !== "idle"}>Cancelar</button><button className="button button-primary" disabled={saveState !== "idle"} onClick={handleSave}>{saveState === "saving" ? "Salvando..." : <><Check size={16} />Salvar tarefa</>}</button></footer>{saveState === "success" && <div className="drawer-save-feedback" role="status" aria-live="polite"><div className="drawer-save-icon"><Check size={30} strokeWidth={2.5} /></div><strong>Tarefa salva</strong><span>Fechando detalhe…</span></div>}{deleteState === "deleting" && <div className="drawer-delete-feedback" role="status" aria-live="polite"><div className="drawer-delete-icon"><Trash2 size={30} strokeWidth={2.5} /></div><strong>Tarefa excluída</strong><span>Removendo do Planner…</span></div>}{showDiscardPrompt && <UnsavedChangesDialog onContinue={() => setShowDiscardPrompt(false)} onDiscard={onClose} />}{showDeletePrompt && <DeleteTaskDialog taskTitle={taskItem.title} onCancel={onCancelDelete} onConfirm={onConfirmDelete} />}{subtaskToDelete && <DeleteTaskDialog taskTitle={subtaskToDelete.title} subject="subtarefa" onCancel={() => setSubtaskToDelete(null)} onConfirm={() => { setSubtaskToDelete(null); onDelete(subtaskToDelete.id); }} />}</aside></div>;
 }
 
 function TaskDrawer({ task, onDelete, ...props }) {
@@ -788,15 +881,21 @@ export default function App() {
     if (!files.length) return Promise.resolve(false);
     return files.reduce((queue, file, index) => queue.then(() => {
       const baseState = confirmedStateRef.current || state;
-      const previewUrl = String(file?.type || "").startsWith("image/") && globalThis.URL?.createObjectURL ? globalThis.URL.createObjectURL(file) : "";
+      const previewUrl = globalThis.URL?.createObjectURL ? globalThis.URL.createObjectURL(file) : "";
       return runOptimisticMutation(
         (current) => addOptimisticAttachment(current, id, file, previewUrl),
-        () => Promise.resolve(store.addAttachment(baseState, id, file)).then((result) => mergeAttachmentDetailsIntoState(baseState, id, result)),
+        () => Promise.resolve(store.addAttachment(baseState, id, file, previewUrl)).then((result) => mergeAttachmentDetailsIntoState(baseState, id, result)),
         files.length > 1 ? `Anexo ${index + 1} de ${files.length} na fila...` : (store.live ? "Anexo em envio..." : "Anexo adicionado no mock local."),
         files.length > 1 ? `Anexo ${index + 1} de ${files.length} salvo.` : (store.live ? "Anexo salvo no SharePoint." : "Anexo salvo localmente."),
       );
     }), Promise.resolve(true));
   }, [state, store, runOptimisticMutation]);
+  const removeAttachment = useCallback((taskId, attachment) => runOptimisticMutation(
+    (current) => ({ ...current, tasks: current.tasks.map((taskItem) => taskItem.id === taskId ? { ...taskItem, attachments: (taskItem.attachments || []).filter((item) => item.id !== attachment.id) } : taskItem) }),
+    () => Promise.resolve(store.deleteAttachment(confirmedStateRef.current || state, taskId, attachment)),
+    store.live ? "Anexo removido. Sincronizando SharePoint..." : "Anexo removido no mock local.",
+    store.live ? "Anexo removido do SharePoint." : "Anexo removido localmente.",
+  ), [state, store, runOptimisticMutation]);
   const workItems = useMemo(() => normalizeWorkItems(state || {}), [state?.tasks, state?.quality]);
   const currentEmployee = resolveCurrentEmployee(state.employees, store.live);
   const onTaskScopeChange = useCallback((scope) => {

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { addAttachment, addComment, createTask, deleteTask, ensureQuoteTask, seedState, updateTask } from "../src/mockStore.js";
+import { addAttachment, addComment, createTask, deleteAttachment, deleteTask, ensureQuoteTask, seedState, updateTask } from "../src/mockStore.js";
 
 function withStorage() {
   const values = new Map();
@@ -39,6 +39,17 @@ test("adiciona comentário e anexo mock", () => {
   assert.equal(task.comments.length, 3);
   assert.equal(task.attachments.length, 3);
   assert.equal(task.attachments.at(-1).name, "confirmacao.png");
+});
+
+test("remove somente o anexo selecionado no mock", () => {
+  withStorage();
+  const initial = seedState();
+  const task = initial.tasks.find((item) => item.id === "task-1");
+  const attachmentId = task.attachments[0].id;
+  const next = deleteAttachment(initial, task.id, attachmentId);
+  const updatedTask = next.tasks.find((item) => item.id === task.id);
+  assert.equal(updatedTask.attachments.some((attachment) => attachment.id === attachmentId), false);
+  assert.equal(updatedTask.attachments.length, task.attachments.length - 1);
 });
 
 test("exclui somente a tarefa selecionada no mock", () => {

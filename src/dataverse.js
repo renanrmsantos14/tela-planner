@@ -2,6 +2,7 @@ import {
   addAttachment as addMockAttachment,
   addComment as addMockComment,
   createTask as createMockTask,
+  deleteAttachment as deleteMockAttachment,
   deleteTask as deleteMockTask,
   ensureQuoteTask as ensureMockQuoteTask,
   loadState as loadMockState,
@@ -25,6 +26,7 @@ const ENVIRONMENT_VARIABLE_DEFINITION_TABLE = "environmentvariabledefinition";
 const ENVIRONMENT_VARIABLE_VALUE_TABLE = "environmentvariablevalue";
 const FLOW_URL_SCHEMA = "new_URLFlowsalvararquivosSharePoint";
 const READ_FLOW_URL_SCHEMA = "new_URLFlowConsultarArquivosSharePoint";
+const DELETE_FLOW_URL_SCHEMA = "new_URLFlowExcluirArquivoSharePoint";
 const DEV_DATAVERSE_URL = "https://org23b93544.crm2.dynamics.com";
 const MAX_ATTACHMENT_SIZE = 5 * 1024 * 1024;
 const MAX_IMAGE_EDGE = 1600;
@@ -146,6 +148,10 @@ async function resolveSharePointFlowUrl(xrm) {
 
 async function resolveSharePointReadFlowUrl(xrm) {
   return resolveEnvironmentVariableUrl(xrm, READ_FLOW_URL_SCHEMA);
+}
+
+async function resolveSharePointDeleteFlowUrl(xrm) {
+  return resolveEnvironmentVariableUrl(xrm, DELETE_FLOW_URL_SCHEMA, String(import.meta.env?.VITE_FLOW_EXCLUIR_ANEXO_SHAREPOINT_URL || ""));
 }
 
 async function resolveLookupNavigation(xrm, entity, attribute, target) {
@@ -498,6 +504,18 @@ async function loadLiveAttachmentContent(xrm, attachment) {
   return { ...attachment, mimeType, dataUrl: `data:${mimeType};base64,${result.conteudoBase64}` };
 }
 
+async function deleteLiveAttachment(xrm, state, taskId, attachment) {
+  const flowUrl = await resolveSharePointDeleteFlowUrl(xrm);
+  if (!flowUrl) throw new Error(`URL do Flow de exclusão não configurada: ${DELETE_FLOW_URL_SCHEMA}.`);
+  if (!attachment?.sharePointId && !attachment?.fileLocator && !attachment?.path) throw new Error("Anexo sem identificador ou caminho SharePoint.");
+  const response = await fetch(flowUrl, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: attachment.sharePointId || "", fileLocator: attachment.fileLocator || "", caminhoSharePoint: attachment.path || "", nomeArquivo: attachment.name || "", tarefaId: taskId }) });
+  const responseText = await response.text();
+  const result = extractFlowRecord(responseText) || {};
+  if (!response.ok || result.sucesso !== true) throw new Error(result.erro || `Flow de exclusão SharePoint falhou: HTTP ${response.status}.`);
+  if (attachment.eventId) await request(xrm, `/${entitySetName(EVENT_TABLE)}(${cleanId(attachment.eventId)})`, { method: "DELETE" });
+  return loadLiveState(xrm);
+}
+
 async function createLiveSubtask(xrm, state, parentId, input) {
   const nextState = await createLiveTask(xrm, state, { ...input, parentTaskId: parentId, sourceType: input.sourceType || "manual", sourceCode: input.sourceCode || "" });
   const child = nextState.tasks.find((item) => item.title === input.title.trim() && !item.parentTaskId);
@@ -581,7 +599,8 @@ function createMockDataStore() {
     updateTask: async (state, id, patch) => withMode(updateMockTask(state, id, patch)),
     deleteTask: async (state, id) => withMode(deleteMockTask(state, id)),
     addComment: async (state, id, text) => withMode(addMockComment(state, id, text)),
-    addAttachment: async (state, id, file) => withMode(addMockAttachment(state, id, file?.name || "Arquivo")),
+    addAttachment: async (state, id, file, previewUrl = "") => withMode(addMockAttachment(state, id, { name: file?.name || "Arquivo", mimeType: file?.type || "", size: file?.size || 0, previewUrl })),
+    deleteAttachment: async (state, taskId, attachment) => withMode(deleteMockAttachment(state, taskId, attachment?.id)),
     ensureQuoteTask: async (state, quote) => withMode(ensureMockQuoteTask(state, quote)),
     save: async (state) => persist(state),
     reset: async () => withMode(resetMockState()),
@@ -614,6 +633,7 @@ export function createDataStore() {
     deleteTask: (state, id) => deleteLiveTask(xrm, state, id),
     addComment: (state, id, text) => addLiveComment(xrm, id, text),
     addAttachment: (state, id, file) => addLiveAttachment(xrm, id, file),
+    deleteAttachment: (state, taskId, attachment) => deleteLiveAttachment(xrm, state, taskId, attachment),
     ensureQuoteTask: (state, quote) => ensureLiveQuoteTask(xrm, state, quote),
     save: (state) => loadLiveState(xrm),
     reset: () => loadLiveState(xrm),
