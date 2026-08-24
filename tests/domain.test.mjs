@@ -39,6 +39,17 @@ test("resolve menções por nome ignorando acentos e caixa", () => {
   assert.deepEqual(mentionedEmployees("@CAMILA TORRES revisar e @joao mendes validar", employees).map((item) => item.id), ["1", "2"]);
 });
 
+test("resolve @all e @todos como menção para toda a equipe", () => {
+  const employees = [{ id: "1", name: "Camila Torres" }, { id: "2", name: "João Mendes" }];
+  assert.deepEqual(mentionedEmployees("Aviso: @all", employees).map((item) => item.id), ["1", "2"]);
+  assert.deepEqual(mentionedEmployees("Atenção (@todos)!", employees).map((item) => item.id), ["1", "2"]);
+});
+
+test("resolve menção pelo apelido carregado do funcionário", () => {
+  const employees = [{ id: "1", name: "Renan Martins", apelido: "Renan" }];
+  assert.deepEqual(mentionedEmployees("@renan revisar", employees).map((item) => item.id), ["1"]);
+});
+
 test("normaliza múltiplos responsáveis", () => {
   assert.deepEqual(normalizeAssigneeNames(["Não atribuído", "Marina", "Marina", "Rafael"]), ["Marina", "Rafael"]);
   assert.deepEqual(normalizeAssigneeNames([]), ["Não atribuído"]);

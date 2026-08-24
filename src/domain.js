@@ -88,9 +88,10 @@ export function buildTaskCreationInput(input = {}) {
 
 export function mentionedEmployees(text, employees = []) {
   const normalizedText = normalizeText(text);
+  if (/(^|[^a-z0-9_])@(all|todos)(?=$|[^a-z0-9_])/i.test(normalizedText)) return employees;
   return employees.filter((employee) => {
-    const name = normalizeText(employee?.name);
-    return name && normalizedText.includes(`@${name}`);
+    const names = [employee?.name, employee?.apelido, employee?.mentionSearchText].filter(Boolean).map(normalizeText);
+    return names.some((name) => new RegExp(`(^|[^a-z0-9_])@${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?=$|[^a-z0-9_])`, "i").test(normalizedText));
   });
 }
 

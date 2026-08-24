@@ -313,7 +313,7 @@ function measureStage(name, operation) {
 }
 
 function buildCoreState(xrm, rows, relations, assigneeRelations, employees) {
-  const employeeRecords = employees.map((row) => ({ id: row.cr40f_funcionariosid, name: row.cr40f_nomecompleto || row.new_apelido || "Sem nome", userId: row._cr40f_usuariodataverse_value || "", externalNotificationsAvailable: Boolean(row._cr40f_usuariodataverse_value) }));
+  const employeeRecords = employees.map((row) => ({ id: row.cr40f_funcionariosid, name: row.cr40f_nomecompleto || row.new_apelido || "Sem nome", apelido: row.new_apelido || "", mentionSearchText: [row.cr40f_nomecompleto, row.new_apelido].filter(Boolean).join(" "), userId: row._cr40f_usuariodataverse_value || "", externalNotificationsAvailable: Boolean(row._cr40f_usuariodataverse_value) }));
   const employeeById = new Map(employeeRecords.map((employee) => [cleanId(employee.id).toLowerCase(), employee]));
   const relationByChild = new Map(relations.map(normalizeRelation).map((item) => [item.childTaskId, item.parentTaskId]));
   const assigneesByTask = new Map();
@@ -390,7 +390,7 @@ async function loadLiveState(xrm) {
     retrieveMany(xrm, QUALITY_ACTION_TABLE, "?$select=cr40f_acaooperacionalid,cr40f_titulo,cr40f_descricao,cr40f_status,cr40f_prazo,_cr40f_responsavel_value&$filter=statecode eq 0&$orderby=createdon desc"),
     retrieveMany(xrm, EMPLOYEE_TABLE, "?$select=cr40f_funcionariosid,cr40f_nomecompleto,new_apelido,_cr40f_usuariodataverse_value&$filter=statecode eq 0 and cr40f_status eq 0 and cr40f_funcao eq 202410001&$orderby=cr40f_nomecompleto asc"),
   ]);
-  const employeeRecords = employees.map((row) => ({ id: row.cr40f_funcionariosid, name: row.cr40f_nomecompleto || row.new_apelido || "Sem nome", userId: row._cr40f_usuariodataverse_value || "", externalNotificationsAvailable: Boolean(row._cr40f_usuariodataverse_value) }));
+  const employeeRecords = employees.map((row) => ({ id: row.cr40f_funcionariosid, name: row.cr40f_nomecompleto || row.new_apelido || "Sem nome", apelido: row.new_apelido || "", mentionSearchText: [row.cr40f_nomecompleto, row.new_apelido].filter(Boolean).join(" "), userId: row._cr40f_usuariodataverse_value || "", externalNotificationsAvailable: Boolean(row._cr40f_usuariodataverse_value) }));
   const employeeById = new Map(employeeRecords.map((employee) => [cleanId(employee.id).toLowerCase(), employee]));
   const relationByChild = new Map(relations.map(normalizeRelation).map((item) => [item.childTaskId, item.parentTaskId]));
   const assigneesByTask = new Map();
