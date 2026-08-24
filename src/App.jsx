@@ -1,16 +1,17 @@
 import React, { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, lazy, Suspense, memo } from "react";
 import { createPortal } from "react-dom";
 import {
-  ArrowUpRight, BellRing, CalendarDays, Check, CheckCircle2, ChevronDown, ChevronRight, CircleHelp, ClipboardList, ListChecks, Trash2,
+  ArrowUpRight, BellRing, CalendarDays, Check, CheckCircle2, ChevronDown, ChevronRight, ClipboardList, ListChecks, Trash2,
   Clock3, File, FileArchive, FileImage, FileSpreadsheet, FileText, LayoutDashboard, ListFilter, LoaderCircle, Menu, MessageCircle, Paperclip, PanelLeftClose,
   PanelLeftOpen, Plus, RotateCcw, Search, Settings, ShieldAlert, Sparkles, Target, UserRound, Users, X,
   UploadCloud,
 } from "lucide-react";
-import { addOptimisticAttachment, addOptimisticComment, applyOptimisticTaskPatch, buildAssigneeOptions, buildEmployeeAssigneeOptions, buildOptimisticTask, buildTaskCreationInput, filterTasks, formatDate, formatLongDate, isBlocked, isDueToday, isOverdue, mentionedEmployees, normalizeAssigneeNames, normalizeText, PRIORITIES, quoteTaskTitle, sortTasks, sourceById, STATUSES, statusById, TASK_SOURCES, taskStats } from "./domain";
+import { addOptimisticAttachment, addOptimisticComment, applyOptimisticTaskPatch, buildAssigneeOptions, buildEmployeeAssigneeOptions, buildOptimisticTask, buildTaskCreationInput, filterTasks, formatDate, formatLongDate, isDueToday, isOverdue, mentionedEmployees, normalizeAssigneeNames, normalizeText, PRIORITIES, quoteTaskTitle, sortTasks, sourceById, STATUSES, statusById, TASK_SOURCES, taskStats } from "./domain";
 import { createDataStore } from "./dataverse";
 import SearchableSelect, { SearchableMultiSelect } from "./SearchableSelect.jsx";
 import CentralView from "./CentralView.jsx";
 import AssigneeDisplay from "./AssigneeDisplay.jsx";
+import { MentionableField, useMentionController } from "./MentionableField.jsx";
 import LoadingFallback from "./LoadingFallback.jsx";
 import { filterWorkItems, isAssignedToEmployee, normalizeWorkItems, workItemStats } from "./workItems.js";
 import { APP_VERSION } from "./version.js";
@@ -36,6 +37,10 @@ const CALENDAR_WEEKDAY_FORMATTER = new Intl.DateTimeFormat("pt-BR", { weekday: "
 const TODAY_LABEL_FORMATTER = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short" });
 const CHECKLIST_VISIBILITY_STORAGE_KEY = "betinhos-tela-planner-checklist-visibility-v1";
 let plannerQuoteSearch = null;
+
+function createDefaultFilters() {
+  return { query: "", assignee: [], status: [], priority: [], source: [], team: "" };
+}
 
 function readChecklistVisibility() {
   try { return JSON.parse(localStorage.getItem(CHECKLIST_VISIBILITY_STORAGE_KEY) || "{}"); } catch { return {}; }
@@ -124,8 +129,9 @@ function DeleteTaskDialog({ taskTitle, onCancel, onConfirm, subject = "tarefa" }
   return <div className="drawer-confirm-layer" onMouseDown={(event) => event.stopPropagation()}><div className="drawer-confirm" role="dialog" aria-modal="true" aria-labelledby="delete-task-title"><h2>Excluir {subject}?</h2><p>“{taskTitle}” será removida do Planner. Esta ação não pode ser desfeita.</p><div className="drawer-confirm-actions"><button className="button button-quiet" type="button" onClick={onCancel}>Cancelar</button><button className="button button-danger" type="button" onClick={onConfirm}>Excluir {subject}</button></div></div></div>;
 }
 
-function AppShell({ active, onNavigate, children, onCreate, tasks, live, currentEmployee, personalStats, openTaskCount }) {
+function AppShell({ active, onNavigate, children, onCreate, tasks, live, currentEmployee, personalStats, openTaskCount, mentionEmployees = [] }) {
   const [expanded, setExpanded] = useState(true);
+  useMentionController(mentionEmployees.length ? mentionEmployees : globalThis.__plannerEmployees || []);
   const stats = personalStats || taskStats(tasks);
   const todayLabel = TODAY_LABEL_FORMATTER.format(new Date()).replace(".", "");
   const userName = currentEmployee?.name || "Usuário não vinculado";
@@ -160,12 +166,8 @@ function TaskScopeSelector({ active, onSelect, disabled = false }) {
   return <div className="task-scope-selector" aria-label="Escopo das tarefas"><button className={active === "all" ? "task-scope-button active" : "task-scope-button"} type="button" onClick={() => onSelect("all")} aria-pressed={active === "all"}><Users size={14} />Todas</button><button className={active === "mine" ? "task-scope-button active" : "task-scope-button"} type="button" onClick={() => onSelect("mine")} aria-pressed={active === "mine"} disabled={disabled} title={disabled ? "Usuário atual não identificado" : "Filtrar minhas tarefas"}><UserRound size={14} />Minhas</button></div>;
 }
 
-function openTasksOnly(tasks) {
-  return tasks.filter((taskItem) => !["done", "cancelled"].includes(taskItem.status));
-}
-
-function tasksForView(tasks, filters) {
-  return filters.status?.length ? tasks : openTasksOnly(tasks);
+function tasksForView(tasks) {
+  return tasks;
 }
 
 const LIST_SORT_COLUMNS = [
@@ -203,7 +205,6 @@ const TaskCard = memo(function TaskCard({ task: taskItem, subtasks = [], current
     <div className="task-card-top"><PriorityBadge priority={taskItem.priority} />{overdue && <span className="overdue-label">Vencida</span>}{canOpen && <button className="card-open" onClick={(event) => { event.stopPropagation(); onOpen(taskItem.id); }} aria-label="Abrir tarefa"><ArrowUpRight size={15} /></button>}</div>
     <h3>{taskItem.title}</h3>
     {(taskItem.sourceType || taskItem.quoteId) && <div className="task-source-row"><SourceBadge sourceType={taskItem.sourceType || (taskItem.quoteId ? "quote" : "manual")} /><span>{taskItem.sourceCode || taskItem.quoteCode}</span><em>{taskItem.sourceLabel || taskItem.quoteTitle}</em></div>}
-    {isBlocked(taskItem) && <div className="blocked-note"><CircleHelp size={13} />Bloqueada: {taskItem.blockedReason}</div>}
     {mentionCount > 0 && <div className="task-mention-alert"><BellRing size={13} /><span>Você foi acionado</span>{mentionCount > 1 && <strong>{mentionCount}</strong>}</div>}
     {showChecklistOnCard && subtasks.length > 0 && <div className="task-checklist" aria-label={`Checklist: ${completedSubtasks} de ${subtasks.length} concluídas`}><div className="task-checklist-heading"><span><ListChecks size={13} />Checklist</span><strong>{completedSubtasks}/{subtasks.length}</strong></div><div className="task-checklist-items">{visibleSubtasks.map((subtask) => { const completed = subtask.status === "done"; return <button className={`task-checklist-item ${completed ? "is-complete" : ""}`} key={subtask.id} type="button" aria-pressed={completed} disabled={subtask.syncStatus === "syncing"} onClick={(event) => { event.stopPropagation(); onToggleSubtask?.(subtask.id, { status: completed ? "todo" : "done" }); }}><span className="task-checklist-box">{completed && <Check size={10} strokeWidth={3} />}</span><span>{subtask.title}</span></button>; })}</div>{subtasks.length > visibleSubtasks.length && <span className="task-checklist-more">+{subtasks.length - visibleSubtasks.length} itens</span>}</div>}
     <div className="task-card-footer"><AssigneeDisplay value={taskItem.assigneeProfiles?.length ? taskItem.assigneeProfiles : taskItem.assigneeNames || taskItem.assigneeName} small />{taskItem.syncStatus === "syncing" ? <span className="sync-chip" role="status">Enviando...</span> : <span className={overdue ? "date-chip overdue" : "date-chip"}><Clock3 size={13} />{formatDate(taskItem.dueDate)}</span>}{showQuickComplete && !["done", "cancelled"].includes(taskItem.status) && <button className="task-quick-action" type="button" onClick={(event) => { event.stopPropagation(); onComplete?.(taskItem.id); }}>Concluir</button>}</div>
@@ -256,7 +257,18 @@ const Board = memo(function Board({ tasks, subtasksByParent, currentEmployee, ch
     layoutAnimationsRef.current.forEach((animation) => animation.cancel());
     layoutAnimationsRef.current.clear();
     const nextRects = new Map(cards.map((card) => [card.dataset.taskId, card.getBoundingClientRect()]));
+    const motionDuration = globalThis.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ? 1 : undefined;
     const pendingTransfer = pendingTransferRef.current;
+    if (pendingTransfer && !pendingTransfer.ready) {
+      const movedCard = cards.find((card) => card.dataset.taskId === pendingTransfer.id);
+      const movedNext = movedCard && nextRects.get(pendingTransfer.id);
+      const movedStatusId = movedCard?.closest(".board-column")?.dataset.statusId;
+      if (movedCard && movedNext && pendingTransfer.slotRect && movedStatusId === pendingTransfer.statusId && typeof movedCard.animate === "function") {
+        const slotTransform = `translate(${pendingTransfer.slotRect.left - movedNext.left}px, ${pendingTransfer.slotRect.top - movedNext.top}px)`;
+        layoutAnimationsRef.current.set(pendingTransfer.id, movedCard.animate([{ transform: slotTransform }], { duration: motionDuration ?? 1, fill: "both", composite: "replace" }));
+      }
+      return;
+    }
     if (pendingTransfer) {
       const movedCard = cards.find((card) => card.dataset.taskId === pendingTransfer.id);
       const movedNext = movedCard && nextRects.get(pendingTransfer.id);
@@ -275,9 +287,10 @@ const Board = memo(function Board({ tasks, subtasksByParent, currentEmployee, ch
           let duration = DRAG_REORDER_DURATION;
           if (isMovedCard) {
             const slotTransform = `translate(${pendingTransfer.slotRect.left - movedNext.left}px, ${pendingTransfer.slotRect.top - movedNext.top}px)`;
+            const entryTransform = `${slotTransform} translateY(-6px) scale(.97)`;
             keyframes = [
-              { transform: fromTransform, offset: 0, easing: DRAG_TRANSFER_EASING },
-              { transform: slotTransform, offset: transferOffset },
+              { transform: entryTransform, opacity: 0, offset: 0, easing: DRAG_TRANSFER_EASING },
+              { transform: slotTransform, opacity: 1, offset: transferOffset },
               { transform: slotTransform, offset: reorderOffset, easing: DRAG_REORDER_EASING },
               { transform: "translate(0, 0)", offset: 1 },
             ];
@@ -294,7 +307,7 @@ const Board = memo(function Board({ tasks, subtasksByParent, currentEmployee, ch
             keyframes = [{ transform: fromTransform }, { transform: "translate(0, 0)" }];
           }
           if (!keyframes) return;
-          layoutAnimationsRef.current.set(card.dataset.taskId, card.animate(keyframes, { duration, easing: "linear", fill: "both", composite: "replace" }));
+           layoutAnimationsRef.current.set(card.dataset.taskId, card.animate(keyframes, { duration: motionDuration ?? duration, easing: "linear", fill: "both", composite: "replace" }));
         });
         pendingTransferRef.current = null;
         animateLayoutRef.current = false;
@@ -308,13 +321,13 @@ const Board = memo(function Board({ tasks, subtasksByParent, currentEmployee, ch
         const previous = cardRectsRef.current.get(card.dataset.taskId);
         const next = nextRects.get(card.dataset.taskId);
         if (!previous || !next || typeof card.animate !== "function" || (Math.abs(previous.top - next.top) < 1 && Math.abs(previous.left - next.left) < 1)) return;
-        const animation = card.animate([{ transform: `translate(${previous.left - next.left}px, ${previous.top - next.top}px)` }, { transform: "translate(0, 0)" }], { duration: DRAG_REORDER_DURATION, easing: DRAG_REORDER_EASING, fill: "both", composite: "replace" });
+        const animation = card.animate([{ transform: `translate(${previous.left - next.left}px, ${previous.top - next.top}px)` }, { transform: "translate(0, 0)" }], { duration: motionDuration ?? DRAG_REORDER_DURATION, easing: DRAG_REORDER_EASING, fill: "both", composite: "replace" });
         layoutAnimationsRef.current.set(card.dataset.taskId, animation);
       });
       animateLayoutRef.current = false;
     }
     cardRectsRef.current = nextRects;
-  }, [dragState?.statusId, dragState?.insertAt, dropExit, tasks]);
+  }, [dragState?.statusId, dragState?.insertAt, dropExit, dropFeedback?.phase, tasks]);
   useEffect(() => {
     if (!dropExit) return undefined;
     const timer = window.setTimeout(() => {
@@ -356,12 +369,10 @@ const Board = memo(function Board({ tasks, subtasksByParent, currentEmployee, ch
     const task = tasks.find((item) => item.id === id);
     const sourceStatusId = dragState?.sourceStatusId || task?.status;
     const shouldAttemptMove = id && !id.startsWith("optimistic-") && sourceStatusId !== statusId;
-    const moveRequiresReason = statusId === "waiting" && !String(task?.blockedReason || "").trim();
-    const canMove = shouldAttemptMove && !moveRequiresReason;
+    const canMove = shouldAttemptMove;
     const slotRect = getExitMetrics();
-    if (canMove) animateLayoutRef.current = true;
     if (canMove && dragState) {
-      pendingTransferRef.current = { id, statusId, slotRect };
+      pendingTransferRef.current = { id, statusId, slotRect, ready: false };
       setDropFeedback({ id, statusId, phase: "loading" });
       setDropExit(null);
     } else if (dragState) {
@@ -369,7 +380,6 @@ const Board = memo(function Board({ tasks, subtasksByParent, currentEmployee, ch
     }
     setDragState(null);
     if (shouldAttemptMove) {
-      const startedAt = performance.now();
       Promise.resolve(onMove(id, statusId)).then((success) => {
         const finish = () => {
           feedbackTimerRef.current = null;
@@ -382,11 +392,11 @@ const Board = memo(function Board({ tasks, subtasksByParent, currentEmployee, ch
           setDropFeedback((current) => current?.id === id ? { ...current, phase: "success" } : current);
           feedbackClearTimerRef.current = window.setTimeout(() => {
             feedbackClearTimerRef.current = null;
+            if (pendingTransferRef.current?.id === id) pendingTransferRef.current = { ...pendingTransferRef.current, ready: true };
             setDropFeedback((current) => current?.id === id ? null : current);
           }, 520);
         };
-        const waitForAnimation = Math.max(0, DRAG_TOTAL_DURATION - (performance.now() - startedAt));
-        feedbackTimerRef.current = window.setTimeout(finish, success ? waitForAnimation : 0);
+        feedbackTimerRef.current = window.setTimeout(finish, 0);
       });
     }
   }, [clearFeedbackTimers, dragState, getExitMetrics, onMove, tasks]);
@@ -401,29 +411,12 @@ const Board = memo(function Board({ tasks, subtasksByParent, currentEmployee, ch
   return <div className="board-grid" ref={boardRef}>{STATUSES.map((status) => { const items = tasks.filter((taskItem) => taskItem.status === status.id); const visibleDropState = dragState || dropExit; const isExiting = !dragState && Boolean(dropExit); const hasExitMetrics = isExiting && visibleDropState.slotRect; const showDropSlot = Boolean(visibleDropState && (!visibleDropState.isMove || dragState) && visibleDropState.sourceStatusId !== status.id && visibleDropState.statusId === status.id); const dropSlot = showDropSlot ? <div className={`drop-placeholder card-drop-placeholder ${hasExitMetrics ? "is-exiting" : ""}`} style={{ "--drop-slot-height": `${Math.max(76, visibleDropState.height || 96)}px`, ...(hasExitMetrics ? { "--drop-slot-top": `${visibleDropState.slotRect.localTop}px`, "--drop-slot-left": `${visibleDropState.slotRect.localLeft}px`, "--drop-slot-width": `${visibleDropState.slotRect.width}px` } : {}) }} aria-label={`Espaço para soltar em ${status.label}`}><Plus size={17} aria-hidden="true" /><span>Solte aqui</span></div> : null; return <section className={`board-column ${showDropSlot ? "is-drop-target" : ""}`} data-status-id={status.id} key={status.id} onDragOver={(event) => handleDragOver(status.id, event)} onDrop={(event) => handleDrop(status.id, event)} onDragEnd={clearDrag}><div className="column-header"><div><span className={`column-marker marker-${status.tone}`} /><h2>{status.label}</h2><span className="column-count">{items.length}</span></div><button className="icon-button" type="button" onClick={onCreate} aria-label={`Criar tarefa em ${status.label}`}><Plus size={16} /></button></div><div className="column-body">{items.map((taskItem, index) => <React.Fragment key={taskItem.id}>{showDropSlot && visibleDropState.insertAt === index && dropSlot}<TaskCard task={taskItem} subtasks={subtasksByParent.get(taskItem.id) || []} currentEmployee={currentEmployee} showChecklistOnCard={checklistVisibility[taskItem.id]} onOpen={onOpen} onToggleSubtask={onToggleSubtask} isDragging={dragState?.id === taskItem.id} dropFeedback={dropFeedback?.id === taskItem.id ? dropFeedback.phase : ""} onDragStart={handleDragStart} onDragEnd={clearDrag} /></React.Fragment>)}{showDropSlot && visibleDropState.insertAt >= items.length && dropSlot}{!items.length && !showDropSlot && <div className="drop-placeholder"><Plus size={17} /><span>Arraste tarefas para cá</span></div>}</div></section>; })}</div>;
 });
 
-function ActiveFilterChips({ filters, setFilters, assigneeOptions }) {
-  const chips = [];
-  const removeValue = (key, value) => setFilters((current) => ({ ...current, [key]: (Array.isArray(current[key]) ? current[key] : []).filter((item) => item !== value) }));
-  const addMultiValueChips = (key, prefix, options) => (filters[key] || []).forEach((value) => chips.push({ key: `${key}-${value}`, label: `${prefix}: ${options.find((option) => option.value === value)?.label || value}`, onRemove: () => removeValue(key, value) }));
-
-  if (filters.query) chips.push({ key: "query", label: `Busca: ${filters.query}`, onRemove: () => setFilters((current) => ({ ...current, query: "" })) });
-  addMultiValueChips("assignee", "Responsável", assigneeOptions.map((name) => ({ value: name, label: name })));
-  addMultiValueChips("status", "Status", TASK_FILTER_STATUS_OPTIONS);
-  addMultiValueChips("priority", "Prioridade", PRIORITY_OPTIONS);
-  addMultiValueChips("source", "Origem", SOURCE_OPTIONS);
-  if (filters.team) chips.push({ key: "team", label: `Equipe: ${filters.team}`, onRemove: () => setFilters((current) => ({ ...current, team: "" })) });
-  if (filters.blocked) chips.push({ key: "blocked", label: "Bloqueadas", onRemove: () => setFilters((current) => ({ ...current, blocked: false })) });
-
-  if (!chips.length) return null;
-  return <div className="active-filter-chips" aria-label="Filtros ativos">{chips.map((chip) => <button className="active-filter-chip" key={chip.key} type="button" onClick={chip.onRemove}><span>{chip.label}</span><X size={12} aria-hidden="true" /></button>)}</div>;
-}
-
 const FilterBar = memo(function FilterBar({ filters, setFilters, onCreate, employees = [] }) {
   const [expanded, setExpanded] = useState(false);
   const assigneeOptions = useMemo(() => buildAssigneeOptions(employees), [employees]);
   const teamOptions = useMemo(() => TEAM_OPTIONS.map((team) => ({ value: team, label: team })), []);
-  const activeFilterCount = [filters.query, filters.assignee?.length, filters.status?.length, filters.priority?.length, filters.source?.length, filters.team, filters.blocked].filter(Boolean).length;
-  return <div className={`filter-bar ${expanded ? "is-expanded" : "is-collapsed"}`}><button className="filter-toggle" type="button" onClick={() => setExpanded((value) => !value)} aria-expanded={expanded}><ListFilter size={15} /><span>Filtros</span>{activeFilterCount > 0 && <b>{activeFilterCount}</b>}<ChevronDown size={15} /></button><div className="search-field filter-search"><Search size={16} /><input value={filters.query} onChange={(event) => setFilters((current) => ({ ...current, query: event.target.value }))} placeholder="Buscar tarefas, cotações, qualidade ou pessoas" /></div><div className="filter-bar-content"><SearchableMultiSelect value={filters.assignee} onChange={(value) => setFilters((current) => ({ ...current, assignee: value }))} placeholder="Todos os responsáveis" options={assigneeOptions.map((name) => ({ value: name, label: name }))} /><SearchableMultiSelect value={filters.status} onChange={(value) => setFilters((current) => ({ ...current, status: value }))} placeholder={filters.status?.length ? "Status selecionados" : "Não concluídas"} options={TASK_FILTER_STATUS_OPTIONS} /><SearchableMultiSelect value={filters.priority} onChange={(value) => setFilters((current) => ({ ...current, priority: value }))} placeholder="Todas as prioridades" options={PRIORITY_OPTIONS} /><SearchableMultiSelect value={filters.source} onChange={(value) => setFilters((current) => ({ ...current, source: value }))} placeholder="Todas as origens" options={SOURCE_OPTIONS} /><SearchableSelect value={filters.team || ""} onChange={(value) => setFilters((current) => ({ ...current, team: value }))} placeholder="Todas as equipes" options={teamOptions} /><button className={`button ${filters.blocked ? "button-secondary" : "button-quiet"}`} type="button" onClick={() => setFilters((current) => ({ ...current, blocked: !current.blocked }))}><CircleHelp size={15} />Bloqueadas</button><button className="button button-primary" type="button" onClick={onCreate}><Plus size={16} />Nova tarefa</button></div><ActiveFilterChips filters={filters} setFilters={setFilters} assigneeOptions={assigneeOptions} /></div>;
+  const activeFilterCount = [filters.query, filters.assignee?.length, filters.status?.length, filters.priority?.length, filters.source?.length, filters.team].filter(Boolean).length;
+  return <div className={`filter-bar ${expanded ? "is-expanded" : "is-collapsed"}`}><button className="filter-toggle" type="button" onClick={() => setExpanded((value) => !value)} aria-expanded={expanded}><ListFilter size={15} /><span>Filtros</span>{activeFilterCount > 0 && <b>{activeFilterCount}</b>}<ChevronDown size={15} /></button><div className="search-field filter-search"><Search size={16} /><input value={filters.query} onChange={(event) => setFilters((current) => ({ ...current, query: event.target.value }))} placeholder="Buscar tarefas, cotações, qualidade ou pessoas" /></div><div className="filter-bar-content"><SearchableMultiSelect value={filters.assignee} onChange={(value) => setFilters((current) => ({ ...current, assignee: value }))} placeholder="Todos os responsáveis" options={assigneeOptions.map((name) => ({ value: name, label: name }))} /><SearchableMultiSelect value={filters.status} onChange={(value) => setFilters((current) => ({ ...current, status: value }))} placeholder="Todos os status" options={TASK_FILTER_STATUS_OPTIONS} /><SearchableMultiSelect value={filters.priority} onChange={(value) => setFilters((current) => ({ ...current, priority: value }))} placeholder="Todas as prioridades" options={PRIORITY_OPTIONS} /><SearchableMultiSelect value={filters.source} onChange={(value) => setFilters((current) => ({ ...current, source: value }))} placeholder="Todas as origens" options={SOURCE_OPTIONS} /><SearchableSelect value={filters.team || ""} onChange={(value) => setFilters((current) => ({ ...current, team: value }))} placeholder="Todas as equipes" options={teamOptions} /><button className="button button-quiet" type="button" onClick={() => setFilters(createDefaultFilters())}><RotateCcw size={15} />Limpar filtros</button><button className="button button-primary" type="button" onClick={onCreate}><Plus size={16} />Nova tarefa</button></div></div>;
 });
 
 
@@ -468,7 +461,7 @@ function QualityView({ state, onCreate, onCreateTask, filters, setFilters }) {
     const query = normalizeText(filters.query);
     const matchesQuery = !query || [item.code, item.title, item.type, item.status, linkedTask?.title].some((value) => normalizeText(value).includes(query));
     const taskFilters = { ...filters, query: "" };
-    const matchesTaskFilters = linkedTask ? filterTasks([linkedTask], taskFilters).length > 0 : !filters.assignee?.length && !filters.status?.length && !filters.priority?.length && !filters.source?.length && !filters.team && !filters.blocked;
+    const matchesTaskFilters = linkedTask ? filterTasks([linkedTask], taskFilters).length > 0 : !filters.assignee?.length && !filters.priority?.length && !filters.source?.length && !filters.team;
     return matchesQuery && matchesTaskFilters;
   }), [quality, state.tasks, filters]);
   return <div className="page-content"><PageHeader eyebrow="Origem operacional" title="Qualidade" description="Transforme erros e ações operacionais em tarefas do Planner interno." /><FilterBar filters={filters} setFilters={setFilters} onCreate={onCreateTask} employees={state.employees} /><section className="panel task-table"><div className="table-header"><span>Registro</span><span>Tipo</span><span>Prazo</span><span>Status</span><span>Ação</span></div>{filteredQuality.map((item) => { const linked = state.tasks.some((taskItem) => taskItem.sourceId === item.id); return <div className="table-row" key={`${item.type}-${item.id}`}><div className="table-task"><span className="table-status status-waiting" /><strong>{item.code ? `${item.code} · ` : ""}{item.title}</strong></div><span>{item.type === "error" ? "Erro operacional" : "Ação operacional"}</span><span>{formatDate(item.dueDate)}</span><span>{item.status || "Ativo"}</span>{linked ? <span className="linked-label">Tarefa criada</span> : <button className="small-button" onClick={() => onCreate(item)}>Criar tarefa</button>}</div>; })}{!filteredQuality.length && <div className="empty-inline">Nenhum erro ou ação operacional disponível.</div>}</section></div>;
@@ -683,10 +676,10 @@ function MoreView({ onNavigate }) {
 }
 
 function TaskDrawerContent({ task: taskItem, state, currentEmployee, loadAttachmentContent, showChecklistOnCard, onToggleChecklistOnCard, onClose, onSave, onDelete, onComment, onAttachment, onDeleteAttachment, onOpenQuote, onAddSubtask, onRequestDelete, deleteState, showDeletePrompt, onCancelDelete, onConfirmDelete }) {
-  const [form, setForm] = useState(taskItem ? { ...taskItem } : null); const [comment, setComment] = useState(""); const [mentionActiveIndex, setMentionActiveIndex] = useState(0); const [newSubtaskTitle, setNewSubtaskTitle] = useState(""); const [isAddingSubtask, setIsAddingSubtask] = useState(false); const [subtaskToDelete, setSubtaskToDelete] = useState(null); const [saveState, setSaveState] = useState("idle"); const [validationError, setValidationError] = useState(""); const [showDiscardPrompt, setShowDiscardPrompt] = useState(false); const [draftAttachments, setDraftAttachments] = useState([]); const [pendingAttachmentRemovals, setPendingAttachmentRemovals] = useState([]); const draftAttachmentsRef = useRef([]); draftAttachmentsRef.current = draftAttachments; const assigneeOptions = useMemo(() => buildEmployeeAssigneeOptions(state.employees), [state.employees]);
+  const [form, setForm] = useState(taskItem ? { ...taskItem } : null); const [comment, setComment] = useState(""); const [newSubtaskTitle, setNewSubtaskTitle] = useState(""); const [isAddingSubtask, setIsAddingSubtask] = useState(false); const [subtaskToDelete, setSubtaskToDelete] = useState(null); const [saveState, setSaveState] = useState("idle"); const [saveProgress, setSaveProgress] = useState({ label: "Salvando tarefa…", detail: "Validando alterações", current: 0, total: 1 }); const [validationError, setValidationError] = useState(""); const [showDiscardPrompt, setShowDiscardPrompt] = useState(false); const [draftAttachments, setDraftAttachments] = useState([]); const [pendingAttachmentRemovals, setPendingAttachmentRemovals] = useState([]); const draftAttachmentsRef = useRef([]); draftAttachmentsRef.current = draftAttachments; const assigneeOptions = useMemo(() => buildEmployeeAssigneeOptions(state.employees), [state.employees]);
   const saveCloseTimerRef = useRef(null);
   useEffect(() => {
-    setForm(taskItem ? { ...taskItem, assigneeName: normalizeAssigneeNames(taskItem.assigneeNames || taskItem.assigneeName).filter((name) => name !== "Não atribuído") } : null); setComment(""); setMentionActiveIndex(0); setNewSubtaskTitle(""); setIsAddingSubtask(false); setSubtaskToDelete(null); setSaveState("idle"); setValidationError(""); setShowDiscardPrompt(false); setDraftAttachments([]); setPendingAttachmentRemovals([]);
+    setForm(taskItem ? { ...taskItem, assigneeName: normalizeAssigneeNames(taskItem.assigneeNames || taskItem.assigneeName).filter((name) => name !== "Não atribuído") } : null); setComment(""); setMentionActiveIndex(0); setNewSubtaskTitle(""); setIsAddingSubtask(false); setSubtaskToDelete(null); setSaveState("idle"); setSaveProgress({ label: "Salvando tarefa…", detail: "Validando alterações", current: 0, total: 1 }); setValidationError(""); setShowDiscardPrompt(false); setDraftAttachments([]); setPendingAttachmentRemovals([]);
     if (saveCloseTimerRef.current) window.clearTimeout(saveCloseTimerRef.current);
     return () => { if (saveCloseTimerRef.current) window.clearTimeout(saveCloseTimerRef.current); };
   }, [taskItem?.id]);
@@ -695,55 +688,59 @@ function TaskDrawerContent({ task: taskItem, state, currentEmployee, loadAttachm
     const container = document.querySelector(".task-drawer .drawer-section:nth-of-type(2)");
     if (container) container.scrollTop = container.scrollHeight;
   }, [taskItem?.id, taskItem?.comments?.length]);
-  useEffect(() => {
-    const textarea = document.querySelector(".task-drawer .comment-compose textarea");
-    if (!textarea) return undefined;
-    textarea.setAttribute("aria-label", "Comentário");
-    textarea.setAttribute("aria-autocomplete", "list");
-    textarea.setAttribute("aria-expanded", String(mentionSuggestions.length > 0));
-    const suggestionList = textarea.parentElement.querySelector(".mention-suggestions");
-    if (suggestionList) { suggestionList.id = "comment-mention-list"; textarea.setAttribute("aria-controls", suggestionList.id); } else textarea.removeAttribute("aria-controls");
-    const options = textarea.parentElement.querySelectorAll(".mention-suggestion");
-    options.forEach((option, index) => {
-      option.id = `comment-mention-option-${index}`;
-      option.classList.toggle("is-active", index === mentionActiveIndex);
-      option.setAttribute("aria-selected", String(index === mentionActiveIndex));
-    });
-    const onKeyDown = (event) => {
-      if (event.defaultPrevented) return;
-      if (mentionSuggestions.length > 0 && event.key === "ArrowDown") { event.preventDefault(); setMentionActiveIndex((current) => (current + 1) % mentionSuggestions.length); return; }
-      if (mentionSuggestions.length > 0 && event.key === "ArrowUp") { event.preventDefault(); setMentionActiveIndex((current) => (current - 1 + mentionSuggestions.length) % mentionSuggestions.length); return; }
-      if (mentionSuggestions.length > 0 && (event.key === "Tab" || event.key === "Enter")) { event.preventDefault(); insertMention(mentionSuggestions[mentionActiveIndex] || mentionSuggestions[0]); return; }
-      if (event.ctrlKey && event.key === "Enter") return;
-      if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); submitComment(); }
-    };
-    textarea.addEventListener("keydown", onKeyDown);
-    return () => textarea.removeEventListener("keydown", onKeyDown);
-  }, [comment, mentionActiveIndex, taskItem?.id]);
   if (!taskItem || !form) return null;
+  const setMentionActiveIndex = () => undefined;
   const subtasks = state.tasks.filter((item) => item.parentTaskId === taskItem.id); const history = [...(taskItem.history || [])].reverse();
-  const mentionMatch = comment.match(/(?:^|\s)@([^\s@]*)$/);
+  const mentionMatch = comment.match(/(?:^|[^\p{L}\p{N}_])@([^\s@]*)$/u);
   const mentionQuery = normalizeText(mentionMatch?.[1] || "");
-   const mentionSuggestions = mentionMatch ? (state.employees || []).filter((employee) => normalizeText(employee.name).includes(mentionQuery)).sort((left, right) => Number(normalizeText(left.name).startsWith(mentionQuery)) - Number(normalizeText(right.name).startsWith(mentionQuery))).reverse().slice(0, 6) : [];
+  const mentionSuggestions = [];
    const isOwnComment = (item) => item.author === "Você" || (currentEmployee?.userId && String(item.authorId || "").replace(/[{}]/g, "").toLowerCase() === String(currentEmployee.userId).replace(/[{}]/g, "").toLowerCase()) || (currentEmployee?.name && normalizeText(item.author) === normalizeText(currentEmployee.name));
-   const set = (key, value) => setForm((current) => ({ ...current, [key]: value, ...(key === "status" && value !== "waiting" ? { blockedReason: "" } : {}) }));
-   const isDirty = ["title", "status", "priority", "teamName", "dueDate", "description", "blockedReason"].some((key) => JSON.stringify(form[key] || "") !== JSON.stringify(taskItem[key] || "")) || JSON.stringify(form.assigneeName || []) !== JSON.stringify(normalizeAssigneeNames(taskItem.assigneeNames || taskItem.assigneeName).filter((name) => name !== "Não atribuído")) || comment.length > 0;
+   const set = (key, value) => setForm((current) => ({ ...current, [key]: value }));
+   const visibleAttachments = [...(taskItem.attachments || []).filter((item) => !pendingAttachmentRemovals.includes(item.id)), ...draftAttachments];
+   const isDirty = ["title", "status", "priority", "teamName", "dueDate", "description"].some((key) => JSON.stringify(form[key] || "") !== JSON.stringify(taskItem[key] || "")) || JSON.stringify(form.assigneeName || []) !== JSON.stringify(normalizeAssigneeNames(taskItem.assigneeNames || taskItem.assigneeName).filter((name) => name !== "Não atribuído")) || comment.length > 0 || draftAttachments.length > 0 || pendingAttachmentRemovals.length > 0;
   const requestClose = () => { if (saveState !== "idle") return; if (isDirty) setShowDiscardPrompt(true); else onClose(); };
   const submitSubtask = () => { const title = newSubtaskTitle.trim(); if (!title) return; onAddSubtask(taskItem.id, title); setNewSubtaskTitle(""); setIsAddingSubtask(false); };
-   const insertMention = (employee) => { const match = comment.match(/(^|\s)@([^\s@]*)$/); if (!match) return; setComment(`${comment.slice(0, match.index + match[1].length)}@${employee.name} `); setMentionActiveIndex(0); };
-   const submitComment = () => { if (!comment.trim()) return; onComment(taskItem.id, comment); setComment(""); setMentionActiveIndex(0); };
-   const handleCommentChange = (event) => { setComment(event.target.value); setMentionActiveIndex(0); };
+   const submitComment = () => { if (!comment.trim()) return; onComment(taskItem.id, comment); setComment(""); };
+   const insertMention = () => undefined;
+   const handleDraftAttachment = (id, filesOrFile) => setDraftAttachments((current) => [...current, ...toAttachmentFiles(filesOrFile).map((file) => createDraftAttachment(file, "edit"))]);
+   const handleDraftAttachmentDelete = (id, attachment) => {
+     if (attachment?.syncStatus === "pending") {
+       releaseDraftAttachment(attachment);
+       setDraftAttachments((current) => current.filter((item) => item.id !== attachment.id));
+       return;
+     }
+     setPendingAttachmentRemovals((current) => current.includes(attachment.id) ? current : [...current, attachment.id]);
+   };
    const handleSave = () => {
      if (saveState !== "idle") return;
-     const blockedReason = form.status === "waiting" ? String(form.blockedReason || "").trim() : "";
-     if (form.status === "waiting" && !blockedReason) { setValidationError("Informe por que esta tarefa está aguardando."); return; }
      setValidationError("");
+     const removals = pendingAttachmentRemovals.map((attachmentId) => (taskItem.attachments || []).find((item) => item.id === attachmentId)).filter(Boolean);
+     const total = 1 + removals.length + draftAttachments.length;
+     setSaveProgress({ label: "Salvando tarefa…", detail: "Aplicando alterações", current: 0, total });
      setSaveState("saving");
-     onSave(taskItem.id, { title: form.title, status: form.status, priority: form.priority, assigneeNames: normalizeAssigneeNames(form.assigneeName), teamName: form.teamName, dueDate: form.dueDate, description: form.description, blockedReason });
-    setSaveState("success");
-    saveCloseTimerRef.current = window.setTimeout(onClose, 620);
+     Promise.resolve(onSave(taskItem.id, { title: form.title, status: form.status, priority: form.priority, assigneeNames: normalizeAssigneeNames(form.assigneeName), teamName: form.teamName, dueDate: form.dueDate, description: form.description })).then((success) => {
+       if (!success) throw new Error("Não foi possível salvar a tarefa.");
+       setSaveProgress({ label: removals.length || draftAttachments.length ? "Atualizando anexos…" : "Finalizando…", detail: "Tarefa salva", current: 1, total });
+       return removals.reduce((queue, attachment, index) => queue.then((ok) => {
+         if (!ok) return false;
+         setSaveProgress({ label: "Removendo anexo…", detail: attachment.name || `Anexo ${index + 1}`, current: 1 + index, total });
+         return Promise.resolve(onDeleteAttachment(taskItem.id, attachment)).then((result) => { setSaveProgress({ label: "Atualizando anexos…", detail: `${index + 1} de ${total - 1} concluído`, current: 2 + index, total }); return result; });
+       }), Promise.resolve(true));
+     }).then((success) => {
+       if (!success) throw new Error("Não foi possível remover um dos anexos.");
+       return draftAttachments.reduce((queue, attachment, index) => queue.then((ok) => {
+         if (!ok) return false;
+         const completed = 1 + removals.length + index;
+         setSaveProgress({ label: `Enviando anexo ${index + 1} de ${draftAttachments.length}…`, detail: attachment.name || "Arquivo selecionado", current: completed, total });
+         return Promise.resolve(onAttachment(taskItem.id, attachment.file)).then((result) => { setSaveProgress({ label: "Atualizando anexos…", detail: `${completed + 1} de ${total} concluído`, current: completed + 1, total }); return result; });
+       }), Promise.resolve(true));
+     }).then((success) => {
+       if (!success) throw new Error("Não foi possível enviar um dos anexos.");
+       setSaveState("success");
+       saveCloseTimerRef.current = window.setTimeout(onClose, 620);
+     }).catch((error) => { setSaveState("idle"); setValidationError(error.message || "Não foi possível salvar as alterações."); });
   };
- return <div className="drawer-layer" onMouseDown={(event) => { if (event.target === event.currentTarget) requestClose(); }}><aside className="task-drawer"><header className="drawer-header"><div><span className="eyebrow">Detalhe da tarefa</span><span className="drawer-code">{taskItem.quoteCode || "TAREFA"}</span></div><button className="icon-button" onClick={requestClose} aria-label="Fechar detalhe" disabled={saveState !== "idle"}><X size={19} /></button></header><div className="drawer-body"><div className="drawer-title"><input value={form.title} onChange={(event) => set("title", event.target.value)} aria-label="Título da tarefa" /><PriorityBadge priority={form.priority} /></div>{taskItem.quoteId && <button className="linked-record" onClick={() => onOpenQuote(taskItem.quoteId)}><FileText size={16} /><span><small>Cotação vinculada</small><strong>{taskItem.quoteCode} · {taskItem.quoteTitle}</strong></span><ArrowUpRight size={15} /></button>}<div className="drawer-field-grid"><label>Status<InputSelect value={form.status} onChange={(value) => set("status", value)} options={STATUS_OPTIONS} /></label><label>Prioridade<InputSelect value={form.priority} onChange={(value) => set("priority", value)} options={PRIORITY_OPTIONS} /></label><label>Responsável<InputSelect value={form.assigneeName} onChange={(value) => set("assigneeName", value)} options={assigneeOptions} placeholder="Não atribuído" /></label><label>Equipe<InputSelect value={form.teamName} onChange={(value) => set("teamName", value)} options={TEAM_OPTIONS} /></label><label>Prazo<input type="date" value={form.dueDate || ""} onChange={(event) => set("dueDate", event.target.value)} /></label></div>{form.status === "waiting" && <label className="drawer-blocked-field">Motivo do bloqueio<textarea value={form.blockedReason || ""} onChange={(event) => { set("blockedReason", event.target.value); setValidationError(""); }} rows="3" placeholder="O que está impedindo o avanço?" aria-label="Motivo do bloqueio" required /><small>Obrigatório enquanto tarefa estiver aguardando.</small></label>}{validationError && <div className="field-error" role="alert">{validationError}</div>}<label className="drawer-description">Descrição<textarea value={form.description} onChange={(event) => set("description", event.target.value)} rows="4" /></label><section className="drawer-section"><div className="drawer-section-heading"><h3>Subtarefas</h3><div className="drawer-heading-actions"><label className="checklist-visibility-toggle"><input type="checkbox" checked={showChecklistOnCard} onChange={(event) => onToggleChecklistOnCard(event.target.checked)} /><span>No quadro</span></label><button className="text-button" type="button" onClick={() => setIsAddingSubtask(true)}><Plus size={14} />Adicionar</button></div></div>{isAddingSubtask && <div className="subtask-inline-create"><span className="subtask-check" aria-hidden="true" /><input autoFocus value={newSubtaskTitle} onChange={(event) => setNewSubtaskTitle(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") submitSubtask(); if (event.key === "Escape") { setNewSubtaskTitle(""); setIsAddingSubtask(false); } }} placeholder="Digite o título da subtarefa" aria-label="Título da subtarefa" /><button className="subtask-inline-action" type="button" onClick={submitSubtask} disabled={!newSubtaskTitle.trim()} aria-label="Salvar subtarefa"><Check size={15} /></button></div>}{subtasks.length ? subtasks.map((subtask) => <div className="subtask-row" key={subtask.id}><button className="subtask-toggle" type="button" disabled={subtask.syncStatus === "syncing"} onClick={() => onSave(subtask.id, { status: subtask.status === "done" ? "todo" : "done" })}><span className={`subtask-check ${subtask.status === "done" ? "checked" : ""}`}>{subtask.status === "done" && <Check size={13} />}</span><span>{subtask.title}</span><small>{subtask.syncStatus === "syncing" ? "Sincronizando..." : formatDate(subtask.dueDate)}</small></button><button className="subtask-delete" type="button" disabled={subtask.syncStatus === "syncing"} onClick={(event) => { event.stopPropagation(); setSubtaskToDelete(subtask); }} aria-label="Excluir subtarefa" title="Excluir subtarefa"><Trash2 size={13} /></button></div>) : !isAddingSubtask && <div className="empty-inline">Nenhuma subtarefa adicionada.</div>}</section><section className="drawer-section"><div className="drawer-section-heading"><h3>Comentários</h3><span className="section-count">{taskItem.comments.length}</span></div>{taskItem.comments.map((item) => <div className={`comment-row ${isOwnComment(item) ? "comment-own" : ""} ${item.syncStatus === "syncing" ? "item-syncing" : ""}`} key={item.id}><Avatar name={item.author} small /><div><strong>{item.author}{item.syncStatus === "syncing" ? " · Enviando..." : ""}</strong><p>{item.text}</p></div></div>)}<div className="comment-compose"><div className="comment-mention-field"><textarea value={comment} onChange={(event) => setComment(event.target.value)} onKeyDown={(event) => { if (event.ctrlKey && event.key === "Enter") { event.preventDefault(); submitComment(); } if (event.key === "Escape") setComment((value) => value.replace(/(?:^|\s)@[^\s@]*$/, "")); }} placeholder="Adicione um comentário ou use @ para mencionar alguém..." rows="2" />{mentionSuggestions.length > 0 && <div className="mention-suggestions" role="listbox" aria-label="Responsáveis para mencionar">{mentionSuggestions.map((employee) => <button type="button" className="mention-suggestion" key={employee.id || employee.name} onMouseDown={(event) => event.preventDefault()} onClick={() => insertMention(employee)}><Avatar name={employee.name} small /><span>{employee.name}</span></button>)}</div>}</div><button className="button button-secondary" disabled={!comment.trim()} onClick={submitComment}><MessageCircle size={15} />Comentar</button></div></section><AttachmentSection taskId={taskItem.id} attachments={taskItem.attachments} loadAttachmentContent={loadAttachmentContent} onAttachment={onAttachment} onDeleteAttachment={onDeleteAttachment} /><section className="drawer-section history-section"><div className="drawer-section-heading"><h3>Histórico</h3></div>{history.slice(0, 5).map((item) => <div className="history-row" key={item.id}><span className="history-dot" /><div><strong>{item.text}</strong><small>{item.author} · agora</small></div></div>)}</section></div><footer className="drawer-footer"><button className="button button-danger task-delete-button" type="button" onClick={onRequestDelete} disabled={deleteState !== "idle" || saveState !== "idle"}><Trash2 size={15} />Excluir</button><button className="button button-quiet" onClick={requestClose} disabled={saveState !== "idle"}>Cancelar</button><button className="button button-primary" disabled={saveState !== "idle"} onClick={handleSave}>{saveState === "saving" ? "Salvando..." : <><Check size={16} />Salvar tarefa</>}</button></footer>{saveState === "success" && <div className="drawer-save-feedback" role="status" aria-live="polite"><div className="drawer-save-icon"><Check size={30} strokeWidth={2.5} /></div><strong>Tarefa salva</strong><span>Fechando detalhe…</span></div>}{deleteState === "deleting" && <div className="drawer-delete-feedback" role="status" aria-live="polite"><div className="drawer-delete-icon"><Trash2 size={30} strokeWidth={2.5} /></div><strong>Tarefa excluída</strong><span>Removendo do Planner…</span></div>}{showDiscardPrompt && <UnsavedChangesDialog onContinue={() => setShowDiscardPrompt(false)} onDiscard={onClose} />}{showDeletePrompt && <DeleteTaskDialog taskTitle={taskItem.title} onCancel={onCancelDelete} onConfirm={onConfirmDelete} />}{subtaskToDelete && <DeleteTaskDialog taskTitle={subtaskToDelete.title} subject="subtarefa" onCancel={() => setSubtaskToDelete(null)} onConfirm={() => { setSubtaskToDelete(null); onDelete(subtaskToDelete.id); }} />}</aside></div>;
+ return <div className="drawer-layer" onMouseDown={(event) => { if (event.target === event.currentTarget) requestClose(); }}><aside className="task-drawer">{saveState === "saving" && <div className="drawer-save-feedback drawer-progress-feedback" role="status" aria-live="polite"><div className="drawer-progress-icon"><LoaderCircle size={27} className="spin" /></div><strong>{saveProgress.label}</strong><span>{saveProgress.detail}</span><div className="drawer-progress-bar" aria-label={`${saveProgress.current} de ${saveProgress.total} etapas concluídas`}><i style={{ width: `${Math.min(100, Math.round((saveProgress.current / Math.max(1, saveProgress.total)) * 100))}%` }} /></div></div>}<header className="drawer-header"><div><span className="eyebrow">Detalhe da tarefa</span><span className="drawer-code">{taskItem.quoteCode || "TAREFA"}</span></div><button className="icon-button" onClick={requestClose} aria-label="Fechar detalhe" disabled={saveState !== "idle"}><X size={19} /></button></header><div className="drawer-body"><div className="drawer-title"><input value={form.title} onChange={(event) => set("title", event.target.value)} aria-label="Título da tarefa" /><PriorityBadge priority={form.priority} /></div>{taskItem.quoteId && <button className="linked-record" onClick={() => onOpenQuote(taskItem.quoteId)}><FileText size={16} /><span><small>Cotação vinculada</small><strong>{taskItem.quoteCode} · {taskItem.quoteTitle}</strong></span><ArrowUpRight size={15} /></button>}<div className="drawer-field-grid"><label>Status<InputSelect value={form.status} onChange={(value) => set("status", value)} options={STATUS_OPTIONS} /></label><label>Prioridade<InputSelect value={form.priority} onChange={(value) => set("priority", value)} options={PRIORITY_OPTIONS} /></label><label>Responsável<InputSelect value={form.assigneeName} onChange={(value) => set("assigneeName", value)} options={assigneeOptions} placeholder="Não atribuído" /></label><label>Equipe<InputSelect value={form.teamName} onChange={(value) => set("teamName", value)} options={TEAM_OPTIONS} /></label><label>Prazo<input type="date" value={form.dueDate || ""} onChange={(event) => set("dueDate", event.target.value)} /></label></div>{validationError && <div className="field-error" role="alert">{validationError}</div>}<label className="drawer-description">Descrição<textarea value={form.description} onChange={(event) => set("description", event.target.value)} rows="4" /></label><section className="drawer-section"><div className="drawer-section-heading"><h3>Subtarefas</h3><div className="drawer-heading-actions"><label className="checklist-visibility-toggle"><input type="checkbox" checked={showChecklistOnCard} onChange={(event) => onToggleChecklistOnCard(event.target.checked)} /><span>No quadro</span></label><button className="text-button" type="button" onClick={() => setIsAddingSubtask(true)}><Plus size={14} />Adicionar</button></div></div>{isAddingSubtask && <div className="subtask-inline-create"><span className="subtask-check" aria-hidden="true" /><input autoFocus value={newSubtaskTitle} onChange={(event) => setNewSubtaskTitle(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") submitSubtask(); if (event.key === "Escape") { setNewSubtaskTitle(""); setIsAddingSubtask(false); } }} placeholder="Digite o título da subtarefa" aria-label="Título da subtarefa" /><button className="subtask-inline-action" type="button" onClick={submitSubtask} disabled={!newSubtaskTitle.trim()} aria-label="Salvar subtarefa"><Check size={15} /></button></div>}{subtasks.length ? subtasks.map((subtask) => <div className="subtask-row" key={subtask.id}><button className="subtask-toggle" type="button" disabled={subtask.syncStatus === "syncing"} onClick={() => onSave(subtask.id, { status: subtask.status === "done" ? "todo" : "done" })}><span className={`subtask-check ${subtask.status === "done" ? "checked" : ""}`}>{subtask.status === "done" && <Check size={13} />}</span><span>{subtask.title}</span><small>{subtask.syncStatus === "syncing" ? "Sincronizando..." : formatDate(subtask.dueDate)}</small></button><button className="subtask-delete" type="button" disabled={subtask.syncStatus === "syncing"} onClick={(event) => { event.stopPropagation(); setSubtaskToDelete(subtask); }} aria-label="Excluir subtarefa" title="Excluir subtarefa"><Trash2 size={13} /></button></div>) : !isAddingSubtask && <div className="empty-inline">Nenhuma subtarefa adicionada.</div>}</section><section className="drawer-section"><div className="drawer-section-heading"><h3>Comentários</h3><span className="section-count">{taskItem.comments.length}</span></div>{taskItem.comments.map((item) => <div className={`comment-row ${isOwnComment(item) ? "comment-own" : ""} ${item.syncStatus === "syncing" ? "item-syncing" : ""}`} key={item.id}><Avatar name={item.author} small /><div><strong>{item.author}{item.syncStatus === "syncing" ? " · Enviando..." : ""}</strong><p>{item.text}</p></div></div>)}<div className="comment-compose"><div className="comment-mention-field"><textarea value={comment} onChange={(event) => setComment(event.target.value)} onKeyDown={(event) => { if (event.ctrlKey && event.key === "Enter") { event.preventDefault(); submitComment(); } if (event.key === "Escape") setComment((value) => value.replace(/(?:^|\s)@[^\s@]*$/, "")); }} placeholder="Adicione um comentário ou use @ para mencionar alguém..." rows="2" />{mentionSuggestions.length > 0 && <div className="mention-suggestions" role="listbox" aria-label="Responsáveis para mencionar">{mentionSuggestions.map((employee) => <button type="button" className="mention-suggestion" key={employee.id || employee.name} onMouseDown={(event) => event.preventDefault()} onClick={() => insertMention(employee)}><Avatar name={employee.name} small /><span>{employee.name}</span></button>)}</div>}</div><button className="button button-secondary" disabled={!comment.trim()} onClick={submitComment}><MessageCircle size={15} />Comentar</button></div></section><AttachmentSection taskId={taskItem.id} attachments={visibleAttachments} loadAttachmentContent={loadAttachmentContent} onAttachment={handleDraftAttachment} onDeleteAttachment={handleDraftAttachmentDelete} helperText="As alterações nos anexos só são enviadas ao clicar em Salvar tarefa." /><section className="drawer-section history-section"><div className="drawer-section-heading"><h3>Histórico</h3></div>{history.slice(0, 5).map((item) => <div className="history-row" key={item.id}><span className="history-dot" /><div><strong>{item.text}</strong><small>{item.author} · agora</small></div></div>)}</section></div><footer className="drawer-footer"><button className="button button-danger task-delete-button" type="button" onClick={onRequestDelete} disabled={deleteState !== "idle" || saveState !== "idle"}><Trash2 size={15} />Excluir</button><button className="button button-quiet" onClick={requestClose} disabled={saveState !== "idle"}>Cancelar</button><button className="button button-primary" disabled={saveState !== "idle"} onClick={handleSave}>{saveState === "saving" ? <><LoaderCircle size={16} className="spin" />{saveProgress.label}</> : <><Check size={16} />Salvar tarefa</>}</button></footer>{saveState === "success" && <div className="drawer-save-feedback" role="status" aria-live="polite"><div className="drawer-save-icon"><Check size={30} strokeWidth={2.5} /></div><strong>Tarefa salva</strong><span>Fechando detalhe…</span></div>}{deleteState === "deleting" && <div className="drawer-delete-feedback" role="status" aria-live="polite"><div className="drawer-delete-icon"><Trash2 size={30} strokeWidth={2.5} /></div><strong>Tarefa excluída</strong><span>Removendo do Planner…</span></div>}{showDiscardPrompt && <UnsavedChangesDialog onContinue={() => setShowDiscardPrompt(false)} onDiscard={onClose} />}{showDeletePrompt && <DeleteTaskDialog taskTitle={taskItem.title} onCancel={onCancelDelete} onConfirm={onConfirmDelete} />}{subtaskToDelete && <DeleteTaskDialog taskTitle={subtaskToDelete.title} subject="subtarefa" onCancel={() => setSubtaskToDelete(null)} onConfirm={() => { setSubtaskToDelete(null); onDelete(subtaskToDelete.id); }} />}</aside></div>;
 }
 
 function TaskDrawer({ task, onDelete, ...props }) {
@@ -761,6 +758,7 @@ function NewTaskDrawer({ employees = [], onClose, onSave }) {
   draftAttachmentsRef.current = draftAttachments;
   const [showDiscardPrompt, setShowDiscardPrompt] = useState(false);
   const [saveState, setSaveState] = useState("idle");
+  const [saveProgress, setSaveProgress] = useState({ label: "Criando tarefa…", detail: "Preparando dados", current: 0, total: 1 });
   const saveCloseTimerRef = useRef(null);
   const assigneeOptions = useMemo(() => buildEmployeeAssigneeOptions(employees), [employees]);
   useEffect(() => () => { if (saveCloseTimerRef.current) window.clearTimeout(saveCloseTimerRef.current); draftAttachmentsRef.current.forEach(releaseDraftAttachment); }, []);
@@ -771,14 +769,15 @@ function NewTaskDrawer({ employees = [], onClose, onSave }) {
   const handleDraftAttachmentDelete = (id, attachment) => { releaseDraftAttachment(attachment); setDraftAttachments((current) => current.filter((item) => item.id !== attachment.id)); };
   const handleCreate = () => {
     if (saveState !== "idle" || !form.title.trim()) return;
+    setSaveProgress({ label: "Criando tarefa…", detail: draftAttachments.length ? "Salvando dados antes dos anexos" : "Preparando tarefa", current: 0, total: 1 + draftAttachments.length });
     setSaveState("saving");
-    Promise.resolve().then(() => onSave({ ...form, attachments: draftAttachments })).then((success) => {
+    Promise.resolve().then(() => onSave({ ...form, attachments: draftAttachments, onProgress: setSaveProgress })).then((success) => {
       if (!success) { setSaveState("idle"); return; }
       setSaveState("success");
       saveCloseTimerRef.current = window.setTimeout(onClose, 680);
     }).catch(() => setSaveState("idle"));
   };
-  return <div className="drawer-layer" onMouseDown={(event) => { if (event.target === event.currentTarget) requestClose(); }}><aside className="task-drawer new-task-drawer"><header className="drawer-header"><div><span className="eyebrow">Nova tarefa</span><span className="drawer-code">CRIAÇÃO MANUAL</span></div><button className="icon-button" type="button" onClick={requestClose} aria-label="Fechar criação" disabled={saveState !== "idle"}><X size={19} /></button></header><div className="drawer-body"><div className="drawer-title"><input autoFocus value={form.title} onChange={(event) => set("title", event.target.value)} placeholder="O que precisa ser feito?" aria-label="Título da tarefa" /><PriorityBadge priority={form.priority} /></div><div className="drawer-field-grid new-task-quick-fields"><label>Prioridade<InputSelect value={form.priority} onChange={(value) => set("priority", value)} options={PRIORITY_OPTIONS} /></label><label>Responsável<InputSelect value={form.assigneeName} onChange={(value) => set("assigneeName", value)} options={assigneeOptions} placeholder="Não atribuído" /></label><label>Prazo<input type="date" value={form.dueDate} onChange={(event) => set("dueDate", event.target.value)} /></label><label>Equipe<InputSelect value={form.teamName} onChange={(value) => set("teamName", value)} options={TEAM_OPTIONS} /></label></div><label className="drawer-description">Descrição<textarea value={form.description} onChange={(event) => set("description", event.target.value)} rows="5" placeholder="Adicione contexto para quem vai executar..." /></label><AttachmentSection taskId="new-task" attachments={draftAttachments} onAttachment={handleDraftAttachment} onDeleteAttachment={handleDraftAttachmentDelete} helperText="Os arquivos só serão enviados quando você clicar em Criar tarefa." /><div className="creation-note"><Sparkles size={16} /><span>Preencha os dados e confirme em Criar tarefa para salvar tudo de uma vez.</span></div></div><footer className="drawer-footer"><button className="button button-quiet" type="button" onClick={requestClose} disabled={saveState !== "idle"}>Cancelar</button><button className="button button-primary" type="button" disabled={!form.title.trim() || saveState !== "idle"} onClick={handleCreate}>{saveState === "saving" ? "Criando..." : <><Plus size={16} />Criar tarefa</>}</button></footer>{saveState === "success" && <div className="drawer-save-feedback" role="status" aria-live="polite"><div className="drawer-save-icon"><Check size={30} strokeWidth={2.5} /></div><strong>Tarefa criada</strong><span>Fechando…</span></div>}{showDiscardPrompt && <UnsavedChangesDialog onContinue={() => setShowDiscardPrompt(false)} onDiscard={onClose} />}</aside></div>;
+  return <div className="drawer-layer" onMouseDown={(event) => { if (event.target === event.currentTarget) requestClose(); }}><aside className="task-drawer new-task-drawer">{saveState === "saving" && <div className="drawer-save-feedback drawer-progress-feedback" role="status" aria-live="polite"><div className="drawer-progress-icon"><LoaderCircle size={27} className="spin" /></div><strong>{saveProgress.label}</strong><span>{saveProgress.detail}</span><div className="drawer-progress-bar" aria-label={`${saveProgress.current} de ${saveProgress.total} etapas concluídas`}><i style={{ width: `${Math.min(100, Math.round((saveProgress.current / Math.max(1, saveProgress.total)) * 100))}%` }} /></div></div>}<header className="drawer-header"><div><span className="eyebrow">Nova tarefa</span><span className="drawer-code">CRIAÇÃO MANUAL</span></div><button className="icon-button" type="button" onClick={requestClose} aria-label="Fechar criação" disabled={saveState !== "idle"}><X size={19} /></button></header><div className="drawer-body"><div className="drawer-title"><input autoFocus value={form.title} onChange={(event) => set("title", event.target.value)} placeholder="O que precisa ser feito?" aria-label="Título da tarefa" /><PriorityBadge priority={form.priority} /></div><div className="drawer-field-grid new-task-quick-fields"><label>Prioridade<InputSelect value={form.priority} onChange={(value) => set("priority", value)} options={PRIORITY_OPTIONS} /></label><label>Responsável<InputSelect value={form.assigneeName} onChange={(value) => set("assigneeName", value)} options={assigneeOptions} placeholder="Não atribuído" /></label><label>Prazo<input type="date" value={form.dueDate} onChange={(event) => set("dueDate", event.target.value)} /></label><label>Equipe<InputSelect value={form.teamName} onChange={(value) => set("teamName", value)} options={TEAM_OPTIONS} /></label></div><label className="drawer-description">Descrição<textarea value={form.description} onChange={(event) => set("description", event.target.value)} rows="5" placeholder="Adicione contexto para quem vai executar..." /></label><AttachmentSection taskId="new-task" attachments={draftAttachments} onAttachment={handleDraftAttachment} onDeleteAttachment={handleDraftAttachmentDelete} helperText="Os arquivos só serão enviados quando você clicar em Criar tarefa." /><div className="creation-note"><Sparkles size={16} /><span>Preencha os dados e confirme em Criar tarefa para salvar tudo de uma vez.</span></div></div><footer className="drawer-footer"><button className="button button-quiet" type="button" onClick={requestClose} disabled={saveState !== "idle"}>Cancelar</button><button className="button button-primary" type="button" disabled={!form.title.trim() || saveState !== "idle"} onClick={handleCreate}>{saveState === "saving" ? <><LoaderCircle size={16} className="spin" />{saveProgress.label}</> : <><Plus size={16} />Criar tarefa</>}</button></footer>{saveState === "success" && <div className="drawer-save-feedback" role="status" aria-live="polite"><div className="drawer-save-icon"><Check size={30} strokeWidth={2.5} /></div><strong>Tarefa criada</strong><span>Fechando…</span></div>}{showDiscardPrompt && <UnsavedChangesDialog onContinue={() => setShowDiscardPrompt(false)} onDiscard={onClose} />}</aside></div>;
 }
 
 // Lazy-loaded wrappers for non-critical views (Quality & Settings)
@@ -787,15 +786,21 @@ const LazyQualityView = lazy(() => Promise.resolve({ default: QualityView }));
 const LazySettingsView = lazy(() => Promise.resolve({ default: SettingsView }));
 
 export default function App() {
-  const [active, setActive] = useState("board"); const [store] = useState(() => createDataStore()); const [state, setState] = useState(() => ({ tasks: [], quotes: [], employees: [], quality: [], live: store.live, loading: { core: true, quotes: true, quality: true, photos: true }, loadErrors: {} })); const [selectedId, setSelectedId] = useState(""); const [creating, setCreating] = useState(false); const [filters, setFilters] = useState({ query: "", assignee: [], status: [], priority: [], source: [], team: "" }); const [taskScope, setTaskScope] = useState("mine"); const [checklistVisibility, setChecklistVisibility] = useState(readChecklistVisibility); const [notice, setNotice] = useState(""); const [noticeAction, setNoticeAction] = useState(null); const [error, setError] = useState(""); const [failedTaskDraft, setFailedTaskDraft] = useState(null);
+  const [active, setActive] = useState("board"); const [store] = useState(() => createDataStore()); const [state, setState] = useState(() => ({ tasks: [], quotes: [], employees: [], quality: [], live: store.live, loading: { core: true, quotes: true, quality: true, photos: true }, loadErrors: {} })); const [selectedId, setSelectedId] = useState(""); const [creating, setCreating] = useState(false); const [filters, setFilters] = useState(createDefaultFilters); const [taskScope, setTaskScope] = useState("mine"); const [checklistVisibility, setChecklistVisibility] = useState(readChecklistVisibility); const [notice, setNotice] = useState(""); const [noticeAction, setNoticeAction] = useState(null); const [error, setError] = useState(""); const [failedTaskDraft, setFailedTaskDraft] = useState(null);
   const confirmedStateRef = useRef(null); const pendingMutationsRef = useRef(new Map()); const noticeTimerRef = useRef(null); const launchHandledRef = useRef(false); const failedTaskReopenTimerRef = useRef(null);
   const dismissNotice = useCallback(() => { if (noticeTimerRef.current) window.clearTimeout(noticeTimerRef.current); noticeTimerRef.current = null; setNotice(""); setNoticeAction(null); }, []);
   const showNotice = useCallback((message, duration = 2600, action = null) => { setNotice(message); setNoticeAction(action); if (noticeTimerRef.current) window.clearTimeout(noticeTimerRef.current); noticeTimerRef.current = window.setTimeout(() => { noticeTimerRef.current = null; setNotice(""); setNoticeAction(null); }, duration); }, []);
+  globalThis.__plannerEmployees = state.employees;
   const defaultEmployee = resolveCurrentEmployee(state.employees, store.live);
   useEffect(() => {
     if (taskScope !== "mine" || !defaultEmployee?.name) return;
     setFilters((current) => current.assignee?.length ? current : { ...current, assignee: [defaultEmployee.name] });
   }, [taskScope, defaultEmployee?.name]);
+  useEffect(() => {
+    if (!defaultEmployee?.name) return;
+    const isMine = filters.assignee?.length === 1 && filters.assignee[0] === defaultEmployee.name;
+    setTaskScope((current) => current === (isMine ? "mine" : "all") ? current : (isMine ? "mine" : "all"));
+  }, [filters.assignee, defaultEmployee?.name]);
   useEffect(() => () => { if (failedTaskReopenTimerRef.current) window.clearTimeout(failedTaskReopenTimerRef.current); }, []);
   const applyPendingMutations = useCallback((confirmed) => [...pendingMutationsRef.current.values()].reduce((current, mutation) => mutation.update(current), confirmed), []);
   const mergeConfirmed = useCallback((patch) => { const current = confirmedStateRef.current || {}; const next = { ...current, ...patch, loading: { ...(current.loading || {}), ...(patch.loading || {}) } }; confirmedStateRef.current = next; setState(applyPendingMutations(next)); }, [applyPendingMutations]);
@@ -851,21 +856,11 @@ export default function App() {
   const moveTask = useCallback((id, status) => {
     const task = state.tasks.find((item) => item.id === id);
     if (!task) return Promise.resolve(false);
-    if (status === "waiting" && !String(task.blockedReason || "").trim()) {
-      setSelectedId(id);
-      showNotice("Informe o motivo do bloqueio antes de aguardar.", 4200);
-      return Promise.resolve(false);
-    }
-    const patch = { status, ...(status !== "waiting" && task.status === "waiting" ? { blockedReason: "" } : {}) };
+    const patch = { status };
     return runOptimisticMutation((current) => applyOptimisticTaskPatch(current, id, patch), () => store.updateTask(state, id, patch), store.live ? "Status alterado. Sincronizando..." : "Status alterado no mock local.", store.live ? "Status sincronizado." : "Status atualizado localmente.");
   }, [state, store, runOptimisticMutation, showNotice]);
   const saveTask = useCallback((id, patch) => {
-    const task = state.tasks.find((item) => item.id === id);
-    if (patch.status === "waiting" && !String(patch.blockedReason ?? task?.blockedReason ?? "").trim()) {
-      showNotice("Informe o motivo do bloqueio antes de salvar.", 4200);
-      return Promise.resolve(false);
-    }
-    const nextPatch = patch.status && patch.status !== "waiting" && task?.status === "waiting" && patch.blockedReason === undefined ? { ...patch, blockedReason: "" } : patch;
+    const nextPatch = patch;
     const shouldReopen = id === selectedId;
     return runOptimisticMutation((current) => applyOptimisticTaskPatch(current, id, nextPatch), () => store.updateTask(state, id, nextPatch), "", "").then((success) => {
       if (success) {
@@ -883,8 +878,8 @@ export default function App() {
   const completeTask = useCallback((id) => {
     const task = state.tasks.find((item) => item.id === id);
     if (!task || ["done", "cancelled"].includes(task.status)) return Promise.resolve(false);
-    const previousPatch = { status: task.status, blockedReason: task.blockedReason || "" };
-    const completePatch = { status: "done", blockedReason: "" };
+    const previousPatch = { status: task.status };
+    const completePatch = { status: "done" };
     return runOptimisticMutation((current) => applyOptimisticTaskPatch(current, id, completePatch), () => store.updateTask(state, id, completePatch), "", "").then((success) => {
       if (!success) return false;
       showNotice("Tarefa concluída.", 5600, { label: "Desfazer", onClick: () => runOptimisticMutation((current) => applyOptimisticTaskPatch(current, id, previousPatch), () => store.updateTask(confirmedStateRef.current || state, id, previousPatch), "", "Tarefa reaberta.") });
@@ -895,7 +890,7 @@ export default function App() {
     const shouldCloseDrawer = selectedId === id;
     return runOptimisticMutation((current) => ({ ...current, tasks: current.tasks.filter((taskItem) => taskItem.id !== id) }), () => store.deleteTask(state, id), "", "").then((success) => { if (success && shouldCloseDrawer) setSelectedId(""); return success; });
   }, [state, store, runOptimisticMutation, selectedId]);
-  const createNewTask = useCallback((input) => { const { subtasks = [], attachments = [], ...taskInput } = input; const commonTask = buildTaskCreationInput(taskInput); const operation = () => store.createTask(state, commonTask).then((nextState) => { const parent = nextState.tasks.find((taskItem) => taskItem.title === commonTask.title && !taskItem.parentTaskId); if (!parent) return nextState; const withSubtasks = subtasks.reduce((promise, title) => promise.then((currentState) => store.createSubtask(currentState, parent.id, { title, description: "", priority: "medium", assigneeName: "Não atribuído", teamName: "Operação", dueDate: "" })), Promise.resolve(nextState)); return attachments.reduce((promise, attachment) => promise.then((currentState) => store.addAttachment(currentState, parent.id, attachment.file, attachment.previewUrl).then((result) => mergeAttachmentDetailsIntoState(currentState, parent.id, result))), withSubtasks); }); return runOptimisticCreate(commonTask, operation, store.live ? "Tarefa sincronizada." : "Tarefa salva localmente."); }, [state, store, runOptimisticCreate]);
+  const createNewTask = useCallback((input) => { const { subtasks = [], attachments = [], onProgress, ...taskInput } = input; const commonTask = buildTaskCreationInput(taskInput); const operation = () => { onProgress?.({ label: "Criando tarefa…", detail: "Salvando dados da tarefa", current: 0, total: 1 + attachments.length }); return store.createTask(state, commonTask).then((nextState) => { const parent = nextState.tasks.find((taskItem) => taskItem.title === commonTask.title && !taskItem.parentTaskId); if (!parent) return nextState; onProgress?.({ label: attachments.length ? "Tarefa criada. Preparando anexos…" : "Finalizando tarefa…", detail: "Tarefa salva", current: 1, total: 1 + attachments.length }); const withSubtasks = subtasks.reduce((promise, title) => promise.then((currentState) => store.createSubtask(currentState, parent.id, { title, description: "", priority: "medium", assigneeName: "Não atribuído", teamName: "Operação", dueDate: "" })), Promise.resolve(nextState)); return attachments.reduce((promise, attachment, index) => promise.then((currentState) => { onProgress?.({ label: `Enviando anexo ${index + 1} de ${attachments.length}…`, detail: attachment.name || "Arquivo selecionado", current: index + 1, total: 1 + attachments.length }); return store.addAttachment(currentState, parent.id, attachment.file, attachment.previewUrl).then((result) => { onProgress?.({ label: "Atualizando anexos…", detail: `${index + 1} de ${attachments.length} concluído`, current: index + 2, total: 1 + attachments.length }); return mergeAttachmentDetailsIntoState(currentState, parent.id, result); }); }), withSubtasks); }); }; return runOptimisticCreate(commonTask, operation, store.live ? "Tarefa sincronizada." : "Tarefa salva localmente."); }, [state, store, runOptimisticCreate]);
   const createSubtask = useCallback((parentId, title) => { const input = { title, description: "", priority: "medium", assigneeName: "Não atribuído", teamName: "Operação", dueDate: "" }; runOptimisticCreate(input, () => store.createSubtask(state, parentId, input), store.live ? "Subtarefa sincronizada." : "Subtarefa salva localmente.", parentId); }, [state, store, runOptimisticCreate]);
   const createQualityTask = useCallback((item) => { const input = { title: item.title, description: item.description, dueDate: item.dueDate, sourceType: "quality", sourceId: item.id, sourceCode: item.code, sourceLabel: item.type === "error" ? "Erro operacional" : "Ação operacional" }; runOptimisticCreate(input, () => store.createQualityTask(state, item), store.live ? "Tarefa de qualidade sincronizada." : "Tarefa de qualidade salva localmente."); }, [state, store, runOptimisticCreate]);
   const refreshData = useCallback((quote) => { if (!quote) return runMutation(store.save(state), store.live ? "Dados atualizados." : "Dados locais atualizados."); const input = { title: quoteTaskTitle(quote), quoteId: quote.id, quoteCode: quote.code || "", quoteTitle: quote.title || "", dueDate: quote.deadline, priority: "medium", sourceType: "quote", assigneeName: "Não atribuído", teamName: "Comercial" }; return runOptimisticCreate(input, () => store.ensureQuoteTask(state, quote), store.live ? "Tarefa principal sincronizada." : "Tarefa principal salva localmente."); }, [state, store, runMutation, runOptimisticCreate]);
@@ -906,13 +901,15 @@ export default function App() {
     if (!files.length) return Promise.resolve(false);
     return files.reduce((queue, file, index) => queue.then(() => {
       const baseState = confirmedStateRef.current || state;
-      const previewUrl = globalThis.URL?.createObjectURL ? globalThis.URL.createObjectURL(file) : "";
-      return runOptimisticMutation(
+      const previewPromise = store.live
+        ? Promise.resolve(globalThis.URL?.createObjectURL ? globalThis.URL.createObjectURL(file) : "")
+        : fileToDataUrl(file);
+      return previewPromise.then((previewUrl) => runOptimisticMutation(
         (current) => addOptimisticAttachment(current, id, file, previewUrl),
         () => Promise.resolve(store.addAttachment(baseState, id, file, previewUrl)).then((result) => mergeAttachmentDetailsIntoState(baseState, id, result)),
         files.length > 1 ? `Anexo ${index + 1} de ${files.length} na fila...` : (store.live ? "Anexo em envio..." : "Anexo adicionado no mock local."),
         files.length > 1 ? `Anexo ${index + 1} de ${files.length} salvo.` : (store.live ? "Anexo salvo no SharePoint." : "Anexo salvo localmente."),
-      );
+      ));
     }), Promise.resolve(true));
   }, [state, store, runOptimisticMutation]);
   const removeAttachment = useCallback((taskId, attachment) => runOptimisticMutation(
@@ -927,18 +924,27 @@ export default function App() {
     setTaskScope(scope);
     setFilters((current) => ({ ...current, assignee: scope === "mine" && currentEmployee?.name ? [currentEmployee.name] : [] }));
   }, [currentEmployee?.name]);
+  const onCentralModeChange = useCallback((mode) => {
+    setActive(mode === "mine" ? "dashboard" : "team");
+    onTaskScopeChange(mode === "mine" ? "mine" : "all");
+  }, [onTaskScopeChange]);
+  const navigate = useCallback((target) => {
+    if (target === "dashboard") return onCentralModeChange("mine");
+    if (target === "team") return onCentralModeChange("team");
+    setActive(target);
+  }, [onCentralModeChange]);
   if (error) return <div className="app-error"><strong>Não foi possível carregar o Planner.</strong><span>{error}</span><button className="button button-secondary" onClick={() => { setError(""); store.load().then(setState).catch((failure) => setError(failure.message)); }}>Tentar novamente</button></div>;
-  if (state.loading?.core) return <AppShell active={active} onNavigate={setActive} onCreate={() => setCreating(true)} tasks={state.tasks} live={store.live} currentEmployee={null} personalStats={taskStats([])} openTaskCount={0}><DataLoadingView loading={state.loading} error={state.loadErrors?.core} /></AppShell>;
+  if (state.loading?.core) return <AppShell active={active} onNavigate={navigate} onCreate={() => setCreating(true)} tasks={state.tasks} live={store.live} currentEmployee={null} personalStats={taskStats([])} openTaskCount={0}><DataLoadingView loading={state.loading} error={state.loadErrors?.core} /></AppShell>;
   const viewState = { ...state, workItems };
   const personalItems = currentEmployee ? workItems.filter((item) => isAssignedToEmployee(item, currentEmployee)) : [];
   const personalStats = workItemStats(filterWorkItems(personalItems));
   const openTaskCount = state.tasks.filter((task) => !task.parentTaskId && !["done", "cancelled"].includes(task.status)).length;
   const renderPage = () => {
-    if (active === "dashboard" || active === "team") return <CentralView state={viewState} mode={active === "dashboard" ? "mine" : "team"} onChangeMode={(mode) => setActive(mode === "mine" ? "dashboard" : "team")} onOpenTask={openTask} onOpenSource={(item) => store.openSource?.(item)} onCompleteTask={completeTask} onCreate={() => setCreating(true)} />;
-    if (active === "board") return <BoardView state={state} currentEmployee={currentEmployee} checklistVisibility={checklistVisibility} onOpen={openTask} onToggleSubtask={saveTask} onMove={moveTask} onComplete={completeTask} onCreate={() => setCreating(true)} filters={filters} setFilters={setFilters} onNavigate={setActive} taskScope={taskScope} onScopeChange={onTaskScopeChange} />;
-    if (active === "list") return <ListView state={state} currentEmployee={currentEmployee} onOpen={openTask} onCreate={() => setCreating(true)} filters={filters} setFilters={setFilters} onNavigate={setActive} taskScope={taskScope} onScopeChange={onTaskScopeChange} />;
-    if (active === "calendar") return <CalendarView state={state} currentEmployee={currentEmployee} onOpen={openTask} onCreate={() => setCreating(true)} filters={filters} setFilters={setFilters} onNavigate={setActive} taskScope={taskScope} onScopeChange={onTaskScopeChange} />;
-    if (active === "more") return <MoreView onNavigate={setActive} />;
+    if (active === "dashboard" || active === "team") return <CentralView state={viewState} mode={active === "dashboard" ? "mine" : "team"} currentEmployee={currentEmployee} filters={filters} filterBar={<FilterBar filters={filters} setFilters={setFilters} onCreate={() => setCreating(true)} employees={state.employees} />} onClearFilters={() => setFilters(createDefaultFilters())} onChangeMode={onCentralModeChange} onOpenTask={openTask} onOpenSource={(item) => store.openSource?.(item)} onCompleteTask={completeTask} onCreate={() => setCreating(true)} />;
+    if (active === "board") return <BoardView state={state} currentEmployee={currentEmployee} checklistVisibility={checklistVisibility} onOpen={openTask} onToggleSubtask={saveTask} onMove={moveTask} onComplete={completeTask} onCreate={() => setCreating(true)} filters={filters} setFilters={setFilters} onNavigate={navigate} taskScope={taskScope} onScopeChange={onTaskScopeChange} />;
+    if (active === "list") return <ListView state={state} currentEmployee={currentEmployee} onOpen={openTask} onCreate={() => setCreating(true)} filters={filters} setFilters={setFilters} onNavigate={navigate} taskScope={taskScope} onScopeChange={onTaskScopeChange} />;
+    if (active === "calendar") return <CalendarView state={state} currentEmployee={currentEmployee} onOpen={openTask} onCreate={() => setCreating(true)} filters={filters} setFilters={setFilters} onNavigate={navigate} taskScope={taskScope} onScopeChange={onTaskScopeChange} />;
+    if (active === "more") return <MoreView onNavigate={navigate} />;
     if (active === "quality") return state.loading?.quality ? <LoadingFallback /> : <Suspense fallback={<LoadingFallback />}><LazyQualityView state={state} onCreate={createQualityTask} onCreateTask={() => setCreating(true)} filters={filters} setFilters={setFilters} /></Suspense>;
     return <Suspense fallback={<LoadingFallback />}><LazySettingsView onReset={reloadData} live={store.live} /></Suspense>;
   };
