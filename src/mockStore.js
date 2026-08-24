@@ -1,6 +1,7 @@
 import { normalizeAssigneeNames, STATUSES } from "./domain.js";
+import { notificationDedupeKey, notificationRecipients } from "./notifications.js";
 
-export const STORAGE_KEY = "betinhos-tela-planner-mock-v1";
+export const STORAGE_KEY = "betinhos-tela-planner-mock-v2";
 
 const dateFromToday = (offset) => {
   const date = new Date();
@@ -108,13 +109,13 @@ export function seedState() {
   addChecklist("task-40", ["Revisar atrasadas", "Cobrar bloqueios", "Atualizar próximos passos"]);
   addChecklist("task-42", ["Enviar cobrança ao parceiro", "Registrar retorno", "Atualizar status da tarefa"]);
   const employees = [
-    { id: "employee-marina", name: "Marina Alves", userId: "user-marina" },
+    { id: "employee-marina", name: "Marina Alves", userId: "user-marina", externalNotificationsAvailable: true },
     { id: "employee-rafael", name: "Rafael Lima", userId: "user-rafael" },
     { id: "employee-camila", name: "Camila Torres", userId: "user-camila" },
     { id: "employee-joao", name: "João Mendes", userId: "user-joao" },
-    { id: "employee-luiza", name: "Luiza Prado", userId: "user-luiza" },
+    { id: "employee-luiza", name: "Luiza Prado", userId: "", externalNotificationsAvailable: false },
     { id: "employee-gustavo", name: "Gustavo Neri", userId: "user-gustavo" },
-    { id: "employee-renan", name: "Renan Martins", userId: "user-renan", isMockCurrentUser: true },
+    { id: "employee-renan", name: "Renan Martins", userId: "user-renan", externalNotificationsAvailable: true, isMockCurrentUser: true },
   ];
   const quality = [
     { id: "quality-error-204", type: "error", code: "QAL-204", title: "Atraso na confirmação do fornecedor", description: "Fornecedor respondeu após a janela combinada para o embarque.", status: "Em tratamento", dueDate: dateFromToday(1), assigneeName: "Rafael Lima" },
@@ -126,7 +127,13 @@ export function seedState() {
     { id: "quality-action-302", type: "action", code: "ACT-302", title: "Atualizar roteiro de contingência", description: "Documentar alternativas para interdições e atrasos.", status: "Aberto", dueDate: dateFromToday(6), assigneeName: "Rafael Lima" },
     { id: "quality-action-303", type: "action", code: "ACT-303", title: "Treinar confirmação de passageiros", description: "Reforçar confirmação D-1 e D-0 com a equipe comercial.", status: "Planejado", dueDate: dateFromToday(8), assigneeName: "Camila Torres" },
   ];
-  return { quotes, tasks, employees, quality, lastUpdated: new Date().toISOString() };
+  employees.forEach((employee) => { employee.externalNotificationsAvailable ??= Boolean(employee.userId); });
+  tasks.forEach((item) => { item.creatorUserId ||= "user-renan"; item.creatorEmployeeId ||= "employee-renan"; item.assigneeIds ||= employees.filter((employee) => item.assigneeNames.includes(employee.name)).map((employee) => employee.id); });
+  const notifications = [
+    { id: "notification-1", taskId: "task-42", recipientEmployeeId: "employee-renan", type: "mention", title: "Rafael mencionou você", message: "Preciso do retorno do parceiro até o fim do dia.", occurredAt: new Date().toISOString(), readAt: "" },
+    { id: "notification-2", taskId: "task-40", recipientEmployeeId: "employee-renan", type: "due_today", title: "Tarefa vence hoje", message: "Revisar pendências prioritárias do dia", occurredAt: new Date(Date.now() - 3600000).toISOString(), readAt: "" },
+  ];
+  return { quotes, tasks, employees, quality, notifications, lastUpdated: new Date().toISOString() };
 }
 
 function task(id, title, quoteId, quoteCode, quoteTitle, status, priority, assigneeName, teamName, dueDate, description, parentTaskId = null, context = {}) {
@@ -160,41 +167,62 @@ export function createTask(state, input) {
   }
   const sourceType = input.sourceType || (input.quoteId ? "quote" : "manual");
   const assigneeNames = normalizeAssigneeNames(input.assigneeNames || input.assigneeName);
+  const assigneeIds = input.assigneeIds || employeeIdsByNames(state.employees, assigneeNames);
   const nextTask = {
     id: uid("task"), parentTaskId: input.parentTaskId || null, quoteId: input.quoteId || null,
     quoteCode: input.quoteCode || "", quoteTitle: input.quoteTitle || "Sem vínculo", title: input.title.trim(),
-    status: input.status || STATUSES[0].id, priority: input.priority || "medium", assigneeNames, assigneeName: assigneeNames.join(", "),
+    status: input.status || STATUSES[0].id, priority: input.priority || "medium", assigneeNames, assigneeName: assigneeNames.join(", "), assigneeIds,
+    creatorEmployeeId: input.actorEmployeeId || "", creatorUserId: input.actorUserId || "",
     teamName: input.teamName || "Operação", dueDate: input.dueDate || "", description: input.description || "",
-    checklist: input.checklist || [], labels: input.quoteCode ? [input.quoteCode] : [], sourceType, sourceId: input.sourceId || input.quoteId || null, sourceLabel: input.sourceLabel || (sourceType === "quality" ? "Ação de qualidade" : sourceType === "quote" ? "Pedido de cotação" : "Tarefa manual"), sourceCode: input.sourceCode || input.quoteCode || "", blockedReason: input.blockedReason || "", comments: [], attachments: [],
+    checklist: input.checklist || [], labels: input.quoteCode ? [input.quoteCode] : [], sourceType, sourceId: input.sourceId || input.quoteId || null, sourceLabel: input.sourceLabel || (sourceType === "quality" ? "Ação de qualidade" : sourceType === "quote" ? "Pedido de cotação" : "Tarefa manual"), sourceCode: input.sourceCode || input.quoteCode || "", comments: [], attachments: [],
     history: [{ id: uid("history"), text: "Tarefa criada no mock.", createdAt: new Date().toISOString(), author: "Você" }],
   };
-  return saveState({ ...state, tasks: [...state.tasks, nextTask] });
+  const notifications = [...(state.notifications || [])];
+  notificationRecipients({ type: "assignment", assigneeIds, actorEmployeeId: input.actorEmployeeId }).forEach((recipientEmployeeId) => {
+    notifications.unshift({ id: uid("notification"), taskId: nextTask.id, recipientEmployeeId, type: "assignment", title: "Nova tarefa atribuída", message: nextTask.title, occurredAt: new Date().toISOString(), readAt: "", dedupeKey: notificationDedupeKey({ recipientId: recipientEmployeeId, taskId: nextTask.id, type: "assignment", eventId: nextTask.id }) });
+  });
+  return saveState({ ...state, tasks: [...state.tasks, nextTask], notifications });
 }
 
 export function updateTask(state, id, patch) {
-  return saveState({ ...state, tasks: state.tasks.map((taskItem) => {
+  const existing = state.tasks.find((taskItem) => taskItem.id === id);
+  const tasks = state.tasks.map((taskItem) => {
     if (taskItem.id !== id) return taskItem;
     const nextStatus = patch.status ?? taskItem.status;
-    const nextBlockedReason = patch.blockedReason !== undefined
-      ? String(patch.blockedReason || "").trim()
-      : (nextStatus === "waiting" ? taskItem.blockedReason || "" : "");
-    if (nextStatus === "waiting" && !nextBlockedReason) throw new Error("Informe o motivo do bloqueio antes de salvar.");
     const statusChanged = patch.status !== undefined && patch.status !== taskItem.status;
-    const blockChanged = nextBlockedReason !== String(taskItem.blockedReason || "").trim();
     const history = [...(taskItem.history || [])];
     if (statusChanged) history.push({ id: uid("history"), text: nextStatus === "done" ? "Tarefa concluída." : `Status alterado para ${STATUSES.find((item) => item.id === nextStatus)?.label || nextStatus}.`, createdAt: new Date().toISOString(), author: "Você" });
-    if (blockChanged) history.push({ id: uid("history"), text: nextBlockedReason ? `Bloqueio registrado: ${nextBlockedReason}` : "Bloqueio removido.", createdAt: new Date().toISOString(), author: "Você" });
-    return { ...taskItem, ...patch, status: nextStatus, blockedReason: nextBlockedReason, history };
-  }) });
+    return { ...taskItem, ...patch, status: nextStatus, history };
+  });
+  if (!existing) return saveState({ ...state, tasks });
+  const next = tasks.find((taskItem) => taskItem.id === id);
+  const changes = [
+    patch.status !== undefined && patch.status !== existing.status ? "status" : "",
+    patch.dueDate !== undefined && patch.dueDate !== existing.dueDate ? "deadline" : "",
+    patch.assigneeNames !== undefined && JSON.stringify(normalizeAssigneeNames(patch.assigneeNames)) !== JSON.stringify(normalizeAssigneeNames(existing.assigneeNames)) ? "assignees" : "",
+  ].filter(Boolean);
+  const notifications = [...(state.notifications || [])];
+  changes.forEach((type) => notificationRecipients({ type, creatorEmployeeId: existing.creatorEmployeeId, assigneeIds: next.assigneeIds || employeeIdsByNames(state.employees, next.assigneeNames), previousAssigneeIds: existing.assigneeIds || employeeIdsByNames(state.employees, existing.assigneeNames), actorEmployeeId: patch.actorEmployeeId }).forEach((recipientEmployeeId) => {
+    const eventId = uid("event");
+    notifications.unshift({ id: uid("notification"), taskId: id, recipientEmployeeId, type, title: type === "deadline" ? "Prazo alterado" : type === "status" ? "Status alterado" : "Responsáveis alterados", message: next.title, occurredAt: new Date().toISOString(), readAt: "", dedupeKey: notificationDedupeKey({ recipientId: recipientEmployeeId, taskId: id, type, eventId }) });
+  }));
+  return saveState({ ...state, tasks, notifications });
+}
+
+function employeeIdsByNames(employees = [], names = []) {
+  const wanted = new Set(normalizeAssigneeNames(names));
+  return employees.filter((employee) => wanted.has(employee.name)).map((employee) => employee.id);
 }
 
 export function deleteTask(state, id) {
   return saveState({ ...state, tasks: state.tasks.filter((taskItem) => taskItem.id !== id) });
 }
 
-export function addComment(state, id, text) {
+export function addComment(state, id, text, context = {}) {
   const comment = { id: uid("comment"), text: text.trim(), createdAt: new Date().toISOString(), author: "Você" };
-  return saveState({ ...state, tasks: state.tasks.map((taskItem) => taskItem.id === id ? { ...taskItem, comments: [...taskItem.comments, comment] } : taskItem) });
+  const notifications = [...(state.notifications || [])];
+  (context.mentionedEmployeeIds || []).filter((employeeId) => employeeId !== context.actorEmployeeId).forEach((recipientEmployeeId) => notifications.unshift({ id: uid("notification"), taskId: id, recipientEmployeeId, type: "mention", title: "Você foi mencionado", message: text.trim(), occurredAt: new Date().toISOString(), readAt: "", dedupeKey: notificationDedupeKey({ recipientId: recipientEmployeeId, taskId: id, type: "mention", eventId: comment.id }) }));
+  return saveState({ ...state, notifications, tasks: state.tasks.map((taskItem) => taskItem.id === id ? { ...taskItem, comments: [...taskItem.comments, comment] } : taskItem) });
 }
 
 export function addAttachment(state, id, name) {
@@ -205,6 +233,14 @@ export function addAttachment(state, id, name) {
 
 export function deleteAttachment(state, taskId, attachmentId) {
   return saveState({ ...state, tasks: state.tasks.map((taskItem) => taskItem.id === taskId ? { ...taskItem, attachments: taskItem.attachments.filter((attachment) => attachment.id !== attachmentId) } : taskItem) });
+}
+
+export function markNotificationRead(state, notificationId, readAt = new Date().toISOString()) {
+  return saveState({ ...state, notifications: (state.notifications || []).map((item) => item.id === notificationId ? { ...item, readAt } : item) });
+}
+
+export function markAllNotificationsRead(state, recipientEmployeeId, readAt = new Date().toISOString()) {
+  return saveState({ ...state, notifications: (state.notifications || []).map((item) => item.recipientEmployeeId === recipientEmployeeId ? { ...item, readAt: item.readAt || readAt } : item) });
 }
 
 export function ensureQuoteTask(state, quote) {

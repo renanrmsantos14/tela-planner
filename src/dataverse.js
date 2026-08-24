@@ -6,6 +6,8 @@ import {
   deleteTask as deleteMockTask,
   ensureQuoteTask as ensureMockQuoteTask,
   loadState as loadMockState,
+  markAllNotificationsRead as markAllMockNotificationsRead,
+  markNotificationRead as markMockNotificationRead,
   resetState as resetMockState,
   saveState as saveMockState,
   updateTask as updateMockTask,
@@ -22,6 +24,7 @@ const EMPLOYEE_ASSIGNEE_FIELD = "cr40f_cr40f_funcionarioresponsavel";
 const EVENT_TABLE = "cr40f_plannertarefaevento";
 const RELATION_TABLE = "cr40f_plannertarearelacao";
 const ASSIGNEE_RELATION_TABLE = "cr40f_plannertarearesponsavel";
+const NOTIFICATION_TABLE = "cr40f_plannernotificacao";
 const ENVIRONMENT_VARIABLE_DEFINITION_TABLE = "environmentvariabledefinition";
 const ENVIRONMENT_VARIABLE_VALUE_TABLE = "environmentvariablevalue";
 const FLOW_URL_SCHEMA = "new_URLFlowsalvararquivosSharePoint";
@@ -41,6 +44,7 @@ const ENTITY_SETS = Object.freeze({
   [EVENT_TABLE]: "cr40f_plannertarefaeventos",
   [RELATION_TABLE]: "cr40f_plannertarearelacaos",
   [ASSIGNEE_RELATION_TABLE]: "cr40f_plannertarearesponsavels",
+  [NOTIFICATION_TABLE]: "cr40f_plannernotificacaos",
   [ENVIRONMENT_VARIABLE_DEFINITION_TABLE]: "environmentvariabledefinitions",
   [ENVIRONMENT_VARIABLE_VALUE_TABLE]: "environmentvariablevalues",
   systemuser: "systemusers",
@@ -275,6 +279,7 @@ function normalizeTask(row, events = [], assignees = []) {
     assigneeName: assignees.length ? assignees.map((item) => item.name).join(", ") : formatLookup(row, EMPLOYEE_ASSIGNEE_FIELD),
     assigneeIds: assignees.length ? assignees.map((item) => item.id) : [row[`_${EMPLOYEE_ASSIGNEE_FIELD}_value`] || ""].filter(Boolean),
     assigneeId: assignees[0]?.id || row[`_${EMPLOYEE_ASSIGNEE_FIELD}_value`] || "",
+    creatorUserId: row._createdby_value || "",
     teamName: formatLookup(row, "cr40f_equipe", "Sem equipe"),
     teamId: row._cr40f_equipe_value || "",
     quoteId: row._cr40f_pedidocotacao_value || null,
@@ -284,7 +289,6 @@ function normalizeTask(row, events = [], assignees = []) {
     sourceId: row._cr40f_pedidocotacao_value || row._cr40f_errooperacional_value || row._cr40f_acaooperacional_value || null,
     sourceCode: row.cr40f_codigoorigem || "",
     sourceLabel: origin === "quote" ? "Pedido de cotação" : origin === "quality" ? "Qualidade" : "Tarefa manual",
-    blockedReason: row.cr40f_motivobloqueio || "",
     comments,
     attachments,
     history,
@@ -309,7 +313,7 @@ function measureStage(name, operation) {
 }
 
 function buildCoreState(xrm, rows, relations, assigneeRelations, employees) {
-  const employeeRecords = employees.map((row) => ({ id: row.cr40f_funcionariosid, name: row.cr40f_nomecompleto || row.new_apelido || "Sem nome", userId: row._cr40f_usuariodataverse_value || "" }));
+  const employeeRecords = employees.map((row) => ({ id: row.cr40f_funcionariosid, name: row.cr40f_nomecompleto || row.new_apelido || "Sem nome", userId: row._cr40f_usuariodataverse_value || "", externalNotificationsAvailable: Boolean(row._cr40f_usuariodataverse_value) }));
   const employeeById = new Map(employeeRecords.map((employee) => [cleanId(employee.id).toLowerCase(), employee]));
   const relationByChild = new Map(relations.map(normalizeRelation).map((item) => [item.childTaskId, item.parentTaskId]));
   const assigneesByTask = new Map();
@@ -319,13 +323,17 @@ function buildCoreState(xrm, rows, relations, assigneeRelations, employees) {
     list.push({ id: item._cr40f_funcionario_value, name: item["_cr40f_funcionario_value@OData.Community.Display.V1.FormattedValue"] || employee?.name || "Sem nome", userId: employee?.userId || "" });
     assigneesByTask.set(item._cr40f_tarefa_value, list);
   });
-  const tasks = rows.map((row) => ({ ...normalizeTask(row, [], assigneesByTask.get(row.cr40f_plannertarefaid) || []), parentTaskId: relationByChild.get(row.cr40f_plannertarefaid) || null, detailsLoaded: false }));
-  return { quotes: [], employees: employeeRecords, quality: [], tasks, lastUpdated: new Date().toISOString(), live: true, loading: { core: false, quotes: true, quality: true } };
+  const tasks = rows.map((row) => {
+    const task = normalizeTask(row, [], assigneesByTask.get(row.cr40f_plannertarefaid) || []);
+    const creator = employeeRecords.find((employee) => cleanId(employee.userId).toLowerCase() === cleanId(task.creatorUserId).toLowerCase());
+    return { ...task, creatorEmployeeId: creator?.id || "", parentTaskId: relationByChild.get(row.cr40f_plannertarefaid) || null, detailsLoaded: false };
+  });
+  return { quotes: [], employees: employeeRecords, quality: [], tasks, notifications: [], lastUpdated: new Date().toISOString(), live: true, loading: { core: false, quotes: true, quality: true, notifications: true } };
 }
 
 export async function loadCoreState(xrm) {
   const [rows, relations, assigneeRelations, employees] = await Promise.all([
-    measureStage("tarefas", () => retrieveMany(xrm, TASK_TABLE, `?$select=cr40f_plannertarefaid,cr40f_name,cr40f_titulo,cr40f_descricao,cr40f_status,cr40f_prioridade,cr40f_prazo,_${EMPLOYEE_ASSIGNEE_FIELD}_value,_cr40f_equipe_value,_cr40f_pedidocotacao_value,_cr40f_errooperacional_value,_cr40f_acaooperacional_value,cr40f_origem,cr40f_codigoorigem,cr40f_motivobloqueio&$filter=statecode eq 0&$orderby=modifiedon desc`)),
+    measureStage("tarefas", () => retrieveMany(xrm, TASK_TABLE, `?$select=cr40f_plannertarefaid,cr40f_name,cr40f_titulo,cr40f_descricao,cr40f_status,cr40f_prioridade,cr40f_prazo,_createdby_value,_${EMPLOYEE_ASSIGNEE_FIELD}_value,_cr40f_equipe_value,_cr40f_pedidocotacao_value,_cr40f_errooperacional_value,_cr40f_acaooperacional_value,cr40f_origem,cr40f_codigoorigem&$filter=statecode eq 0&$orderby=modifiedon desc`)),
     measureStage("relações", () => retrieveMany(xrm, RELATION_TABLE, "?$select=cr40f_plannertarearelacaoid,_cr40f_tarefapai_value,_cr40f_subtarefa_value&$filter=statecode eq 0")),
     measureStage("responsáveis", () => retrieveMany(xrm, ASSIGNEE_RELATION_TABLE, "?$select=cr40f_plannertarearesponsavelid,_cr40f_tarefa_value,_cr40f_funcionario_value&$filter=statecode eq 0")),
     measureStage("funcionários", () => retrieveMany(xrm, EMPLOYEE_TABLE, "?$select=cr40f_funcionariosid,cr40f_nomecompleto,new_apelido,_cr40f_usuariodataverse_value&$filter=statecode eq 0 and cr40f_status eq 0 and cr40f_funcao eq 202410001&$orderby=cr40f_nomecompleto asc")),
@@ -374,7 +382,7 @@ export async function searchQuotes(xrm, query) {
 async function loadLiveState(xrm) {
   const [quotes, rows, events, relations, assigneeRelations, qualityErrors, qualityActions, employees] = await Promise.all([
     retrieveMany(xrm, QUOTE_TABLE, "?$select=cr40f_pedidodecotacaoid,cr40f_numerodacotacao,cr40f_titulo,cr40f_clienteempresa,cr40f_statuscotacao,cr40f_prazoresponder,cr40f_valorcotado,cr40f_plannertaskid,cr40f_linktarefaplanner,cr40f_linkmensagemteams&$filter=statecode eq 0&$orderby=modifiedon desc"),
-    retrieveMany(xrm, TASK_TABLE, `?$select=cr40f_plannertarefaid,cr40f_name,cr40f_titulo,cr40f_descricao,cr40f_status,cr40f_prioridade,cr40f_prazo,_${EMPLOYEE_ASSIGNEE_FIELD}_value,_cr40f_equipe_value,_cr40f_pedidocotacao_value,_cr40f_errooperacional_value,_cr40f_acaooperacional_value,cr40f_origem,cr40f_codigoorigem,cr40f_motivobloqueio&$filter=statecode eq 0&$orderby=modifiedon desc`),
+    retrieveMany(xrm, TASK_TABLE, `?$select=cr40f_plannertarefaid,cr40f_name,cr40f_titulo,cr40f_descricao,cr40f_status,cr40f_prioridade,cr40f_prazo,_createdby_value,_${EMPLOYEE_ASSIGNEE_FIELD}_value,_cr40f_equipe_value,_cr40f_pedidocotacao_value,_cr40f_errooperacional_value,_cr40f_acaooperacional_value,cr40f_origem,cr40f_codigoorigem&$filter=statecode eq 0&$orderby=modifiedon desc`),
     retrieveMany(xrm, EVENT_TABLE, "?$select=cr40f_plannertarefaeventoid,_cr40f_tarefa_value,cr40f_tipo,cr40f_campo,cr40f_descricao,cr40f_valornovo,cr40f_ocorridoem,_cr40f_autor_value,_createdby_value&$orderby=cr40f_ocorridoem desc"),
     retrieveMany(xrm, RELATION_TABLE, "?$select=cr40f_plannertarearelacaoid,_cr40f_tarefapai_value,_cr40f_subtarefa_value&$filter=statecode eq 0"),
     retrieveMany(xrm, ASSIGNEE_RELATION_TABLE, "?$select=cr40f_plannertarearesponsavelid,_cr40f_tarefa_value,_cr40f_funcionario_value,_cr40f_funcionario_value&$filter=statecode eq 0"),
@@ -382,7 +390,7 @@ async function loadLiveState(xrm) {
     retrieveMany(xrm, QUALITY_ACTION_TABLE, "?$select=cr40f_acaooperacionalid,cr40f_titulo,cr40f_descricao,cr40f_status,cr40f_prazo,_cr40f_responsavel_value&$filter=statecode eq 0&$orderby=createdon desc"),
     retrieveMany(xrm, EMPLOYEE_TABLE, "?$select=cr40f_funcionariosid,cr40f_nomecompleto,new_apelido,_cr40f_usuariodataverse_value&$filter=statecode eq 0 and cr40f_status eq 0 and cr40f_funcao eq 202410001&$orderby=cr40f_nomecompleto asc"),
   ]);
-  const employeeRecords = employees.map((row) => ({ id: row.cr40f_funcionariosid, name: row.cr40f_nomecompleto || row.new_apelido || "Sem nome", userId: row._cr40f_usuariodataverse_value || "" }));
+  const employeeRecords = employees.map((row) => ({ id: row.cr40f_funcionariosid, name: row.cr40f_nomecompleto || row.new_apelido || "Sem nome", userId: row._cr40f_usuariodataverse_value || "", externalNotificationsAvailable: Boolean(row._cr40f_usuariodataverse_value) }));
   const employeeById = new Map(employeeRecords.map((employee) => [cleanId(employee.id).toLowerCase(), employee]));
   const relationByChild = new Map(relations.map(normalizeRelation).map((item) => [item.childTaskId, item.parentTaskId]));
   const assigneesByTask = new Map();
@@ -394,12 +402,36 @@ async function loadLiveState(xrm) {
   });
   const eventsByTask = new Map();
   events.forEach((event) => { const list = eventsByTask.get(event._cr40f_tarefa_value) || []; list.push(event); eventsByTask.set(event._cr40f_tarefa_value, list); });
-  const tasks = rows.map((row) => ({ ...normalizeTask(row, eventsByTask.get(row.cr40f_plannertarefaid) || [], assigneesByTask.get(row.cr40f_plannertarefaid) || []), parentTaskId: relationByChild.get(row.cr40f_plannertarefaid) || null }));
+  const tasks = rows.map((row) => {
+    const task = normalizeTask(row, eventsByTask.get(row.cr40f_plannertarefaid) || [], assigneesByTask.get(row.cr40f_plannertarefaid) || []);
+    const creator = employeeRecords.find((employee) => cleanId(employee.userId).toLowerCase() === cleanId(task.creatorUserId).toLowerCase());
+    return { ...task, creatorEmployeeId: creator?.id || "", parentTaskId: relationByChild.get(row.cr40f_plannertarefaid) || null };
+  });
   const quoteById = new Map(quotes.map((row) => [row.cr40f_pedidodecotacaoid, normalizeQuote(row)]));
   const employeesWithProfiles = employeeRecords;
   const quality = [...qualityErrors.map((row) => normalizeQuality(row, "error")), ...qualityActions.map((row) => normalizeQuality(row, "action"))].map((item) => ({ ...item, assigneeProfiles: employeeById.has(cleanId(item.assigneeId).toLowerCase()) ? [employeesWithProfiles.find((employee) => cleanId(employee.id).toLowerCase() === cleanId(item.assigneeId).toLowerCase())] : [] }));
   const tasksWithProfiles = tasks.map((task) => ({ ...task, assigneeProfiles: task.assigneeProfiles?.length ? task.assigneeProfiles : task.assigneeIds.map((id) => employeesWithProfiles.find((employee) => cleanId(employee.id).toLowerCase() === cleanId(id).toLowerCase())).filter(Boolean), quoteCode: quoteById.get(task.quoteId)?.code || "", quoteTitle: quoteById.get(task.quoteId)?.title || "" }));
-  return { quotes: [...quoteById.values()], employees: employeesWithProfiles, quality, tasks: tasksWithProfiles, lastUpdated: new Date().toISOString(), live: true };
+  return { quotes: [...quoteById.values()], employees: employeesWithProfiles, quality, tasks: tasksWithProfiles, notifications: [], lastUpdated: new Date().toISOString(), live: true };
+}
+
+function normalizeNotification(row) {
+  return { id: row.cr40f_plannernotificacaoid, taskId: row._cr40f_tarefa_value || "", recipientEmployeeId: row._cr40f_destinatario_value || "", type: row.cr40f_tipo || "update", title: row.cr40f_titulo || row.cr40f_name || "Notificação", message: row.cr40f_mensagem || "", occurredAt: row.cr40f_ocorridoem || row.createdon || "", readAt: row.cr40f_lidoem || "", referenceDate: dateOnly(row.cr40f_datareferencia), dedupeKey: row.cr40f_chavededupe || "" };
+}
+
+async function loadLiveNotifications(xrm, employeeId) {
+  if (!employeeId) return [];
+  try {
+    const rows = await retrieveMany(xrm, NOTIFICATION_TABLE, `?$select=cr40f_plannernotificacaoid,cr40f_name,cr40f_titulo,cr40f_mensagem,cr40f_tipo,cr40f_ocorridoem,cr40f_lidoem,cr40f_datareferencia,cr40f_chavededupe,_cr40f_tarefa_value,_cr40f_destinatario_value&$filter=_cr40f_destinatario_value eq ${cleanId(employeeId)} and statecode eq 0&$orderby=cr40f_ocorridoem desc&$top=100`);
+    return rows.map(normalizeNotification);
+  } catch (error) {
+    console.warn("[Planner] notificações indisponíveis", error);
+    return [];
+  }
+}
+
+async function markLiveNotificationRead(xrm, notificationId, readAt = new Date().toISOString()) {
+  await request(xrm, `/${entitySetName(NOTIFICATION_TABLE)}(${cleanId(notificationId)})`, { method: "PATCH", body: JSON.stringify({ cr40f_lidoem: readAt }) });
+  return readAt;
 }
 
 async function createEvent(xrm, taskId, type, description, field = "", previous = "", next = "") {
@@ -413,7 +445,7 @@ async function createLiveTask(xrm, state, input) {
   const activeMain = state.tasks.find((task) => task.quoteId === input.quoteId && !task.parentTaskId && !["done", "cancelled"].includes(task.status));
     if (activeMain) throw new Error("Esta cotação já possui um acompanhamento principal ativo.");
   }
-  const payload = { cr40f_titulo: input.title.trim(), cr40f_descricao: input.description || "", cr40f_status: STATUS_VALUES.todo, cr40f_prioridade: PRIORITY_VALUES[input.priority] || PRIORITY_VALUES.medium, cr40f_prazo: input.dueDate ? `${input.dueDate}T12:00:00Z` : null, cr40f_origem: ORIGIN_VALUES[input.sourceType || (input.quoteId ? "quote" : "manual")], cr40f_codigoorigem: input.sourceCode || input.quoteCode || "", cr40f_motivobloqueio: input.blockedReason || "" };
+  const payload = { cr40f_titulo: input.title.trim(), cr40f_descricao: input.description || "", cr40f_status: STATUS_VALUES.todo, cr40f_prioridade: PRIORITY_VALUES[input.priority] || PRIORITY_VALUES.medium, cr40f_prazo: input.dueDate ? `${input.dueDate}T12:00:00Z` : null, cr40f_origem: ORIGIN_VALUES[input.sourceType || (input.quoteId ? "quote" : "manual")], cr40f_codigoorigem: input.sourceCode || input.quoteCode || "" };
   const teamId = input.teamId || await resolveIdByName(xrm, "team", "name", input.teamName);
   await bindLookup(xrm, payload, TASK_TABLE, "cr40f_pedidocotacao", QUOTE_TABLE, input.quoteId);
   await bindLookup(xrm, payload, TASK_TABLE, "cr40f_errooperacional", QUALITY_ERROR_TABLE, input.qualityType === "error" ? input.qualityId : "");
@@ -427,25 +459,24 @@ async function createLiveTask(xrm, state, input) {
   await replaceTaskAssignees(xrm, id, { ...input, assigneeIds });
   await markQuoteOrigin(xrm, input.quoteId, id);
   await createEvent(xrm, id, 100000000, "Tarefa criada.");
+  if (assigneeIds.length) {
+    await createEvent(xrm, id, 100000003, "Responsáveis atribuídos.", "notification:assignment", "", JSON.stringify({ actorEmployeeId: input.actorEmployeeId || "", actorUserId: input.actorUserId || "", creatorEmployeeId: input.actorEmployeeId || "", assigneeIds, previousAssigneeIds: [] }));
+  }
   return loadLiveState(xrm);
 }
 
 async function updateLiveTask(xrm, state, id, patch) {
   const existing = state.tasks.find((item) => item.id === id);
   const previousStatus = existing?.status || "";
-  const previousBlockedReason = String(existing?.blockedReason || "").trim();
+  const previousDueDate = existing?.dueDate || "";
+  const previousAssigneeIds = existing?.assigneeIds || [];
   const nextStatus = patch.status ?? previousStatus;
-  const nextBlockedReason = patch.blockedReason !== undefined
-    ? String(patch.blockedReason || "").trim()
-    : (nextStatus === "waiting" ? previousBlockedReason : "");
-  if (nextStatus === "waiting" && !nextBlockedReason) throw new Error("Informe o motivo do bloqueio antes de salvar.");
   const payload = {};
   if (patch.title !== undefined) payload.cr40f_titulo = patch.title.trim();
   if (patch.description !== undefined) payload.cr40f_descricao = patch.description;
   if (patch.status !== undefined) payload.cr40f_status = STATUS_VALUES[patch.status];
   if (patch.priority !== undefined) payload.cr40f_prioridade = PRIORITY_VALUES[patch.priority];
   if (patch.dueDate !== undefined) payload.cr40f_prazo = patch.dueDate ? `${patch.dueDate}T12:00:00Z` : null;
-  if (patch.blockedReason !== undefined || (patch.status !== undefined && patch.status !== "waiting" && previousStatus === "waiting")) payload.cr40f_motivobloqueio = nextBlockedReason;
   if (patch.assigneeId !== undefined || patch.assigneeName !== undefined || patch.assigneeNames !== undefined) {
     const navigation = await resolveLookupNavigation(xrm, TASK_TABLE, EMPLOYEE_ASSIGNEE_FIELD, EMPLOYEE_TABLE);
     const assigneeIds = await resolveAssigneeIds(xrm, patch);
@@ -457,15 +488,21 @@ async function updateLiveTask(xrm, state, id, patch) {
   await request(xrm, `/${entitySetName(TASK_TABLE)}(${cleanId(id)})`, { method: "PATCH", body: JSON.stringify(payload) });
   await markQuoteOrigin(xrm, existing?.quoteId);
   const statusChanged = patch.status !== undefined && nextStatus !== previousStatus;
-  const blockChanged = nextBlockedReason !== previousBlockedReason;
+  const dueDateChanged = patch.dueDate !== undefined && patch.dueDate !== previousDueDate;
+  const nextAssigneeIds = patch.assigneeIds || await resolveAssigneeIds(xrm, patch);
+  const assigneesChanged = patch.assigneeNames !== undefined && JSON.stringify([...previousAssigneeIds].sort()) !== JSON.stringify([...nextAssigneeIds].sort());
+  const eventContext = { actorEmployeeId: patch.actorEmployeeId || "", actorUserId: patch.actorUserId || "", creatorEmployeeId: existing?.creatorEmployeeId || "", assigneeIds: nextAssigneeIds, previousAssigneeIds };
   if (statusChanged) await createEvent(xrm, id, 100000002, nextStatus === "done" ? "Tarefa concluída." : `Status alterado para ${STATUSES.find((item) => item.id === nextStatus)?.label || nextStatus}.`, "status", previousStatus, nextStatus);
-  if (blockChanged) await createEvent(xrm, id, 100000002, nextBlockedReason ? "Bloqueio registrado." : "Bloqueio removido.", "cr40f_motivobloqueio", previousBlockedReason, nextBlockedReason);
-  if (!statusChanged && !blockChanged) await createEvent(xrm, id, patch.status !== undefined ? 100000002 : 100000001, "Tarefa atualizada.");
+  if (statusChanged) await createEvent(xrm, id, 100000002, "Notificação de status pendente.", "notification:status", "", JSON.stringify({ ...eventContext, previousStatus, nextStatus }));
+  if (dueDateChanged) await createEvent(xrm, id, 100000002, `Prazo alterado de ${previousDueDate || "sem prazo"} para ${patch.dueDate || "sem prazo"}.${patch.deadlineChangeReason ? ` Motivo: ${patch.deadlineChangeReason}` : ""}`, "notification:deadline", previousDueDate, JSON.stringify({ ...eventContext, nextDueDate: patch.dueDate || "", reason: patch.deadlineChangeReason || "" }));
+  if (assigneesChanged) await createEvent(xrm, id, 100000002, "Responsáveis alterados.", "notification:assignees", JSON.stringify(previousAssigneeIds), JSON.stringify(eventContext));
+  if (!statusChanged && !dueDateChanged && !assigneesChanged) await createEvent(xrm, id, patch.status !== undefined ? 100000002 : 100000001, "Tarefa atualizada.");
   return loadLiveState(xrm);
 }
 
-async function addLiveComment(xrm, taskId, text) {
+async function addLiveComment(xrm, taskId, text, context = {}) {
   await createEvent(xrm, taskId, 100000001, "Comentário adicionado.", "comentario", "", text.trim());
+  if (context.mentionedEmployeeIds?.length) await createEvent(xrm, taskId, 100000001, "Menção em comentário.", "notification:mention", "", JSON.stringify(context));
   return loadLiveState(xrm);
 }
 
@@ -589,7 +626,10 @@ function createMockDataStore() {
     load: async () => withMode(loadMockState()),
     loadCore: async () => ({ ...withMode(loadMockState()), loading: { core: false, quotes: false, quality: false, photos: false } }),
     loadSupplemental: async (state) => ({ ...state, loading: { ...(state.loading || {}), quotes: false, quality: false } }),
-    loadTaskDetails: async (taskId) => ({ taskId, comments: [], attachments: [], history: [] }),
+    loadNotifications: async (employeeId) => (loadMockState().notifications || []).filter((item) => !employeeId || item.recipientEmployeeId === employeeId),
+    markNotificationRead: async (state, notificationId) => withMode(markMockNotificationRead(state, notificationId)),
+    markAllNotificationsRead: async (state, employeeId) => withMode(markAllMockNotificationsRead(state, employeeId)),
+    loadTaskDetails: async (taskId) => ({ taskId, detailsLoaded: true }),
     loadAttachmentContent: async () => { throw new Error("Prévia de anexo disponível somente no ambiente conectado."); },
     loadPhotos: async () => ({ loading: { photos: false } }),
     searchQuotes: async () => [],
@@ -598,7 +638,7 @@ function createMockDataStore() {
     createQualityTask: async (state, item) => withMode(createMockTask(state, { title: item.title, description: item.description, dueDate: item.dueDate, sourceType: "quality", sourceId: item.id, sourceCode: item.code, sourceLabel: item.type === "error" ? "Erro operacional" : "Ação operacional" })),
     updateTask: async (state, id, patch) => withMode(updateMockTask(state, id, patch)),
     deleteTask: async (state, id) => withMode(deleteMockTask(state, id)),
-    addComment: async (state, id, text) => withMode(addMockComment(state, id, text)),
+    addComment: async (state, id, text, context) => withMode(addMockComment(state, id, text, context)),
     addAttachment: async (state, id, file, previewUrl = "") => withMode(addMockAttachment(state, id, { name: file?.name || "Arquivo", mimeType: file?.type || "", size: file?.size || 0, previewUrl })),
     deleteAttachment: async (state, taskId, attachment) => withMode(deleteMockAttachment(state, taskId, attachment?.id)),
     ensureQuoteTask: async (state, quote) => withMode(ensureMockQuoteTask(state, quote)),
@@ -622,6 +662,14 @@ export function createDataStore() {
     load: () => loadLiveState(xrm),
     loadCore: () => loadCoreState(xrm),
     loadSupplemental: (state) => loadSupplementalState(xrm, state),
+    loadNotifications: (employeeId) => loadLiveNotifications(xrm, employeeId),
+    markNotificationRead: async (state, notificationId) => { const readAt = await markLiveNotificationRead(xrm, notificationId); return { ...state, notifications: (state.notifications || []).map((item) => item.id === notificationId ? { ...item, readAt } : item) }; },
+    markAllNotificationsRead: async (state, employeeId) => {
+      const unread = (state.notifications || []).filter((item) => item.recipientEmployeeId === employeeId && !item.readAt);
+      await Promise.all(unread.map((item) => markLiveNotificationRead(xrm, item.id)));
+      const readAt = new Date().toISOString();
+      return { ...state, notifications: (state.notifications || []).map((item) => item.recipientEmployeeId === employeeId ? { ...item, readAt: item.readAt || readAt } : item) };
+    },
     loadTaskDetails: (taskId) => loadTaskDetails(xrm, taskId),
     loadAttachmentContent: (attachment) => loadLiveAttachmentContent(xrm, attachment),
     loadPhotos: async () => ({ loading: { photos: false } }),
@@ -631,7 +679,7 @@ export function createDataStore() {
     createQualityTask: (state, item) => createLiveTask(xrm, state, { title: item.title, description: item.description, dueDate: item.dueDate, sourceType: "quality", sourceCode: item.code, qualityType: item.type, qualityId: item.id }),
     updateTask: (state, id, patch) => updateLiveTask(xrm, state, id, patch),
     deleteTask: (state, id) => deleteLiveTask(xrm, state, id),
-    addComment: (state, id, text) => addLiveComment(xrm, id, text),
+    addComment: (state, id, text, context) => addLiveComment(xrm, id, text, context),
     addAttachment: (state, id, file) => addLiveAttachment(xrm, id, file),
     deleteAttachment: (state, taskId, attachment) => deleteLiveAttachment(xrm, state, taskId, attachment),
     ensureQuoteTask: (state, quote) => ensureLiveQuoteTask(xrm, state, quote),
