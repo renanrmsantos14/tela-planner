@@ -32,7 +32,7 @@ $definition = @'
           "subscriptionRequest/message": 1,
           "subscriptionRequest/entityname": "cr40f_plannertarefaevento",
           "subscriptionRequest/scope": 4,
-          "subscriptionRequest/filterexpression": "startswith(cr40f_campo,'notification:')"
+          "subscriptionRequest/filterexpression": "cr40f_campo eq 'notification:mention'"
         },
         "host": {
           "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
