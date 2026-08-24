@@ -226,7 +226,24 @@ function normalizeQuality(row, type) {
 function normalizeEventDetails(events = []) {
   const comments = events.filter((item) => item.cr40f_campo === "comentario").map((item) => ({ id: item.cr40f_plannertarefaeventoid, authorId: cleanId(item._cr40f_autor_value || item._createdby_value), text: item.cr40f_valornovo || item.cr40f_descricao || "", createdAt: item.cr40f_ocorridoem, author: item.authorName || item["_cr40f_autor_value@OData.Community.Display.V1.FormattedValue"] || item["_createdby_value@OData.Community.Display.V1.FormattedValue"] || "Sistema" })).sort((left, right) => String(left.createdAt || "").localeCompare(String(right.createdAt || "")));
   const attachments = events.filter((item) => item.cr40f_campo === "anexo").map((item) => {
-    try { return { id: item.cr40f_plannertarefaeventoid, ...JSON.parse(item.cr40f_valornovo || "{}"), createdAt: item.cr40f_ocorridoem }; } catch { return { id: item.cr40f_plannertarefaeventoid, name: item.cr40f_valornovo || "Anexo", createdAt: item.cr40f_ocorridoem }; }
+    try {
+      const raw = JSON.parse(item.cr40f_valornovo || "{}");
+      const sharePointId = raw.id || raw.itemId || raw.ItemId || "";
+      return {
+        ...raw,
+        id: sharePointId || item.cr40f_plannertarefaeventoid,
+        sharePointId,
+        eventId: item.cr40f_plannertarefaeventoid,
+        fileLocator: raw.fileLocator || raw.identificador || raw.Identifier || "",
+        path: raw.path || raw.caminhoSharePoint || raw.caminhoCompleto || raw.Path || "",
+        name: raw.name || raw.nomeArquivo || raw.Name || "Anexo",
+        mimeType: raw.mimeType || raw.MediaType || "",
+        size: raw.size ?? raw.tamanho ?? raw.Size,
+        createdAt: item.cr40f_ocorridoem,
+      };
+    } catch {
+      return { id: item.cr40f_plannertarefaeventoid, sharePointId: "", eventId: item.cr40f_plannertarefaeventoid, name: item.cr40f_valornovo || "Anexo", createdAt: item.cr40f_ocorridoem };
+    }
   });
   const history = events.map((item) => ({ id: item.cr40f_plannertarefaeventoid, text: item.cr40f_descricao, createdAt: item.cr40f_ocorridoem, author: item.authorName || item["_cr40f_autor_value@OData.Community.Display.V1.FormattedValue"] || item["_createdby_value@OData.Community.Display.V1.FormattedValue"] || "Sistema" }));
   return { comments, attachments, history };
@@ -458,7 +475,8 @@ async function addLiveAttachment(xrm, taskId, file) {
   const responseText = await response.text();
   const result = extractFlowRecord(responseText) || {};
   if (!response.ok || result.sucesso !== true) throw new Error(result.erro || `Flow SharePoint falhou: HTTP ${response.status}.`);
-  const attachment = { name: result.nomeArquivo || fileName, id: result.id || "", fileLocator: result.fileLocator || "", path: result.caminhoSharePoint || "", mimeType: result.mimeType || file.type || "application/octet-stream", size: result.tamanho ?? file.size };
+  const sharePointId = result.id || result.itemId || result.ItemId || "";
+  const attachment = { name: result.nomeArquivo || result.Name || fileName, id: sharePointId, sharePointId, fileLocator: result.fileLocator || result.identificador || result.Identifier || "", path: result.caminhoSharePoint || result.caminhoCompleto || result.Path || "", mimeType: result.mimeType || result.MediaType || file.type || "application/octet-stream", size: result.tamanho ?? result.Size ?? file.size };
   if (!attachment.id && !attachment.fileLocator && !attachment.path) throw new Error("Flow SharePoint não retornou identificador ou caminho do arquivo.");
   await createEvent(xrm, taskId, 100000001, "Anexo adicionado.", "anexo", "", JSON.stringify(attachment));
   return loadLiveState(xrm);
@@ -467,8 +485,8 @@ async function addLiveAttachment(xrm, taskId, file) {
 async function loadLiveAttachmentContent(xrm, attachment) {
   const flowUrl = await resolveSharePointReadFlowUrl(xrm);
   if (!flowUrl) throw new Error(`URL do Flow de consulta não configurada: ${READ_FLOW_URL_SCHEMA}.`);
-  if (!attachment?.id && !attachment?.fileLocator && !attachment?.path) throw new Error("Anexo sem identificador ou caminho SharePoint.");
-  const response = await fetch(flowUrl, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: attachment.id || "", fileLocator: attachment.fileLocator || "", caminhoSharePoint: attachment.path || "", nomeArquivo: attachment.name || "" }) });
+  if (!attachment?.sharePointId && !attachment?.fileLocator && !attachment?.path) throw new Error("Anexo sem identificador ou caminho SharePoint.");
+  const response = await fetch(flowUrl, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: attachment.sharePointId || "", fileLocator: attachment.fileLocator || "", caminhoSharePoint: attachment.path || "", nomeArquivo: attachment.name || "" }) });
   const responseText = await response.text();
   const result = extractFlowRecord(responseText) || {};
   if (!response.ok || result.sucesso !== true || !result.conteudoBase64) throw new Error(result.erro || `Flow de consulta SharePoint falhou: HTTP ${response.status}.`);

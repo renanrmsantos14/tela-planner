@@ -483,10 +483,10 @@ function isImageAttachment(attachment) {
 }
 
 function AttachmentPreview({ attachment, loadAttachmentContent }) {
-  const cacheKey = attachment?.id || attachment?.fileLocator || attachment?.path || attachment?.name;
+  const cacheKey = attachment?.sharePointId || attachment?.fileLocator || attachment?.path || attachment?.name;
   const [state, setState] = useState(() => ({ dataUrl: attachmentPreviewCache.get(cacheKey) || "", loading: false, error: "" }));
   useEffect(() => {
-    if (!isImageAttachment(attachment) || !loadAttachmentContent || !cacheKey || (!attachment?.id && !attachment?.fileLocator && !attachment?.path) || attachmentPreviewCache.has(cacheKey)) return undefined;
+    if (!isImageAttachment(attachment) || !loadAttachmentContent || !cacheKey || (!attachment?.sharePointId && !attachment?.fileLocator && !attachment?.path) || attachmentPreviewCache.has(cacheKey)) return undefined;
     let active = true;
     setState({ dataUrl: "", loading: true, error: "" });
     loadAttachmentContent(attachment).then((result) => {
