@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, lazy, Suspense, memo } from "react";
+import { createPortal } from "react-dom";
 import {
   ArrowUpRight, BellRing, CalendarDays, Check, CheckCircle2, ChevronDown, ChevronRight, CircleHelp, ClipboardList, ListChecks, Trash2,
   Clock3, File, FileArchive, FileImage, FileSpreadsheet, FileText, LayoutDashboard, ListFilter, LoaderCircle, Menu, MessageCircle, Paperclip, PanelLeftClose,
@@ -652,7 +653,7 @@ function AttachmentSection({ taskId, attachments = [], loadAttachmentContent, on
         </div>
       </div>
     </article>)}</div> : <div className="attachment-empty"><Paperclip size={16} /><span><strong>Nenhum anexo ainda</strong><small>Inclua briefing, evidência ou qualquer arquivo útil para a execução.</small></span></div>}
-    {previewAttachment && previewUrl && <div className="attachment-lightbox" role="dialog" aria-modal="true" aria-label={`Prévia de ${previewAttachment.name || "arquivo anexado"}`} onMouseDown={(event) => { if (event.target === event.currentTarget) setPreviewAttachment(null); }}><button className="icon-button attachment-lightbox-close" type="button" onClick={() => setPreviewAttachment(null)} aria-label="Fechar prévia"><X size={19} /></button>{isPdfAttachment(previewAttachment) ? <iframe src={previewUrl} title={previewAttachment.name || "Prévia do PDF"} /> : <img src={previewUrl} alt={previewAttachment.name || "Imagem anexada"} />}</div>}
+    {previewAttachment && previewUrl && typeof document !== "undefined" && document.body ? createPortal(<div className="attachment-lightbox" role="dialog" aria-modal="true" aria-label={`Prévia de ${previewAttachment.name || "arquivo anexado"}`} onMouseDown={(event) => { if (event.target === event.currentTarget) setPreviewAttachment(null); }}><button className="icon-button attachment-lightbox-close" type="button" onClick={() => setPreviewAttachment(null)} aria-label="Fechar prévia"><X size={19} /></button>{isPdfAttachment(previewAttachment) ? <iframe src={previewUrl} title={previewAttachment.name || "Prévia do PDF"} /> : <img src={previewUrl} alt={previewAttachment.name || "Imagem anexada"} />}</div>, document.body) : null}
   </section>;
 }
 
