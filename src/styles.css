@@ -531,6 +531,12 @@ button { cursor: pointer; }
 .task-checklist-item { pointer-events: none; }
 .task-checklist-item .task-checklist-box { pointer-events: auto; cursor: pointer; }
 
+.attachment-item { display: grid; gap: 4px; }
+.attachment-preview { overflow: hidden; width: min(100%, 300px); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--neutral); }
+.attachment-preview img { display: block; width: 100%; max-height: 220px; object-fit: contain; }
+.attachment-preview-state { color: var(--tertiary); font-size: 9px; }
+.attachment-preview-error { color: var(--red); }
+
 /* Fluxo mobile: busca sempre visível, filtros sob demanda e criação em duas camadas. */
 .filter-bar .filter-search { min-width: 190px; flex: 1 1 220px; }
 .filter-bar .filter-bar-content { display: contents; }

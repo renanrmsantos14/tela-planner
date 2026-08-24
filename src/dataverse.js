@@ -10,7 +10,6 @@ import {
   updateTask as updateMockTask,
 } from "./mockStore.js";
 import { normalizeAssigneeNames, STATUSES } from "./domain.js";
-import { connectGraphSession, loadGraphPhotoUrls } from "./graphPhotos.js";
 
 const API_VERSION = "v9.2";
 const QUOTE_TABLE = "cr40f_pedidodecotacao";
@@ -24,9 +23,8 @@ const RELATION_TABLE = "cr40f_plannertarearelacao";
 const ASSIGNEE_RELATION_TABLE = "cr40f_plannertarearesponsavel";
 const ENVIRONMENT_VARIABLE_DEFINITION_TABLE = "environmentvariabledefinition";
 const ENVIRONMENT_VARIABLE_VALUE_TABLE = "environmentvariablevalue";
-const FLOW_URL_SCHEMA = "new_FlowURLFlowSalvarArquivosOnedrive";
-const GRAPH_CLIENT_ID_SCHEMA = "new_PlannerGraphClientId";
-const GRAPH_TENANT_ID_SCHEMA = "new_PlannerGraphTenantId";
+const FLOW_URL_SCHEMA = "new_URLFlowsalvararquivosSharePoint";
+const READ_FLOW_URL_SCHEMA = "new_URLFlowConsultarArquivosSharePoint";
 const DEV_DATAVERSE_URL = "https://org23b93544.crm2.dynamics.com";
 const MAX_ATTACHMENT_SIZE = 5 * 1024 * 1024;
 const ENTITY_SETS = Object.freeze({
@@ -59,14 +57,6 @@ function extractFlowRecord(value) {
   if (!value) return null;
   if (typeof value === "object") return value;
   try { const parsed = JSON.parse(value); return parsed && typeof parsed === "object" ? parsed : null; } catch { return null; }
-}
-
-function getFlowLink(result) {
-  for (const key of ["shareLink", "link", "webUrl", "url", "fileLink", "sharedLink"]) {
-    if (typeof result?.[key] === "string" && result[key].trim()) return result[key].trim();
-  }
-  const nested = extractFlowRecord(result?.body || result?.Body || result?.responseText);
-  return nested ? getFlowLink(nested) : "";
 }
 
 export function entitySetName(logicalName) {
@@ -139,22 +129,20 @@ async function retrieveMany(xrm, table, query) {
   return rows;
 }
 
-async function resolveOneDriveFlowUrl(xrm) {
-  const definitions = await retrieveMany(xrm, ENVIRONMENT_VARIABLE_DEFINITION_TABLE, `?$select=environmentvariabledefinitionid,defaultvalue&$filter=schemaname eq '${FLOW_URL_SCHEMA}'&$top=1`);
+async function resolveEnvironmentVariableUrl(xrm, schemaName, fallback = "") {
+  const definitions = await retrieveMany(xrm, ENVIRONMENT_VARIABLE_DEFINITION_TABLE, `?$select=environmentvariabledefinitionid,defaultvalue&$filter=schemaname eq '${schemaName}'&$top=1`);
   const definition = definitions[0];
-  if (!definition) return String(import.meta.env?.VITE_FLOW_SALVAR_ANEXOS_ONEDRIVE_URL || "").trim();
+  if (!definition) return fallback.trim();
   const values = await retrieveMany(xrm, ENVIRONMENT_VARIABLE_VALUE_TABLE, `?$select=value&$filter=_environmentvariabledefinitionid_value eq ${definition.environmentvariabledefinitionid}&$top=1`);
-  return String(values[0]?.value || definition.defaultvalue || import.meta.env?.VITE_FLOW_SALVAR_ANEXOS_ONEDRIVE_URL || "").trim();
+  return String(values[0]?.value || definition.defaultvalue || fallback).trim();
 }
 
-async function resolveEnvironmentValues(xrm, schemaNames) {
-  const filter = schemaNames.map((name) => `schemaname eq '${name}'`).join(" or ");
-  const definitions = await retrieveMany(xrm, ENVIRONMENT_VARIABLE_DEFINITION_TABLE, `?$select=environmentvariabledefinitionid,schemaname,defaultvalue&$filter=${filter}`);
-  const values = await Promise.all(definitions.map(async (definition) => {
-    const current = await retrieveMany(xrm, ENVIRONMENT_VARIABLE_VALUE_TABLE, `?$select=value&$filter=_environmentvariabledefinitionid_value eq ${definition.environmentvariabledefinitionid}&$top=1`);
-    return [definition.schemaname, String(current[0]?.value || definition.defaultvalue || "").trim()];
-  }));
-  return Object.fromEntries(values);
+async function resolveSharePointFlowUrl(xrm) {
+  return resolveEnvironmentVariableUrl(xrm, FLOW_URL_SCHEMA, String(import.meta.env?.VITE_FLOW_SALVAR_ANEXOS_SHAREPOINT_URL || ""));
+}
+
+async function resolveSharePointReadFlowUrl(xrm) {
+  return resolveEnvironmentVariableUrl(xrm, READ_FLOW_URL_SCHEMA);
 }
 
 async function resolveLookupNavigation(xrm, entity, attribute, target) {
@@ -257,7 +245,7 @@ function normalizeTask(row, events = [], assignees = []) {
     priority,
     dueDate: dateOnly(row.cr40f_prazo),
     assigneeNames: assignees.length ? assignees.map((item) => item.name) : normalizeAssigneeNames(formatLookup(row, EMPLOYEE_ASSIGNEE_FIELD)),
-    assigneeProfiles: assignees.length ? assignees.map((item) => ({ id: item.id, name: item.name, userId: item.userId || "", avatarUrl: item.avatarUrl || "" })) : [],
+    assigneeProfiles: assignees.length ? assignees.map((item) => ({ id: item.id, name: item.name, userId: item.userId || "" })) : [],
     assigneeName: assignees.length ? assignees.map((item) => item.name).join(", ") : formatLookup(row, EMPLOYEE_ASSIGNEE_FIELD),
     assigneeIds: assignees.length ? assignees.map((item) => item.id) : [row[`_${EMPLOYEE_ASSIGNEE_FIELD}_value`] || ""].filter(Boolean),
     assigneeId: assignees[0]?.id || row[`_${EMPLOYEE_ASSIGNEE_FIELD}_value`] || "",
@@ -369,54 +357,23 @@ async function loadLiveState(xrm) {
     retrieveMany(xrm, EMPLOYEE_TABLE, "?$select=cr40f_funcionariosid,cr40f_nomecompleto,new_apelido,_cr40f_usuariodataverse_value&$filter=statecode eq 0 and cr40f_status eq 0 and cr40f_funcao eq 202410001&$orderby=cr40f_nomecompleto asc"),
   ]);
   const employeeRecords = employees.map((row) => ({ id: row.cr40f_funcionariosid, name: row.cr40f_nomecompleto || row.new_apelido || "Sem nome", userId: row._cr40f_usuariodataverse_value || "" }));
-  const currentUserId = cleanId(xrm.Utility.getGlobalContext().userSettings.userId);
-  const linkedUserIds = [...new Set([...employeeRecords.map((employee) => cleanId(employee.userId)), currentUserId].filter(Boolean))];
-  let systemUsers = [];
-  if (linkedUserIds.length) {
-    try {
-      const userFilter = linkedUserIds.map((id) => `systemuserid eq ${id}`).join(" or ");
-      systemUsers = await retrieveMany(xrm, "systemuser", `?$select=systemuserid,azureactivedirectoryobjectid,internalemailaddress&$filter=${userFilter}`);
-    } catch (error) {
-      console.warn("Não foi possível carregar as fotos dos usuários Dataverse.", error);
-    }
-  }
-  const userById = new Map(systemUsers.map((user) => [cleanId(user.systemuserid).toLowerCase(), user]));
-  let graphPhotos = new Map();
-  let graphAuthRequired = false;
-  try {
-    const config = await resolveEnvironmentValues(xrm, [GRAPH_CLIENT_ID_SCHEMA, GRAPH_TENANT_ID_SCHEMA]);
-    const currentUser = userById.get(currentUserId.toLowerCase());
-    graphPhotos = await loadGraphPhotoUrls({ clientId: config[GRAPH_CLIENT_ID_SCHEMA], tenantId: config[GRAPH_TENANT_ID_SCHEMA], redirectUri: `${xrm.Utility.getGlobalContext().getClientUrl().replace(/\/$/, "")}/WebResources/new_PlannerAuth.html`, loginHint: currentUser?.internalemailaddress || "" }, systemUsers.map((user) => ({ azureObjectId: cleanId(user.azureactivedirectoryobjectid) })).filter((user) => user.azureObjectId));
-  } catch (error) {
-    graphAuthRequired = true;
-    console.warn("Não foi possível carregar fotos do Microsoft 365.", error);
-  }
   const employeeById = new Map(employeeRecords.map((employee) => [cleanId(employee.id).toLowerCase(), employee]));
   const relationByChild = new Map(relations.map(normalizeRelation).map((item) => [item.childTaskId, item.parentTaskId]));
   const assigneesByTask = new Map();
   assigneeRelations.forEach((item) => {
     const list = assigneesByTask.get(item._cr40f_tarefa_value) || [];
     const employee = employeeById.get(cleanId(item._cr40f_funcionario_value).toLowerCase());
-    const user = userById.get(cleanId(employee?.userId).toLowerCase());
-    list.push({ id: item._cr40f_funcionario_value, name: item["_cr40f_funcionario_value@OData.Community.Display.V1.FormattedValue"] || employee?.name || "Sem nome", userId: employee?.userId || "", avatarUrl: graphPhotos.get(cleanId(user?.azureactivedirectoryobjectid)) || "" });
+    list.push({ id: item._cr40f_funcionario_value, name: item["_cr40f_funcionario_value@OData.Community.Display.V1.FormattedValue"] || employee?.name || "Sem nome", userId: employee?.userId || "" });
     assigneesByTask.set(item._cr40f_tarefa_value, list);
   });
   const eventsByTask = new Map();
   events.forEach((event) => { const list = eventsByTask.get(event._cr40f_tarefa_value) || []; list.push(event); eventsByTask.set(event._cr40f_tarefa_value, list); });
   const tasks = rows.map((row) => ({ ...normalizeTask(row, eventsByTask.get(row.cr40f_plannertarefaid) || [], assigneesByTask.get(row.cr40f_plannertarefaid) || []), parentTaskId: relationByChild.get(row.cr40f_plannertarefaid) || null }));
   const quoteById = new Map(quotes.map((row) => [row.cr40f_pedidodecotacaoid, normalizeQuote(row)]));
-  const employeesWithProfiles = employeeRecords.map((employee) => {
-    const user = userById.get(cleanId(employee.userId).toLowerCase());
-    return { ...employee, avatarUrl: graphPhotos.get(cleanId(user?.azureactivedirectoryobjectid)) || "" };
-  });
+  const employeesWithProfiles = employeeRecords;
   const quality = [...qualityErrors.map((row) => normalizeQuality(row, "error")), ...qualityActions.map((row) => normalizeQuality(row, "action"))].map((item) => ({ ...item, assigneeProfiles: employeeById.has(cleanId(item.assigneeId).toLowerCase()) ? [employeesWithProfiles.find((employee) => cleanId(employee.id).toLowerCase() === cleanId(item.assigneeId).toLowerCase())] : [] }));
   const tasksWithProfiles = tasks.map((task) => ({ ...task, assigneeProfiles: task.assigneeProfiles?.length ? task.assigneeProfiles : task.assigneeIds.map((id) => employeesWithProfiles.find((employee) => cleanId(employee.id).toLowerCase() === cleanId(id).toLowerCase())).filter(Boolean), quoteCode: quoteById.get(task.quoteId)?.code || "", quoteTitle: quoteById.get(task.quoteId)?.title || "" }));
-  return { quotes: [...quoteById.values()], employees: employeesWithProfiles, quality, tasks: tasksWithProfiles, graphAuthRequired, lastUpdated: new Date().toISOString(), live: true };
-}
-
-async function connectLiveGraph(xrm) {
-  await connectGraphSession();
-  return loadLiveState(xrm);
+  return { quotes: [...quoteById.values()], employees: employeesWithProfiles, quality, tasks: tasksWithProfiles, lastUpdated: new Date().toISOString(), live: true };
 }
 
 async function createEvent(xrm, taskId, type, description, field = "", previous = "", next = "") {
@@ -494,17 +451,29 @@ async function addLiveAttachment(xrm, taskId, file) {
   const fileName = sanitizePathSegment(file.name, "arquivo");
   const taskKey = sanitizePathSegment(task.cr40f_codigoorigem || taskId);
   const path = `Tarefas Planner/${String(apiUrl(xrm)).toLowerCase().includes(DEV_DATAVERSE_URL) ? "DEV/" : ""}${taskKey}/Anexos`;
-  const flowUrl = await resolveOneDriveFlowUrl(xrm);
+  const flowUrl = await resolveSharePointFlowUrl(xrm);
   if (!flowUrl) throw new Error(`URL do Flow não configurada: ${FLOW_URL_SCHEMA}.`);
   const base64 = file.base64 || await fileToBase64(file);
   const response = await fetch(flowUrl, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ caminhoCompleto: path, nomeArquivo: fileName, conteudoBase64: base64, mimeType: file.type || "application/octet-stream", metadados: { tarefaId: taskId, tarefa: task.cr40f_titulo || "", origem: "PLANNER_INTERNO" } }) });
   const responseText = await response.text();
-  if (!response.ok) throw new Error(`Flow OneDrive falhou: HTTP ${response.status}.`);
   const result = extractFlowRecord(responseText) || {};
-  const link = getFlowLink(result);
-  if (!link) throw new Error("Arquivo salvo no OneDrive, mas o Flow não retornou link.");
-  await createEvent(xrm, taskId, 100000001, "Anexo adicionado.", "anexo", "", JSON.stringify({ name: fileName, link }));
+  if (!response.ok || result.sucesso !== true) throw new Error(result.erro || `Flow SharePoint falhou: HTTP ${response.status}.`);
+  const attachment = { name: result.nomeArquivo || fileName, id: result.id || "", fileLocator: result.fileLocator || "", path: result.caminhoSharePoint || "", mimeType: result.mimeType || file.type || "application/octet-stream", size: result.tamanho ?? file.size };
+  if (!attachment.id && !attachment.fileLocator && !attachment.path) throw new Error("Flow SharePoint não retornou identificador ou caminho do arquivo.");
+  await createEvent(xrm, taskId, 100000001, "Anexo adicionado.", "anexo", "", JSON.stringify(attachment));
   return loadLiveState(xrm);
+}
+
+async function loadLiveAttachmentContent(xrm, attachment) {
+  const flowUrl = await resolveSharePointReadFlowUrl(xrm);
+  if (!flowUrl) throw new Error(`URL do Flow de consulta não configurada: ${READ_FLOW_URL_SCHEMA}.`);
+  if (!attachment?.id && !attachment?.fileLocator && !attachment?.path) throw new Error("Anexo sem identificador ou caminho SharePoint.");
+  const response = await fetch(flowUrl, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: attachment.id || "", fileLocator: attachment.fileLocator || "", caminhoSharePoint: attachment.path || "", nomeArquivo: attachment.name || "" }) });
+  const responseText = await response.text();
+  const result = extractFlowRecord(responseText) || {};
+  if (!response.ok || result.sucesso !== true || !result.conteudoBase64) throw new Error(result.erro || `Flow de consulta SharePoint falhou: HTTP ${response.status}.`);
+  const mimeType = result.mimeType || attachment.mimeType || "application/octet-stream";
+  return { ...attachment, mimeType, dataUrl: `data:${mimeType};base64,${result.conteudoBase64}` };
 }
 
 async function createLiveSubtask(xrm, state, parentId, input) {
@@ -556,6 +525,7 @@ function createMockDataStore() {
     loadCore: async () => ({ ...withMode(loadMockState()), loading: { core: false, quotes: false, quality: false, photos: false } }),
     loadSupplemental: async (state) => ({ ...state, loading: { ...(state.loading || {}), quotes: false, quality: false } }),
     loadTaskDetails: async (taskId) => ({ taskId, comments: [], attachments: [], history: [] }),
+    loadAttachmentContent: async () => { throw new Error("Prévia de anexo disponível somente no ambiente conectado."); },
     loadPhotos: async () => ({ loading: { photos: false } }),
     searchQuotes: async () => [],
     createTask: async (state, input) => withMode(createMockTask(state, input)),
@@ -573,15 +543,21 @@ function createMockDataStore() {
   };
 }
 
+function registerAttachmentLoader(store) {
+  if (typeof globalThis !== "undefined") globalThis.__plannerAttachmentLoader = store.loadAttachmentContent;
+  return store;
+}
+
 export function createDataStore() {
   const xrm = getXrm();
-  if (!xrm) return createMockDataStore();
-  return {
+  if (!xrm) return registerAttachmentLoader(createMockDataStore());
+  return registerAttachmentLoader({
     live: true,
     load: () => loadLiveState(xrm),
     loadCore: () => loadCoreState(xrm),
     loadSupplemental: (state) => loadSupplementalState(xrm, state),
     loadTaskDetails: (taskId) => loadTaskDetails(xrm, taskId),
+    loadAttachmentContent: (attachment) => loadLiveAttachmentContent(xrm, attachment),
     loadPhotos: async () => ({ loading: { photos: false } }),
     searchQuotes: (query) => searchQuotes(xrm, query),
     createTask: (state, input) => createLiveTask(xrm, state, input),
@@ -600,5 +576,5 @@ export function createDataStore() {
       const params = source === "quality_error" ? `errorId=${cleanId(sourceRecordId)}` : source === "quality_action" ? `actionId=${cleanId(sourceRecordId)}` : source === "quote_followup" ? `view=recent&recordId=${cleanId(sourceRecordId)}` : `taskId=${cleanId(sourceRecordId)}`;
       return xrm.Navigation?.openWebResource?.(resource, { data: params });
     },
-  };
+  });
 }
