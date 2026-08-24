@@ -691,3 +691,30 @@ button { cursor: pointer; }
   .more-actions { max-width: none; }
   .task-quick-action { min-height: 34px; padding: 0 10px; }
 }
+/* Comment composer polish */
+.comment-section-title { display: flex; gap: 8px; align-items: center; }
+.comment-section-helper { color: var(--tertiary); font-size: 9px; font-weight: 700; }
+.comment-row { animation: comment-in 180ms var(--ease-out); }
+.comment-row > .comment-bubble { max-width: 86%; padding: 9px 11px; border: 1px solid #e7edf5; border-radius: 13px 13px 13px 4px; background: #f7f9fc; }
+.comment-row.comment-own > .comment-bubble { border-color: #d8e5fb; border-radius: 13px 13px 4px 13px; background: var(--blue-soft); }
+.comment-bubble header { display: flex; gap: 8px; align-items: baseline; }
+.comment-row.comment-own .comment-bubble header { justify-content: flex-end; }
+.comment-bubble time { color: var(--tertiary); font-size: 9px; }
+.comment-row p { line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+.comment-sync-status { display: block; margin-top: 5px; color: var(--blue); font-size: 9px; }
+.comment-empty-state { display: grid; justify-items: center; gap: 5px; margin: 2px 0 15px; padding: 20px 14px; border: 1px dashed #d9e2ee; border-radius: 12px; color: var(--muted); text-align: center; background: #fbfcfe; }
+.comment-empty-state svg { color: var(--blue); }
+.comment-empty-state strong { color: var(--control); font-size: 11px; }
+.comment-empty-state span { max-width: 220px; font-size: 10px; line-height: 1.4; }
+.comment-compose { padding: 11px; border: 1px solid #dbe5f1; border-radius: 13px; background: #fbfcfe; box-shadow: 0 7px 18px rgba(0,26,61,.05); }
+.comment-compose-label { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+.comment-compose-label strong { color: var(--control); font-size: 11px; }
+.comment-compose-label span, .comment-compose-hint { color: var(--tertiary); font-size: 9px; }
+.comment-compose-label b { color: var(--blue); }
+.comment-compose textarea { min-height: 58px; padding: 10px 11px; border-color: #d6e0ed; background: #fff; }
+.comment-compose-footer { display: flex; gap: 8px; align-items: center; }
+.comment-compose-hint { display: inline-flex; gap: 4px; align-items: center; flex: 1; }
+.comment-character-count { color: var(--tertiary); font-size: 9px; font-variant-numeric: tabular-nums; }
+.comment-submit { display: inline-flex; gap: 6px; align-items: center; }
+@keyframes comment-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .comment-row { animation: none; } }

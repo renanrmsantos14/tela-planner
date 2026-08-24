@@ -13,6 +13,7 @@ import React, {
 import { createPortal } from "react-dom";
 import {
   ArrowUpRight,
+  AtSign,
   BellRing,
   CalendarDays,
   Check,
@@ -39,6 +40,7 @@ import {
   Plus,
   RotateCcw,
   Search,
+  Send,
   Settings,
   ShieldAlert,
   Sparkles,
@@ -2706,6 +2708,13 @@ function MoreView({ onNavigate }) {
   );
 }
 
+function formatCommentTimestamp(value) {
+  if (!value) return "Agora";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Agora";
+  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(date);
+}
+
 function TaskDrawerContent({
   task: taskItem,
   state,
@@ -3242,25 +3251,39 @@ function TaskDrawerContent({
           </section>
           <section className="drawer-section">
             <div className="drawer-section-heading">
-              <h3>Comentários</h3>
-              <span className="section-count">{taskItem.comments.length}</span>
+              <div className="comment-section-title">
+                <h3>Conversa da tarefa</h3>
+                <span className="section-count">{taskItem.comments.length}</span>
+              </div>
+              <span className="comment-section-helper">Atualizações e contexto</span>
             </div>
-            {taskItem.comments.map((item) => (
-              <div
+            {taskItem.comments.length ? taskItem.comments.map((item) => (
+              <article
                 className={`comment-row ${isOwnComment(item) ? "comment-own" : ""} ${item.syncStatus === "syncing" ? "item-syncing" : ""}`}
                 key={item.id}
               >
                 <Avatar name={item.author} small />
-                <div>
-                  <strong>
-                    {item.author}
-                    {item.syncStatus === "syncing" ? " · Enviando..." : ""}
-                  </strong>
+                <div className="comment-bubble">
+                  <header>
+                    <strong>{item.author}</strong>
+                    <time dateTime={item.createdAt}>{formatCommentTimestamp(item.createdAt)}</time>
+                  </header>
                   <p>{item.text}</p>
+                  {item.syncStatus === "syncing" && <small className="comment-sync-status">Enviando…</small>}
                 </div>
+              </article>
+            )) : (
+              <div className="comment-empty-state">
+                <MessageCircle size={18} aria-hidden="true" />
+                <strong>Comece a conversa</strong>
+                <span>Registre uma atualização para manter a equipe alinhada.</span>
               </div>
-            ))}
+            )}
             <div className="comment-compose">
+              <div className="comment-compose-label">
+                <strong>Nova atualização</strong>
+                <span>Use <b>@</b> para mencionar alguém</span>
+              </div>
               <div className="comment-mention-field">
                 <textarea
                   value={comment}
@@ -3275,7 +3298,9 @@ function TaskDrawerContent({
                         value.replace(/(?:^|\s)@[^\s@]*$/, ""),
                       );
                   }}
-                  placeholder="Adicione um comentário ou use @ para mencionar alguém..."
+                  aria-label="Nova atualização da tarefa"
+                  placeholder="O que a equipe precisa saber?"
+                  maxLength={1000}
                   rows="2"
                 />
                 {mentionSuggestions.length > 0 && (
@@ -3300,14 +3325,14 @@ function TaskDrawerContent({
                   </div>
                 )}
               </div>
-              <button
-                className="button button-secondary"
-                disabled={!comment.trim()}
-                onClick={submitComment}
-              >
-                <MessageCircle size={15} />
-                Comentar
-              </button>
+              <div className="comment-compose-footer">
+                <span className="comment-compose-hint"><AtSign size={13} aria-hidden="true" /> Mencione responsáveis para avisá-los</span>
+                <span className="comment-character-count">{comment.length}/1000</span>
+                <button className="button button-secondary comment-submit" disabled={!comment.trim()} onClick={submitComment}>
+                  <Send size={14} aria-hidden="true" />
+                  Enviar atualização
+                </button>
+              </div>
             </div>
           </section>
           <AttachmentSection
