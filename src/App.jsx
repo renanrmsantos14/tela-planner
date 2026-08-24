@@ -3702,6 +3702,7 @@ export default function App() {
     loading: { core: true, quotes: true, quality: true, photos: true },
     loadErrors: {},
   }));
+  const currentEmployee = resolveCurrentEmployee(state.employees, store.live);
   const [selectedId, setSelectedId] = useState("");
   const [creating, setCreating] = useState(false);
   const [filters, setFilters] = useState(createDefaultFilters);
@@ -4360,7 +4361,6 @@ export default function App() {
     () => normalizeWorkItems(state || {}),
     [state?.tasks, state?.quality],
   );
-  const currentEmployee = resolveCurrentEmployee(state.employees, store.live);
   useEffect(() => {
     if (!currentEmployee?.id || !store.loadNotifications) return undefined;
     let activeRequest = true;
