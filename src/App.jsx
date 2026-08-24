@@ -648,7 +648,7 @@ function AppShell({
           <button
             className={`refresh-trigger${refreshing ? " is-refreshing" : ""}`}
             type="button"
-            onClick={onRefresh}
+            onClick={() => onRefresh?.({ silent: false })}
             disabled={refreshing}
             aria-label={refreshing ? "Atualizando dados" : "Atualizar dados"}
             title={refreshing ? "Atualizando dados" : "Atualizar dados"}
@@ -682,7 +682,7 @@ function AppShell({
           <button
             className={`refresh-trigger mobile-refresh-trigger${refreshing ? " is-refreshing" : ""}`}
             type="button"
-            onClick={onRefresh}
+            onClick={() => onRefresh?.({ silent: false })}
             disabled={refreshing}
             aria-label={refreshing ? "Atualizando dados" : "Atualizar dados"}
             title={refreshing ? "Atualizando dados" : "Atualizar dados"}
@@ -3808,10 +3808,11 @@ export default function App() {
     },
     [applyPendingMutations],
   );
-  const refreshInBackground = useCallback(async () => {
+  const refreshInBackground = useCallback(async ({ silent = true } = {}) => {
     if (refreshInFlightRef.current || state.loading?.core) return;
     refreshInFlightRef.current = true;
     setRefreshing(true);
+    if (!silent) showNotice("Atualizando dados…", 5200);
     try {
       const core = await store.loadCore();
       mergeConfirmed(core);
@@ -3833,18 +3834,19 @@ export default function App() {
             : { photos: undefined }),
         },
       }));
+      if (!silent) showNotice("Dados atualizados agora.", 2200);
     } catch {
-      // Atualização automática é silenciosa; os dados atuais permanecem disponíveis.
+      if (!silent) showNotice("Não foi possível atualizar. Dados atuais mantidos.", 4200);
     } finally {
       refreshInFlightRef.current = false;
       setRefreshing(false);
     }
-  }, [mergeConfirmed, state.loading?.core, store]);
+  }, [mergeConfirmed, showNotice, state.loading?.core, store]);
 
   useEffect(() => {
     if (state.loading?.core) return undefined;
     const timer = window.setInterval(() => {
-      if (document.visibilityState !== "hidden") refreshInBackground();
+      if (document.visibilityState !== "hidden") refreshInBackground({ silent: true });
     }, 60000);
     return () => window.clearInterval(timer);
   }, [refreshInBackground, state.loading?.core]);
@@ -4636,11 +4638,11 @@ export default function App() {
       )}
       {notice && (
         <div
-          className={`toast ${notice.startsWith("Falha") ? "toast-error" : ""}`}
+          className={`toast ${notice.startsWith("Falha") || notice.startsWith("Não foi") ? "toast-error" : ""} ${refreshing ? "toast-refreshing" : ""}`}
           role="status"
           aria-live="polite"
         >
-          <CheckCircle2 size={17} />
+          {refreshing ? <LoaderCircle className="spin" size={17} /> : <CheckCircle2 size={17} />}
           <span>{notice}</span>
           {noticeAction && (
             <button
