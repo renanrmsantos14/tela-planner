@@ -58,6 +58,16 @@ test("ordena tarefas abertas antes das concluídas", () => {
   assert.deepEqual(sortTasks(tasks).map((item) => item.id), ["1", "2", "3"]);
 });
 
+test("mantém cada coluna em ordem crescente de prazo", () => {
+  const sameColumn = [
+    { id: "late", status: "todo", dueDate: "2026-08-20" },
+    { id: "early", status: "todo", dueDate: "2026-08-05" },
+    { id: "no-date", status: "todo", dueDate: "" },
+  ];
+
+  assert.deepEqual(sortTasks(sameColumn).map((item) => item.id), ["early", "late", "no-date"]);
+});
+
 test("filtra origem e bloqueio operacional", () => {
   const qualityTask = { ...tasks[1], status: "waiting", sourceType: "quality", sourceLabel: "Erro operacional", blockedReason: "Aguardando terceiro" };
   assert.equal(isBlocked(qualityTask), true);

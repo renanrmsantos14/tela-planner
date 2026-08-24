@@ -218,9 +218,10 @@ function getDropIndex(column, pointerY, draggedId) {
   return cards.length;
 }
 
-const DRAG_TRANSFER_DURATION = 220;
-const DRAG_REORDER_DURATION = 170;
-const DRAG_TOTAL_DURATION = DRAG_TRANSFER_DURATION + DRAG_REORDER_DURATION;
+const DRAG_TRANSFER_DURATION = 230;
+const DRAG_SETTLE_DURATION = 36;
+const DRAG_REORDER_DURATION = 180;
+const DRAG_TOTAL_DURATION = DRAG_TRANSFER_DURATION + DRAG_SETTLE_DURATION + DRAG_REORDER_DURATION;
 const DRAG_TRANSFER_EASING = "cubic-bezier(.22, .61, .36, 1)";
 const DRAG_REORDER_EASING = "cubic-bezier(.77, 0, .175, 1)";
 
@@ -247,6 +248,7 @@ const Board = memo(function Board({ tasks, subtasksByParent, currentEmployee, ch
       const movedNext = movedCard && nextRects.get(pendingTransfer.id);
       if (movedCard && movedNext && pendingTransfer.slotRect) {
         const transferOffset = DRAG_TRANSFER_DURATION / DRAG_TOTAL_DURATION;
+        const reorderOffset = (DRAG_TRANSFER_DURATION + DRAG_SETTLE_DURATION) / DRAG_TOTAL_DURATION;
         cards.forEach((card) => {
           const previous = cardRectsRef.current.get(card.dataset.taskId);
           const next = nextRects.get(card.dataset.taskId);
@@ -260,14 +262,16 @@ const Board = memo(function Board({ tasks, subtasksByParent, currentEmployee, ch
             const slotTransform = `translate(${pendingTransfer.slotRect.left - movedNext.left}px, ${pendingTransfer.slotRect.top - movedNext.top}px)`;
             keyframes = [
               { transform: fromTransform, offset: 0, easing: DRAG_TRANSFER_EASING },
-              { transform: slotTransform, offset: transferOffset, easing: DRAG_REORDER_EASING },
+              { transform: slotTransform, offset: transferOffset },
+              { transform: slotTransform, offset: reorderOffset, easing: DRAG_REORDER_EASING },
               { transform: "translate(0, 0)", offset: 1 },
             ];
             duration = DRAG_TOTAL_DURATION;
           } else if (isTargetCard) {
             keyframes = [
               { transform: fromTransform, offset: 0 },
-              { transform: fromTransform, offset: transferOffset, easing: DRAG_REORDER_EASING },
+              { transform: fromTransform, offset: transferOffset },
+              { transform: fromTransform, offset: reorderOffset, easing: DRAG_REORDER_EASING },
               { transform: "translate(0, 0)", offset: 1 },
             ];
             duration = DRAG_TOTAL_DURATION;
