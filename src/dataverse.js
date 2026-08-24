@@ -237,7 +237,7 @@ function normalizeEventDetails(events = []) {
   const attachments = events.filter((item) => item.cr40f_campo === "anexo").map((item) => {
     try {
       const raw = JSON.parse(item.cr40f_valornovo || "{}");
-      const sharePointId = raw.id || raw.itemId || raw.ItemId || "";
+      const sharePointId = raw.id || raw.identificador || raw.Identifier || raw.itemId || raw.ItemId || "";
       return {
         ...raw,
         id: sharePointId || item.cr40f_plannertarefaeventoid,
@@ -485,7 +485,7 @@ async function addLiveAttachment(xrm, taskId, file) {
   const responseText = await response.text();
   const result = extractFlowRecord(responseText) || {};
   if (!response.ok || result.sucesso !== true) throw new Error(result.erro || `Flow SharePoint falhou: HTTP ${response.status}.`);
-  const sharePointId = result.id || result.itemId || result.ItemId || "";
+  const sharePointId = result.identificador || result.Identifier || result.id || result.itemId || result.ItemId || "";
   const attachment = { name: result.nomeArquivo || result.Name || fileName, id: sharePointId, sharePointId, fileLocator: result.fileLocator || result.identificador || result.Identifier || "", path: result.caminhoSharePoint || result.caminhoCompleto || result.Path || "", mimeType: result.mimeType || result.MediaType || uploadFile.type || "application/octet-stream", size: result.tamanho ?? result.Size ?? uploadFile.size };
   if (!attachment.id && !attachment.fileLocator && !attachment.path) throw new Error("Flow SharePoint não retornou identificador ou caminho do arquivo.");
   await createEvent(xrm, taskId, 100000001, "Anexo adicionado.", "anexo", "", JSON.stringify(attachment));
@@ -508,7 +508,7 @@ async function deleteLiveAttachment(xrm, state, taskId, attachment) {
   const flowUrl = await resolveSharePointDeleteFlowUrl(xrm);
   if (!flowUrl) throw new Error(`URL do Flow de exclusão não configurada: ${DELETE_FLOW_URL_SCHEMA}.`);
   if (!attachment?.sharePointId && !attachment?.fileLocator && !attachment?.path) throw new Error("Anexo sem identificador ou caminho SharePoint.");
-  const response = await fetch(flowUrl, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: attachment.sharePointId || "", fileLocator: attachment.fileLocator || "", caminhoSharePoint: attachment.path || "", nomeArquivo: attachment.name || "", tarefaId: taskId }) });
+  const response = await fetch(flowUrl, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: attachment.sharePointId || attachment.fileLocator || attachment.path || "", fileLocator: attachment.fileLocator || "", caminhoSharePoint: attachment.path || "", nomeArquivo: attachment.name || "", tarefaId: taskId }) });
   const responseText = await response.text();
   const result = extractFlowRecord(responseText) || {};
   if (!response.ok || result.sucesso !== true) throw new Error(result.erro || `Flow de exclusão SharePoint falhou: HTTP ${response.status}.`);
