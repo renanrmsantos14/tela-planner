@@ -562,8 +562,9 @@ button { cursor: pointer; }
 .attachment-delete-button { width: 28px; height: 28px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 7px; color: var(--tertiary); background: transparent; cursor: pointer; }
 .attachment-delete-button:hover, .attachment-delete-button:focus-visible { color: var(--red); background: var(--red-soft); outline: 0; }
 .attachment-delete-button:disabled { cursor: progress; opacity: .45; }
-.attachment-remove-confirm { display: flex; align-items: center; gap: 3px; padding: 3px; border: 1px solid #f2d0d5; border-radius: 8px; background: #fff8f9; }
+.attachment-remove-confirm { display: flex; align-items: center; gap: 3px; padding: 3px; border: 1px solid #f2d0d5; border-radius: 8px; background: #fff8f9; transform-origin: right center; animation: attachment-remove-confirm-in 160ms var(--ease-out); }
 .attachment-remove-confirm .button { min-height: 26px; padding: 0 8px; border-radius: 6px; font-size: 9px; white-space: nowrap; }
+@keyframes attachment-remove-confirm-in { from { opacity: 0; transform: translateY(3px) scale(.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
 .attachment-feedback { margin: 8px 0 0; padding: 8px 10px; border-radius: 8px; font-size: 10px; line-height: 1.4; }
 .attachment-feedback-error { color: var(--red); background: var(--red-soft); }
 .attachment-file-icon { width: 32px; height: 32px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 8px; color: var(--blue); background: var(--blue-soft); }
