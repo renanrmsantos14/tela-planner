@@ -632,14 +632,18 @@ function NotificationsPanel({
           </button>
         </header>
         <div className="notification-panel-actions">
+          <span className="notification-action-summary" aria-live="polite">
+            {unread ? `${unread} \u00e3o lida${unread === 1 ? "" : "s"}` : "Tudo lido"}
+          </span>
           <button
-            className="text-button"
+            className="notification-mark-all"
             type="button"
             onClick={onMarkAllRead}
             disabled={!unread}
+            aria-label="Marcar todas como lidas"
           >
-            <Check size={15} strokeWidth={2.2} />
-            <span>Marcar tudo como lido</span>
+            <Check size={14} strokeWidth={2.2} aria-hidden="true" />
+            <span>Marcar todas</span>
           </button>
         </div>
         <div className="notification-filters" role="tablist" aria-label="Filtrar notificações">
@@ -697,9 +701,10 @@ function NotificationsPanel({
                           type="button"
                           onClick={() => onMarkRead(item.id)}
                           aria-label={`Marcar como lida: ${presentation.title}`}
+                          title="Marcar como lida"
                         >
                           <Check aria-hidden="true" size={13} strokeWidth={2.4} />
-                          <span>Ler depois</span>
+                          <span className="sr-only">Marcar como lida</span>
                         </button>
                       )}
                     </div>
