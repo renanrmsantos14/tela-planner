@@ -601,8 +601,6 @@ function NotificationsPanel({
     { id: "informational", label: "Informativas", icon: FileText, items: informationalNotifications },
   ];
   const visibleNotifications = [...(notificationFilter === "actionable" ? actionableNotifications : notificationFilter === "informational" ? informationalNotifications : notifications)].sort((left, right) => {
-    const unreadDelta = Number(Boolean(right.readAt)) - Number(Boolean(left.readAt));
-    if (unreadDelta !== 0) return unreadDelta;
     return new Date(right.occurredAt || 0).getTime() - new Date(left.occurredAt || 0).getTime();
   });
 
