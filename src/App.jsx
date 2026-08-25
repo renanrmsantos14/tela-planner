@@ -767,6 +767,7 @@ function AppShell({
     : desktopNavActive;
   const activeLabel =
     MOBILE_NAV_ITEMS.find(([id]) => id === mobileNavActive)?.[1] || "Central";
+  const canCreateTask = ["dashboard", "team", "board", "list", "calendar"].includes(active);
   return (
     <div className={`app-shell ${expanded ? "" : "sidebar-collapsed"}`}>
       <aside className="sidebar">
@@ -946,6 +947,17 @@ function AppShell({
           </button>
         ))}
       </nav>
+      {canCreateTask && (
+        <button
+          className="mobile-fab"
+          type="button"
+          onClick={onCreate}
+          aria-label="Criar nova tarefa"
+          title="Nova tarefa"
+        >
+          <Plus size={22} strokeWidth={2.5} aria-hidden="true" />
+        </button>
+      )}
       {notificationsOpen && (
         <NotificationsPanel
           notifications={notifications}
@@ -1924,7 +1936,9 @@ function BoardView({
       ),
     [filtered],
   );
-  const isMobile = useMediaQuery("(max-width: 820px)");
+  const isMobile = useMediaQuery(
+    "(max-width: 820px), (max-width: 900px) and (max-height: 600px)",
+  );
   const subtasksByParent = useMemo(
     () =>
       state.tasks.reduce((index, taskItem) => {
