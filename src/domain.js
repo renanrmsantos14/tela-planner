@@ -1,7 +1,7 @@
 export const STATUSES = [
   { id: "todo", label: "A fazer", tone: "neutral" },
-  { id: "doing", label: "Em andamento", tone: "action" },
   { id: "waiting", label: "Aguardando", tone: "warning" },
+  { id: "doing", label: "Em andamento", tone: "action" },
   { id: "done", label: "Concluído", tone: "success" },
 ];
 
@@ -36,6 +36,47 @@ export const statusById = (id) => STATUSES.find((item) => item.id === id) || STA
 export const priorityById = (id) => PRIORITIES.find((item) => item.id === id) || PRIORITIES[1];
 export const sourceById = (id) => TASK_SOURCES.find((item) => item.id === id) || TASK_SOURCES[0];
 
+export const EMPTY_WAITING_CONTEXT = Object.freeze({
+  subject: "",
+  onType: "employee",
+  onId: "",
+  onName: "",
+  expectedDate: "",
+  note: "",
+});
+
+export function normalizeWaitingContext(value = {}) {
+  const source = value && typeof value === "object" ? value : {};
+  return {
+    subject: String(source.subject || "").trim(),
+    onType: source.onType === "team" ? "team" : "employee",
+    onId: String(source.onId || "").trim(),
+    onName: String(source.onName || "").trim(),
+    expectedDate: String(source.expectedDate || "").slice(0, 10),
+    note: String(source.note || "").trim(),
+  };
+}
+
+export function validateWaitingContext(status, value) {
+  if (status !== "waiting") return { allowed: true, error: "" };
+  const context = normalizeWaitingContext(value);
+  if (!context.subject) {
+    return { allowed: false, error: "Informe o que está sendo aguardado." };
+  }
+  if (!context.onId || !context.onName) {
+    return { allowed: false, error: "Informe de quem está sendo aguardado o retorno." };
+  }
+  return { allowed: true, error: "" };
+}
+
+export function waitingContextSummary(value) {
+  const context = normalizeWaitingContext(value);
+  if (!context.subject || !context.onName) return "";
+  const parts = [`Aguardando ${context.subject}`, context.onName];
+  if (context.expectedDate) parts.push(`até ${formatDate(context.expectedDate)}`);
+  return parts.join(" · ");
+}
+
 export function quoteTaskTitle(quote = {}) {
   const reference = String(quote.code || quote.title || "").trim();
   return `Acompanhar ${reference || "cotação"}`;
@@ -44,6 +85,7 @@ export function quoteTaskTitle(quote = {}) {
 export function buildOptimisticTask(input, parentTaskId = null) {
   const quoteId = input.quoteId || null;
   const assigneeNames = normalizeAssigneeNames(input.assigneeNames || input.assigneeName);
+  const assignmentMode = input.assignmentMode === "team" ? "team" : "people";
   return {
     id: `optimistic-${globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`}`,
     title: String(input.title || "Nova tarefa").trim(),
@@ -51,6 +93,8 @@ export function buildOptimisticTask(input, parentTaskId = null) {
     status: input.status || "todo",
     priority: input.priority || "medium",
     dueDate: input.dueDate || "",
+    assignmentMode,
+    teamId: input.teamId || "",
     assigneeNames,
     assigneeName: assigneeNames.join(", "),
     teamName: input.teamName || "Sem equipe",
@@ -62,6 +106,7 @@ export function buildOptimisticTask(input, parentTaskId = null) {
     sourceCode: input.sourceCode || input.quoteCode || "",
     sourceLabel: input.sourceLabel || (quoteId ? "Pedido de cotação" : "Tarefa manual"),
     parentTaskId,
+    waitingContext: normalizeWaitingContext(input.waitingContext),
     comments: [],
     attachments: [],
     history: [],
@@ -87,6 +132,61 @@ export function buildAssigneeOptions(employees = []) {
 export function buildEmployeeAssigneeOptions(employees = []) {
   return [...new Set(employees.map((employee) => String(employee?.name || "").trim()).filter(Boolean))]
     .sort((left, right) => left.localeCompare(right, "pt-BR", { sensitivity: "base" }));
+}
+
+export function normalizeTeam(team = {}) {
+  return {
+    id: String(team.id || ""),
+    name: String(team.name || "").trim(),
+    memberIds: [...new Set((team.memberIds || team.members || []).map((id) => String(id || "").trim()).filter(Boolean))],
+  };
+}
+
+export function resolveTaskAssignment(input = {}, teams = [], employees = []) {
+  const assignmentMode = input.assignmentMode === "team" ? "team" : "people";
+  const employeeById = new Map(employees.map((employee) => [String(employee.id), employee]));
+  const employeeByName = new Map(employees.map((employee) => [String(employee.name), employee]));
+  if (assignmentMode === "team" && input.teamId) {
+    const team = teams.map(normalizeTeam).find((item) => item.id === String(input.teamId));
+    const memberIds = team?.memberIds || [...new Set((input.assigneeIds || []).map((id) => String(id || "")).filter(Boolean))];
+    const memberNames = memberIds.map((id) => employeeById.get(id)?.name).filter(Boolean);
+    return {
+      assignmentMode,
+      teamId: String(input.teamId),
+      teamName: team?.name || String(input.teamName || "").trim(),
+      assigneeIds: memberIds,
+      assigneeNames: memberNames.length ? memberNames : normalizeAssigneeNames(input.assigneeNames || input.assigneeName),
+    };
+  }
+  const assigneeNames = normalizeAssigneeNames(input.assigneeNames || input.assigneeName).filter((name) => name !== "Não atribuído");
+  const assigneeIds = [...new Set((input.assigneeIds || assigneeNames.map((name) => employeeByName.get(name)?.id)).filter(Boolean).map(String))];
+  return {
+    assignmentMode: "people",
+    teamId: "",
+    teamName: input.assignmentMode === "people" ? "" : String(input.teamName || "").trim(),
+    assigneeIds,
+    assigneeNames: assigneeNames.length ? assigneeNames : ["Não atribuído"],
+  };
+}
+
+export function migrateLegacyTeams(tasks = [], employees = [], teamNames = []) {
+  const names = [...new Set([
+    ...teamNames,
+    ...tasks.map((task) => task.teamName),
+  ].map((name) => String(name || "").trim()).filter((name) => name && name !== "Sem equipe"))];
+  const teams = names.map((name) => ({
+    id: `team-${normalizeText(name).replace(/[^a-z0-9]+/g, "-")}`,
+    name,
+    memberIds: [...new Set(tasks.filter((task) => task.teamName === name).flatMap((task) => task.assigneeIds || employees.filter((employee) => (task.assigneeNames || []).includes(employee.name)).map((employee) => employee.id)))],
+  }));
+  const teamByName = new Map(teams.map((team) => [team.name, team]));
+  return {
+    teams,
+    tasks: tasks.map((task) => {
+      const team = teamByName.get(task.teamName);
+      return team ? { ...task, assignmentMode: "team", teamId: team.id } : { ...task, assignmentMode: "people", teamId: "", teamName: "" };
+    }),
+  };
 }
 
 export function buildTaskCreationInput(input = {}) {

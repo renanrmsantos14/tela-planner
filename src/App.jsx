@@ -60,22 +60,27 @@ import {
   buildEmployeeAssigneeOptions,
   buildOptimisticTask,
   buildTaskCreationInput,
+  EMPTY_WAITING_CONTEXT,
   filterTasks,
   formatDate,
   formatLongDate,
   isDueToday,
   isOverdue,
   mentionedEmployees,
+  normalizeWaitingContext,
   normalizeAssigneeNames,
   normalizeText,
   PRIORITIES,
   quoteTaskTitle,
+  resolveTaskAssignment,
   sortTasks,
   sourceById,
   STATUSES,
   statusById,
   TASK_SOURCES,
   taskStats,
+  validateWaitingContext,
+  waitingContextSummary,
 } from "./domain";
 import { createDataStore } from "./dataverse";
 import SearchableSelect, {
@@ -175,42 +180,28 @@ function readChecklistVisibility() {
   }
 }
 
-function currentUserId() {
-  return String(
-    window.parent?.Xrm?.Utility?.getGlobalContext?.().userSettings?.userId ||
-      window.Xrm?.Utility?.getGlobalContext?.().userSettings?.userId ||
-      "",
-  )
-    .replace(/[{}]/g, "")
-    .toLowerCase();
-}
-
 function launchQuoteId() {
   const params = new URLSearchParams(window.location.search);
   const data = new URLSearchParams(
     (params.get("data") || "").replace(/^\?/, ""),
   );
-  return (
-    params.get("quoteId") ||
-    data.get("quoteId") ||
-    params.get("recordId") ||
-    data.get("recordId") ||
-    ""
-  );
+  const source = params.get("source") || data.get("source") || "";
+  if (source !== "quote") return "";
+  return params.get("sourceId") || data.get("sourceId") || "";
 }
 
-function resolveCurrentEmployee(employees, live) {
+function resolveCurrentEmployee(employees, live, currentUserEmail = "") {
   if (!live)
     return (
       (employees || []).find((employee) => employee.isMockCurrentUser) || null
     );
-  const userId = currentUserId();
+  const normalizedEmail = String(currentUserEmail || "").trim().toLowerCase();
+  if (!normalizedEmail) return null;
   return (
     (employees || []).find(
       (employee) =>
-        String(employee.userId || "")
-          .replace(/[{}]/g, "")
-          .toLowerCase() === userId,
+        String(employee.emailMicrosoft || "").trim().toLowerCase() ===
+        normalizedEmail,
     ) || null
   );
 }
@@ -345,6 +336,156 @@ function InputSelect({
       options={normalizedOptions}
       onQueryChange={remoteSearch}
     />
+  );
+}
+
+function WaitingContextFields({ value, onChange, employees = [], error = "" }) {
+  const context = normalizeWaitingContext(value);
+  const employeeOptions = employees
+    .filter((employee) => employee?.id && employee?.name)
+    .map((employee) => ({ value: employee.id, label: employee.name }));
+  const targetOptions = context.onType === "team"
+    ? TEAM_OPTIONS.map((team) => ({ value: team, label: team }))
+    : employeeOptions;
+  const update = (patch) => onChange({ ...context, ...patch });
+  const selectTarget = (id) => {
+    const option = targetOptions.find((item) => String(item.value) === String(id));
+    update({ onId: id || "", onName: option?.label || "" });
+  };
+  return (
+    <section className="waiting-context" aria-labelledby="waiting-context-title">
+      <div className="waiting-context-heading">
+        <div>
+          <span className="status-field-label">Contexto do retorno</span>
+          <strong id="waiting-context-title">O que está sendo aguardado?</strong>
+        </div>
+        <span>Obrigatório para entrar em Aguardando</span>
+      </div>
+      <label>
+        O que está sendo aguardado?
+        <input
+          value={context.subject}
+          onChange={(event) => update({ subject: event.target.value })}
+          placeholder="Ex.: confirmação da segunda van"
+        />
+      </label>
+      <div className="waiting-context-grid">
+        <label>
+          Tipo
+          <InputSelect
+            value={context.onType}
+            onChange={(onType) => update({ onType, onId: "", onName: "" })}
+            options={[{ value: "employee", label: "Funcionário" }, { value: "team", label: "Equipe" }]}
+          />
+        </label>
+        <label>
+          De quem?
+          <InputSelect
+            value={context.onId}
+            onChange={selectTarget}
+            options={targetOptions}
+            placeholder={context.onType === "team" ? "Selecione a equipe" : "Selecione o funcionário"}
+          />
+        </label>
+        <label>
+          Retorno previsto
+          <input
+            type="date"
+            value={context.expectedDate}
+            onChange={(event) => update({ expectedDate: event.target.value })}
+          />
+        </label>
+      </div>
+      <label>
+        Observação
+        <textarea
+          value={context.note}
+          onChange={(event) => update({ note: event.target.value })}
+          rows="2"
+          placeholder="Adicione o último contexto da cobrança"
+        />
+      </label>
+      {error && <div className="field-error" role="alert">{error}</div>}
+    </section>
+  );
+}
+
+function AssignmentFields({ form, setForm, employees = [], teams = [] }) {
+  const assignmentMode = form.assignmentMode === "team" ? "team" : "people";
+  const employeeById = new Map(employees.map((employee) => [String(employee.id), employee]));
+  const employeeOptions = buildEmployeeAssigneeOptions(employees).map((name) => ({ value: name, label: name }));
+  const teamOptions = teams.map((team) => ({
+    value: team.id,
+    label: team.name,
+    subtitle: String((team.memberIds || []).length) + ((team.memberIds || []).length === 1 ? " membro" : " membros"),
+  }));
+  const selectedTeam = teams.find((team) => String(team.id) === String(form.teamId || ""));
+  const selectedMemberNames = (form.assigneeIds || []).map((id) => employeeById.get(String(id))?.name).filter(Boolean);
+  const selectMode = (mode) => {
+    setForm((current) => mode === "team"
+      ? { ...current, assignmentMode: "team", teamId: "", teamName: "", assigneeName: [], assigneeIds: [] }
+      : { ...current, assignmentMode: "people", teamId: "", teamName: "", assigneeName: [], assigneeIds: [] });
+  };
+  const selectTeam = (teamId) => {
+    const team = teams.find((item) => String(item.id) === String(teamId));
+    const memberIds = team?.memberIds || [];
+    setForm((current) => ({
+      ...current,
+      assignmentMode: "team",
+      teamId: team?.id || "",
+      teamName: team?.name || "",
+      assigneeIds: memberIds,
+      assigneeName: memberIds.map((id) => employeeById.get(String(id))?.name).filter(Boolean),
+    }));
+  };
+  const selectPeople = (names) => {
+    const selectedNames = Array.isArray(names) ? names : [];
+    setForm((current) => ({
+      ...current,
+      assignmentMode: "people",
+      teamId: "",
+      teamName: "",
+      assigneeName: selectedNames,
+      assigneeIds: selectedNames.map((name) => employees.find((employee) => employee.name === name)?.id).filter(Boolean),
+    }));
+  };
+  return (
+    <div className="assignment-field">
+      <div className="assignment-mode" role="group" aria-label="Tipo de atribuição">
+        <button type="button" className={assignmentMode === "people" ? "is-selected" : ""} aria-pressed={assignmentMode === "people"} onClick={() => selectMode("people")}>
+          <UserRound size={14} /> Pessoas
+        </button>
+        <button type="button" className={assignmentMode === "team" ? "is-selected" : ""} aria-pressed={assignmentMode === "team"} onClick={() => selectMode("team")}>
+          <Users size={14} /> Equipe
+        </button>
+      </div>
+      {assignmentMode === "team" ? (
+        <>
+          <label>
+            Equipe
+            <InputSelect value={form.teamId || ""} onChange={selectTeam} options={teamOptions} placeholder={teams.length ? "Selecione uma equipe" : "Nenhuma equipe cadastrada"} disabled={!teams.length} />
+          </label>
+          {selectedTeam && (
+            <div className="assignment-members" aria-label={"Membros de " + selectedTeam.name}>
+              <span className="assignment-members-label">Responsáveis desta equipe</span>
+              <div className="assignment-members-list">
+                {(selectedMemberNames.length ? selectedMemberNames : selectedTeam.memberIds || []).map((member, index) => (
+                  <span className="assignment-member-chip" key={String(member) + "-" + index}>
+                    <span className="avatar avatar-small">{String(member).split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()}</span>
+                    {member}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      ) : (
+        <label>
+          Responsáveis
+          <InputSelect value={form.assigneeName || []} onChange={selectPeople} options={employeeOptions} placeholder="Selecione uma ou mais pessoas" multiple />
+        </label>
+      )}
+    </div>
   );
 }
 
@@ -1214,6 +1355,12 @@ const TaskCard = memo(function TaskCard({
           <span>Você foi mencionado</span>
         </div>
       )}
+      {taskItem.status === "waiting" && waitingContextSummary(taskItem.waitingContext) && (
+        <div className="task-waiting-summary" title={waitingContextSummary(taskItem.waitingContext)}>
+          <Clock3 size={13} />
+          <span>{waitingContextSummary(taskItem.waitingContext)}</span>
+        </div>
+      )}
       {showChecklistOnCard && subtasks.length > 0 && (
         <div
           className="task-checklist"
@@ -1747,7 +1894,7 @@ const Board = memo(function Board({
               <button
                 className="icon-button"
                 type="button"
-                onClick={onCreate}
+                onClick={() => onCreate(status.id)}
                 aria-label={`Criar tarefa em ${status.label}`}
               >
                 <Plus size={16} />
@@ -1807,6 +1954,7 @@ const FilterBar = memo(function FilterBar({
   setFilters,
   onCreate,
   employees = [],
+  teams = [],
 }) {
   const [expanded, setExpanded] = useState(false);
   const assigneeOptions = useMemo(
@@ -1814,8 +1962,8 @@ const FilterBar = memo(function FilterBar({
     [employees],
   );
   const teamOptions = useMemo(
-    () => TEAM_OPTIONS.map((team) => ({ value: team, label: team })),
-    [],
+    () => teams.map((team) => ({ value: team.name, label: team.name })),
+    [teams],
   );
   const activeFilterCount = [
     filters.query,
@@ -2035,6 +2183,7 @@ function BoardView({
         setFilters={setFilters}
         onCreate={onCreate}
         employees={state.employees}
+        teams={state.teams}
       />
       {isMobile ? (
         <MobileBoardList
@@ -2106,6 +2255,7 @@ function ListView({
         setFilters={setFilters}
         onCreate={onCreate}
         employees={state.employees}
+        teams={state.teams}
       />
       <section className="panel task-table">
         <div className="table-header" role="row">
@@ -2148,7 +2298,12 @@ function ListView({
           >
             <div className="table-task">
               <span className={`table-status status-${taskItem.status}`} />
-              <strong>{taskItem.title}</strong>
+              <div className="table-task-copy">
+                <strong>{taskItem.title}</strong>
+                {taskItem.status === "waiting" && waitingContextSummary(taskItem.waitingContext) && (
+                  <small>{waitingContextSummary(taskItem.waitingContext)}</small>
+                )}
+              </div>
             </div>
             <span>{taskItem.quoteCode || "—"}</span>
             <AssigneeDisplay
@@ -2212,6 +2367,7 @@ function CalendarView({
         setFilters={setFilters}
         onCreate={onCreate}
         employees={state.employees}
+        teams={state.teams}
       />
       <div className="calendar-strip">
         {days.map((date) => (
@@ -2299,6 +2455,7 @@ function QualityView({ state, onCreate, onCreateTask, filters, setFilters }) {
         setFilters={setFilters}
         onCreate={onCreateTask}
         employees={state.employees}
+        teams={state.teams}
       />
       <section className="panel task-table">
         <div className="table-header">
@@ -2346,7 +2503,84 @@ function QualityView({ state, onCreate, onCreateTask, filters, setFilters }) {
   );
 }
 
-function SettingsView({ onReset, live }) {
+function TeamManager({ teams = [], employees = [], onSave }) {
+  const emptyDraft = { id: "", name: "", memberIds: [] };
+  const [draft, setDraft] = useState(emptyDraft);
+  const [saving, setSaving] = useState(false);
+  const [validationError, setValidationError] = useState("");
+  const employeeOptions = employees.map((employee) => ({ value: employee.id, label: employee.name }));
+  const startEdit = (team) => {
+    setDraft({ id: team.id, name: team.name, memberIds: [...(team.memberIds || [])] });
+    setValidationError("");
+  };
+  const submit = () => {
+    const name = draft.name.trim();
+    if (!name) {
+      setValidationError("Informe um nome para a equipe.");
+      return;
+    }
+    setSaving(true);
+    Promise.resolve(onSave({ ...draft, name }))
+      .then((success) => {
+        if (success) {
+          setDraft(emptyDraft);
+          setValidationError("");
+        }
+      })
+      .catch((failure) => setValidationError(failure.message || "Não foi possível salvar a equipe."))
+      .finally(() => setSaving(false));
+  };
+  return (
+    <section className="panel teams-settings-panel">
+      <div className="panel-heading">
+        <div>
+          <span className="eyebrow">Atribuição rápida</span>
+          <h2>Equipes</h2>
+          <p className="panel-copy">Cadastre grupos de trabalho e use seus membros ao criar uma tarefa.</p>
+        </div>
+        <span className="panel-count">{teams.length}</span>
+      </div>
+      <div className="team-manager-body">
+        <div className="team-list">
+          {teams.length ? teams.map((team) => (
+            <button className="team-list-row" type="button" key={team.id} onClick={() => startEdit(team)}>
+              <span className="team-list-icon"><Users size={16} /></span>
+              <span className="team-list-copy">
+                <strong>{team.name}</strong>
+                <small>{(team.memberIds || []).length} {(team.memberIds || []).length === 1 ? "membro" : "membros"}</small>
+              </span>
+              <ChevronRight size={16} />
+            </button>
+          )) : <div className="empty-inline">Nenhuma equipe cadastrada.</div>}
+        </div>
+        <div className="team-form">
+          <div className="team-form-heading">
+            <div>
+              <span className="eyebrow">{draft.id ? "Editar equipe" : "Nova equipe"}</span>
+              <strong>{draft.id ? "Atualize nome e membros" : "Crie um atalho de atribuição"}</strong>
+            </div>
+            {draft.id && <button className="text-button" type="button" onClick={() => setDraft(emptyDraft)}>Nova equipe</button>}
+          </div>
+          <label>
+            Nome da equipe
+            <input value={draft.name} onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))} placeholder="Ex.: Operação" />
+          </label>
+          <label>
+            Membros
+            <SearchableMultiSelect value={draft.memberIds} onChange={(memberIds) => setDraft((current) => ({ ...current, memberIds }))} options={employeeOptions} placeholder="Selecione os membros" />
+          </label>
+          {validationError && <div className="form-error" role="alert">{validationError}</div>}
+          <button className="button button-primary" type="button" onClick={submit} disabled={saving || !draft.name.trim()}>
+            {saving ? <LoaderCircle size={15} className="spin" /> : <Check size={15} />}
+            {saving ? "Salvando…" : draft.id ? "Salvar equipe" : "Cadastrar equipe"}
+          </button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function SettingsView({ onReset, live, teams = [], employees = [], onSaveTeam }) {
   return (
     <div className="page-content">
       <PageHeader
@@ -2404,6 +2638,7 @@ function SettingsView({ onReset, live }) {
           </div>
         </div>
       </section>
+      <TeamManager teams={teams} employees={employees} onSave={onSaveTeam} />
     </div>
   );
 }
@@ -2456,6 +2691,16 @@ function fileToDataUrl(file) {
       );
     reader.readAsDataURL(file);
   });
+}
+
+function filesFromClipboard(event) {
+  const clipboard = event.clipboardData;
+  const files = Array.from(clipboard?.files || []).filter(Boolean);
+  if (files.length) return files;
+  return Array.from(clipboard?.items || [])
+    .filter((item) => item.kind === "file")
+    .map((item) => item.getAsFile?.())
+    .filter(Boolean);
 }
 
 function createDraftAttachment(file, prefix = "draft") {
@@ -2796,7 +3041,7 @@ function AttachmentSection({
               ? "Solte os arquivos aqui"
               : "Adicione evidências à tarefa"}
           </strong>
-          <small>Clique para escolher ou arraste arquivos para cá</small>
+          <small>Cole com Ctrl+V, clique para escolher ou arraste arquivos para cá</small>
         </span>
         <span className="attachment-dropzone-action">Escolher arquivos</span>
         <input
@@ -3019,6 +3264,7 @@ function formatCommentTimestamp(value) {
 function TaskDrawerContent({
   task: taskItem,
   state,
+  teams = [],
   currentEmployee,
   loadAttachmentContent,
   showChecklistOnCard,
@@ -3060,19 +3306,19 @@ function TaskDrawerContent({
   const drawerBodyRef = useRef(null);
   const commentExpansionAnchorRef = useRef(null);
   draftAttachmentsRef.current = draftAttachments;
-  const assigneeOptions = useMemo(
-    () => buildEmployeeAssigneeOptions(state.employees),
-    [state.employees],
-  );
   const saveCloseTimerRef = useRef(null);
   useEffect(() => {
     setForm(
       taskItem
         ? {
             ...taskItem,
+            assignmentMode: taskItem.assignmentMode || (taskItem.teamId ? "team" : "people"),
+            teamId: taskItem.teamId || "",
+            assigneeIds: taskItem.assigneeIds || [],
             assigneeName: normalizeAssigneeNames(
               taskItem.assigneeNames || taskItem.assigneeName,
             ).filter((name) => name !== "Não atribuído"),
+            waitingContext: normalizeWaitingContext(taskItem.waitingContext),
           }
         : null,
     );
@@ -3156,7 +3402,7 @@ function TaskDrawerContent({
     ...draftAttachments,
   ];
   const isDirty =
-    ["title", "status", "priority", "teamName", "dueDate", "description"].some(
+    ["title", "status", "priority", "assignmentMode", "teamId", "teamName", "dueDate", "description", "waitingContext"].some(
       (key) =>
         JSON.stringify(form[key] || "") !== JSON.stringify(taskItem[key] || ""),
     ) ||
@@ -3164,8 +3410,9 @@ function TaskDrawerContent({
       JSON.stringify(
         normalizeAssigneeNames(
           taskItem.assigneeNames || taskItem.assigneeName,
-        ).filter((name) => name !== "Não atribuído"),
+      ).filter((name) => name !== "Não atribuído"),
       ) ||
+    JSON.stringify(form.assigneeIds || []) !== JSON.stringify(taskItem.assigneeIds || []) ||
     comment.length > 0 ||
     draftAttachments.length > 0 ||
     pendingAttachmentRemovals.length > 0;
@@ -3181,6 +3428,7 @@ function TaskDrawerContent({
     nextDueDate: form.dueDate,
     reason: form.deadlineChangeReason,
   });
+  const waitingValidation = validateWaitingContext(form.status, form.waitingContext);
   const selectedEmployees = state.employees.filter((employee) =>
     normalizeAssigneeNames(form.assigneeName).includes(employee.name),
   );
@@ -3212,6 +3460,12 @@ function TaskDrawerContent({
         createDraftAttachment(file, "edit"),
       ),
     ]);
+  const handlePaste = (event) => {
+    const files = filesFromClipboard(event);
+    if (!files.length) return;
+    event.preventDefault();
+    handleDraftAttachment("paste", files);
+  };
   const handleDraftAttachmentDelete = (id, attachment) => {
     if (attachment?.syncStatus === "pending") {
       releaseDraftAttachment(attachment);
@@ -3229,6 +3483,10 @@ function TaskDrawerContent({
     setValidationError("");
     if (dueDateChanged && !deadlineValidation.allowed) {
       setValidationError(deadlineValidation.error);
+      return;
+    }
+    if (!waitingValidation.allowed) {
+      setValidationError(waitingValidation.error);
       return;
     }
     const removals = pendingAttachmentRemovals
@@ -3249,6 +3507,9 @@ function TaskDrawerContent({
         title: form.title,
         status: form.status,
         priority: form.priority,
+        assignmentMode: form.assignmentMode,
+        teamId: form.teamId || "",
+        assigneeIds: form.assigneeIds || [],
         assigneeNames: normalizeAssigneeNames(form.assigneeName),
         teamName: form.teamName,
         dueDate: form.dueDate,
@@ -3258,6 +3519,7 @@ function TaskDrawerContent({
         actorEmployeeId: currentEmployee?.id || "",
         actorUserId: currentEmployee?.userId || "",
         description: form.description,
+        waitingContext: normalizeWaitingContext(form.waitingContext),
       }),
     )
       .then((success) => {
@@ -3400,7 +3662,7 @@ function TaskDrawerContent({
             <X size={19} />
           </button>
         </header>
-        <div className="drawer-body" ref={drawerBodyRef}>
+        <div className="drawer-body" ref={drawerBodyRef} onPaste={handlePaste}>
           <div className="drawer-title">
             <label className="drawer-title-field" htmlFor={`task-title-${taskItem.id}`}>
               <span className="drawer-title-label">Título da tarefa</span>
@@ -3443,23 +3705,7 @@ function TaskDrawerContent({
                 onChange={(value) => set("priority", value)}
               />
             </div>
-            <label>
-              Responsável
-              <InputSelect
-                value={form.assigneeName}
-                onChange={(value) => set("assigneeName", value)}
-                options={assigneeOptions}
-                placeholder="Não atribuído"
-              />
-            </label>
-            <label>
-              Equipe
-              <InputSelect
-                value={form.teamName}
-                onChange={(value) => set("teamName", value)}
-                options={TEAM_OPTIONS}
-              />
-            </label>
+            <AssignmentFields form={form} setForm={setForm} employees={state.employees} teams={teams} />
             <label>
               Prazo
               <input
@@ -3471,6 +3717,14 @@ function TaskDrawerContent({
               />
             </label>
           </div>
+          {form.status === "waiting" && (
+            <WaitingContextFields
+              value={form.waitingContext}
+              onChange={(value) => set("waitingContext", value)}
+              employees={state.employees}
+              error={validationError && !waitingValidation.allowed ? validationError : ""}
+            />
+          )}
           {dueDateChanged && currentDeadlineRole === "assignee" && (
             <label className="deadline-reason">
               Motivo da alteração do prazo
@@ -3483,7 +3737,7 @@ function TaskDrawerContent({
               <span>{missingExternalRecipients.map((employee) => employee.name).join(", ")} não receberá Teams/e-mail até ter usuário Microsoft vinculado.</span>
             </div>
           )}
-          {validationError && (
+          {validationError && (form.status !== "waiting" || waitingValidation.allowed) && (
             <div className="field-error" role="alert">
               {validationError}
             </div>
@@ -3824,15 +4078,19 @@ function TaskDrawer({ task, onDelete, ...props }) {
   );
 }
 
-function NewTaskDrawer({ employees = [], onClose, onSave }) {
+function NewTaskDrawer({ employees = [], teams = [], initialStatus = "todo", onClose, onSave }) {
   const [form, setForm] = useState({
     title: "",
-    status: "todo",
+    status: initialStatus,
     priority: "medium",
+    assignmentMode: "people",
+    teamId: "",
     assigneeName: [],
-    teamName: "Comercial",
+    assigneeIds: [],
+    teamName: "",
     dueDate: "",
     description: "",
+    waitingContext: { ...EMPTY_WAITING_CONTEXT },
   });
   const [draftAttachments, setDraftAttachments] = useState([]);
   const initialFormRef = useRef(form);
@@ -3840,6 +4098,7 @@ function NewTaskDrawer({ employees = [], onClose, onSave }) {
   draftAttachmentsRef.current = draftAttachments;
   const [showDiscardPrompt, setShowDiscardPrompt] = useState(false);
   const [saveState, setSaveState] = useState("idle");
+  const [validationError, setValidationError] = useState("");
   const [saveProgress, setSaveProgress] = useState({
     label: "Criando tarefa…",
     detail: "Preparando dados",
@@ -3847,10 +4106,6 @@ function NewTaskDrawer({ employees = [], onClose, onSave }) {
     total: 1,
   });
   const saveCloseTimerRef = useRef(null);
-  const assigneeOptions = useMemo(
-    () => buildEmployeeAssigneeOptions(employees),
-    [employees],
-  );
   useEffect(
     () => () => {
       if (saveCloseTimerRef.current)
@@ -3879,6 +4134,12 @@ function NewTaskDrawer({ employees = [], onClose, onSave }) {
         createDraftAttachment(file, "new"),
       ),
     ]);
+  const handlePaste = (event) => {
+    const files = filesFromClipboard(event);
+    if (!files.length) return;
+    event.preventDefault();
+    handleDraftAttachment("paste", files);
+  };
   const handleDraftAttachmentDelete = (id, attachment) => {
     releaseDraftAttachment(attachment);
     setDraftAttachments((current) =>
@@ -3887,6 +4148,12 @@ function NewTaskDrawer({ employees = [], onClose, onSave }) {
   };
   const handleCreate = () => {
     if (saveState !== "idle" || !form.title.trim()) return;
+    const waitingValidation = validateWaitingContext(form.status, form.waitingContext);
+    if (!waitingValidation.allowed) {
+      setValidationError(waitingValidation.error);
+      return;
+    }
+    setValidationError("");
     setSaveProgress({
       label: "Criando tarefa…",
       detail: draftAttachments.length
@@ -3960,7 +4227,7 @@ function NewTaskDrawer({ employees = [], onClose, onSave }) {
             <X size={19} />
           </button>
         </header>
-        <div className="drawer-body">
+        <div className="drawer-body" onPaste={handlePaste}>
           <div className="drawer-title">
             <label className="drawer-title-field" htmlFor="new-task-title">
               <span className="drawer-title-label">Título da tarefa</span>
@@ -3989,15 +4256,7 @@ function NewTaskDrawer({ employees = [], onClose, onSave }) {
                 onChange={(value) => set("priority", value)}
               />
             </div>
-            <label>
-              Responsável
-              <InputSelect
-                value={form.assigneeName}
-                onChange={(value) => set("assigneeName", value)}
-                options={assigneeOptions}
-                placeholder="Não atribuído"
-              />
-            </label>
+            <AssignmentFields form={form} setForm={setForm} employees={employees} teams={teams} />
             <label>
               Prazo
               <input
@@ -4006,15 +4265,18 @@ function NewTaskDrawer({ employees = [], onClose, onSave }) {
                 onChange={(event) => set("dueDate", event.target.value)}
               />
             </label>
-            <label>
-              Equipe
-              <InputSelect
-                value={form.teamName}
-                onChange={(value) => set("teamName", value)}
-                options={TEAM_OPTIONS}
-              />
-            </label>
           </div>
+          {form.status === "waiting" && (
+            <WaitingContextFields
+              value={form.waitingContext}
+              onChange={(value) => set("waitingContext", value)}
+              employees={employees}
+              error={validationError}
+            />
+          )}
+          {validationError && form.status !== "waiting" && (
+            <div className="field-error" role="alert">{validationError}</div>
+          )}
           <label className="drawer-description">
             Descrição
             <textarea
@@ -4103,15 +4365,22 @@ export default function App() {
     tasks: [],
     quotes: [],
     employees: [],
+    teams: [],
+    currentUserEmail: "",
     quality: [],
     notifications: [],
     live: store.live,
     loading: { core: true, quotes: true, quality: true, photos: true },
     loadErrors: {},
   }));
-  const currentEmployee = resolveCurrentEmployee(state.employees, store.live);
+  const currentEmployee = resolveCurrentEmployee(
+    state.employees,
+    store.live,
+    state.currentUserEmail,
+  );
   const [selectedId, setSelectedId] = useState("");
   const [creating, setCreating] = useState(false);
+  const [creatingStatus, setCreatingStatus] = useState("todo");
   const [filters, setFilters] = useState(createDefaultFilters);
   const [taskScope, setTaskScope] = useState("mine");
   const [checklistVisibility, setChecklistVisibility] = useState(
@@ -4121,6 +4390,7 @@ export default function App() {
   const [noticeAction, setNoticeAction] = useState(null);
   const [error, setError] = useState("");
   const [failedTaskDraft, setFailedTaskDraft] = useState(null);
+  const [pendingTaskDraft, setPendingTaskDraft] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const confirmedStateRef = useRef(null);
   const pendingMutationsRef = useRef(new Map());
@@ -4145,7 +4415,11 @@ export default function App() {
     }, duration);
   }, []);
   globalThis.__plannerEmployees = state.employees;
-  const defaultEmployee = resolveCurrentEmployee(state.employees, store.live);
+  const defaultEmployee = resolveCurrentEmployee(
+    state.employees,
+    store.live,
+    state.currentUserEmail,
+  );
   useEffect(() => {
     if (taskScope !== "mine" || !defaultEmployee?.name) return;
     setFilters((current) =>
@@ -4379,8 +4653,44 @@ export default function App() {
     );
     const taskId = params.get("taskId") || data.get("taskId") || "";
     const mode = params.get("mode") || data.get("mode") || "";
+    const quoteSourceId = launchQuoteId();
     if (taskId) setSelectedId(taskId);
-    if (mode === "create") setCreating(true);
+    if (quoteSourceId) {
+      const openExistingOrCreate = (quote) =>
+        Promise.resolve(store.ensureQuoteTask(state, quote))
+          .then((next) => {
+            confirmedStateRef.current = next;
+            setState(applyPendingMutations(next));
+            const task = next.tasks.find(
+              (item) => item.quoteId === quote.id && !item.parentTaskId,
+            );
+            if (task) setSelectedId(task.id);
+          })
+          .catch((failure) =>
+            showNotice(
+              failure.message ||
+                "Não foi possível abrir o acompanhamento da cotação.",
+              5200,
+            ),
+          );
+      const knownQuote = state.quotes.find((item) => item.id === quoteSourceId);
+      if (knownQuote) {
+        openExistingOrCreate(knownQuote);
+      } else if (store.searchQuotes) {
+        store
+          .searchQuotes(quoteSourceId)
+          .then((found) => {
+            const quote = found.find((item) => item.id === quoteSourceId) || found[0];
+            if (quote) return openExistingOrCreate(quote);
+            showNotice("Cotação de origem não encontrada.", 5200);
+          })
+          .catch(() => showNotice("Cotação de origem não encontrada.", 5200));
+      } else {
+        showNotice("Cotação de origem não encontrada.", 5200);
+      }
+    } else if (mode === "create") {
+      setCreating(true);
+    }
   }, [state]);
   const runOptimisticMutation = useCallback(
     (update, operation, pendingMessage, successMessage) => {
@@ -4431,12 +4741,24 @@ export default function App() {
   const selected = useMemo(() => {
     const taskItem = state?.tasks.find((item) => item.id === selectedId);
     if (!taskItem) return undefined;
-    return failedTaskDraft?.id === taskItem.id
-      ? { ...taskItem, ...failedTaskDraft.patch, syncStatus: undefined }
+    const failedPatch = failedTaskDraft?.id === taskItem.id ? failedTaskDraft.patch : null;
+    const pendingPatch = pendingTaskDraft?.id === taskItem.id ? pendingTaskDraft.patch : null;
+    return failedPatch || pendingPatch
+      ? { ...taskItem, ...pendingPatch, ...failedPatch, syncStatus: undefined }
       : taskItem;
-  }, [state, selectedId, failedTaskDraft]);
+  }, [state, selectedId, failedTaskDraft, pendingTaskDraft]);
   const openTask = useCallback((id) => setSelectedId(id), []);
-  const closeTask = useCallback(() => setSelectedId(""), []);
+  const closeTask = useCallback(() => {
+    setSelectedId("");
+    setPendingTaskDraft(null);
+  }, []);
+  const openCreate = useCallback((status = "todo") => {
+    const nextStatus = STATUSES.some((item) => item.id === status)
+      ? status
+      : "todo";
+    setCreatingStatus(nextStatus);
+    setCreating(true);
+  }, []);
   const setChecklistVisibilityForTask = useCallback((id, visible) => {
     setChecklistVisibility((current) => {
       const next = { ...current, [id]: visible };
@@ -4455,6 +4777,14 @@ export default function App() {
     (id, status) => {
       const task = state.tasks.find((item) => item.id === id);
       if (!task) return Promise.resolve(false);
+      if (status === "waiting" && task.status !== "waiting") {
+        const waitingValidation = validateWaitingContext("waiting", task.waitingContext);
+        if (!waitingValidation.allowed) {
+          setPendingTaskDraft({ id, patch: { status: "waiting" } });
+          setSelectedId(id);
+          return Promise.resolve(false);
+        }
+      }
       const patch = { status };
       return runOptimisticMutation(
         (current) => applyOptimisticTaskPatch(current, id, patch),
@@ -4476,6 +4806,12 @@ export default function App() {
       ].filter((value) => typeof value === "string").join(" ");
       const nextPatch = {
         ...patch,
+        ...(patch.assignmentMode !== undefined || patch.teamId !== undefined || patch.assigneeIds !== undefined || patch.assigneeNames !== undefined
+          ? (() => {
+              const assignment = resolveTaskAssignment(patch, state.teams || [], state.employees || []);
+              return { ...assignment, assigneeName: assignment.assigneeNames.join(", ") };
+            })()
+          : {}),
         actorEmployeeId: currentEmployee?.id || "",
         actorUserId: currentEmployee?.userId || "",
         mentionedEmployeeIds: mentionText ? mentionedEmployees(mentionText, state.employees).map((employee) => employee.id) : [],
@@ -4488,6 +4824,7 @@ export default function App() {
         "",
       ).then((success) => {
         if (success) {
+          setPendingTaskDraft((current) => current?.id === id ? null : current);
           if (shouldReopen)
             setFailedTaskDraft((current) =>
               current?.id === id ? null : current,
@@ -4560,6 +4897,25 @@ export default function App() {
     },
     [state, store, runOptimisticMutation, selectedId],
   );
+  const saveTeam = useCallback(
+    (input) => {
+      const operation = input.id
+        ? store.updateTeam(state, input.id, input)
+        : store.createTeam(state, input);
+      return Promise.resolve(operation)
+        .then((next) => {
+          confirmedStateRef.current = next;
+          setState(applyPendingMutations(next));
+          showNotice(input.id ? "Equipe atualizada." : "Equipe criada.");
+          return true;
+        })
+        .catch((failure) => {
+          showNotice(failure.message || "Não foi possível salvar a equipe.", 5200);
+          return false;
+        });
+    },
+    [applyPendingMutations, showNotice, state, store],
+  );
   const createNewTask = useCallback(
     (input) => {
       const {
@@ -4568,8 +4924,11 @@ export default function App() {
         onProgress,
         ...taskInput
       } = input;
+      const assignment = resolveTaskAssignment(taskInput, state.teams || [], state.employees || []);
       const commonTask = {
         ...buildTaskCreationInput(taskInput),
+        ...assignment,
+        assigneeName: assignment.assigneeNames.join(", "),
         actorEmployeeId: currentEmployee?.id || "",
         actorUserId: currentEmployee?.userId || "",
       };
@@ -4725,7 +5084,11 @@ export default function App() {
   }, [store, runMutation]);
   const addComment = useCallback(
     (id, text) => {
-      const actor = resolveCurrentEmployee(state.employees, store.live);
+      const actor = resolveCurrentEmployee(
+        state.employees,
+        store.live,
+        state.currentUserEmail,
+      );
       const mentionedEmployeeIds = mentionedEmployees(text, state.employees).map((employee) => employee.id);
       const context = { actorEmployeeId: actor?.id || "", actorUserId: actor?.userId || "", mentionedEmployeeIds };
       return (
@@ -4933,7 +5296,7 @@ export default function App() {
       <AppShell
         active={active}
         onNavigate={navigate}
-        onCreate={() => setCreating(true)}
+        onCreate={openCreate}
         tasks={state.tasks}
         live={store.live}
         currentEmployee={null}
@@ -4969,8 +5332,9 @@ export default function App() {
             <FilterBar
               filters={filters}
               setFilters={setFilters}
-              onCreate={() => setCreating(true)}
+              onCreate={openCreate}
               employees={state.employees}
+              teams={state.teams}
             />
           }
           onClearFilters={() => setFilters(createDefaultFilters())}
@@ -4978,7 +5342,7 @@ export default function App() {
           onOpenTask={openTask}
           onOpenSource={(item) => store.openSource?.(item)}
           onCompleteTask={completeTask}
-          onCreate={() => setCreating(true)}
+          onCreate={openCreate}
         />
       );
     if (active === "quotes")
@@ -4993,7 +5357,7 @@ export default function App() {
           onToggleSubtask={saveTask}
           onMove={moveTask}
           onComplete={completeTask}
-          onCreate={() => setCreating(true)}
+          onCreate={openCreate}
           filters={filters}
           setFilters={setFilters}
           onNavigate={navigate}
@@ -5007,7 +5371,7 @@ export default function App() {
           state={state}
           currentEmployee={currentEmployee}
           onOpen={openTask}
-          onCreate={() => setCreating(true)}
+          onCreate={openCreate}
           filters={filters}
           setFilters={setFilters}
           onNavigate={navigate}
@@ -5021,7 +5385,7 @@ export default function App() {
           state={state}
           currentEmployee={currentEmployee}
           onOpen={openTask}
-          onCreate={() => setCreating(true)}
+          onCreate={openCreate}
           filters={filters}
           setFilters={setFilters}
           onNavigate={navigate}
@@ -5038,7 +5402,7 @@ export default function App() {
           <LazyQualityView
             state={state}
             onCreate={createQualityTask}
-            onCreateTask={() => setCreating(true)}
+            onCreateTask={openCreate}
             filters={filters}
             setFilters={setFilters}
           />
@@ -5046,7 +5410,7 @@ export default function App() {
       );
     return (
       <Suspense fallback={<LoadingFallback />}>
-        <LazySettingsView onReset={reloadData} live={store.live} />
+          <LazySettingsView onReset={reloadData} live={store.live} teams={state.teams} employees={state.employees} onSaveTeam={saveTeam} />
       </Suspense>
     );
   };
@@ -5054,7 +5418,7 @@ export default function App() {
     <AppShell
       active={active}
       onNavigate={navigate}
-      onCreate={() => setCreating(true)}
+      onCreate={openCreate}
       tasks={state.tasks}
       live={store.live}
       currentEmployee={currentEmployee}
@@ -5109,6 +5473,7 @@ export default function App() {
         <TaskDrawer
           task={selected}
           state={state}
+          teams={state.teams}
           currentEmployee={currentEmployee}
           showChecklistOnCard={Boolean(checklistVisibility[selected.id])}
           onToggleChecklistOnCard={(visible) =>
@@ -5133,6 +5498,8 @@ export default function App() {
       {creating && (
         <NewTaskDrawer
           employees={state.employees}
+          teams={state.teams}
+          initialStatus={creatingStatus}
           onClose={() => setCreating(false)}
           onSave={createNewTask}
         />

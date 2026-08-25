@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { addOptimisticAttachment, addOptimisticComment, applyOptimisticTaskPatch, buildAssigneeOptions, buildOptimisticTask, buildTaskCreationInput, filterTasks, getDueBucket, isOverdue, mentionedEmployees, normalizeAssigneeNames, quoteTaskTitle, sortTasks, taskStats } from "../src/domain.js";
+import { addOptimisticAttachment, addOptimisticComment, applyOptimisticTaskPatch, buildAssigneeOptions, buildOptimisticTask, buildTaskCreationInput, filterTasks, getDueBucket, isOverdue, mentionedEmployees, migrateLegacyTeams, normalizeAssigneeNames, normalizeTeam, quoteTaskTitle, resolveTaskAssignment, sortTasks, STATUSES, taskStats, validateWaitingContext, waitingContextSummary } from "../src/domain.js";
 
 const tasks = [
   { id: "1", title: "Atrasada", quoteTitle: "Cotação A", assigneeName: "Marina", status: "todo", priority: "high", dueDate: "2026-08-01" },
@@ -55,6 +55,28 @@ test("normaliza múltiplos responsáveis", () => {
   assert.deepEqual(normalizeAssigneeNames([]), ["Não atribuído"]);
 });
 
+test("normaliza equipe e expande seus membros no snapshot da tarefa", () => {
+  const team = normalizeTeam({ id: "team-op", name: "Operação", memberIds: ["e1", "e1", "e2"] });
+  const assignment = resolveTaskAssignment({ assignmentMode: "team", teamId: team.id }, [team], [{ id: "e1", name: "Marina" }, { id: "e2", name: "Rafael" }]);
+
+  assert.deepEqual(team.memberIds, ["e1", "e2"]);
+  assert.deepEqual(assignment, { assignmentMode: "team", teamId: "team-op", teamName: "Operação", assigneeIds: ["e1", "e2"], assigneeNames: ["Marina", "Rafael"] });
+});
+
+test("migra equipes legadas sem alterar tarefas fora de equipe", () => {
+  const migrated = migrateLegacyTeams([
+    { id: "task-op", teamName: "Operação", assigneeIds: ["e1"], assigneeNames: ["Marina"] },
+    { id: "task-manual", teamName: "Sem equipe", assigneeIds: ["e2"], assigneeNames: ["Rafael"] },
+  ], [{ id: "e1", name: "Marina" }, { id: "e2", name: "Rafael" }], ["Operação"]);
+
+  assert.equal(migrated.teams[0].name, "Operação");
+  assert.deepEqual(migrated.teams[0].memberIds, ["e1"]);
+  assert.equal(migrated.tasks[0].assignmentMode, "team");
+  assert.equal(migrated.tasks[0].teamId, "team-operacao");
+  assert.equal(migrated.tasks[1].assignmentMode, "people");
+  assert.equal(migrated.tasks[1].teamId, "");
+});
+
 test("filtra texto ignorando acentos e caixa", () => {
   const accented = [{ ...tasks[0], title: "Revisão de cotação" }];
   assert.equal(filterTasks(accented, { query: "REVISAO COTACAO", status: "", priority: "" }).length, 1);
@@ -82,6 +104,18 @@ test("mantém cada coluna em ordem crescente de prazo", () => {
 test("filtra origem e status aguardando", () => {
   const qualityTask = { ...tasks[1], status: "waiting", sourceType: "quality", sourceLabel: "Erro operacional" };
   assert.equal(filterTasks([tasks[0], qualityTask], { query: "", status: ["waiting"], priority: [], source: ["quality"] }).length, 1);
+});
+
+test("ordena Aguardando antes de Em andamento", () => {
+  assert.deepEqual(STATUSES.map((item) => item.id), ["todo", "waiting", "doing", "done"]);
+});
+
+test("valida contexto mínimo e monta resumo de Aguardando", () => {
+  assert.equal(validateWaitingContext("waiting", {}).allowed, false);
+  const context = { subject: "confirmação da segunda van", onType: "team", onId: "Operação", onName: "Operação", expectedDate: "2026-08-28", note: "Cobrar parceiro" };
+  assert.equal(validateWaitingContext("waiting", context).allowed, true);
+  assert.equal(waitingContextSummary(context), "Aguardando confirmação da segunda van · Operação · até 28 ago.");
+  assert.equal(validateWaitingContext("doing", {}).allowed, true);
 });
 
 test("monta responsáveis únicos em ordem alfabética", () => {

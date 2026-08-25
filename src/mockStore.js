@@ -1,4 +1,12 @@
-import { normalizeAssigneeNames, STATUSES } from "./domain.js";
+import {
+  migrateLegacyTeams,
+  normalizeAssigneeNames,
+  normalizeWaitingContext,
+  resolveTaskAssignment,
+  STATUSES,
+  validateWaitingContext,
+  waitingContextSummary,
+} from "./domain.js";
 import { notificationDedupeKey, notificationRecipients } from "./notifications.js";
 
 export const STORAGE_KEY = "betinhos-tela-planner-mock-v2";
@@ -38,7 +46,7 @@ export function seedState() {
   ];
   const tasks = [
     task("task-1", "Preparar proposta comercial", "quote-1008", "COT-1008", "Transfer executivo · Aeroporto GRU", "doing", "high", "Marina Alves", "Comercial", dateFromToday(0), "Revisar composição de preço e confirmar janela de embarque."),
-    task("task-2", "Confirmar disponibilidade de veículo", "quote-1007", "COT-1007", "Van executiva · Evento corporativo", "waiting", "medium", "Rafael Lima", "Operação", dateFromToday(2), "Aguardando confirmação do parceiro para a segunda van."),
+    task("task-2", "Confirmar disponibilidade de veículo", "quote-1007", "COT-1007", "Van executiva · Evento corporativo", "waiting", "medium", "Rafael Lima", "Operação", dateFromToday(2), "Aguardando confirmação do parceiro para a segunda van.", null, { waitingContext: { subject: "confirmação da segunda van", onType: "team", onId: "Operação", onName: "Operação", expectedDate: dateFromToday(2), note: "Parceiro ainda não confirmou a disponibilidade." } }),
     task("task-3", "Validar margem da proposta", "quote-1008", "COT-1008", "Transfer executivo · Aeroporto GRU", "todo", "medium", "Camila Torres", "Financeiro", dateFromToday(1), "Validar margem mínima antes de enviar ao cliente.", "task-1"),
     task("task-4", "Selecionar motorista de apoio", "quote-1006", "COT-1006", "Carro blindado · Diretoria", "todo", "high", "João Mendes", "Operação", dateFromToday(1), "Separar duas opções de motorista habilitado.", "task-5"),
     task("task-5", "Montar cotação do carro blindado", "quote-1006", "COT-1006", "Carro blindado · Diretoria", "doing", "high", "Marina Alves", "Comercial", dateFromToday(1), "Compor o valor final com deslocamento e espera."),
@@ -86,7 +94,7 @@ export function seedState() {
   tasks.push(
     task("task-40", "Revisar pendências prioritárias do dia", null, "OPS-040", "Rotina operacional interna", "doing", "high", "Renan Martins", "Comercial", dateFromToday(0), "Consolidar pendências críticas, cobrar responsáveis e registrar próximos passos."),
     task("task-41", "Aprovar mensagem para cliente estratégico", "quote-1004", "COT-1004", "Roadshow executivo · São Paulo e Campinas", "todo", "high", "Renan Martins", "Comercial", dateFromToday(1), "Validar texto final antes do envio ao cliente e registrar a decisão.", "task-40"),
-    task("task-42", "Acompanhar retorno do fornecedor", "quote-1007", "COT-1007", "Van executiva · Evento corporativo", "waiting", "medium", ["Renan Martins", "Rafael Lima"], "Operação", dateFromToday(1), "Cobrar disponibilidade da segunda van e atualizar a equipe."),
+    task("task-42", "Acompanhar retorno do fornecedor", "quote-1007", "COT-1007", "Van executiva · Evento corporativo", "waiting", "medium", ["Renan Martins", "Rafael Lima"], "Operação", dateFromToday(1), "Cobrar disponibilidade da segunda van e atualizar a equipe.", null, { waitingContext: { subject: "disponibilidade da segunda van", onType: "employee", onId: "employee-rafael", onName: "Rafael Lima", expectedDate: dateFromToday(1), note: "Registrar o retorno e atualizar a equipe." } }),
     task("task-43", "Revisar comentário da ocorrência QAL-205", null, "QAL-205", "Divergência de quilometragem faturada", "todo", "medium", "Renan Martins", "Qualidade", dateFromToday(2), "Ler evidências, validar a tratativa e encaminhar decisão.", null, { sourceType: "quality", sourceId: "quality-error-205", sourceLabel: "Erro operacional", sourceCode: "QAL-205" }),
     task("task-44", "Confirmar fechamento semanal", null, "OPS-044", "Rotina operacional interna", "done", "low", "Renan Martins", "Financeiro", dateFromToday(-1), "Conferir se todas as tarefas críticas têm evidência e responsável."),
   );
@@ -146,18 +154,26 @@ export function seedState() {
   ];
   employees.forEach((employee) => { employee.externalNotificationsAvailable ??= Boolean(employee.userId); });
   tasks.forEach((item) => { item.creatorUserId ||= "user-renan"; item.creatorEmployeeId ||= "employee-renan"; item.assigneeIds ||= employees.filter((employee) => item.assigneeNames.includes(employee.name)).map((employee) => employee.id); });
+  const migrated = migrateLegacyTeams(tasks, employees, ["Comercial", "Financeiro", "Operação", "Qualidade"]);
+  migrated.tasks.forEach((item) => {
+    const assignment = resolveTaskAssignment({ ...item, assignmentMode: item.assignmentMode, teamId: item.teamId }, migrated.teams, employees);
+    item.assignmentMode = assignment.assignmentMode;
+    item.teamId = assignment.teamId;
+    item.teamName = assignment.teamName;
+    item.assigneeName = item.assigneeNames.join(", ");
+  });
   const notifications = [
     { id: "notification-1", taskId: "task-42", recipientEmployeeId: "employee-renan", type: "mention", title: "Rafael mencionou você", message: "Preciso do retorno do parceiro até o fim do dia.", occurredAt: new Date().toISOString(), readAt: "" },
     { id: "notification-2", taskId: "task-40", recipientEmployeeId: "employee-renan", type: "due_today", title: "Tarefa vence hoje", message: "Revisar pendências prioritárias do dia", occurredAt: new Date(Date.now() - 3600000).toISOString(), readAt: "" },
   ];
-  return { quotes, tasks, employees, quality, notifications, lastUpdated: new Date().toISOString() };
+  return { quotes, tasks: migrated.tasks, employees, teams: migrated.teams, quality, notifications, lastUpdated: new Date().toISOString() };
 }
 
 function task(id, title, quoteId, quoteCode, quoteTitle, status, priority, assigneeName, teamName, dueDate, description, parentTaskId = null, context = {}) {
   const assigneeNames = normalizeAssigneeNames(assigneeName);
   return {
     id, title, parentTaskId, quoteId, quoteCode, quoteTitle, status, priority, assigneeNames, assigneeName: assigneeNames.join(", "), teamName, dueDate,
-    description, checklist: context.checklist || [], labels: [quoteCode], sourceType: quoteId ? "quote" : "manual", sourceId: quoteId, sourceLabel: quoteId ? "Pedido de cotação" : "Tarefa manual", sourceCode: quoteCode, ...context, comments: context.comments || [], attachments: context.attachments || [],
+    description, checklist: context.checklist || [], labels: [quoteCode], sourceType: quoteId ? "quote" : "manual", sourceId: quoteId, sourceLabel: quoteId ? "Pedido de cotação" : "Tarefa manual", sourceCode: quoteCode, ...context, waitingContext: normalizeWaitingContext(context.waitingContext), comments: context.comments || [], attachments: context.attachments || [],
     history: context.history || [{ id: uid("history"), text: "Tarefa criada no cenário de demonstração.", createdAt: new Date().toISOString(), author: "Sistema" }],
   };
 }
@@ -165,7 +181,11 @@ function task(id, title, quoteId, quoteCode, quoteTitle, status, priority, assig
 export function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : seedState();
+    if (!raw) return seedState();
+    const state = JSON.parse(raw);
+    if (state.teams) return state;
+    const migrated = migrateLegacyTeams(state.tasks || [], state.employees || [], ["Comercial", "Financeiro", "Operação", "Qualidade"]);
+    return { ...state, tasks: migrated.tasks, teams: migrated.teams };
   } catch {
     return seedState();
   }
@@ -183,14 +203,19 @@ export function createTask(state, input) {
     if (activeMain) throw new Error("Esta cotação já possui um acompanhamento principal ativo.");
   }
   const sourceType = input.sourceType || (input.quoteId ? "quote" : "manual");
-  const assigneeNames = normalizeAssigneeNames(input.assigneeNames || input.assigneeName);
-  const assigneeIds = input.assigneeIds || employeeIdsByNames(state.employees, assigneeNames);
+  const status = input.status || STATUSES[0].id;
+  const waitingContext = normalizeWaitingContext(input.waitingContext);
+  const waitingValidation = validateWaitingContext(status, waitingContext);
+  if (!waitingValidation.allowed) throw new Error(waitingValidation.error);
+  const assignment = resolveTaskAssignment(input, state.teams || [], state.employees || []);
+  const assigneeNames = assignment.assigneeNames;
+  const assigneeIds = assignment.assigneeIds.length ? assignment.assigneeIds : employeeIdsByNames(state.employees, assigneeNames);
   const nextTask = {
     id: uid("task"), parentTaskId: input.parentTaskId || null, quoteId: input.quoteId || null,
     quoteCode: input.quoteCode || "", quoteTitle: input.quoteTitle || "Sem vínculo", title: input.title.trim(),
-    status: input.status || STATUSES[0].id, priority: input.priority || "medium", assigneeNames, assigneeName: assigneeNames.join(", "), assigneeIds,
+    status, priority: input.priority || "medium", assignmentMode: assignment.assignmentMode, teamId: assignment.teamId, assigneeNames, assigneeName: assigneeNames.join(", "), assigneeIds,
     creatorEmployeeId: input.actorEmployeeId || "", creatorUserId: input.actorUserId || "",
-    teamName: input.teamName || "Operação", dueDate: input.dueDate || "", description: input.description || "",
+    teamName: assignment.teamName || input.teamName || "", dueDate: input.dueDate || "", description: input.description || "", waitingContext,
     checklist: input.checklist || [], labels: input.quoteCode ? [input.quoteCode] : [], sourceType, sourceId: input.sourceId || input.quoteId || null, sourceLabel: input.sourceLabel || (sourceType === "quality" ? "Ação de qualidade" : sourceType === "quote" ? "Pedido de cotação" : "Tarefa manual"), sourceCode: input.sourceCode || input.quoteCode || "", comments: [], attachments: [],
     history: [{ id: uid("history"), text: "Tarefa criada no mock.", createdAt: new Date().toISOString(), author: "Você" }],
   };
@@ -203,20 +228,33 @@ export function createTask(state, input) {
 
 export function updateTask(state, id, patch) {
   const existing = state.tasks.find((taskItem) => taskItem.id === id);
+  const nextStatus = patch.status ?? existing?.status;
+  const waitingContext = patch.waitingContext === undefined
+    ? normalizeWaitingContext(existing?.waitingContext)
+    : normalizeWaitingContext(patch.waitingContext);
+  const waitingValidation = validateWaitingContext(nextStatus, waitingContext);
+  if (existing && existing.status !== "waiting" && nextStatus === "waiting" && !waitingValidation.allowed) {
+    throw new Error(waitingValidation.error);
+  }
   const tasks = state.tasks.map((taskItem) => {
     if (taskItem.id !== id) return taskItem;
-    const nextStatus = patch.status ?? taskItem.status;
     const statusChanged = patch.status !== undefined && patch.status !== taskItem.status;
+    const waitingChanged = patch.waitingContext !== undefined && JSON.stringify(waitingContext) !== JSON.stringify(normalizeWaitingContext(taskItem.waitingContext));
     const history = [...(taskItem.history || [])];
     if (statusChanged) history.push({ id: uid("history"), text: nextStatus === "done" ? "Tarefa concluída." : `Status alterado para ${STATUSES.find((item) => item.id === nextStatus)?.label || nextStatus}.`, createdAt: new Date().toISOString(), author: "Você" });
-    return { ...taskItem, ...patch, status: nextStatus, history };
+    if (statusChanged && nextStatus === "waiting") history.push({ id: uid("history"), text: waitingContextSummary(waitingContext), createdAt: new Date().toISOString(), author: "Você" });
+    if (waitingChanged && !statusChanged) history.push({ id: uid("history"), text: `Contexto de Aguardando atualizado: ${waitingContextSummary(waitingContext)}.`, createdAt: new Date().toISOString(), author: "Você" });
+    const assignment = patch.assignmentMode !== undefined || patch.teamId !== undefined || patch.assigneeIds !== undefined || patch.assigneeNames !== undefined || patch.assigneeName !== undefined
+      ? resolveTaskAssignment({ ...taskItem, ...patch }, state.teams || [], state.employees || [])
+      : null;
+    return { ...taskItem, ...patch, ...(assignment || {}), assigneeName: assignment ? assignment.assigneeNames.join(", ") : taskItem.assigneeName, status: nextStatus, waitingContext, history };
   });
   if (!existing) return saveState({ ...state, tasks });
   const next = tasks.find((taskItem) => taskItem.id === id);
   const changes = [
     patch.status !== undefined && patch.status !== existing.status ? "status" : "",
     patch.dueDate !== undefined && patch.dueDate !== existing.dueDate ? "deadline" : "",
-    patch.assigneeNames !== undefined && JSON.stringify(normalizeAssigneeNames(patch.assigneeNames)) !== JSON.stringify(normalizeAssigneeNames(existing.assigneeNames)) ? "assignees" : "",
+    (patch.assigneeNames !== undefined || patch.assigneeIds !== undefined || patch.assignmentMode !== undefined || patch.teamId !== undefined) && JSON.stringify(next.assigneeIds || []) !== JSON.stringify(existing.assigneeIds || []) ? "assignees" : "",
   ].filter(Boolean);
   const notifications = [...(state.notifications || [])];
   changes.forEach((type) => notificationRecipients({ type, creatorEmployeeId: existing.creatorEmployeeId, assigneeIds: next.assigneeIds || employeeIdsByNames(state.employees, next.assigneeNames), previousAssigneeIds: existing.assigneeIds || employeeIdsByNames(state.employees, existing.assigneeNames), nextStatus: next.status, actorEmployeeId: patch.actorEmployeeId }).forEach((recipientEmployeeId) => {
@@ -228,6 +266,28 @@ export function updateTask(state, id, patch) {
     notifications.unshift({ id: uid("notification"), taskId: id, recipientEmployeeId, type: "mention", title: "Você foi mencionado", message: next.title, occurredAt: new Date().toISOString(), readAt: "", dedupeKey: notificationDedupeKey({ recipientId: recipientEmployeeId, taskId: id, type: "mention", eventId }) });
   });
   return saveState({ ...state, tasks, notifications });
+}
+
+export function createTeam(state, input) {
+  const name = String(input.name || "").trim();
+  if (!name) throw new Error("Informe um nome para a equipe.");
+  if ((state.teams || []).some((team) => team.name.localeCompare(name, "pt-BR", { sensitivity: "base" }) === 0)) {
+    throw new Error("Já existe uma equipe com esse nome.");
+  }
+  const team = { id: uid("team"), name, memberIds: [...new Set((input.memberIds || []).filter(Boolean).map(String))] };
+  return saveState({ ...state, teams: [...(state.teams || []), team] });
+}
+
+export function updateTeam(state, id, patch) {
+  const name = String(patch.name || "").trim();
+  if (!name) throw new Error("Informe um nome para a equipe.");
+  if ((state.teams || []).some((team) => team.id !== id && team.name.localeCompare(name, "pt-BR", { sensitivity: "base" }) === 0)) {
+    throw new Error("Já existe uma equipe com esse nome.");
+  }
+  return saveState({
+    ...state,
+    teams: (state.teams || []).map((team) => team.id === id ? { ...team, name, memberIds: [...new Set((patch.memberIds || []).filter(Boolean).map(String))] } : team),
+  });
 }
 
 function employeeIdsByNames(employees = [], names = []) {

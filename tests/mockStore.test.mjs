@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { addAttachment, addComment, createTask, deleteAttachment, deleteTask, ensureQuoteTask, seedState, updateTask } from "../src/mockStore.js";
+import { addAttachment, addComment, createTask, createTeam, deleteAttachment, deleteTask, ensureQuoteTask, seedState, updateTask, updateTeam } from "../src/mockStore.js";
 
 function withStorage() {
   const values = new Map();
@@ -87,23 +87,53 @@ test("preserva origem na tarefa criada", () => {
   assert.equal(task.sourceId, "quality-1");
 });
 
+test("salva equipe e snapshot de responsáveis sem reescrever tarefas antigas", () => {
+  withStorage();
+  const initial = seedState();
+  const teamState = createTeam(initial, { name: "Equipe teste", memberIds: ["employee-marina", "employee-rafael"] });
+  const team = teamState.teams.at(-1);
+  const created = createTask(teamState, { title: "Revisar escala", assignmentMode: "team", teamId: team.id });
+  const task = created.tasks.at(-1);
+
+  assert.equal(task.assignmentMode, "team");
+  assert.equal(task.teamId, team.id);
+  assert.deepEqual(task.assigneeIds, team.memberIds);
+
+  const editedTeam = updateTeam(created, team.id, { name: team.name, memberIds: ["employee-marina"] });
+  const savedTask = editedTeam.tasks.find((item) => item.id === task.id);
+  assert.deepEqual(editedTeam.teams.at(-1).memberIds, ["employee-marina"]);
+  assert.deepEqual(savedTask.assigneeIds, ["employee-marina", "employee-rafael"]);
+});
+
 test("registra aguardando e conclusão no histórico mock", () => {
   withStorage();
   const initial = seedState();
   const task = initial.tasks.find((item) => item.status === "todo");
-  const waiting = updateTask(initial, task.id, { status: "waiting" }).tasks.find((item) => item.id === task.id);
+  const waitingContext = { subject: "retorno do parceiro", onType: "team", onId: "Operação", onName: "Operação", expectedDate: "2026-08-28", note: "Cobrar até o fim do dia" };
+  const waiting = updateTask(initial, task.id, { status: "waiting", waitingContext }).tasks.find((item) => item.id === task.id);
   const doing = updateTask({ ...initial, tasks: [waiting] }, task.id, { status: "doing" }).tasks.find((item) => item.id === task.id);
   const completed = updateTask({ ...initial, tasks: [doing] }, task.id, { status: "done" }).tasks.find((item) => item.id === task.id);
   assert.ok(waiting.history.some((item) => item.text === "Status alterado para Aguardando."));
+  assert.ok(waiting.history.some((item) => item.text.includes("Aguardando retorno do parceiro")));
   assert.ok(completed.history.some((item) => item.text === "Tarefa concluída."));
 });
 
-test("salva aguardando sem motivo no mock", () => {
+test("exige contexto ao entrar em Aguardando no mock", () => {
   withStorage();
   const initial = seedState();
   const task = initial.tasks.find((item) => item.status === "todo");
-  const updated = updateTask(initial, task.id, { status: "waiting" }).tasks.find((item) => item.id === task.id);
-  assert.equal(updated.status, "waiting");
+  assert.throws(() => updateTask(initial, task.id, { status: "waiting" }), /Informe o que está sendo aguardado/);
+});
+
+test("preserva contexto ao sair de Aguardando", () => {
+  withStorage();
+  const initial = seedState();
+  const task = initial.tasks.find((item) => item.status === "todo");
+  const waitingContext = { subject: "aprovação da proposta", onType: "employee", onId: "employee-marina", onName: "Marina Alves" };
+  const waiting = updateTask(initial, task.id, { status: "waiting", waitingContext });
+  const doing = updateTask(waiting, task.id, { status: "doing" }).tasks.find((item) => item.id === task.id);
+  assert.equal(doing.waitingContext.subject, "aprovação da proposta");
+  assert.equal(doing.status, "doing");
 });
 
 test("semeia cenário operacional amplo e variado", () => {
