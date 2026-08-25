@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { memo, useCallback, useMemo } from "react";
 import { ArrowUpRight, CalendarDays, CheckCircle2, Clock3, Users } from "lucide-react";
 import { formatDate } from "./domain";
 import AssigneeDisplay from "./AssigneeDisplay.jsx";
@@ -30,13 +30,17 @@ export default function CentralView({ state, mode = "mine", currentEmployee, fil
   const filteredItems = useMemo(() => sortWorkItems(filterWorkItems(scopedItems, filters)), [scopedItems, filters]);
   const items = useMemo(() => mineOnly ? filteredItems.filter((item) => item.dueBucket !== "none") : filteredItems, [filteredItems, mineOnly]);
   const stats = useMemo(() => workItemStats(activeItems), [activeItems]);
-  const deadlineSections = useMemo(() => [
-    { key: "overdue", label: "Atrasadas", items: items.filter((item) => item.dueBucket === "overdue") },
-    { key: "today", label: "Vencem hoje", items: items.filter((item) => item.dueBucket === "today") },
-    { key: "tomorrow", label: "Vencem amanhã", items: items.filter((item) => item.dueBucket === "tomorrow") },
-    { key: "upcoming", label: "Próximas tarefas", items: items.filter((item) => item.dueBucket === "upcoming") },
-  ], [items]);
-  const open = (item) => item.source === "task" || item.source === "quote_followup" ? onOpenTask(item.sourceRecordId) : onOpenSource(item);
+  const deadlineSections = useMemo(() => {
+    const sections = new Map([
+      ["overdue", { key: "overdue", label: "Atrasadas", items: [] }],
+      ["today", { key: "today", label: "Vencem hoje", items: [] }],
+      ["tomorrow", { key: "tomorrow", label: "Vencem amanhã", items: [] }],
+      ["upcoming", { key: "upcoming", label: "Próximas tarefas", items: [] }],
+    ]);
+    items.forEach((item) => sections.get(item.dueBucket)?.items.push(item));
+    return [...sections.values()];
+  }, [items]);
+  const open = useCallback((item) => item.source === "task" || item.source === "quote_followup" ? onOpenTask(item.sourceRecordId) : onOpenSource(item), [onOpenSource, onOpenTask]);
   const emptyMessage = !currentEmployee && mineOnly
     ? { title: "Usuário sem vínculo", detail: "Seu usuário Dataverse ainda não está associado a um funcionário administrativo." }
     : mineOnly && !items.length && activeItems.length
@@ -66,7 +70,7 @@ export default function CentralView({ state, mode = "mine", currentEmployee, fil
   </div>;
 }
 
-function CentralRow({ item, onOpen, onComplete }) {
+const CentralRow = memo(function CentralRow({ item, onOpen, onComplete }) {
   const statusLabel = item.statusLabel || STATUS_LABELS[item.statusGroup] || item.sourceStatus || "A fazer";
   const canComplete = Boolean(onComplete) && ["task", "quote_followup"].includes(item.source) && !item.isTerminal;
   return <article className="central-row">
@@ -76,7 +80,7 @@ function CentralRow({ item, onOpen, onComplete }) {
     </button>
     {canComplete && <button className="central-row-complete" type="button" onClick={() => onComplete(item.sourceRecordId)} aria-label={`Concluir ${item.title}`}><CheckCircle2 size={15} />Concluir</button>}
   </article>;
-}
+});
 
 function PageHeader({ mode, onChangeMode, onCreate }) {
   const mine = mode === "mine";

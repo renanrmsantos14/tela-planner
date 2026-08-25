@@ -1359,6 +1359,7 @@ function translateBetween(previous, next) {
 
 const Board = memo(function Board({
   tasks,
+  tasksByStatus,
   subtasksByParent,
   currentEmployee,
   checklistVisibility,
@@ -1689,7 +1690,7 @@ const Board = memo(function Board({
   return (
     <div className="board-grid" ref={boardRef}>
       {STATUSES.map((status) => {
-        const items = tasks.filter((taskItem) => taskItem.status === status.id);
+        const items = tasksByStatus[status.id] || [];
         const hasActiveDropCard =
           dropFeedback?.statusId === status.id &&
           dropFeedback.insertAt !== undefined &&
@@ -1983,23 +1984,18 @@ function BoardView({
   const filtered = useMemo(
     () =>
       sortTasks(
-        filterTasks(
-          tasksForView(state.tasks, filters).filter(
-            (taskItem) => !taskItem.parentTaskId,
-          ),
-          filters,
-        ),
+        filterTasks(state.tasks.filter((taskItem) => !taskItem.parentTaskId), filters),
       ),
     [state.tasks, filters],
   );
   const tasksByStatus = useMemo(
-    () =>
-      Object.fromEntries(
-        STATUSES.map((status) => [
-          status.id,
-          filtered.filter((taskItem) => taskItem.status === status.id),
-        ]),
-      ),
+    () => {
+      const grouped = Object.fromEntries(STATUSES.map((status) => [status.id, []]));
+      filtered.forEach((taskItem) => {
+        if (grouped[taskItem.status]) grouped[taskItem.status].push(taskItem);
+      });
+      return grouped;
+    },
     [filtered],
   );
   const isMobile = useMediaQuery(
@@ -2054,6 +2050,7 @@ function BoardView({
       ) : (
         <Board
           tasks={filtered}
+          tasksByStatus={tasksByStatus}
           subtasksByParent={subtasksByParent}
           currentEmployee={currentEmployee}
           checklistVisibility={checklistVisibility}
@@ -2261,13 +2258,16 @@ function CalendarView({
 
 function QualityView({ state, onCreate, onCreateTask, filters, setFilters }) {
   const quality = state.quality || [];
+  const query = normalizeText(filters.query);
+  const taskFilters = useMemo(() => ({ ...filters, query: "" }), [filters]);
+  const taskBySourceId = useMemo(
+    () => new Map(state.tasks.map((taskItem) => [taskItem.sourceId, taskItem])),
+    [state.tasks],
+  );
   const filteredQuality = useMemo(
     () =>
       quality.filter((item) => {
-        const linkedTask = state.tasks.find(
-          (taskItem) => taskItem.sourceId === item.id,
-        );
-        const query = normalizeText(filters.query);
+        const linkedTask = taskBySourceId.get(item.id);
         const matchesQuery =
           !query ||
           [
@@ -2277,7 +2277,6 @@ function QualityView({ state, onCreate, onCreateTask, filters, setFilters }) {
             item.status,
             linkedTask?.title,
           ].some((value) => normalizeText(value).includes(query));
-        const taskFilters = { ...filters, query: "" };
         const matchesTaskFilters = linkedTask
           ? filterTasks([linkedTask], taskFilters).length > 0
           : !filters.assignee?.length &&
@@ -2286,7 +2285,7 @@ function QualityView({ state, onCreate, onCreateTask, filters, setFilters }) {
             !filters.team;
         return matchesQuery && matchesTaskFilters;
       }),
-    [quality, state.tasks, filters],
+    [quality, taskBySourceId, query, taskFilters, filters],
   );
   return (
     <div className="page-content">
@@ -2310,9 +2309,7 @@ function QualityView({ state, onCreate, onCreateTask, filters, setFilters }) {
           <span>Ação</span>
         </div>
         {filteredQuality.map((item) => {
-          const linked = state.tasks.some(
-            (taskItem) => taskItem.sourceId === item.id,
-          );
+          const linked = taskBySourceId.has(item.id);
           return (
             <div className="table-row" key={`${item.type}-${item.id}`}>
               <div className="table-task">

@@ -179,28 +179,29 @@ export function formatLongDate(value) {
   return LONG_DATE_FORMATTER.format(new Date(`${value}T12:00:00`));
 }
 
-export function filterTasks(tasks, filters) {
+export function filterTasks(tasks, filters = {}) {
   const query = normalizeText(filters.query);
   const queryTokens = query.split(/\s+/).filter(Boolean);
   const selectedValues = (value) => Array.isArray(value) ? value : value ? [value] : [];
-  const statusValues = selectedValues(filters.status);
+  const statusValues = new Set(selectedValues(filters.status));
   const assigneeValues = selectedValues(filters.assignee);
-  const priorityValues = selectedValues(filters.priority);
-  const sourceValues = selectedValues(filters.source);
+  const priorityValues = new Set(selectedValues(filters.priority));
+  const sourceValues = new Set(selectedValues(filters.source));
   return tasks.filter((task) => {
+    if (statusValues.size && !statusValues.has(task.status)) return false;
+    if (priorityValues.size && !priorityValues.has(task.priority)) return false;
+    if (sourceValues.size && !sourceValues.has(task.sourceType)) return false;
+    if (assigneeValues.length) {
+      const taskAssignees = task.assigneeNames || normalizeAssigneeNames(task.assigneeName);
+      if (!assigneeValues.some((value) => taskAssignees.includes(value))) return false;
+    }
+    if (filters.team && task.teamName !== filters.team) return false;
+    if (!query) return true;
     const assigneeSearch = [task.assigneeName, ...(Array.isArray(task.assigneeNames) ? task.assigneeNames : [])].filter(Boolean).join(" ");
-    const matchesQuery = !query || [task.title, task.quoteTitle, assigneeSearch, task.teamName]
-      .some((value) => {
-        const normalizedValue = normalizeText(value);
-        return normalizedValue.includes(query) || queryTokens.every((token) => normalizedValue.includes(token));
-      });
-    const matchesStatus = !statusValues.length || statusValues.includes(task.status);
-    const matchesPriority = !priorityValues.length || priorityValues.includes(task.priority);
-    const matchesSource = !sourceValues.length || sourceValues.includes(task.sourceType);
-    const taskAssignees = task.assigneeNames || normalizeAssigneeNames(task.assigneeName);
-    const matchesAssignee = !assigneeValues.length || assigneeValues.some((value) => taskAssignees.includes(value));
-    const matchesTeam = !filters.team || task.teamName === filters.team;
-    return matchesQuery && matchesStatus && matchesPriority && matchesSource && matchesAssignee && matchesTeam;
+    return [task.title, task.quoteTitle, assigneeSearch, task.teamName].some((value) => {
+      const normalizedValue = normalizeText(value);
+      return normalizedValue.includes(query) || queryTokens.every((token) => normalizedValue.includes(token));
+    });
   });
 }
 

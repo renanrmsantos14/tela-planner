@@ -113,25 +113,24 @@ export function sortWorkItems(items = []) {
 export function filterWorkItems(items = [], filters = {}) {
   const query = String(filters.query || "").trim().toLocaleLowerCase("pt-BR");
   const selectedValues = (value) => Array.isArray(value) ? value : value ? [value] : [];
-  const statusValues = selectedValues(filters.status);
+  const statusValues = new Set(selectedValues(filters.status));
   const assigneeValues = selectedValues(filters.assignee);
-  const priorityValues = selectedValues(filters.priority);
-  const sourceValues = selectedValues(filters.source);
-  const sourceMatches = (item, value) => {
-    if (value === "manual") return item.source === "task";
-    if (value === "quote") return item.source === "quote_followup";
-    if (value === "quality") return ["quality_error", "quality_action"].includes(item.source);
-    return item.source === value;
-  };
+  const priorityValues = new Set(selectedValues(filters.priority));
+  const sourceValues = new Set(selectedValues(filters.source));
   return items.filter((item) => {
     const assigneeNames = item.assigneeNames || (item.assigneeName ? [item.assigneeName] : []);
-    const matchesAssignee = !assigneeValues.length || assigneeValues.some((value) => String(value) === String(item.assigneeEmployeeId) || assigneeNames.includes(value) || String(item.assigneeName || "").includes(String(value)));
-    const matchesStatus = !statusValues.length || statusValues.includes(item.statusGroup);
-    const matchesPriority = !priorityValues.length || priorityValues.includes(item.priority);
-    const matchesSource = !sourceValues.length || sourceValues.some((value) => sourceMatches(item, value));
-    const matchesTeam = !filters.team || item.teamName === filters.team;
-    const matchesQuery = !query || [item.title, item.context, item.assigneeName, item.sourceCode, item.teamName].join(" ").toLocaleLowerCase("pt-BR").includes(query);
-    return matchesAssignee && matchesStatus && matchesPriority && matchesSource && matchesTeam && matchesQuery;
+    if (assigneeValues.length && !assigneeValues.some((value) => String(value) === String(item.assigneeEmployeeId) || assigneeNames.includes(value) || String(item.assigneeName || "").includes(String(value)))) return false;
+    if (statusValues.size && !statusValues.has(item.statusGroup)) return false;
+    if (priorityValues.size && !priorityValues.has(item.priority)) return false;
+    if (sourceValues.size) {
+      const matchesSource = sourceValues.has(item.source)
+        || (sourceValues.has("manual") && item.source === "task")
+        || (sourceValues.has("quote") && item.source === "quote_followup")
+        || (sourceValues.has("quality") && ["quality_error", "quality_action"].includes(item.source));
+      if (!matchesSource) return false;
+    }
+    if (filters.team && item.teamName !== filters.team) return false;
+    return !query || [item.title, item.context, item.assigneeName, item.sourceCode, item.teamName].join(" ").toLocaleLowerCase("pt-BR").includes(query);
   });
 }
 
