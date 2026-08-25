@@ -3061,11 +3061,16 @@ function TaskDrawerContent({
         </header>
         <div className="drawer-body">
           <div className="drawer-title">
-            <input
-              value={form.title}
-              onChange={(event) => set("title", event.target.value)}
-              aria-label="Título da tarefa"
-            />
+            <label className="drawer-title-field" htmlFor={`task-title-${taskItem.id}`}>
+              <span className="drawer-title-label">Título da tarefa</span>
+              <input
+                id={`task-title-${taskItem.id}`}
+                value={form.title}
+                onChange={(event) => set("title", event.target.value)}
+                placeholder="Escreva o título da tarefa"
+                aria-label="Título da tarefa"
+              />
+            </label>
             <PriorityBadge priority={form.priority} />
           </div>
           {taskItem.quoteId && (
@@ -3615,13 +3620,17 @@ function NewTaskDrawer({ employees = [], onClose, onSave }) {
         </header>
         <div className="drawer-body">
           <div className="drawer-title">
-            <input
-              autoFocus
-              value={form.title}
-              onChange={(event) => set("title", event.target.value)}
-              placeholder="O que precisa ser feito?"
-              aria-label="Título da tarefa"
-            />
+            <label className="drawer-title-field" htmlFor="new-task-title">
+              <span className="drawer-title-label">Título da tarefa</span>
+              <input
+                id="new-task-title"
+                autoFocus
+                value={form.title}
+                onChange={(event) => set("title", event.target.value)}
+                placeholder="Ex.: Confirmar motorista"
+                aria-label="Título da tarefa"
+              />
+            </label>
             <PriorityBadge priority={form.priority} />
           </div>
           <div className="drawer-field-grid new-task-quick-fields">
