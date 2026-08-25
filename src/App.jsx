@@ -2540,6 +2540,13 @@ function TeamManager({ teams = [], employees = [], onSave }) {
   const [saving, setSaving] = useState(false);
   const [validationError, setValidationError] = useState("");
   const employeeOptions = employees.map((employee) => ({ value: employee.id, label: employee.name }));
+  const employeeNameById = new Map(employees.map((employee) => [String(employee.id), employee.name]));
+  const memberSummary = (team) => {
+    const names = (team.memberIds || []).map((id) => employeeNameById.get(String(id))).filter(Boolean);
+    if (!names.length) return "Nenhum membro selecionado";
+    if (names.length <= 2) return names.join(", ");
+    return `${names.slice(0, 2).join(", ")} +${names.length - 2}`;
+  };
   const startEdit = (team) => {
     setDraft({ id: team.id, name: team.name, memberIds: [...(team.memberIds || [])] });
     setValidationError("");
@@ -2562,46 +2569,64 @@ function TeamManager({ teams = [], employees = [], onSave }) {
       .finally(() => setSaving(false));
   };
   return (
-    <section className="panel teams-settings-panel">
-      <div className="panel-heading">
+    <section className="panel teams-settings-panel" aria-labelledby="teams-settings-title">
+      <div className="panel-heading teams-panel-heading">
         <div>
           <span className="eyebrow">Atribuição rápida</span>
-          <h2>Equipes</h2>
+          <h2 id="teams-settings-title">Equipes do Planner</h2>
           <p className="panel-copy">Cadastre grupos de trabalho e use seus membros ao criar uma tarefa.</p>
         </div>
-        <span className="panel-count">{teams.length}</span>
+        <div className="team-total" aria-label={`${teams.length} ${teams.length === 1 ? "equipe cadastrada" : "equipes cadastradas"}`}>
+          <strong>{teams.length}</strong>
+          <span>{teams.length === 1 ? "equipe" : "equipes"}</span>
+        </div>
       </div>
       <div className="team-manager-body">
-        <div className="team-list">
+        <div className="team-list-column">
+          <div className="team-list-heading">
+            <div>
+              <strong>Equipes cadastradas</strong>
+              <span>Selecione uma equipe para editar seus membros.</span>
+            </div>
+            <span className="team-list-count">{teams.length}</span>
+          </div>
+          <div className="team-list">
           {teams.length ? teams.map((team) => (
-            <button className="team-list-row" type="button" key={team.id} onClick={() => startEdit(team)}>
-              <span className="team-list-icon"><Users size={16} /></span>
+            <button className={`team-list-row${draft.id === team.id ? " is-selected" : ""}`} type="button" key={team.id} onClick={() => startEdit(team)} aria-label={`Editar equipe ${team.name}`}>
+              <span className="team-list-icon" aria-hidden="true"><Users size={17} /></span>
               <span className="team-list-copy">
                 <strong>{team.name}</strong>
-                <small>{(team.memberIds || []).length} {(team.memberIds || []).length === 1 ? "membro" : "membros"}</small>
+                <span className="team-list-meta">
+                  <span>{(team.memberIds || []).length} {(team.memberIds || []).length === 1 ? "membro" : "membros"}</span>
+                  <span aria-hidden="true">·</span>
+                  <span>{memberSummary(team)}</span>
+                </span>
               </span>
-              <ChevronRight size={16} />
+              <span className="team-list-action">Editar <ChevronRight size={15} aria-hidden="true" /></span>
             </button>
-          )) : <div className="empty-inline">Nenhuma equipe cadastrada.</div>}
+          )) : <div className="team-list-empty"><Users size={18} /><strong>Nenhuma equipe cadastrada</strong><span>Crie a primeira para acelerar a atribuição de tarefas.</span></div>}
+          </div>
         </div>
         <div className="team-form">
           <div className="team-form-heading">
             <div>
               <span className="eyebrow">{draft.id ? "Editar equipe" : "Nova equipe"}</span>
               <strong>{draft.id ? "Atualize nome e membros" : "Crie um atalho de atribuição"}</strong>
+              <p>{draft.id ? "As mudanças valem para novas tarefas; tarefas antigas preservam o snapshot salvo." : "Escolha quem receberá a tarefa quando esta equipe for selecionada."}</p>
             </div>
             {draft.id && <button className="text-button" type="button" onClick={() => setDraft(emptyDraft)}>Nova equipe</button>}
           </div>
-          <label>
+          <label className="team-form-field">
             Nome da equipe
             <input value={draft.name} onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))} placeholder="Ex.: Operação" />
           </label>
-          <label>
+          <label className="team-form-field">
             Membros
             <SearchableMultiSelect value={draft.memberIds} onChange={(memberIds) => setDraft((current) => ({ ...current, memberIds }))} options={employeeOptions} placeholder="Selecione os membros" />
+            <span className="team-form-hint">Você pode incluir a mesma pessoa em mais de uma equipe.</span>
           </label>
           {validationError && <div className="form-error" role="alert">{validationError}</div>}
-          <button className="button button-primary" type="button" onClick={submit} disabled={saving || !draft.name.trim()}>
+          <button className="button button-primary team-form-submit" type="button" onClick={submit} disabled={saving || !draft.name.trim()}>
             {saving ? <LoaderCircle size={15} className="spin" /> : <Check size={15} />}
             {saving ? "Salvando…" : draft.id ? "Salvar equipe" : "Cadastrar equipe"}
           </button>
