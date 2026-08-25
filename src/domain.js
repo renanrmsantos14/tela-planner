@@ -6,9 +6,9 @@ export const STATUSES = [
 ];
 
 export const PRIORITIES = [
-  { id: "high", label: "Alta", tone: "danger" },
-  { id: "medium", label: "Média", tone: "warning" },
   { id: "low", label: "Baixa", tone: "neutral" },
+  { id: "medium", label: "Média", tone: "warning" },
+  { id: "high", label: "Alta", tone: "danger" },
 ];
 
 export const QUOTE_STATUSES = ["Nova", "Em análise", "Aguardando fornecedor", "Respondida"];

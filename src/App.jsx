@@ -3071,7 +3071,6 @@ function TaskDrawerContent({
                 aria-label="Título da tarefa"
               />
             </label>
-            <PriorityBadge priority={form.priority} />
           </div>
           {taskItem.quoteId && (
             <button
@@ -3631,7 +3630,6 @@ function NewTaskDrawer({ employees = [], onClose, onSave }) {
                 aria-label="Título da tarefa"
               />
             </label>
-            <PriorityBadge priority={form.priority} />
           </div>
           <div className="drawer-field-grid new-task-quick-fields">
             <label>
