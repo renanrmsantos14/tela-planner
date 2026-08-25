@@ -453,11 +453,11 @@ function AssignmentFields({ form, setForm, employees = [], teams = [] }) {
   return (
     <div className="assignment-field">
       <div className="assignment-mode" role="group" aria-label="Tipo de atribuição">
-        <button type="button" className={assignmentMode === "people" ? "is-selected" : ""} aria-pressed={assignmentMode === "people"} onClick={() => selectMode("people")}>
-          <UserRound size={14} /> Pessoas
+        <button type="button" className={assignmentMode === "people" ? "is-selected" : ""} aria-label="Pessoas" title="Pessoas" aria-pressed={assignmentMode === "people"} onClick={() => selectMode("people")}>
+          <UserRound size={16} aria-hidden="true" />
         </button>
-        <button type="button" className={assignmentMode === "team" ? "is-selected" : ""} aria-pressed={assignmentMode === "team"} onClick={() => selectMode("team")}>
-          <Users size={14} /> Equipe
+        <button type="button" className={assignmentMode === "team" ? "is-selected" : ""} aria-label="Equipe" title="Equipe" aria-pressed={assignmentMode === "team"} onClick={() => selectMode("team")}>
+          <Users size={16} aria-hidden="true" />
         </button>
       </div>
       {assignmentMode === "team" ? (
@@ -3737,7 +3737,7 @@ function TaskDrawerContent({
               />
             </div>
             <AssignmentFields form={form} setForm={setForm} employees={state.employees} teams={teams} />
-            <label>
+            <label className="deadline-field">
               Prazo
               <input
                 type="date"
@@ -4289,7 +4289,7 @@ function NewTaskDrawer({ employees = [], teams = [], initialStatus = "todo", onC
               />
             </div>
             <AssignmentFields form={form} setForm={setForm} employees={employees} teams={teams} />
-            <label>
+            <label className="deadline-field">
               Prazo
               <input
                 type="date"

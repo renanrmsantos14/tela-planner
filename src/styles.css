@@ -1259,10 +1259,12 @@ button { cursor: pointer; }
 /* Atribuição única: pessoa e equipe compartilham o mesmo contrato visual. */
 .assignment-field { min-width: 0; display: grid; gap: 8px; }
 .assignment-field > span { color: var(--muted); font-size: 10px; font-weight: 800; }
-.assignment-mode { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 3px; border: 1px solid var(--line); border-radius: 9px; background: var(--neutral); }
-.assignment-mode button { min-height: 30px; border: 0; border-radius: 7px; color: var(--muted); background: transparent; font-size: 10px; font-weight: 800; cursor: pointer; }
+.assignment-mode { width: max-content; display: grid; grid-template-columns: repeat(2, 42px); gap: 4px; padding: 3px; border: 1px solid var(--line); border-radius: 9px; background: var(--neutral); }
+.assignment-mode button { width: 42px; min-height: 30px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 7px; color: var(--muted); background: transparent; cursor: pointer; }
 .assignment-mode button:hover { color: var(--navy); background: #eef3fa; }
 .assignment-mode button.is-selected { color: var(--blue); background: var(--surface); box-shadow: 0 1px 4px rgba(0,26,61,.1); }
+.deadline-field { width: 160px; max-width: 100%; }
+.drawer-field-grid .deadline-field input { width: 160px; max-width: 100%; }
 .assignment-members { display: flex; flex-wrap: wrap; gap: 5px; min-height: 25px; }
 .assignment-member-chip { display: inline-flex; align-items: center; min-height: 24px; padding: 0 8px; border: 1px solid #cbdaf7; border-radius: 999px; color: var(--blue); background: var(--blue-soft); font-size: 10px; font-weight: 700; }
 .assignment-empty { color: var(--tertiary); font-size: 10px; font-weight: 600; }
