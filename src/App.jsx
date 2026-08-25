@@ -619,7 +619,7 @@ function NotificationsPanel({
             </span>
             <div>
               <h2>Caixa de entrada</h2>
-              <p>{unread ? `${unread} não lida${unread === 1 ? "" : "s"}` : "Tudo em dia"}</p>
+              <p>{unread ? "Atualiza\u00e7\u00f5es recentes" : "Tudo em dia"}</p>
             </div>
           </div>
           <button
@@ -695,7 +695,12 @@ function NotificationsPanel({
                         <span>{presentation.action}</span>
                         <ChevronRight aria-hidden="true" size={15} strokeWidth={2.4} />
                       </button>
-                      {!item.readAt && (
+                      {item.readAt ? (
+                        <span className="notification-read-status" aria-label="Notificação lida">
+                          <Check aria-hidden="true" size={12} strokeWidth={2.5} />
+                          <span>Lida</span>
+                        </span>
+                      ) : (
                         <button
                           className="notification-read"
                           type="button"
@@ -4701,7 +4706,21 @@ export default function App() {
   }, [currentEmployee?.id, store]);
   const markNotificationRead = useCallback((notificationId) => {
     if (!store.markNotificationRead) return;
-    store.markNotificationRead(state, notificationId).then(setState).catch((failure) => showNotice(`Falha ao atualizar notificação: ${failure.message}`));
+    const notification = (state.notifications || []).find((item) => item.id === notificationId);
+    if (!notification || notification.readAt) return;
+    const optimisticReadAt = new Date().toISOString();
+    setState((current) => ({
+      ...current,
+      notifications: (current.notifications || []).map((item) => item.id === notificationId ? { ...item, readAt: optimisticReadAt } : item),
+    }));
+    showNotice("Notificação marcada como lida.", 2400);
+    store.markNotificationRead(state, notificationId).then(setState).catch((failure) => {
+      setState((current) => ({
+        ...current,
+        notifications: (current.notifications || []).map((item) => item.id === notificationId && item.readAt === optimisticReadAt ? { ...item, readAt: "" } : item),
+      }));
+      showNotice(`Falha ao atualizar notificação: ${failure.message}`, 4200);
+    });
   }, [state, store, showNotice]);
   const markTaskNotificationsRead = useCallback((taskId) => {
     if (!taskId || !store.markNotificationRead) return;
@@ -4719,7 +4738,21 @@ export default function App() {
   }, [selectedId, markTaskNotificationsRead]);
   const markAllNotificationsRead = useCallback(() => {
     if (!currentEmployee?.id || !store.markAllNotificationsRead) return;
-    store.markAllNotificationsRead(state, currentEmployee.id).then(setState).catch((failure) => showNotice(`Falha ao atualizar notificações: ${failure.message}`));
+    const optimisticReadAt = new Date().toISOString();
+    const unreadIds = new Set((state.notifications || []).filter((item) => item.recipientEmployeeId === currentEmployee.id && !item.readAt).map((item) => item.id));
+    if (!unreadIds.size) return;
+    setState((current) => ({
+      ...current,
+      notifications: (current.notifications || []).map((item) => unreadIds.has(item.id) ? { ...item, readAt: optimisticReadAt } : item),
+    }));
+    showNotice("Todas as notificações foram marcadas como lidas.", 2600);
+    store.markAllNotificationsRead(state, currentEmployee.id).then(setState).catch((failure) => {
+      setState((current) => ({
+        ...current,
+        notifications: (current.notifications || []).map((item) => unreadIds.has(item.id) && item.readAt === optimisticReadAt ? { ...item, readAt: "" } : item),
+      }));
+      showNotice(`Falha ao atualizar notificações: ${failure.message}`, 4200);
+    });
   }, [currentEmployee?.id, state, store, showNotice]);
   const openNotification = useCallback((item) => { if (!item.readAt) markNotificationRead(item.id); if (item.taskId) setSelectedId(item.taskId); }, [markNotificationRead]);
   const onTaskScopeChange = useCallback(
