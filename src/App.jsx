@@ -3354,7 +3354,7 @@ function TaskDrawerContent({
                 <span className="history-dot" />
                 <div>
                   <strong>{item.text}</strong>
-                  <small>{item.author} · agora</small>
+                  <small>{item.author} · {formatCommentTimestamp(item.createdAt)}</small>
                 </div>
               </div>
             ))}
