@@ -509,6 +509,7 @@ function notificationPresentation(item, task) {
   const taskCode = task?.quoteCode || task?.sourceCode || "OPS";
   const context = task ? `${taskCode} • ${task.teamName || "Operação"}` : "Central de avisos";
   const type = item.type || "update";
+  const distinctMessage = item.message && String(item.message).trim() !== String(taskTitle).trim() ? item.message : "";
 
   if (["deadline", "due_today", "overdue"].includes(type)) {
     return {
@@ -516,7 +517,7 @@ function notificationPresentation(item, task) {
       context,
       icon: type === "overdue" ? ShieldAlert : CalendarDays,
       label: type === "overdue" ? "ATRASADA" : "PENDENTE",
-      message: item.message || "O prazo desta tarefa precisa de atenção.",
+      message: distinctMessage || (type === "overdue" ? "O prazo desta tarefa está atrasado." : "O prazo desta tarefa vence hoje."),
       title: taskTitle,
       tone: type === "overdue" ? "danger" : "warning",
     };
@@ -540,20 +541,21 @@ function notificationPresentation(item, task) {
       context,
       icon: MessageCircle,
       label: "MENÇÃO",
-      message: item.message || "Há uma mensagem aguardando sua resposta.",
+      message: distinctMessage || "Há uma mensagem aguardando sua resposta.",
       title: item.title || "Você foi mencionado",
       tone: "info",
     };
   }
 
   if (type === "status") {
+    const statusLabel = task ? statusById(task.status)?.label : "";
     return {
       action: "Ver tarefa",
       context,
       icon: CheckCircle2,
-      label: "ATUALIZAÇÃO",
-      message: item.message || "O andamento desta tarefa foi alterado.",
-      title: `Status atualizado · ${taskTitle}`,
+      label: "STATUS",
+      message: statusLabel ? `Agora: ${statusLabel}` : "O andamento desta tarefa foi alterado.",
+      title: taskTitle,
       tone: "info",
     };
   }
@@ -564,8 +566,8 @@ function notificationPresentation(item, task) {
       context,
       icon: Users,
       label: "EQUIPE",
-      message: item.message || "A equipe responsável foi atualizada.",
-      title: `Responsáveis atualizados · ${taskTitle}`,
+      message: distinctMessage || "A equipe responsável foi atualizada.",
+      title: taskTitle,
       tone: "info",
     };
   }
@@ -575,7 +577,7 @@ function notificationPresentation(item, task) {
     context,
     icon: BellRing,
     label: "INFORMATIVA",
-    message: item.message || "Há uma nova atualização no Planner.",
+    message: distinctMessage || "Há uma nova atualização no Planner.",
     title: item.title || taskTitle,
     tone: "neutral",
   };
@@ -695,12 +697,7 @@ function NotificationsPanel({
                         <span>{presentation.action}</span>
                         <ChevronRight aria-hidden="true" size={15} strokeWidth={2.4} />
                       </button>
-                      {item.readAt ? (
-                        <span className="notification-read-status" aria-label="Notificação lida">
-                          <Check aria-hidden="true" size={12} strokeWidth={2.5} />
-                          <span>Lida</span>
-                        </span>
-                      ) : (
+                      {!item.readAt && (
                         <button
                           className="notification-read"
                           type="button"
