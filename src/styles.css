@@ -631,9 +631,14 @@ button { cursor: pointer; }
 .priority-picker { display: grid; gap: 5px; }
 .priority-picker-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
 .priority-option { width: 100%; min-height: 44px; display: grid; place-items: center; padding: 0; border: 1px solid var(--line); border-radius: 11px; color: var(--muted); background: var(--neutral); font: inherit; cursor: pointer; transition: border-color 160ms ease, background-color 160ms ease, color 160ms ease, transform 160ms ease; }
-.priority-option:hover { border-color: #c4d1df; color: var(--control); background: #f7f9fc; }
+.priority-option:hover { border-color: #c4d1df; background: #f7f9fc; }
 .priority-option:active { transform: scale(.98); }
 .priority-option:focus-visible { outline: 0; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(33,89,210,.11); }
+.priority-option svg { fill: none; opacity: .78; }
+.priority-option-danger { color: #c65d55; }
+.priority-option-warning { color: #c08a1c; }
+.priority-option-neutral { color: #7f8b99; }
+.priority-option.is-selected svg { fill: currentColor; opacity: 1; }
 .priority-option-danger.is-selected { border-color: #e3b7b2; color: var(--red); background: var(--red-soft); }
 .priority-option-warning.is-selected { border-color: #e5ce9c; color: var(--amber); background: var(--amber-soft); }
 .priority-option-neutral.is-selected { border-color: #c5d2df; color: var(--control); background: #edf2f7; }
