@@ -100,6 +100,7 @@ import {
 import { APP_VERSION } from "./version.js";
 import {
   deadlineRole,
+  isTaskWaitingForEmployee,
   unreadCount,
   validateDeadlineChange,
 } from "./notifications.js";
@@ -339,13 +340,13 @@ function InputSelect({
   );
 }
 
-function WaitingContextFields({ value, onChange, employees = [], error = "" }) {
+function WaitingContextFields({ value, onChange, employees = [], teams = [], error = "" }) {
   const context = normalizeWaitingContext(value);
   const employeeOptions = employees
     .filter((employee) => employee?.id && employee?.name)
     .map((employee) => ({ value: employee.id, label: employee.name }));
   const targetOptions = context.onType === "team"
-    ? TEAM_OPTIONS.map((team) => ({ value: team, label: team }))
+    ? (teams.length ? teams.map((team) => ({ value: team.id, label: team.name })) : TEAM_OPTIONS.map((team) => ({ value: team, label: team })))
     : employeeOptions;
   const update = (patch) => onChange({ ...context, ...patch });
   const selectTarget = (id) => {
@@ -649,6 +650,7 @@ const ACTIONABLE_NOTIFICATION_TYPES = new Set([
   "due_today",
   "mention",
   "overdue",
+  "waiting",
 ]);
 
 function formatNotificationTime(value) {
@@ -704,6 +706,18 @@ function notificationPresentation(item, task) {
     };
   }
 
+  if (type === "waiting" || (type === "status" && task?.status === "waiting")) {
+    return {
+      action: "Abrir tarefa",
+      context,
+      icon: BellRing,
+      label: "RETORNO PENDENTE",
+      message: distinctMessage || waitingContextSummary(task?.waitingContext) || "Esta tarefa aguarda um retorno para avançar.",
+      title: item.title || taskTitle,
+      tone: "warning",
+    };
+  }
+
   if (type === "status") {
     const statusLabel = task ? statusById(task.status)?.label : "";
     return {
@@ -740,6 +754,11 @@ function notificationPresentation(item, task) {
   };
 }
 
+function isActionableNotification(item, tasks) {
+  if (ACTIONABLE_NOTIFICATION_TYPES.has(item.type)) return true;
+  return item.type === "status" && tasks.some((task) => task.id === item.taskId && task.status === "waiting");
+}
+
 function NotificationsPanel({
   notifications,
   tasks,
@@ -750,8 +769,8 @@ function NotificationsPanel({
 }) {
   const [notificationFilter, setNotificationFilter] = useState("all");
   const unread = unreadCount(notifications);
-  const actionableNotifications = notifications.filter((item) => ACTIONABLE_NOTIFICATION_TYPES.has(item.type));
-  const informationalNotifications = notifications.filter((item) => !ACTIONABLE_NOTIFICATION_TYPES.has(item.type));
+  const actionableNotifications = notifications.filter((item) => isActionableNotification(item, tasks));
+  const informationalNotifications = notifications.filter((item) => !isActionableNotification(item, tasks));
   const filterOptions = [
     { id: "all", label: "Todas", icon: BellRing, items: notifications },
     { id: "actionable", label: "Pendentes", icon: ListChecks, items: actionableNotifications },
@@ -1293,6 +1312,7 @@ const TaskCard = memo(function TaskCard({
   onDragEnd,
 }) {
   const overdue = isOverdue(taskItem);
+  const waitingActionRequired = isTaskWaitingForEmployee(taskItem, currentEmployee);
   const canOpen = !taskItem.id.startsWith("optimistic-");
   const completedSubtasks = subtasks.filter(
     (subtask) => subtask.status === "done",
@@ -1324,6 +1344,12 @@ const TaskCard = memo(function TaskCard({
       <div className="task-card-top">
         <PriorityBadge priority={taskItem.priority} />
         {overdue && <span className="overdue-label">Vencida</span>}
+        {waitingActionRequired && (
+          <span className="task-waiting-action" title="Aguardando sua atuação" aria-label="Aguardando sua atuação">
+            <BellRing size={13} aria-hidden="true" />
+            <span>Pendente para você</span>
+          </span>
+        )}
         {canOpen && (
           <button
             className="card-open"
@@ -2298,6 +2324,11 @@ function ListView({
           >
             <div className="table-task">
               <span className={`table-status status-${taskItem.status}`} />
+              {isTaskWaitingForEmployee(taskItem, currentEmployee) && (
+                <span className="table-waiting-action" title="Aguardando sua atuação" aria-label="Aguardando sua atuação">
+                  <BellRing size={14} aria-hidden="true" />
+                </span>
+              )}
               <div className="table-task-copy">
                 <strong>{taskItem.title}</strong>
                 {taskItem.status === "waiting" && waitingContextSummary(taskItem.waitingContext) && (
@@ -3722,6 +3753,7 @@ function TaskDrawerContent({
               value={form.waitingContext}
               onChange={(value) => set("waitingContext", value)}
               employees={state.employees}
+              teams={teams}
               error={validationError && !waitingValidation.allowed ? validationError : ""}
             />
           )}
@@ -4271,6 +4303,7 @@ function NewTaskDrawer({ employees = [], teams = [], initialStatus = "todo", onC
               value={form.waitingContext}
               onChange={(value) => set("waitingContext", value)}
               employees={employees}
+              teams={teams}
               error={validationError}
             />
           )}

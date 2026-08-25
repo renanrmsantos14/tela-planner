@@ -220,8 +220,10 @@ export function createTask(state, input) {
     history: [{ id: uid("history"), text: "Tarefa criada no mock.", createdAt: new Date().toISOString(), author: "Você" }],
   };
   const notifications = [...(state.notifications || [])];
-  notificationRecipients({ type: "assignment", assigneeIds, actorEmployeeId: input.actorEmployeeId }).forEach((recipientEmployeeId) => {
-    notifications.unshift({ id: uid("notification"), taskId: nextTask.id, recipientEmployeeId, type: "assignment", title: "Nova tarefa atribuída", message: nextTask.title, occurredAt: new Date().toISOString(), readAt: "", dedupeKey: notificationDedupeKey({ recipientId: recipientEmployeeId, taskId: nextTask.id, type: "assignment", eventId: nextTask.id }) });
+  const creationNotificationType = status === "waiting" ? "waiting" : "assignment";
+  notificationRecipients({ type: creationNotificationType, assigneeIds, creatorEmployeeId: nextTask.creatorEmployeeId, mentionedEmployeeIds: waitingTargetIds(state, waitingContext), actorEmployeeId: input.actorEmployeeId }).forEach((recipientEmployeeId) => {
+    const message = creationNotificationType === "waiting" ? waitingContextSummary(waitingContext) : nextTask.title;
+    notifications.unshift({ id: uid("notification"), taskId: nextTask.id, recipientEmployeeId, type: creationNotificationType, title: creationNotificationType === "waiting" ? "Retorno aguardado" : "Nova tarefa atribuída", message, occurredAt: new Date().toISOString(), readAt: "", dedupeKey: notificationDedupeKey({ recipientId: recipientEmployeeId, taskId: nextTask.id, type: creationNotificationType, eventId: nextTask.id }) });
   });
   return saveState({ ...state, tasks: [...state.tasks, nextTask], notifications });
 }
@@ -236,6 +238,8 @@ export function updateTask(state, id, patch) {
   if (existing && existing.status !== "waiting" && nextStatus === "waiting" && !waitingValidation.allowed) {
     throw new Error(waitingValidation.error);
   }
+  const statusChanged = patch.status !== undefined && patch.status !== existing?.status;
+  const waitingChanged = patch.waitingContext !== undefined && JSON.stringify(waitingContext) !== JSON.stringify(normalizeWaitingContext(existing?.waitingContext));
   const tasks = state.tasks.map((taskItem) => {
     if (taskItem.id !== id) return taskItem;
     const statusChanged = patch.status !== undefined && patch.status !== taskItem.status;
@@ -252,14 +256,16 @@ export function updateTask(state, id, patch) {
   if (!existing) return saveState({ ...state, tasks });
   const next = tasks.find((taskItem) => taskItem.id === id);
   const changes = [
-    patch.status !== undefined && patch.status !== existing.status ? "status" : "",
+    patch.status !== undefined && patch.status !== existing.status ? (next.status === "waiting" ? "waiting" : "status") : "",
     patch.dueDate !== undefined && patch.dueDate !== existing.dueDate ? "deadline" : "",
+    waitingChanged && !statusChanged ? "waiting" : "",
     (patch.assigneeNames !== undefined || patch.assigneeIds !== undefined || patch.assignmentMode !== undefined || patch.teamId !== undefined) && JSON.stringify(next.assigneeIds || []) !== JSON.stringify(existing.assigneeIds || []) ? "assignees" : "",
   ].filter(Boolean);
   const notifications = [...(state.notifications || [])];
-  changes.forEach((type) => notificationRecipients({ type, creatorEmployeeId: existing.creatorEmployeeId, assigneeIds: next.assigneeIds || employeeIdsByNames(state.employees, next.assigneeNames), previousAssigneeIds: existing.assigneeIds || employeeIdsByNames(state.employees, existing.assigneeNames), nextStatus: next.status, actorEmployeeId: patch.actorEmployeeId }).forEach((recipientEmployeeId) => {
+  changes.forEach((type) => notificationRecipients({ type, creatorEmployeeId: existing.creatorEmployeeId, assigneeIds: next.assigneeIds || employeeIdsByNames(state.employees, next.assigneeNames), mentionedEmployeeIds: type === "waiting" ? waitingTargetIds(state, next.waitingContext) : [], previousAssigneeIds: existing.assigneeIds || employeeIdsByNames(state.employees, existing.assigneeNames), nextStatus: next.status, actorEmployeeId: patch.actorEmployeeId }).forEach((recipientEmployeeId) => {
     const eventId = uid("event");
-    notifications.unshift({ id: uid("notification"), taskId: id, recipientEmployeeId, type, title: type === "deadline" ? "Prazo alterado" : type === "status" ? "Status alterado" : "Responsáveis alterados", message: next.title, occurredAt: new Date().toISOString(), readAt: "", dedupeKey: notificationDedupeKey({ recipientId: recipientEmployeeId, taskId: id, type, eventId }) });
+    const isWaiting = type === "waiting";
+    notifications.unshift({ id: uid("notification"), taskId: id, recipientEmployeeId, type, title: isWaiting ? (waitingChanged && !statusChanged ? "Contexto de retorno atualizado" : "Retorno aguardado") : type === "deadline" ? "Prazo alterado" : type === "status" ? "Status alterado" : "Responsáveis alterados", message: isWaiting ? waitingContextSummary(next.waitingContext) || next.title : next.title, occurredAt: new Date().toISOString(), readAt: "", dedupeKey: notificationDedupeKey({ recipientId: recipientEmployeeId, taskId: id, type, eventId }) });
   }));
   (patch.mentionedEmployeeIds || []).filter((employeeId) => employeeId !== patch.actorEmployeeId).forEach((recipientEmployeeId) => {
     const eventId = uid("event");
@@ -293,6 +299,15 @@ export function updateTeam(state, id, patch) {
 function employeeIdsByNames(employees = [], names = []) {
   const wanted = new Set(normalizeAssigneeNames(names));
   return employees.filter((employee) => wanted.has(employee.name)).map((employee) => employee.id);
+}
+
+function waitingTargetIds(state, context) {
+  if (context?.onType === "employee") return context.onId ? [context.onId] : [];
+  const target = (state.teams || []).find((team) =>
+    String(team.id) === String(context?.onId || "") ||
+    String(team.name).toLocaleLowerCase("pt-BR") === String(context?.onName || "").toLocaleLowerCase("pt-BR"),
+  );
+  return target?.memberIds || [];
 }
 
 export function deleteTask(state, id) {

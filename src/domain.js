@@ -184,7 +184,14 @@ export function migrateLegacyTeams(tasks = [], employees = [], teamNames = []) {
     teams,
     tasks: tasks.map((task) => {
       const team = teamByName.get(task.teamName);
-      return team ? { ...task, assignmentMode: "team", teamId: team.id } : { ...task, assignmentMode: "people", teamId: "", teamName: "" };
+      const waitingContext = normalizeWaitingContext(task.waitingContext);
+      const waitingTeam = waitingContext.onType === "team"
+        ? teams.find((item) => item.id === waitingContext.onId || item.name === waitingContext.onName)
+        : null;
+      const next = waitingTeam
+        ? { waitingContext: { ...waitingContext, onId: waitingTeam.id, onName: waitingTeam.name } }
+        : { waitingContext };
+      return team ? { ...task, ...next, assignmentMode: "team", teamId: team.id } : { ...task, ...next, assignmentMode: "people", teamId: "", teamName: "" };
     }),
   };
 }

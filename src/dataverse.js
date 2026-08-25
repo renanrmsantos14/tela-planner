@@ -158,6 +158,15 @@ function waitingContextPayload(value) {
   };
 }
 
+function waitingTargetIds(state, context) {
+  if (context?.onType === "employee") return context.onId ? [context.onId] : [];
+  const target = (state.teams || []).find((team) =>
+    String(team.id) === String(context?.onId || "") ||
+    String(team.name).toLocaleLowerCase("pt-BR") === String(context?.onName || "").toLocaleLowerCase("pt-BR"),
+  );
+  return target?.memberIds || [];
+}
+
 async function loadCurrentUserEmail(xrm) {
   const userId = cleanId(
     xrm.Utility?.getGlobalContext?.().userSettings?.userId,
@@ -667,6 +676,9 @@ async function createLiveTask(xrm, state, input) {
   if (assigneeIds.length) {
     await createEvent(xrm, id, 100000003, "Responsáveis atribuídos.", "notification:assignment", "", JSON.stringify({ actorEmployeeId: input.actorEmployeeId || "", actorUserId: input.actorUserId || "", creatorEmployeeId: input.actorEmployeeId || "", assigneeIds, previousAssigneeIds: [] }));
   }
+  if (status === "waiting") {
+    await createEvent(xrm, id, 100000002, waitingContextSummary(waitingContext), "notification:waiting", "", JSON.stringify({ actorEmployeeId: input.actorEmployeeId || "", actorUserId: input.actorUserId || "", creatorEmployeeId: input.actorEmployeeId || "", assigneeIds, waitingContext, waitingTargetIds: waitingTargetIds(state, waitingContext) }));
+  }
   return loadLiveState(xrm);
 }
 
@@ -713,7 +725,8 @@ async function updateLiveTask(xrm, state, id, patch) {
   if (statusChanged) await createEvent(xrm, id, 100000002, nextStatus === "done" ? "Tarefa concluída." : `Status alterado para ${STATUSES.find((item) => item.id === nextStatus)?.label || nextStatus}.`, "status", previousStatus, nextStatus);
   if (statusChanged && nextStatus === "waiting") await createEvent(xrm, id, 100000002, waitingContextSummary(waitingContext), "waitingContext", JSON.stringify(normalizeWaitingContext(existing?.waitingContext)), JSON.stringify(waitingContext));
   if (waitingChanged && !statusChanged) await createEvent(xrm, id, 100000002, `Contexto de Aguardando atualizado: ${waitingContextSummary(waitingContext)}.`, "waitingContext", JSON.stringify(normalizeWaitingContext(existing?.waitingContext)), JSON.stringify(waitingContext));
-  if (statusChanged && ["done", "waiting"].includes(nextStatus)) await createEvent(xrm, id, 100000002, nextStatus === "done" ? "Tarefa concluída por outro responsável." : "Tarefa aguardando retorno.", "notification:status", "", JSON.stringify({ ...eventContext, previousStatus, nextStatus }));
+  if (statusChanged && nextStatus === "done") await createEvent(xrm, id, 100000002, "Tarefa concluída por outro responsável.", "notification:status", "", JSON.stringify({ ...eventContext, previousStatus, nextStatus }));
+  if ((statusChanged && nextStatus === "waiting") || (waitingChanged && !statusChanged)) await createEvent(xrm, id, 100000002, waitingContextSummary(waitingContext) || "Tarefa aguardando retorno.", "notification:waiting", "", JSON.stringify({ ...eventContext, previousStatus, nextStatus, waitingContext, waitingTargetIds: waitingTargetIds(state, waitingContext) }));
   if (dueDateChanged) await createEvent(xrm, id, 100000002, `Prazo alterado de ${previousDueDate || "sem prazo"} para ${patch.dueDate || "sem prazo"}.${patch.deadlineChangeReason ? ` Motivo: ${patch.deadlineChangeReason}` : ""}`, "notification:deadline", previousDueDate, JSON.stringify({ ...eventContext, nextDueDate: patch.dueDate || "", reason: patch.deadlineChangeReason || "" }));
   if (assigneesChanged) await createEvent(xrm, id, 100000002, "Responsáveis alterados.", "notification:assignees", JSON.stringify(previousAssigneeIds), JSON.stringify({ ...eventContext, addedAssigneeIds: nextAssigneeIds.filter((assigneeId) => !previousAssigneeIds.includes(assigneeId)), removedAssigneeIds: previousAssigneeIds.filter((assigneeId) => !nextAssigneeIds.includes(assigneeId)) }));
   if (!statusChanged && !dueDateChanged && !assigneesChanged && !waitingChanged) await createEvent(xrm, id, patch.status !== undefined ? 100000002 : 100000001, "Tarefa atualizada.");

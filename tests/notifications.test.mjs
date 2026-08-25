@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { dailyReminderRows, deadlineReminderType, deadlineRole, groupDailyDigest, notificationDedupeKey, notificationRecipients, previousBusinessDay, unreadCount, validateDeadlineChange } from "../src/notifications.js";
+import { dailyReminderRows, deadlineReminderType, deadlineRole, groupDailyDigest, isTaskWaitingForEmployee, notificationDedupeKey, notificationRecipients, previousBusinessDay, unreadCount, validateDeadlineChange } from "../src/notifications.js";
 
 test("D-1 útil de segunda-feira cai na sexta-feira", () => {
   assert.equal(previousBusinessDay("2026-08-24"), "2026-08-21");
@@ -29,6 +29,15 @@ test("destinatários removem ator, duplicados e atribuições antigas", () => {
   assert.deepEqual(notificationRecipients({ type: "status", creatorEmployeeId: "c", assigneeIds: ["a", "b"], previousAssigneeIds: ["a"], nextStatus: "doing", actorEmployeeId: "a" }), []);
   assert.deepEqual(notificationRecipients({ type: "assignees", assigneeIds: ["a", "b"], previousAssigneeIds: ["a", "c"], actorEmployeeId: "a" }), ["b", "c"]);
   assert.deepEqual(notificationRecipients({ type: "mention", mentionedEmployeeIds: ["a", "a", "b"], actorEmployeeId: "b" }), ["a"]);
+  assert.deepEqual(notificationRecipients({ type: "waiting", creatorEmployeeId: "c", assigneeIds: ["a"], mentionedEmployeeIds: ["b"], actorEmployeeId: "a" }), ["c", "b"]);
+});
+
+test("sinaliza Aguardando apenas para criador ou responsável", () => {
+  const task = { status: "waiting", creatorEmployeeId: "creator", assigneeIds: ["assignee"] };
+  assert.equal(isTaskWaitingForEmployee(task, { id: "assignee" }), true);
+  assert.equal(isTaskWaitingForEmployee(task, { id: "creator" }), true);
+  assert.equal(isTaskWaitingForEmployee(task, { id: "viewer" }), false);
+  assert.equal(isTaskWaitingForEmployee({ ...task, status: "doing" }, { id: "assignee" }), false);
 });
 
 test("chave idempotente e badge de não lidas são determinísticos", () => {

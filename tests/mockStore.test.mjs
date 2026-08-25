@@ -110,11 +110,15 @@ test("registra aguardando e conclusão no histórico mock", () => {
   const initial = seedState();
   const task = initial.tasks.find((item) => item.status === "todo");
   const waitingContext = { subject: "retorno do parceiro", onType: "team", onId: "Operação", onName: "Operação", expectedDate: "2026-08-28", note: "Cobrar até o fim do dia" };
-  const waiting = updateTask(initial, task.id, { status: "waiting", waitingContext }).tasks.find((item) => item.id === task.id);
+  const waitingState = updateTask(initial, task.id, { status: "waiting", waitingContext });
+  const waiting = waitingState.tasks.find((item) => item.id === task.id);
+  const waitingNotifications = waitingState.notifications.filter((item) => item.taskId === task.id && item.type === "waiting");
   const doing = updateTask({ ...initial, tasks: [waiting] }, task.id, { status: "doing" }).tasks.find((item) => item.id === task.id);
   const completed = updateTask({ ...initial, tasks: [doing] }, task.id, { status: "done" }).tasks.find((item) => item.id === task.id);
   assert.ok(waiting.history.some((item) => item.text === "Status alterado para Aguardando."));
   assert.ok(waiting.history.some((item) => item.text.includes("Aguardando retorno do parceiro")));
+  assert.ok(waitingNotifications.length >= 1);
+  assert.ok(waitingNotifications.every((item) => item.message.includes("retorno do parceiro")));
   assert.ok(completed.history.some((item) => item.text === "Tarefa concluída."));
 });
 

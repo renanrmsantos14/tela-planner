@@ -30,6 +30,15 @@ export function deadlineRole(task, employee) {
   return "viewer";
 }
 
+export function isTaskWaitingForEmployee(task, employee) {
+  const employeeId = cleanId(employee?.id);
+  const userId = cleanId(employee?.userId);
+  if (task?.status !== "waiting" || !employeeId) return false;
+  return cleanId(task.creatorEmployeeId) === employeeId ||
+    (userId && cleanId(task.creatorUserId) === userId) ||
+    (task.assigneeIds || []).some((id) => cleanId(id) === employeeId);
+}
+
 export function validateDeadlineChange({ task, employee, nextDueDate, reason }) {
   if (dateKey(nextDueDate) === dateKey(task?.dueDate)) return { allowed: true, role: deadlineRole(task, employee), requiresReason: false };
   const role = deadlineRole(task, employee);
@@ -46,6 +55,7 @@ export function notificationRecipients({ creatorEmployeeId, assigneeIds = [], me
   let values = [];
   if (type === "assignment") values = assigneeIds.filter((id) => !previousAssigneeIds.some((oldId) => cleanId(oldId) === cleanId(id)));
   else if (type === "mention") values = mentionedEmployeeIds;
+  else if (type === "waiting") values = [creatorEmployeeId, ...assigneeIds, ...mentionedEmployeeIds];
   else if (type === "status") values = ["done", "waiting"].includes(nextStatus) ? [creatorEmployeeId, ...assigneeIds] : [];
   else if (type === "assignees") {
     const current = new Set(assigneeIds.map(cleanId));
