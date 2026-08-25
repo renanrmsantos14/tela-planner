@@ -1,9 +1,8 @@
-import React, { useMemo, useState } from "react";
-import { ArrowUpRight, CalendarDays, CheckCircle2, Clock3, RotateCcw, Search, Users } from "lucide-react";
+import React, { useMemo } from "react";
+import { ArrowUpRight, CalendarDays, CheckCircle2, Clock3, Users } from "lucide-react";
 import { formatDate } from "./domain";
-import SearchableSelect from "./SearchableSelect.jsx";
 import AssigneeDisplay from "./AssigneeDisplay.jsx";
-import { filterWorkItems, isAssignedToEmployee, sortWorkItems, workItemStats } from "./workItems";
+import { filterWorkItems, sortWorkItems, workItemStats } from "./workItems";
 
 const SOURCE_LABELS = { task: "Tarefa", quote_followup: "Acompanhamento de cotação", quality_error: "Ocorrência", quality_action: "Ação de qualidade" };
 const STATUS_LABELS = { todo: "A fazer", doing: "Em andamento", waiting: "Aguardando", done: "Concluído", cancelled: "Cancelado" };
@@ -20,18 +19,13 @@ function SourceBadge({ source }) {
 }
 
 function hasActiveFilters(filters) {
-  return Boolean(filters.query.trim()) || filters.source !== "all" || filters.assignee !== "all" || filters.statusGroup !== "all";
+  return Boolean(filters?.query?.trim()) || Boolean(filters?.assignee?.length) || Boolean(filters?.status?.length) || Boolean(filters?.priority?.length) || Boolean(filters?.source?.length) || Boolean(filters?.team);
 }
 
-export default function CentralView({ state, mode = "mine", currentEmployee, onOpenTask, onOpenSource, onCompleteTask, onCreate }) {
-  const [filters, setFilters] = useState({ query: "", source: "all", assignee: "all", statusGroup: "all" });
+export default function CentralView({ state, mode = "mine", currentEmployee, filters, filterBar, onClearFilters, onChangeMode, onOpenTask, onOpenSource, onCompleteTask, onCreate }) {
   const mineOnly = mode === "mine";
   const allItems = state.workItems || [];
-  const scopedItems = mineOnly
-    ? currentEmployee
-      ? allItems.filter((item) => isAssignedToEmployee(item, currentEmployee))
-      : []
-    : allItems;
+  const scopedItems = mineOnly && !currentEmployee ? [] : allItems;
   const activeItems = useMemo(() => filterWorkItems(scopedItems), [scopedItems]);
   const filteredItems = useMemo(() => sortWorkItems(filterWorkItems(scopedItems, filters)), [scopedItems, filters]);
   const items = useMemo(() => mineOnly ? filteredItems.filter((item) => item.dueBucket !== "none") : filteredItems, [filteredItems, mineOnly]);
@@ -42,11 +36,7 @@ export default function CentralView({ state, mode = "mine", currentEmployee, onO
     { key: "tomorrow", label: "Vencem amanhã", items: items.filter((item) => item.dueBucket === "tomorrow") },
     { key: "upcoming", label: "Próximas tarefas", items: items.filter((item) => item.dueBucket === "upcoming") },
   ], [items]);
-  const assignees = useMemo(() => [...new Map((state.employees || []).map((employee) => [employee.id || employee.name, employee])).values()], [state.employees]);
-  const assigneeOptions = useMemo(() => [{ value: "all", label: "Toda a equipe" }, ...assignees.map((employee) => ({ value: employee.id || employee.name, label: employee.name }))], [assignees]);
   const open = (item) => item.source === "task" || item.source === "quote_followup" ? onOpenTask(item.sourceRecordId) : onOpenSource(item);
-  const updateFilter = (key, value) => setFilters((current) => ({ ...current, [key]: value }));
-  const clearFilters = () => setFilters({ query: "", source: "all", assignee: "all", statusGroup: "all" });
   const emptyMessage = !currentEmployee && mineOnly
     ? { title: "Usuário sem vínculo", detail: "Seu usuário Dataverse ainda não está associado a um funcionário administrativo." }
     : mineOnly && !items.length && activeItems.length
@@ -56,26 +46,21 @@ export default function CentralView({ state, mode = "mine", currentEmployee, onO
       : { title: "Nenhum resultado", detail: "Tente remover um filtro ou buscar por outro termo." };
 
   return <div className="page-content">
-    <PageHeader mode={mode} onCreate={onCreate} />
+    <PageHeader mode={mode} onChangeMode={onChangeMode} onCreate={onCreate} />
+    {filterBar}
     <div className="metric-grid central-metrics"><Metric label="Pendências abertas" value={stats.open} icon={CheckCircle2} /><Metric label="Atrasadas" value={stats.overdue} icon={Clock3} tone="danger" /><Metric label="Em andamento" value={stats.doing} icon={ArrowUpRight} tone="action" /><Metric label="Aguardando" value={stats.waiting} icon={Users} tone="warning" /></div>
     <section className="panel central-panel">
       <div className="panel-heading"><div><span className="eyebrow">{mineOnly ? "MINHAS PENDÊNCIAS" : "EQUIPE ADMINISTRATIVA"}</span><h2>{mineOnly ? "Próximos movimentos" : "Pendências da equipe"}</h2></div><span className="panel-count">{items.length}</span></div>
-      <div className="central-filters" role="search" aria-label="Filtros de pendências">
-        <label className="search-field"><span className="sr-only">Buscar pendências</span><Search size={16} aria-hidden="true" /><input value={filters.query} onChange={(event) => updateFilter("query", event.target.value)} placeholder="Buscar por tarefa, origem ou responsável" /></label>
-        <label className="central-filter"><span>Origem</span><SearchableSelect value={filters.source} onChange={(value) => updateFilter("source", value)} clearable={false} aria-label="Origem" options={SOURCE_OPTIONS} /></label>
-        <label className="central-filter"><span>Responsável</span><SearchableSelect value={filters.assignee} onChange={(value) => updateFilter("assignee", value)} clearable={false} aria-label="Responsável" options={assigneeOptions} /></label>
-        {hasActiveFilters(filters) && <button className="button button-quiet central-clear" type="button" onClick={clearFilters}><RotateCcw size={14} />Limpar filtros</button>}
-      </div>
       {items.length > 0 && <div className="central-table-head" aria-hidden="true"><span>Item</span><span>Responsável</span><span>Prazo</span><span>Status</span><span>Ações</span></div>}
       {mineOnly ? <div className="central-deadline-sections">
         {deadlineSections.filter((section) => section.items.length > 0).map((section) => <section className={`central-deadline-section central-deadline-${section.key}`} key={section.key}>
           <div className="central-section-heading"><h3>{section.label}</h3><span className="section-count">{section.items.length}</span></div>
           <div className="central-list">{section.items.map((item) => <CentralRow key={item.id} item={item} onOpen={open} onComplete={onCompleteTask} />)}</div>
         </section>)}
-        {!items.length && <div className="central-empty"><strong>{emptyMessage.title}</strong><span>{emptyMessage.detail}</span>{hasActiveFilters(filters) && <button className="button button-secondary" type="button" onClick={clearFilters}>Limpar filtros</button>}</div>}
+        {!items.length && <div className="central-empty"><strong>{emptyMessage.title}</strong><span>{emptyMessage.detail}</span>{hasActiveFilters(filters) && onClearFilters && <button className="button button-secondary" type="button" onClick={onClearFilters}>Limpar filtros</button>}</div>}
       </div> : <div className="central-list">
         {items.map((item) => <CentralRow key={item.id} item={item} onOpen={open} onComplete={onCompleteTask} />)}
-        {!items.length && <div className="central-empty"><strong>{emptyMessage.title}</strong><span>{emptyMessage.detail}</span>{hasActiveFilters(filters) && <button className="button button-secondary" type="button" onClick={clearFilters}>Limpar filtros</button>}</div>}
+        {!items.length && <div className="central-empty"><strong>{emptyMessage.title}</strong><span>{emptyMessage.detail}</span>{hasActiveFilters(filters) && onClearFilters && <button className="button button-secondary" type="button" onClick={onClearFilters}>Limpar filtros</button>}</div>}
       </div>}
     </section>
   </div>;
@@ -93,9 +78,9 @@ function CentralRow({ item, onOpen, onComplete }) {
   </article>;
 }
 
-function PageHeader({ mode, onCreate }) {
+function PageHeader({ mode, onChangeMode, onCreate }) {
   const mine = mode === "mine";
-  return <div className="page-header"><div><span className="eyebrow">OPERAÇÃO ADMINISTRATIVA</span><h1>{mine ? "Minhas pendências" : "Equipe"}</h1><p>{mine ? "Veja o que precisa da sua atenção e qual é o próximo movimento." : "Acompanhe atrasos, responsáveis e obrigações da equipe."}</p></div><button className="button button-primary" onClick={onCreate}>Nova tarefa</button></div>;
+  return <div className="page-header"><div><span className="eyebrow">OPERAÇÃO ADMINISTRATIVA</span><h1>{mine ? "Minhas pendências" : "Equipe"}</h1><p>{mine ? "Veja o que precisa da sua atenção e qual é o próximo movimento." : "Acompanhe atrasos, responsáveis e obrigações da equipe."}</p></div><div className="header-actions"><div className="central-mode-selector" aria-label="Escopo das pendências"><button className={mine ? "central-mode-button active" : "central-mode-button"} type="button" onClick={() => onChangeMode("mine")} aria-pressed={mine}><CheckCircle2 size={15} />Minhas</button><button className={!mine ? "central-mode-button active" : "central-mode-button"} type="button" onClick={() => onChangeMode("team")} aria-pressed={!mine}><Users size={15} />Equipe</button></div><button className="button button-primary" onClick={onCreate}>Nova tarefa</button></div></div>;
 }
 
 function Metric({ label, value, icon: Icon, tone = "neutral" }) {

@@ -54,7 +54,9 @@ function qualityWorkItem(item) {
     assigneeProfiles: item.assigneeProfiles || [],
     dueAt: qualityDue(item),
     dueBucket: qualityDue(item) && !isTerminal ? getDueBucket({ dueDate: qualityDue(item), status: statusGroup }) : "none",
+    priority: cleanText(item.priority),
     priorityRank: Number(item.priorityRank || 1),
+    teamName: cleanText(item.teamName),
     sourceStatus: cleanText(item.status),
     statusGroup,
     statusLabel: cleanText(item.status, TASK_STATUS_LABELS[statusGroup]),
@@ -80,7 +82,9 @@ export function normalizeWorkItems(state = {}) {
     assigneeProfiles: task.assigneeProfiles || [],
     dueAt: cleanText(task.dueDate),
     dueBucket: getDueBucket(task),
+    priority: cleanText(task.priority),
     priorityRank: ({ urgent: 0, high: 1, medium: 2, low: 3 }[task.priority] ?? 2),
+    teamName: cleanText(task.teamName),
     sourceStatus: cleanText(task.status),
     statusGroup: task.status,
     statusLabel: TASK_STATUS_LABELS[task.status] || cleanText(task.status, "A fazer"),
@@ -108,13 +112,26 @@ export function sortWorkItems(items = []) {
 
 export function filterWorkItems(items = [], filters = {}) {
   const query = String(filters.query || "").trim().toLocaleLowerCase("pt-BR");
+  const selectedValues = (value) => Array.isArray(value) ? value : value ? [value] : [];
+  const statusValues = selectedValues(filters.status);
+  const assigneeValues = selectedValues(filters.assignee);
+  const priorityValues = selectedValues(filters.priority);
+  const sourceValues = selectedValues(filters.source);
+  const sourceMatches = (item, value) => {
+    if (value === "manual") return item.source === "task";
+    if (value === "quote") return item.source === "quote_followup";
+    if (value === "quality") return ["quality_error", "quality_action"].includes(item.source);
+    return item.source === value;
+  };
   return items.filter((item) => {
-    if (filters.includeTerminal !== true && item.isTerminal) return false;
-    if (filters.source && filters.source !== "all" && item.source !== filters.source) return false;
-    if (filters.assignee && filters.assignee !== "all" && item.assigneeEmployeeId !== filters.assignee && item.assigneeName !== filters.assignee) return false;
-    if (filters.statusGroup && filters.statusGroup !== "all" && item.statusGroup !== filters.statusGroup) return false;
-    if (query && ![item.title, item.context, item.assigneeName, item.sourceCode].join(" ").toLocaleLowerCase("pt-BR").includes(query)) return false;
-    return true;
+    const assigneeNames = item.assigneeNames || (item.assigneeName ? [item.assigneeName] : []);
+    const matchesAssignee = !assigneeValues.length || assigneeValues.some((value) => String(value) === String(item.assigneeEmployeeId) || assigneeNames.includes(value) || String(item.assigneeName || "").includes(String(value)));
+    const matchesStatus = !statusValues.length || statusValues.includes(item.statusGroup);
+    const matchesPriority = !priorityValues.length || priorityValues.includes(item.priority);
+    const matchesSource = !sourceValues.length || sourceValues.some((value) => sourceMatches(item, value));
+    const matchesTeam = !filters.team || item.teamName === filters.team;
+    const matchesQuery = !query || [item.title, item.context, item.assigneeName, item.sourceCode, item.teamName].join(" ").toLocaleLowerCase("pt-BR").includes(query);
+    return matchesAssignee && matchesStatus && matchesPriority && matchesSource && matchesTeam && matchesQuery;
   });
 }
 

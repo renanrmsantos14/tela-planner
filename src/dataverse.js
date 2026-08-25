@@ -35,6 +35,33 @@ const MAX_ATTACHMENT_SIZE = 5 * 1024 * 1024;
 const MAX_IMAGE_EDGE = 1600;
 const IMAGE_QUALITY = 0.82;
 const OPTIMIZABLE_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const IMAGE_OPTIMIZER_WORKER_SOURCE = `
+  self.onmessage = async ({ data }) => {
+    try {
+      const bitmap = await createImageBitmap(data.file);
+      const scale = Math.min(1, data.maxEdge / Math.max(bitmap.width, bitmap.height));
+      if (scale === 1 && data.file.size <= 900 * 1024) {
+        bitmap.close?.();
+        self.postMessage({ unchanged: true });
+        return;
+      }
+      const canvas = new OffscreenCanvas(
+        Math.max(1, Math.round(bitmap.width * scale)),
+        Math.max(1, Math.round(bitmap.height * scale)),
+      );
+      canvas.getContext("2d").drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      const blob = await canvas.convertToBlob({
+        type: data.file.type,
+        quality: data.file.type === "image/png" ? undefined : data.quality,
+      });
+      bitmap.close?.();
+      const buffer = await blob.arrayBuffer();
+      self.postMessage({ buffer, type: blob.type }, [buffer]);
+    } catch (error) {
+      self.postMessage({ error: error?.message || "Falha ao otimizar imagem." });
+    }
+  };
+`;
 const ENTITY_SETS = Object.freeze({
   [QUOTE_TABLE]: "cr40f_pedidodecotacaos",
   [QUALITY_ERROR_TABLE]: "cr40f_errooperacionals",
@@ -567,6 +594,31 @@ async function createLiveSubtask(xrm, state, parentId, input) {
 
 async function optimizeAttachmentFile(file) {
   if (!file?.type || !OPTIMIZABLE_IMAGE_TYPES.has(file.type) || typeof document === "undefined" || typeof globalThis.createImageBitmap !== "function") return file;
+  if (typeof Worker === "function" && typeof OffscreenCanvas === "function") {
+    let worker;
+    let workerUrl;
+    try {
+      workerUrl = URL.createObjectURL(new Blob([IMAGE_OPTIMIZER_WORKER_SOURCE], { type: "text/javascript" }));
+      worker = new Worker(workerUrl);
+      return await new Promise((resolve, reject) => {
+        worker.onmessage = ({ data }) => {
+          if (data?.error) reject(new Error(data.error));
+          else if (data?.unchanged) resolve(file);
+          else {
+            const blob = new Blob([data.buffer], { type: data.type || file.type });
+            resolve(blob.size < file.size * 0.95 ? new File([blob], file.name, { type: blob.type, lastModified: file.lastModified }) : file);
+          }
+        };
+        worker.onerror = () => reject(new Error("Falha no worker de otimização."));
+        worker.postMessage({ file, maxEdge: MAX_IMAGE_EDGE, quality: IMAGE_QUALITY });
+      });
+    } catch {
+      // Fallback abaixo cobre browsers embutidos sem suporte completo a Worker.
+    } finally {
+      worker?.terminate();
+      if (workerUrl) URL.revokeObjectURL(workerUrl);
+    }
+  }
   try {
     const bitmap = await globalThis.createImageBitmap(file);
     const scale = Math.min(1, MAX_IMAGE_EDGE / Math.max(bitmap.width, bitmap.height));

@@ -19,7 +19,7 @@ test("filtra origem e calcula pendências", () => {
   assert.deepEqual(workItemStats(items), { open: 2, overdue: 1, today: 0, tomorrow: 0, doing: 0, waiting: 1, alertCount: 1 });
 });
 
-test("remove estados terminais e traduz status", () => {
+test("status vazio significa todos e uma seleção explícita continua disponível", () => {
   const items = normalizeWorkItems({
     tasks: [
       { id: "done", title: "Concluída", status: "done", priority: "low" },
@@ -27,7 +27,9 @@ test("remove estados terminais e traduz status", () => {
     ],
     quality: [{ id: "q1", type: "error", title: "Resolvida", status: "Resolvido" }],
   });
-  const visible = filterWorkItems(items);
+  const allStatuses = filterWorkItems(items, { status: [] });
+  assert.equal(allStatuses.length, 3);
+  const visible = filterWorkItems(items, { status: ["todo", "doing", "waiting"] });
   assert.equal(visible.length, 1);
   assert.equal(visible[0].title, "Acompanhar COT-9");
   assert.equal(visible[0].statusLabel, "Aguardando");
@@ -41,6 +43,17 @@ test("escopa itens por responsável sem perder itens não atribuídos na equipe"
   ];
   assert.equal(items.filter((item) => item.assigneeEmployeeId === "e1").length, 1);
   assert.equal(filterWorkItems(items).length, 2);
+});
+
+test("expõe e aplica prioridade, equipe e status nos itens agregados", () => {
+  const items = normalizeWorkItems({ tasks: [
+    { id: "waiting", title: "Retorno", status: "waiting", priority: "high", teamName: "Operação" },
+    { id: "open", title: "Contato", status: "todo", priority: "low", teamName: "Comercial" },
+  ] });
+  assert.equal(items[0].priority, "high");
+  assert.equal(items[0].teamName, "Operação");
+  assert.equal(items[0].statusGroup, "waiting");
+  assert.deepEqual(filterWorkItems(items, { priority: ["high"], team: "Operação", status: ["waiting"] }).map((item) => item.sourceRecordId), ["waiting"]);
 });
 
 test("inclui tarefa compartilhada nas pendências de cada responsável", () => {

@@ -13,12 +13,12 @@ import React, {
 import { createPortal } from "react-dom";
 import {
   ArrowUpRight,
-  AtSign,
   BellRing,
   CalendarDays,
   Check,
   CheckCircle2,
   ChevronDown,
+  ChevronUp,
   ChevronRight,
   ClipboardList,
   ListChecks,
@@ -38,6 +38,7 @@ import {
   Paperclip,
   PanelLeftClose,
   PanelLeftOpen,
+  Play,
   Plus,
   RotateCcw,
   Search,
@@ -81,6 +82,7 @@ import SearchableSelect, {
   SearchableMultiSelect,
 } from "./SearchableSelect.jsx";
 import CentralView from "./CentralView.jsx";
+import QuotesView from "./QuotesView.jsx";
 import AssigneeDisplay from "./AssigneeDisplay.jsx";
 import { MentionableField, useMentionController } from "./MentionableField.jsx";
 import LoadingFallback from "./LoadingFallback.jsx";
@@ -100,6 +102,7 @@ import {
 const CENTRAL_NAV_ITEMS = [
   ["dashboard", "Início", LayoutDashboard],
   ["board", "Tarefas", ClipboardList],
+  ["quotes", "Cotações", FileText],
   ["quality", "Qualidade", ShieldAlert],
   ["settings", "Configurações", Settings],
 ];
@@ -107,6 +110,7 @@ const CENTRAL_NAV_ITEMS = [
 const MOBILE_NAV_ITEMS = [
   ["dashboard", "Hoje", LayoutDashboard],
   ["board", "Tarefas", ClipboardList],
+  ["quotes", "Cotações", FileText],
   ["more", "Mais", Menu],
 ];
 
@@ -124,6 +128,12 @@ const TASK_FILTER_STATUS_OPTIONS = [
   ...STATUS_OPTIONS,
   { value: "cancelled", label: "Cancelada" },
 ];
+const STATUS_ICONS = {
+  todo: ClipboardList,
+  doing: Play,
+  waiting: Clock3,
+  done: CheckCircle2,
+};
 const PRIORITY_OPTIONS = PRIORITIES.map((item) => ({
   value: item.id,
   label: item.label,
@@ -132,7 +142,7 @@ const SOURCE_OPTIONS = TASK_SOURCES.map((item) => ({
   value: item.id,
   label: item.label,
 }));
-const TEAM_OPTIONS = ["Comercial", "Operação", "Financeiro", "Qualidade"];
+const TEAM_OPTIONS = ["Comercial", "Financeiro", "Operação", "Qualidade"];
 const CALENDAR_WEEKDAY_FORMATTER = new Intl.DateTimeFormat("pt-BR", {
   weekday: "short",
 });
@@ -282,6 +292,11 @@ function StatusBadge({ status }) {
   );
 }
 
+function StatusIcon({ status, ...props }) {
+  const Icon = STATUS_ICONS[status] || ClipboardList;
+  return <Icon {...props} />;
+}
+
 function PriorityBadge({ priority }) {
   const item =
     PRIORITIES.find((entry) => entry.id === priority) || PRIORITIES[1];
@@ -379,12 +394,6 @@ function StatusPicker({ value, onChange }) {
     >
       <div className="status-picker-options">
         {STATUSES.map((item) => {
-          const Icon = {
-            todo: ClipboardList,
-            doing: LoaderCircle,
-            waiting: Clock3,
-            done: CheckCircle2,
-          }[item.id] || ClipboardList;
           const isSelected = value === item.id;
           return (
             <button
@@ -396,7 +405,14 @@ function StatusPicker({ value, onChange }) {
               title={item.label}
               onClick={() => onChange(item.id)}
             >
-              <Icon size={18} strokeWidth={2.2} aria-hidden="true" />
+              <StatusIcon
+                status={item.id}
+                size={18}
+                strokeWidth={2.2}
+                fill="none"
+                stroke="currentColor"
+                aria-hidden="true"
+              />
             </button>
           );
         })}
@@ -619,7 +635,7 @@ function NotificationsPanel({
             </span>
             <div>
               <h2>Caixa de entrada</h2>
-              <p>{unread ? "Atualiza\u00e7\u00f5es recentes" : "Tudo em dia"}</p>
+              <p>{unread ? "Atualizações recentes" : "Tudo em dia"}</p>
             </div>
           </div>
           <button
@@ -1131,6 +1147,7 @@ const TaskCard = memo(function TaskCard({
   enableDrag = true,
   isDragging = false,
   dropFeedback = "",
+  style,
   onDragStart,
   onDragEnd,
 }) {
@@ -1142,7 +1159,8 @@ const TaskCard = memo(function TaskCard({
   const visibleSubtasks = subtasks.slice(0, 3);
   return (
     <article
-      className={`task-card ${compact ? "task-card-compact" : ""} ${overdue ? "task-overdue" : ""} ${taskItem.syncStatus === "syncing" ? "task-syncing" : ""} ${isDragging ? "task-card-dragging" : ""}`}
+      className={`task-card ${compact ? "task-card-compact" : ""} ${overdue ? "task-overdue" : ""} ${taskItem.syncStatus === "syncing" ? "task-syncing" : ""} ${isDragging ? "task-card-dragging" : ""} ${dropFeedback ? "task-card-drop-active" : ""}`}
+      style={style}
       draggable={enableDrag && taskItem.syncStatus !== "syncing"}
       tabIndex={canOpen ? "0" : "-1"}
       data-task-id={taskItem.id}
@@ -1304,12 +1322,24 @@ const TaskCard = memo(function TaskCard({
 });
 
 function getDropIndex(column, pointerY, draggedId) {
+  const body = column.querySelector(".column-body");
+  const bodyRect = body?.getBoundingClientRect();
+  const pointerLayoutY = bodyRect
+    ? pointerY - bodyRect.top - body.clientTop + body.scrollTop
+    : null;
   const cards = [...column.querySelectorAll(".task-card[data-task-id]")].filter(
     (card) => card.dataset.taskId !== draggedId,
   );
   for (let index = 0; index < cards.length; index += 1) {
-    const rect = cards[index].getBoundingClientRect();
-    if (pointerY < rect.top + rect.height / 2) return index;
+    const card = cards[index];
+    const layoutTop = pointerLayoutY === null
+      ? card.getBoundingClientRect().top
+      : card.offsetTop;
+    const layoutHeight = pointerLayoutY === null
+      ? card.getBoundingClientRect().height
+      : card.offsetHeight;
+    const comparisonY = pointerLayoutY === null ? pointerY : pointerLayoutY;
+    if (comparisonY < layoutTop + layoutHeight / 2) return index;
   }
   return cards.length;
 }
@@ -1317,6 +1347,7 @@ function getDropIndex(column, pointerY, draggedId) {
 const DRAG_TRANSFER_DURATION = 230;
 const DRAG_SETTLE_DURATION = 36;
 const DRAG_REORDER_DURATION = 180;
+const DRAG_MIN_LOADING_DURATION = 220;
 const DRAG_TOTAL_DURATION =
   DRAG_TRANSFER_DURATION + DRAG_SETTLE_DURATION + DRAG_REORDER_DURATION;
 const DRAG_TRANSFER_EASING = "cubic-bezier(.22, .61, .36, 1)";
@@ -1394,6 +1425,7 @@ const Board = memo(function Board({
           }),
         );
       }
+      cardRectsRef.current = nextRects;
       return;
     }
     if (pendingTransfer) {
@@ -1412,21 +1444,39 @@ const Board = memo(function Board({
         const transferOffset = DRAG_TRANSFER_DURATION / DRAG_TOTAL_DURATION;
         const reorderOffset =
           (DRAG_TRANSFER_DURATION + DRAG_SETTLE_DURATION) / DRAG_TOTAL_DURATION;
+        const slotTransform = `translate(${pendingTransfer.slotRect.left - movedNext.left}px, ${pendingTransfer.slotRect.top - movedNext.top}px)`;
+        const entryTransform = `${slotTransform} translateY(-6px) scale(.97)`;
         cards.forEach((card) => {
+          if (card.dataset.taskId === pendingTransfer.id) return;
           const previous = cardRectsRef.current.get(card.dataset.taskId);
           const next = nextRects.get(card.dataset.taskId);
           if (!previous || !next || typeof card.animate !== "function") return;
-          const isMovedCard = card.dataset.taskId === pendingTransfer.id;
-          const isTargetCard =
-            card.closest(".board-column")?.dataset.statusId ===
-            pendingTransfer.statusId;
-          const fromTransform = translateBetween(previous, next);
-          let keyframes;
-          let duration = DRAG_REORDER_DURATION;
-          if (isMovedCard) {
-            const slotTransform = `translate(${pendingTransfer.slotRect.left - movedNext.left}px, ${pendingTransfer.slotRect.top - movedNext.top}px)`;
-            const entryTransform = `${slotTransform} translateY(-6px) scale(.97)`;
-            keyframes = [
+          if (
+            Math.abs(previous.top - next.top) < 1 &&
+            Math.abs(previous.left - next.left) < 1
+          )
+            return;
+          layoutAnimationsRef.current.set(
+            card.dataset.taskId,
+            card.animate(
+              [
+                { transform: translateBetween(previous, next), offset: 0 },
+                { transform: translateBetween(previous, next), offset: reorderOffset },
+                { transform: "translate(0, 0)", offset: 1 },
+              ],
+              {
+                duration: motionDuration ?? DRAG_TOTAL_DURATION,
+                easing: "linear",
+                fill: "both",
+                composite: "replace",
+              },
+            ),
+          );
+        });
+        layoutAnimationsRef.current.set(
+          pendingTransfer.id,
+          movedCard.animate(
+            [
               {
                 transform: entryTransform,
                 opacity: 0,
@@ -1440,40 +1490,15 @@ const Board = memo(function Board({
                 easing: DRAG_REORDER_EASING,
               },
               { transform: "translate(0, 0)", offset: 1 },
-            ];
-            duration = DRAG_TOTAL_DURATION;
-          } else if (isTargetCard) {
-            keyframes = [
-              { transform: fromTransform, offset: 0 },
-              { transform: fromTransform, offset: transferOffset },
-              {
-                transform: fromTransform,
-                offset: reorderOffset,
-                easing: DRAG_REORDER_EASING,
-              },
-              { transform: "translate(0, 0)", offset: 1 },
-            ];
-            duration = DRAG_TOTAL_DURATION;
-          } else if (
-            Math.abs(previous.top - next.top) >= 1 ||
-            Math.abs(previous.left - next.left) >= 1
-          ) {
-            keyframes = [
-              { transform: fromTransform },
-              { transform: "translate(0, 0)" },
-            ];
-          }
-          if (!keyframes) return;
-          layoutAnimationsRef.current.set(
-            card.dataset.taskId,
-            card.animate(keyframes, {
-              duration: motionDuration ?? duration,
+            ],
+            {
+              duration: motionDuration ?? DRAG_TOTAL_DURATION,
               easing: "linear",
               fill: "both",
               composite: "replace",
-            }),
-          );
-        });
+            },
+          ),
+        );
         pendingTransferRef.current = null;
         animateLayoutRef.current = false;
       } else if (
@@ -1520,7 +1545,7 @@ const Board = memo(function Board({
     dragState?.statusId,
     dragState?.insertAt,
     dropExit,
-    dropFeedback?.phase,
+    dropFeedback === null,
     tasks,
   ]);
   useEffect(() => {
@@ -1596,14 +1621,26 @@ const Board = memo(function Board({
       const canMove = shouldAttemptMove;
       const slotRect = getExitMetrics();
       if (canMove && dragState) {
-        pendingTransferRef.current = { id, statusId, slotRect, ready: false };
-        setDropFeedback({ id, statusId, phase: "loading" });
+        pendingTransferRef.current = {
+          id,
+          statusId,
+          slotRect,
+          insertAt: dragState.insertAt,
+          ready: false,
+        };
+        setDropFeedback({
+          id,
+          statusId,
+          insertAt: dragState.insertAt,
+          phase: "loading",
+        });
         setDropExit(null);
       } else if (dragState) {
         setDropExit({ ...dragState, isMove: false, slotRect });
       }
       setDragState(null);
       if (shouldAttemptMove) {
+        const dropStartedAt = performance.now();
         Promise.resolve(onMove(id, statusId)).then((success) => {
           const finish = () => {
             feedbackTimerRef.current = null;
@@ -1630,14 +1667,18 @@ const Board = memo(function Board({
               );
             }, 520);
           };
-          feedbackTimerRef.current = window.setTimeout(finish, 0);
+          const elapsed = performance.now() - dropStartedAt;
+          feedbackTimerRef.current = window.setTimeout(
+            finish,
+            Math.max(0, DRAG_MIN_LOADING_DURATION - elapsed),
+          );
         });
       }
     },
     [clearFeedbackTimers, dragState, getExitMetrics, onMove, tasks],
   );
   const clearDrag = useCallback(() => {
-    if (dragState)
+    if (dragState && !pendingTransferRef.current)
       setDropExit({ ...dragState, isMove: false, slotRect: getExitMetrics() });
     setDragState((current) => {
       if (!current) return current;
@@ -1649,6 +1690,10 @@ const Board = memo(function Board({
     <div className="board-grid" ref={boardRef}>
       {STATUSES.map((status) => {
         const items = tasks.filter((taskItem) => taskItem.status === status.id);
+        const hasActiveDropCard =
+          dropFeedback?.statusId === status.id &&
+          dropFeedback.insertAt !== undefined &&
+          pendingTransferRef.current?.slotRect;
         const visibleDropState = dragState || dropExit;
         const isExiting = !dragState && Boolean(dropExit);
         const hasExitMetrics = isExiting && visibleDropState.slotRect;
@@ -1688,7 +1733,13 @@ const Board = memo(function Board({
           >
             <div className="column-header">
               <div>
-                <span className={`column-marker marker-${status.tone}`} />
+                <StatusIcon
+                  status={status.id}
+                  className={`status-column-icon status-column-icon-${status.tone}`}
+                  size={17}
+                  strokeWidth={2.2}
+                  aria-hidden="true"
+                />
                 <h2>{status.label}</h2>
                 <span className="column-count">{items.length}</span>
               </div>
@@ -1718,6 +1769,15 @@ const Board = memo(function Board({
                     isDragging={dragState?.id === taskItem.id}
                     dropFeedback={
                       dropFeedback?.id === taskItem.id ? dropFeedback.phase : ""
+                    }
+                    style={
+                      hasActiveDropCard && taskItem.id === dropFeedback.id
+                        ? {
+                            "--drop-card-top": `${pendingTransferRef.current.slotRect.localTop}px`,
+                            "--drop-card-left": `${pendingTransferRef.current.slotRect.localLeft}px`,
+                            "--drop-card-width": `${pendingTransferRef.current.slotRect.width}px`,
+                          }
+                        : undefined
                     }
                     onDragStart={handleDragStart}
                     onDragEnd={clearDrag}
@@ -1867,7 +1927,13 @@ function MobileBoardList({
       {STATUSES.map((status) => (
         <section className="mobile-status-group" key={status.id}>
           <div className="mobile-status-heading">
-            <span className={`column-marker marker-${status.tone}`} />
+            <StatusIcon
+              status={status.id}
+              className={`status-column-icon status-column-icon-${status.tone}`}
+              size={17}
+              strokeWidth={2.2}
+              aria-hidden="true"
+            />
             <h2>{status.label}</h2>
             <span className="column-count">
               {tasksByStatus[status.id].length}
@@ -2976,6 +3042,7 @@ function TaskDrawerContent({
 }) {
   const [form, setForm] = useState(taskItem ? { ...taskItem } : null);
   const [comment, setComment] = useState("");
+  const [showAllComments, setShowAllComments] = useState(false);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
   const [isAddingSubtask, setIsAddingSubtask] = useState(false);
   const [subtaskToDelete, setSubtaskToDelete] = useState(null);
@@ -2993,6 +3060,8 @@ function TaskDrawerContent({
     [],
   );
   const draftAttachmentsRef = useRef([]);
+  const drawerBodyRef = useRef(null);
+  const commentExpansionAnchorRef = useRef(null);
   draftAttachmentsRef.current = draftAttachments;
   const assigneeOptions = useMemo(
     () => buildEmployeeAssigneeOptions(state.employees),
@@ -3011,6 +3080,8 @@ function TaskDrawerContent({
         : null,
     );
     setComment("");
+    setShowAllComments(false);
+    commentExpansionAnchorRef.current = null;
     setMentionActiveIndex(0);
     setNewSubtaskTitle("");
     setIsAddingSubtask(false);
@@ -3037,18 +3108,36 @@ function TaskDrawerContent({
     () => () => draftAttachmentsRef.current.forEach(releaseDraftAttachment),
     [],
   );
-  useEffect(() => {
-    const container = document.querySelector(
-      ".task-drawer .drawer-section:nth-of-type(2)",
-    );
-    if (container) container.scrollTop = container.scrollHeight;
-  }, [taskItem?.id, taskItem?.comments?.length]);
+  useLayoutEffect(() => {
+    const anchor = commentExpansionAnchorRef.current;
+    const container = drawerBodyRef.current;
+    if (!anchor || !container || !showAllComments) return;
+    container.scrollTop =
+      anchor.scrollTop + (container.scrollHeight - anchor.scrollHeight);
+    commentExpansionAnchorRef.current = null;
+  }, [showAllComments]);
   if (!taskItem || !form) return null;
   const setMentionActiveIndex = () => undefined;
   const subtasks = state.tasks.filter(
     (item) => item.parentTaskId === taskItem.id,
   );
   const history = [...(taskItem.history || [])].reverse();
+  const comments = taskItem.comments || [];
+  const visibleComments = showAllComments ? comments : comments.slice(-10);
+  const olderCommentsCount = comments.length - visibleComments.length;
+  const olderCommentsLabel = olderCommentsCount === 1
+    ? "mensagem anterior"
+    : "mensagens anteriores";
+  const expandComments = () => {
+    const container = drawerBodyRef.current;
+    if (container) {
+      commentExpansionAnchorRef.current = {
+        scrollTop: container.scrollTop,
+        scrollHeight: container.scrollHeight,
+      };
+    }
+    setShowAllComments(true);
+  };
   const mentionMatch = comment.match(/(?:^|[^\p{L}\p{N}_])@([^\s@]*)$/u);
   const mentionQuery = normalizeText(mentionMatch?.[1] || "");
   const mentionSuggestions = [];
@@ -3084,6 +3173,9 @@ function TaskDrawerContent({
     draftAttachments.length > 0 ||
     pendingAttachmentRemovals.length > 0;
   const currentDeadlineRole = deadlineRole(taskItem, currentEmployee);
+  const headerStatus = statusById(form.status);
+  const headerPriority = PRIORITIES.find((item) => item.id === form.priority) || PRIORITIES[1];
+  const headerDueDate = form.dueDate ? formatDate(form.dueDate) : "Sem prazo";
   const dueDateChanged =
     String(form.dueDate || "") !== String(taskItem.dueDate || "");
   const deadlineValidation = validateDeadlineChange({
@@ -3280,11 +3372,27 @@ function TaskDrawerContent({
           </div>
         )}
         <header className="drawer-header">
-          <div>
-            <span className="eyebrow">Detalhe da tarefa</span>
-            <span className="drawer-code">
-              {taskItem.quoteCode || "TAREFA"}
-            </span>
+          <div className="drawer-header-main">
+            <div className="drawer-header-title-row">
+              <span className="eyebrow">Detalhe da tarefa</span>
+              <span className="drawer-code">
+                {taskItem.quoteCode || "TAREFA"}
+              </span>
+            </div>
+            <div className="drawer-header-context" aria-label="Resumo da tarefa">
+              <span className={`drawer-context-item drawer-context-${headerStatus.tone}`}>
+                <i aria-hidden="true" />
+                {headerStatus.label}
+              </span>
+              <span className={`drawer-context-item drawer-context-${headerPriority.tone}`}>
+                <Flag size={12} aria-hidden="true" />
+                {headerPriority.label}
+              </span>
+              <span className="drawer-context-item drawer-context-date">
+                <CalendarDays size={12} aria-hidden="true" />
+                {headerDueDate}
+              </span>
+            </div>
           </div>
           <button
             className="icon-button"
@@ -3295,7 +3403,7 @@ function TaskDrawerContent({
             <X size={19} />
           </button>
         </header>
-        <div className="drawer-body">
+        <div className="drawer-body" ref={drawerBodyRef}>
           <div className="drawer-title">
             <label className="drawer-title-field" htmlFor={`task-title-${taskItem.id}`}>
               <span className="drawer-title-label">Título da tarefa</span>
@@ -3493,13 +3601,23 @@ function TaskDrawerContent({
             <div className="drawer-section-heading">
               <div className="comment-section-title">
                 <h3>Conversa da tarefa</h3>
-                <span className="section-count">{taskItem.comments.length}</span>
+                <span className="section-count">{comments.length}</span>
               </div>
               <span className="comment-section-helper">Atualizações e contexto</span>
             </div>
-            {taskItem.comments.length ? taskItem.comments.map((item) => (
+            {olderCommentsCount > 0 && (
+              <button
+                type="button"
+                className="comment-history-toggle"
+                onClick={expandComments}
+              >
+                <ChevronUp size={14} aria-hidden="true" />
+                Mostrar {olderCommentsCount} {olderCommentsLabel}
+              </button>
+            )}
+            {comments.length ? visibleComments.map((item, index) => (
               <article
-                className={`comment-row ${isOwnComment(item) ? "comment-own" : ""} ${item.syncStatus === "syncing" ? "item-syncing" : ""}`}
+                className={`comment-row ${showAllComments && index < olderCommentsCount ? "comment-row-history" : ""} ${isOwnComment(item) ? "comment-own" : ""} ${item.syncStatus === "syncing" ? "item-syncing" : ""}`}
                 key={item.id}
               >
                 <Avatar name={item.author} small />
@@ -3520,16 +3638,12 @@ function TaskDrawerContent({
               </div>
             )}
             <div className="comment-compose">
-              <div className="comment-compose-label">
-                <strong>Nova atualização</strong>
-                <span>Use <b>@</b> para mencionar alguém</span>
-              </div>
               <div className="comment-mention-field">
                 <textarea
                   value={comment}
                   onChange={(event) => setComment(event.target.value)}
                   onKeyDown={(event) => {
-                    if (event.ctrlKey && event.key === "Enter") {
+                    if (event.key === "Enter" && !event.shiftKey) {
                       event.preventDefault();
                       submitComment();
                     }
@@ -3566,11 +3680,8 @@ function TaskDrawerContent({
                 )}
               </div>
               <div className="comment-compose-footer">
-                <span className="comment-compose-hint"><AtSign size={13} aria-hidden="true" /> Mencione responsáveis para avisá-los</span>
-                <span className="comment-character-count">{comment.length}/1000</span>
-                <button className="button button-secondary comment-submit" disabled={!comment.trim()} onClick={submitComment}>
+                <button className="button button-secondary comment-submit" aria-label="Enviar comentário" title="Enviar comentário" disabled={!comment.trim()} onClick={submitComment}>
                   <Send size={14} aria-hidden="true" />
-                  Enviar atualização
                 </button>
               </div>
             </div>
@@ -3719,6 +3830,7 @@ function TaskDrawer({ task, onDelete, ...props }) {
 function NewTaskDrawer({ employees = [], onClose, onSave }) {
   const [form, setForm] = useState({
     title: "",
+    status: "todo",
     priority: "medium",
     assigneeName: [],
     teamName: "Comercial",
@@ -3866,6 +3978,13 @@ function NewTaskDrawer({ employees = [], onClose, onSave }) {
             </label>
           </div>
           <div className="drawer-field-grid new-task-quick-fields">
+            <div className="status-field">
+              <span className="status-field-label">Status</span>
+              <StatusPicker
+                value={form.status}
+                onChange={(value) => set("status", value)}
+              />
+            </div>
             <div className="priority-field">
               <span className="priority-field-label">Prioridade</span>
               <PriorityPicker
@@ -4865,6 +4984,8 @@ export default function App() {
           onCreate={() => setCreating(true)}
         />
       );
+    if (active === "quotes")
+      return <QuotesView state={state} onOpenTask={openTask} />;
     if (active === "board")
       return (
         <BoardView

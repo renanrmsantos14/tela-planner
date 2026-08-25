@@ -3,11 +3,11 @@ import React from "react";
 function normalizeProfiles(value) {
   const values = Array.isArray(value) ? value : String(value || "Não atribuído").split(/\s*,\s*/);
   const profiles = values.map((item) => typeof item === "object"
-    ? { id: item.id || item.userId || item.name, name: String(item.name || "").trim(), avatarUrl: item.avatarUrl || item.imageUrl || "" }
-    : { id: item, name: String(item || "").trim(), avatarUrl: "" })
+    ? { id: item.id || item.userId || item.name, name: String(item.name || "").trim() }
+    : { id: item, name: String(item || "").trim() })
     .filter((profile) => profile.name);
   const unique = [...new Map(profiles.map((profile) => [profile.id || profile.name, profile])).values()];
-  return unique.length ? unique : [{ id: "unassigned", name: "Não atribuído", avatarUrl: "" }];
+  return unique.length ? unique : [{ id: "unassigned", name: "Não atribuído" }];
 }
 
 function initials(name) {
@@ -16,7 +16,6 @@ function initials(name) {
 
 function Avatar({ profile, small, className = "" }) {
   return <span className={`avatar ${small ? "avatar-small" : ""} ${className}`.trim()} aria-hidden="true">
-    {profile.avatarUrl && <img className="avatar-image" src={profile.avatarUrl} alt="" onError={(event) => { event.currentTarget.style.display = "none"; }} />}
     <span className="avatar-initials">{initials(profile.name)}</span>
   </span>;
 }

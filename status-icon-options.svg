@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="180" viewBox="0 0 720 180" role="img" aria-labelledby="title desc">
+  <title id="title">Opções de ícone para Em andamento</title>
+  <desc id="desc">PlayCircle, CircleDot e ArrowRightCircle</desc>
+  <rect width="720" height="180" rx="18" fill="#f7f9fc"/>
+  <g fill="#fff" stroke="#dbe5f1">
+    <rect x="24" y="24" width="208" height="132" rx="14"/>
+    <rect x="256" y="24" width="208" height="132" rx="14"/>
+    <rect x="488" y="24" width="208" height="132" rx="14"/>
+  </g>
+  <g fill="none" stroke="#2159d2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="128" cy="78" r="26"/>
+    <path d="m122 66 18 12-18 12z" fill="#2159d2" stroke="none"/>
+    <circle cx="360" cy="78" r="26"/>
+    <circle cx="360" cy="78" r="7" fill="#2159d2"/>
+    <circle cx="592" cy="78" r="26"/>
+    <path d="M580 78h24m-10-10 10 10-10 10"/>
+  </g>
+  <g fill="#2f3437" font-family="Arial, sans-serif" font-size="15" font-weight="700" text-anchor="middle">
+    <text x="128" y="128">PlayCircle</text>
+    <text x="360" y="128">CircleDot</text>
+    <text x="592" y="128">ArrowRightCircle</text>
+  </g>
+</svg>

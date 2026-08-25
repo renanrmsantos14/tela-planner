@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { addOptimisticAttachment, addOptimisticComment, applyOptimisticTaskPatch, buildAssigneeOptions, buildOptimisticTask, buildTaskCreationInput, filterTasks, getDueBucket, isBlocked, isOverdue, mentionedEmployees, normalizeAssigneeNames, quoteTaskTitle, sortTasks, taskStats } from "../src/domain.js";
+import { addOptimisticAttachment, addOptimisticComment, applyOptimisticTaskPatch, buildAssigneeOptions, buildOptimisticTask, buildTaskCreationInput, filterTasks, getDueBucket, isOverdue, mentionedEmployees, normalizeAssigneeNames, quoteTaskTitle, sortTasks, taskStats } from "../src/domain.js";
 
 const tasks = [
   { id: "1", title: "Atrasada", quoteTitle: "Cotação A", assigneeName: "Marina", status: "todo", priority: "high", dueDate: "2026-08-01" },
@@ -79,14 +79,13 @@ test("mantém cada coluna em ordem crescente de prazo", () => {
   assert.deepEqual(sortTasks(sameColumn).map((item) => item.id), ["early", "late", "no-date"]);
 });
 
-test("filtra origem e bloqueio operacional", () => {
-  const qualityTask = { ...tasks[1], status: "waiting", sourceType: "quality", sourceLabel: "Erro operacional", blockedReason: "Aguardando terceiro" };
-  assert.equal(isBlocked(qualityTask), true);
-  assert.equal(filterTasks([tasks[0], qualityTask], { query: "", status: [], priority: [], source: ["quality"], blocked: true }).length, 1);
+test("filtra origem e status aguardando", () => {
+  const qualityTask = { ...tasks[1], status: "waiting", sourceType: "quality", sourceLabel: "Erro operacional" };
+  assert.equal(filterTasks([tasks[0], qualityTask], { query: "", status: ["waiting"], priority: [], source: ["quality"] }).length, 1);
 });
 
-test("monta responsáveis a partir dos funcionários carregados", () => {
-  assert.deepEqual(buildAssigneeOptions([{ name: "Marina Alves" }, { name: "Marina Alves" }, { name: "" }]), ["Não atribuído", "Marina Alves"]);
+test("monta responsáveis únicos em ordem alfabética", () => {
+  assert.deepEqual(buildAssigneeOptions([{ name: "Rafael Lima" }, { name: "Camila Torres" }, { name: "Camila Torres" }, { name: "" }]), ["Não atribuído", "Camila Torres", "Rafael Lima"]);
 });
 
 test("preserva vínculo manual de cotação sem deep-link", () => {

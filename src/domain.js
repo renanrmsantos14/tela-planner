@@ -61,7 +61,6 @@ export function buildOptimisticTask(input, parentTaskId = null) {
     sourceId: input.sourceId || quoteId,
     sourceCode: input.sourceCode || input.quoteCode || "",
     sourceLabel: input.sourceLabel || (quoteId ? "Pedido de cotação" : "Tarefa manual"),
-    blockedReason: input.blockedReason || "",
     parentTaskId,
     comments: [],
     attachments: [],
@@ -78,7 +77,16 @@ export function normalizeAssigneeNames(value) {
 }
 
 export function buildAssigneeOptions(employees = []) {
-  return ["Não atribuído", ...new Set(employees.map((employee) => String(employee?.name || "").trim()).filter(Boolean))];
+  const names = [...new Set(employees.map((employee) => String(employee?.name || "").trim()).filter(Boolean))]
+    .sort((left, right) => left.localeCompare(right, "pt-BR", { sensitivity: "base" }));
+  return ["Não atribuído", ...names];
+}
+
+// "Não atribuído" é o fallback exibido quando nenhum responsável está selecionado,
+// não um registro selecionável — por isso fica de fora das opções do seletor múltiplo.
+export function buildEmployeeAssigneeOptions(employees = []) {
+  return [...new Set(employees.map((employee) => String(employee?.name || "").trim()).filter(Boolean))]
+    .sort((left, right) => left.localeCompare(right, "pt-BR", { sensitivity: "base" }));
 }
 
 export function buildTaskCreationInput(input = {}) {
@@ -161,10 +169,6 @@ export function isDueToday(task, today = new Date()) {
   return getDueBucket(task, today) === "today";
 }
 
-export function isBlocked(task) {
-  return task.status === "waiting" && Boolean(String(task.blockedReason || "").trim());
-}
-
 export function formatDate(value) {
   if (!value) return "Sem prazo";
   return SHORT_DATE_FORMATTER.format(new Date(`${value}T12:00:00`)).replace(" de ", " ");
@@ -196,8 +200,7 @@ export function filterTasks(tasks, filters) {
     const taskAssignees = task.assigneeNames || normalizeAssigneeNames(task.assigneeName);
     const matchesAssignee = !assigneeValues.length || assigneeValues.some((value) => taskAssignees.includes(value));
     const matchesTeam = !filters.team || task.teamName === filters.team;
-    const matchesBlocked = !filters.blocked || isBlocked(task);
-    return matchesQuery && matchesStatus && matchesPriority && matchesSource && matchesAssignee && matchesTeam && matchesBlocked;
+    return matchesQuery && matchesStatus && matchesPriority && matchesSource && matchesAssignee && matchesTeam;
   });
 }
 

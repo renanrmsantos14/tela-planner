@@ -48,7 +48,7 @@
   --bt-color-danger-soft: var(--bt-color-red-100);
 
   /* font */
-  --bt-font-family-sans: "Manrope", "Segoe UI", sans-serif;
+  --bt-font-family-sans: "Manrope Variable", "Manrope", "Segoe UI", sans-serif;
   --bt-font-family-mono: "Consolas", "SFMono-Regular", monospace;
   --bt-font-weight-regular: 400;
   --bt-font-weight-medium: 500;

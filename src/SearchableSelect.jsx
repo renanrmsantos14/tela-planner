@@ -71,6 +71,40 @@ function viewportMetrics() {
   };
 }
 
+function referenceIsHidden(element, rect, viewport) {
+  const viewportTop = viewport.offsetTop;
+  const viewportBottom = viewport.offsetTop + viewport.height;
+  const viewportLeft = viewport.offsetLeft;
+  const viewportRight = viewport.offsetLeft + viewport.width;
+  if (
+    rect.bottom <= viewportTop ||
+    rect.top >= viewportBottom ||
+    rect.right <= viewportLeft ||
+    rect.left >= viewportRight
+  )
+    return true;
+
+  let ancestor = element.parentElement;
+  while (ancestor && ancestor !== document.body) {
+    const style = window.getComputedStyle(ancestor);
+    const clipsContent = `${style.overflow} ${style.overflowX} ${style.overflowY}`.match(
+      /(?:auto|scroll|hidden|clip)/,
+    );
+    if (clipsContent) {
+      const ancestorRect = ancestor.getBoundingClientRect();
+      if (
+        rect.bottom <= ancestorRect.top ||
+        rect.top >= ancestorRect.bottom ||
+        rect.right <= ancestorRect.left ||
+        rect.left >= ancestorRect.right
+      )
+        return true;
+    }
+    ancestor = ancestor.parentElement;
+  }
+  return false;
+}
+
 function focusAdjacentControl(trigger, direction) {
   const scope = trigger?.closest(
     "form, .dashboard-filters, .filter-surface, .form-stack",
@@ -160,7 +194,7 @@ export default function SearchableSelect({
     () => normalizedOptions.filter((option) => selectedValueSet.has(option.value)),
     [normalizedOptions, selectedValueSet],
   );
-  const selectedOption = selectedOptions[0] || normalizedOptions[0];
+  const selectedOption = selectedOptions[0];
   const normalizedQuery = useMemo(() => normalizeSearchText(query), [query]);
   const queryTokens = useMemo(
     () => searchTokens(normalizedQuery),
@@ -197,6 +231,11 @@ export default function SearchableSelect({
     const rect = triggerRef.current.getBoundingClientRect();
     const viewport = viewportMetrics();
     const safeInset = 8;
+    if (referenceIsHidden(triggerRef.current, rect, viewport)) {
+      setOpen(false);
+      optionRefs.current = [];
+      return;
+    }
     const availableWidth = Math.max(120, viewport.width - safeInset * 2);
     const width = Math.max(
       120,

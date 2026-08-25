@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="320" viewBox="0 0 900 320" role="img" aria-labelledby="title desc">
+  <title id="title">Ícones operacionais para Em andamento</title>
+  <desc id="desc">Cog, Wrench, Factory, Construction, Workflow e ClipboardPenLine</desc>
+  <rect width="900" height="320" rx="20" fill="#f7f9fc"/>
+  <g fill="#fff" stroke="#dbe5f1">
+    <rect x="24" y="24" width="270" height="120" rx="14"/><rect x="315" y="24" width="270" height="120" rx="14"/><rect x="606" y="24" width="270" height="120" rx="14"/>
+    <rect x="24" y="168" width="270" height="120" rx="14"/><rect x="315" y="168" width="270" height="120" rx="14"/><rect x="606" y="168" width="270" height="120" rx="14"/>
+  </g>
+  <g fill="none" stroke="#2159d2" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="159" cy="75" r="23"/><circle cx="159" cy="75" r="8"/><path d="M159 42v9m0 48v9m-33-33h9m48 0h9m-57-23 7 7m34 34 7 7m0-48-7 7m-34 34-7 7"/>
+    <path d="m437 55 18 18-12 12-18-18 12-12Zm-10 10-17 17m-4 4-8 18 18-8m-10-10 10 10"/>
+    <path d="M665 96V64h24V50h25v14h24v32m-73 0h73M665 82h12v14m16-14h12v14m16-14h12v14"/>
+    <path d="M104 110h48V76l20-16 20 16v34h18V92h25v18m-131-14h35m-35 12h35"/>
+    <circle cx="379" cy="75" r="9"/><circle cx="449" cy="75" r="9"/><circle cx="414" cy="105" r="9"/><path d="M388 78l17 19m18 0 17-19"/>
+    <rect x="703" y="52" width="40" height="52" rx="5"/><path d="M715 52v-7h16v7m-16 17h16m-16 12h16m-16 12h9"/>
+  </g>
+  <g fill="#2f3437" font-family="Arial, sans-serif" font-size="15" font-weight="700" text-anchor="middle">
+    <text x="159" y="130">Cog</text><text x="450" y="130">Wrench</text><text x="741" y="130">Factory</text>
+    <text x="159" y="274">Construction</text><text x="450" y="274">Workflow</text><text x="741" y="274">ClipboardPenLine</text>
+  </g>
+</svg>

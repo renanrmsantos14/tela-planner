@@ -79,37 +79,32 @@ test("bloqueia segunda tarefa principal ativa para a mesma cotação no mock", (
   );
 });
 
-test("preserva origem e bloqueio na tarefa criada", () => {
+test("preserva origem na tarefa criada", () => {
   withStorage();
-  const created = createTask(seedState(), { title: "Tratar ocorrência", sourceType: "quality", sourceId: "quality-1", sourceLabel: "Ação de qualidade", sourceCode: "QAL-1", blockedReason: "Aguardando evidência" });
+  const created = createTask(seedState(), { title: "Tratar ocorrência", sourceType: "quality", sourceId: "quality-1", sourceLabel: "Ação de qualidade", sourceCode: "QAL-1" });
   const task = created.tasks.at(-1);
   assert.equal(task.sourceType, "quality");
   assert.equal(task.sourceId, "quality-1");
-  assert.equal(task.blockedReason, "Aguardando evidência");
 });
 
-test("registra bloqueio, desbloqueio e conclusão no histórico mock", () => {
+test("registra aguardando e conclusão no histórico mock", () => {
   withStorage();
   const initial = seedState();
   const task = initial.tasks.find((item) => item.status === "todo");
-  const blocked = updateTask(initial, task.id, { status: "waiting", blockedReason: "Aguardando retorno" }).tasks.find((item) => item.id === task.id);
-  const unblocked = updateTask(blockedState(blocked), task.id, { status: "doing", blockedReason: "" }).tasks.find((item) => item.id === task.id);
-  const completed = updateTask(blockedState(unblocked), task.id, { status: "done", blockedReason: "" }).tasks.find((item) => item.id === task.id);
-  assert.ok(blocked.history.some((item) => item.text.includes("Bloqueio registrado")));
-  assert.ok(unblocked.history.some((item) => item.text === "Bloqueio removido."));
+  const waiting = updateTask(initial, task.id, { status: "waiting" }).tasks.find((item) => item.id === task.id);
+  const doing = updateTask({ ...initial, tasks: [waiting] }, task.id, { status: "doing" }).tasks.find((item) => item.id === task.id);
+  const completed = updateTask({ ...initial, tasks: [doing] }, task.id, { status: "done" }).tasks.find((item) => item.id === task.id);
+  assert.ok(waiting.history.some((item) => item.text === "Status alterado para Aguardando."));
   assert.ok(completed.history.some((item) => item.text === "Tarefa concluída."));
 });
 
-test("não salva aguardando sem motivo no mock", () => {
+test("salva aguardando sem motivo no mock", () => {
   withStorage();
   const initial = seedState();
   const task = initial.tasks.find((item) => item.status === "todo");
-  assert.throws(() => updateTask(initial, task.id, { status: "waiting" }), /motivo do bloqueio/);
+  const updated = updateTask(initial, task.id, { status: "waiting" }).tasks.find((item) => item.id === task.id);
+  assert.equal(updated.status, "waiting");
 });
-
-function blockedState(task) {
-  return { tasks: [task], quotes: [], employees: [], quality: [] };
-}
 
 test("semeia cenário operacional amplo e variado", () => {
   const state = seedState();
@@ -117,7 +112,7 @@ test("semeia cenário operacional amplo e variado", () => {
   assert.equal(state.tasks.length, 44);
   assert.equal(state.employees.length, 7);
   assert.equal(state.quality.length, 8);
-  assert.ok(state.tasks.some((item) => item.status === "waiting" && item.blockedReason));
+  assert.ok(state.tasks.some((item) => item.status === "waiting"));
   assert.ok(state.tasks.some((item) => item.sourceType === "quality"));
   assert.ok(state.tasks.some((item) => item.parentTaskId));
   assert.ok(state.tasks.some((item) => item.checklist.length >= 3));

@@ -11,6 +11,11 @@ const dateFromToday = (offset) => {
 
 const uid = (prefix) => `${prefix}-${Math.random().toString(36).slice(2, 9)}`;
 
+const MOCK_IMAGE_PREVIEWS = {
+  vehicle: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="960" height="640" viewBox="0 0 960 640"><rect width="960" height="640" fill="#dce7e8"/><rect y="390" width="960" height="250" fill="#b4c5c6"/><circle cx="150" cy="130" r="76" fill="#f5c56b"/><path d="M0 420 Q180 300 360 405 T720 380 T960 410 V640 H0Z" fill="#82999a"/><rect x="180" y="300" width="600" height="145" rx="28" fill="#172b35"/><path d="M270 300 L360 215 H600 L690 300Z" fill="#274753"/><rect x="385" y="235" width="185" height="62" rx="8" fill="#9bb8bd"/><circle cx="310" cy="450" r="58" fill="#15232a"/><circle cx="650" cy="450" r="58" fill="#15232a"/><circle cx="310" cy="450" r="25" fill="#ccd7d8"/><circle cx="650" cy="450" r="25" fill="#ccd7d8"/><text x="44" y="570" fill="#ffffff" font-family="Arial" font-size="30" font-weight="700">EVIDÊNCIA · VEÍCULO EXECUTIVO</text></svg>')}`,
+  document: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="960" height="640" viewBox="0 0 960 640"><rect width="960" height="640" fill="#f1eee8"/><rect x="225" y="62" width="510" height="516" rx="12" fill="#ffffff" stroke="#d4cbbd" stroke-width="5"/><rect x="275" y="125" width="260" height="22" rx="11" fill="#253d46"/><rect x="275" y="190" width="410" height="13" rx="6" fill="#d9d4cb"/><rect x="275" y="225" width="350" height="13" rx="6" fill="#d9d4cb"/><rect x="275" y="290" width="410" height="115" rx="9" fill="#e8f0ed"/><path d="M320 360 l48 -48 35 31 52 -59 77 81" fill="none" stroke="#2d796f" stroke-width="13"/><circle cx="590" cy="160" r="30" fill="#d9a441"/><text x="275" y="490" fill="#68777a" font-family="Arial" font-size="25">COMPROVANTE DE SERVIÇO</text></svg>')}`,
+};
+
 export function seedState() {
   const quotes = [
     { id: "quote-1008", code: "COT-1008", title: "Transfer executivo · Aeroporto GRU", client: "Grupo Horizonte", status: "Em análise", deadline: dateFromToday(0), value: "R$ 1.280,00" },
@@ -38,13 +43,13 @@ export function seedState() {
     task("task-4", "Selecionar motorista de apoio", "quote-1006", "COT-1006", "Carro blindado · Diretoria", "todo", "high", "João Mendes", "Operação", dateFromToday(1), "Separar duas opções de motorista habilitado.", "task-5"),
     task("task-5", "Montar cotação do carro blindado", "quote-1006", "COT-1006", "Carro blindado · Diretoria", "doing", "high", "Marina Alves", "Comercial", dateFromToday(1), "Compor o valor final com deslocamento e espera."),
     task("task-6", "Registrar resposta enviada", "quote-1005", "COT-1005", "Recepção de convidados · Congonhas", "done", "low", "Camila Torres", "Comercial", dateFromToday(-1), "Resposta enviada e registrada no histórico."),
-    task("task-7", "Validar causa do erro operacional", null, "QAL-204", "Atraso na confirmação do fornecedor", "waiting", "high", "Rafael Lima", "Qualidade", dateFromToday(1), "Confirmar causa e registrar ação corretiva.", null, { sourceType: "quality", sourceId: "quality-error-204", sourceLabel: "Erro operacional", sourceCode: "QAL-204", blockedReason: "Aguardando retorno do fornecedor" }),
+    task("task-7", "Validar causa do erro operacional", null, "QAL-204", "Atraso na confirmação do fornecedor", "waiting", "high", "Rafael Lima", "Qualidade", dateFromToday(1), "Confirmar causa e registrar ação corretiva.", null, { sourceType: "quality", sourceId: "quality-error-204", sourceLabel: "Erro operacional", sourceCode: "QAL-204" }),
     task("task-8", "Abrir ordem de serviço do roadshow", "quote-1004", "COT-1004", "Roadshow executivo · São Paulo e Campinas", "todo", "high", "Marina Alves", "Operação", dateFromToday(3), "Criar a OS com as quatro janelas de atendimento e pontos de apoio."),
     task("task-9", "Conferir rota São Paulo–Campinas", "quote-1004", "COT-1004", "Roadshow executivo · São Paulo e Campinas", "doing", "high", "João Mendes", "Operação", dateFromToday(2), "Validar pedágios, tempo de deslocamento e janela de retorno.", "task-8"),
-    task("task-10", "Solicitar dados dos passageiros", "quote-1004", "COT-1004", "Roadshow executivo · São Paulo e Campinas", "waiting", "medium", "Camila Torres", "Comercial", dateFromToday(1), "Consolidar nomes, celulares e restrições alimentares.", "task-8", { blockedReason: "Aguardando lista do cliente" }),
+    task("task-10", "Solicitar dados dos passageiros", "quote-1004", "COT-1004", "Roadshow executivo · São Paulo e Campinas", "waiting", "medium", "Camila Torres", "Comercial", dateFromToday(1), "Consolidar nomes, celulares e restrições alimentares.", "task-8"),
     task("task-11", "Confirmar credenciamento dos palestrantes", "quote-1003", "COT-1003", "Traslado de palestrantes · Expo Center Norte", "doing", "medium", "Camila Torres", "Comercial", dateFromToday(3), "Conferir horários de chegada e saída com produção."),
     task("task-12", "Reservar van de 15 lugares", "quote-1003", "COT-1003", "Traslado de palestrantes · Expo Center Norte", "todo", "high", "Rafael Lima", "Operação", dateFromToday(2), "Bloquear veículo com porta-malas compatível com equipamentos.", "task-11"),
-    task("task-13", "Revisar diária em Alphaville", "quote-1002", "COT-1002", "Disposição diária · Alphaville", "waiting", "medium", "Marina Alves", "Financeiro", dateFromToday(4), "Recalcular hora extra e franquia de quilometragem.", null, { blockedReason: "Aguardando tabela atualizada do parceiro" }),
+    task("task-13", "Revisar diária em Alphaville", "quote-1002", "COT-1002", "Disposição diária · Alphaville", "waiting", "medium", "Marina Alves", "Financeiro", dateFromToday(4), "Recalcular hora extra e franquia de quilometragem."),
     task("task-14", "Validar motorista bilíngue", "quote-1001", "COT-1001", "Transfer internacional · GRU–Faria Lima", "todo", "high", "João Mendes", "Operação", dateFromToday(1), "Confirmar inglês fluente e experiência com passageiros estrangeiros."),
     task("task-15", "Enviar condições comerciais", "quote-0998", "COT-0998", "Transfer para conselho · Itaim Bibi", "doing", "high", "Marina Alves", "Comercial", dateFromToday(0), "Enviar proposta com política de espera e cancelamento."),
     task("task-16", "Registrar aceite do cliente", "quote-0999", "COT-0999", "Transporte de equipe · Guarujá", "done", "medium", "Camila Torres", "Comercial", dateFromToday(-2), "Aceite registrado por e-mail e repassado para a operação."),
@@ -81,7 +86,7 @@ export function seedState() {
   tasks.push(
     task("task-40", "Revisar pendências prioritárias do dia", null, "OPS-040", "Rotina operacional interna", "doing", "high", "Renan Martins", "Comercial", dateFromToday(0), "Consolidar pendências críticas, cobrar responsáveis e registrar próximos passos."),
     task("task-41", "Aprovar mensagem para cliente estratégico", "quote-1004", "COT-1004", "Roadshow executivo · São Paulo e Campinas", "todo", "high", "Renan Martins", "Comercial", dateFromToday(1), "Validar texto final antes do envio ao cliente e registrar a decisão.", "task-40"),
-    task("task-42", "Acompanhar retorno do fornecedor", "quote-1007", "COT-1007", "Van executiva · Evento corporativo", "waiting", "medium", ["Renan Martins", "Rafael Lima"], "Operação", dateFromToday(1), "Cobrar disponibilidade da segunda van e atualizar a equipe.", null, { blockedReason: "Aguardando confirmação do parceiro" }),
+    task("task-42", "Acompanhar retorno do fornecedor", "quote-1007", "COT-1007", "Van executiva · Evento corporativo", "waiting", "medium", ["Renan Martins", "Rafael Lima"], "Operação", dateFromToday(1), "Cobrar disponibilidade da segunda van e atualizar a equipe."),
     task("task-43", "Revisar comentário da ocorrência QAL-205", null, "QAL-205", "Divergência de quilometragem faturada", "todo", "medium", "Renan Martins", "Qualidade", dateFromToday(2), "Ler evidências, validar a tratativa e encaminhar decisão.", null, { sourceType: "quality", sourceId: "quality-error-205", sourceLabel: "Erro operacional", sourceCode: "QAL-205" }),
     task("task-44", "Confirmar fechamento semanal", null, "OPS-044", "Rotina operacional interna", "done", "low", "Renan Martins", "Financeiro", dateFromToday(-1), "Conferir se todas as tarefas críticas têm evidência e responsável."),
   );
@@ -90,16 +95,28 @@ export function seedState() {
     const item = tasks.find((taskItem) => taskItem.id === id);
     if (!item) return;
     item.comments = comments.map((text, index) => ({ id: `${id}-comment-${index + 1}`, text, createdAt: seedNow, author: index ? "Rafael Lima" : "Camila Torres" }));
-    item.attachments = attachments.map((name, index) => ({ id: `${id}-file-${index + 1}`, name, createdAt: seedNow }));
+    item.attachments = attachments.map((attachment, index) => {
+      const input = typeof attachment === "string" ? { name: attachment } : attachment;
+      return { id: `${id}-file-${index + 1}`, name: input.name, mimeType: input.mimeType || "", size: input.size || 0, previewUrl: input.previewUrl || "", createdAt: seedNow };
+    });
     item.history = [...item.history, ...history.map((text, index) => ({ id: `${id}-history-${index + 1}`, text, createdAt: seedNow, author: index ? "Sistema" : "Marina Alves" }))];
   };
   enrichTask("task-1", ["Cliente pediu confirmação da janela de embarque antes do envio.", "Margem revisada; falta apenas validar a política de espera."], ["briefing-grupo-horizonte.pdf", "composicao-cotacao-1008.xlsx"], ["Responsável alterado para Marina Alves.", "Cotação vinculada ao Planner."]);
-  enrichTask("task-7", ["Fornecedor informou indisponibilidade do veículo originalmente reservado."], ["registro-contato-fornecedor.msg"], ["Ocorrência QAL-204 convertida em tarefa.", "Tarefa marcada como aguardando."]);
+  enrichTask("task-7", ["Fornecedor informou indisponibilidade do veículo originalmente reservado."], ["registro-contato-fornecedor.msg", { name: "foto-veiculo-executivo.svg", mimeType: "image/svg+xml", size: 184320, previewUrl: MOCK_IMAGE_PREVIEWS.vehicle }, { name: "comprovante-contato.svg", mimeType: "image/svg+xml", size: 97280, previewUrl: MOCK_IMAGE_PREVIEWS.document }], ["Ocorrência QAL-204 convertida em tarefa.", "Tarefa marcada como aguardando."]);
   enrichTask("task-22", ["Escala inicial aprovada pela coordenação."], ["escala-convencao-v1.xlsx"], ["Tarefa iniciada pela operação."]);
   enrichTask("task-35", [], ["relatorio-quilometragem.pdf"], ["Prazo ultrapassado; necessário registrar tratativa."]);
   enrichTask("task-40", ["Vou consolidar este quadro antes da reunião das 16h.", "Rafael, preciso do retorno do parceiro até o fim do dia."], ["pendencias-operacionais-2026-08-17.xlsx"], ["Tarefa atribuída ao usuário do cenário local."]);
   enrichTask("task-41", ["Mensagem revisada pelo Comercial; aguardando aprovação final."], [], ["Criada como subtarefa da revisão diária."]);
   enrichTask("task-43", ["Evidência disponível no relatório de quilometragem."], ["relatorio-quilometragem-qal-205.pdf"], ["Vinculada à ocorrência QAL-205."]);
+  const mockAttachmentVariants = [
+    { name: "evidencia-operacional.svg", mimeType: "image/svg+xml", size: 121856, previewUrl: MOCK_IMAGE_PREVIEWS.vehicle },
+    { name: "comprovante-servico.svg", mimeType: "image/svg+xml", size: 106496, previewUrl: MOCK_IMAGE_PREVIEWS.document },
+  ];
+  const attachmentTargetCount = Math.ceil(tasks.length / 2);
+  const tasksWithAttachments = tasks.filter((item) => item.attachments.length).length;
+  tasks.filter((item) => !item.attachments.length).slice(0, Math.max(0, attachmentTargetCount - tasksWithAttachments)).forEach((item, index) => {
+    item.attachments.push({ id: `${item.id}-file-mock`, ...mockAttachmentVariants[index % mockAttachmentVariants.length], createdAt: seedNow });
+  });
   const addChecklist = (id, items) => {
     const item = tasks.find((taskItem) => taskItem.id === id);
     if (item) item.checklist = items.map((title, index) => ({ id: `${id}-check-${index + 1}`, title, done: index === items.length - 1 }));
@@ -140,7 +157,7 @@ function task(id, title, quoteId, quoteCode, quoteTitle, status, priority, assig
   const assigneeNames = normalizeAssigneeNames(assigneeName);
   return {
     id, title, parentTaskId, quoteId, quoteCode, quoteTitle, status, priority, assigneeNames, assigneeName: assigneeNames.join(", "), teamName, dueDate,
-    description, checklist: context.checklist || [], labels: [quoteCode], sourceType: quoteId ? "quote" : "manual", sourceId: quoteId, sourceLabel: quoteId ? "Pedido de cotação" : "Tarefa manual", sourceCode: quoteCode, blockedReason: "", ...context, comments: context.comments || [], attachments: context.attachments || [],
+    description, checklist: context.checklist || [], labels: [quoteCode], sourceType: quoteId ? "quote" : "manual", sourceId: quoteId, sourceLabel: quoteId ? "Pedido de cotação" : "Tarefa manual", sourceCode: quoteCode, ...context, comments: context.comments || [], attachments: context.attachments || [],
     history: context.history || [{ id: uid("history"), text: "Tarefa criada no cenário de demonstração.", createdAt: new Date().toISOString(), author: "Sistema" }],
   };
 }

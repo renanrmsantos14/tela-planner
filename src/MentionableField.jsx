@@ -15,9 +15,21 @@ function mentionLabel(employee) {
   return employee?.apelido || employee?.name || "Sem nome";
 }
 
-function mentionSubtitle(employee) {
-  if (employee?.apelido && employee?.name && employee.apelido !== employee.name) return employee.name;
-  return employee?.subtitle || "Mencionar";
+function sortMentionPeople(people, query) {
+  const normalizedQuery = normalize(query);
+  return [...people].sort((left, right) => {
+    const leftSearch = normalize(mentionSearchText(left));
+    const rightSearch = normalize(mentionSearchText(right));
+    const startsWithDifference =
+      Number(!leftSearch.startsWith(normalizedQuery)) -
+      Number(!rightSearch.startsWith(normalizedQuery));
+    if (startsWithDifference) return startsWithDifference;
+    return normalize(mentionLabel(left)).localeCompare(
+      normalize(mentionLabel(right)),
+      "pt-BR",
+      { sensitivity: "base" },
+    );
+  });
 }
 
 export function getMentionContext(value, caret = String(value || "").length) {
@@ -35,9 +47,10 @@ export function MentionableField({ value, onChange, employees = [], multiline = 
   const suggestions = useMemo(() => {
     if (!context) return [];
     const query = normalize(context.query);
-    const people = employees
-      .filter((employee) => normalize(mentionSearchText(employee)).includes(query))
-      .sort((left, right) => Number(normalize(mentionSearchText(right)).startsWith(query)) - Number(normalize(mentionSearchText(left)).startsWith(query)));
+    const people = sortMentionPeople(
+      employees.filter((employee) => normalize(mentionSearchText(employee)).includes(query)),
+      query,
+    );
     const globalMatches = !query || "all".includes(query) || "todos".includes(query);
     return globalMatches ? [ALL_MENTION, ...people] : people;
   }, [context?.query, employees]);
@@ -74,7 +87,7 @@ export function MentionableField({ value, onChange, employees = [], multiline = 
   const Field = multiline ? "textarea" : "input";
   return <div className={`mentionable-field ${className}`}>
     <Field ref={inputRef} value={value} onChange={updateCaret} onClick={(event) => setCaret(event.target.selectionStart ?? value.length)} onKeyUp={(event) => setCaret(event.target.selectionStart ?? value.length)} onKeyDown={handleKeyDown} placeholder={placeholder} aria-label={ariaLabel} aria-autocomplete="list" aria-expanded={suggestions.length > 0} rows={rows} {...props} />
-    {suggestions.length > 0 && <div className="mention-suggestions" role="listbox" aria-label="Pessoas para mencionar">{suggestions.map((mention, index) => <button type="button" className={`mention-suggestion ${index === activeIndex ? "is-active" : ""}`} key={mention.id || mention.name} aria-selected={index === activeIndex} onMouseDown={(event) => event.preventDefault()} onClick={() => insertMention(mention)}><MentionAvatar name={mentionLabel(mention)} small /><span>{mentionLabel(mention)}</span><small>{mentionSubtitle(mention)}</small></button>)}</div>}
+    {suggestions.length > 0 && <div className="mention-suggestions" role="listbox" aria-label="Pessoas para mencionar">{suggestions.map((mention, index) => <button type="button" className={`mention-suggestion ${index === activeIndex ? "is-active" : ""}`} key={mention.id || mention.name} aria-selected={index === activeIndex} onMouseDown={(event) => event.preventDefault()} onClick={() => insertMention(mention)}><MentionAvatar name={mentionLabel(mention)} small /><span>{mentionLabel(mention)}</span></button>)}</div>}
   </div>;
 }
 
@@ -91,7 +104,10 @@ export function GlobalMentionController({ employees = [] }) {
     const context = getMentionContext(element.value, element.selectionStart ?? element.value.length);
     if (!context) { setActive(null); return; }
     const query = normalize(context.query);
-    const people = employees.filter((employee) => normalize(mentionSearchText(employee)).includes(query));
+    const people = sortMentionPeople(
+      employees.filter((employee) => normalize(mentionSearchText(employee)).includes(query)),
+      query,
+    );
     const suggestions = (!query || "all".includes(query) || "todos".includes(query)) ? [ALL_MENTION, ...people] : people;
     setActive({ element, context, suggestions, rect: element.getBoundingClientRect() });
   };
@@ -108,7 +124,7 @@ export function GlobalMentionController({ employees = [] }) {
     document.addEventListener("keydown", onKeyDown, true); return () => document.removeEventListener("keydown", onKeyDown, true);
   }, [active, index]);
   if (!active?.suggestions.length || typeof document === "undefined") return null;
-  return createPortal(<div className="mention-suggestions mention-suggestions-global" style={{ top: active.rect.bottom + 7, left: active.rect.left, width: active.rect.width }} role="listbox" aria-label="Pessoas para mencionar">{active.suggestions.map((mention, itemIndex) => <button type="button" className={`mention-suggestion ${itemIndex === index ? "is-active" : ""}`} key={mention.id || mention.name} onMouseDown={(event) => event.preventDefault()} onClick={() => { active.element.focus(); active.element.setSelectionRange(active.context.start, active.context.start + active.context.query.length + 1); active.element.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true })); }}><MentionAvatar name={mentionLabel(mention)} small /><span>{mentionLabel(mention)}</span><small>{mentionSubtitle(mention)}</small></button>)}</div>, document.body);
+  return createPortal(<div className="mention-suggestions mention-suggestions-global" style={{ top: active.rect.bottom + 7, left: active.rect.left, width: active.rect.width }} role="listbox" aria-label="Pessoas para mencionar">{active.suggestions.map((mention, itemIndex) => <button type="button" className={`mention-suggestion ${itemIndex === index ? "is-active" : ""}`} key={mention.id || mention.name} onMouseDown={(event) => event.preventDefault()} onClick={() => { active.element.focus(); active.element.setSelectionRange(active.context.start, active.context.start + active.context.query.length + 1); active.element.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true })); }}><MentionAvatar name={mentionLabel(mention)} small /><span>{mentionLabel(mention)}</span></button>)}</div>, document.body);
 }
 
 export function useMentionController(employees = []) {
@@ -120,22 +136,46 @@ export function useMentionController(employees = []) {
     menu.setAttribute("role", "listbox");
     document.body.appendChild(menu);
     const close = () => { active = null; menu.replaceChildren(); menu.hidden = true; };
+    const positionMenu = () => {
+      if (!active) return;
+      const rect = active.element.getBoundingClientRect();
+      const gap = 7;
+      const viewportPadding = 8;
+      menu.hidden = false;
+      const menuHeight = Math.min(menu.scrollHeight, 260);
+      const menuWidth = Math.min(rect.width, window.innerWidth - viewportPadding * 2);
+      const isOutsideViewport = rect.bottom < viewportPadding || rect.top > window.innerHeight - viewportPadding;
+      if (isOutsideViewport) {
+        menu.hidden = true;
+        return;
+      }
+      const hasRoomBelow = rect.bottom + gap + menuHeight <= window.innerHeight - viewportPadding;
+      const top = hasRoomBelow ? rect.bottom + gap : Math.max(viewportPadding, rect.top - gap - menuHeight);
+      const left = Math.min(Math.max(viewportPadding, rect.left), window.innerWidth - menuWidth - viewportPadding);
+      menu.hidden = false;
+      menu.style.top = `${top}px`;
+      menu.style.left = `${left}px`;
+      menu.style.width = `${menuWidth}px`;
+    };
     const refresh = () => {
       const element = document.activeElement;
       if (!element || !["INPUT", "TEXTAREA"].includes(element.tagName) || element.readOnly || element.disabled) return close();
       const context = getMentionContext(element.value, element.selectionStart ?? element.value.length);
       if (!context) return close();
       const query = normalize(context.query);
-      const people = employees.filter((employee) => normalize(mentionSearchText(employee)).includes(query));
+      const people = sortMentionPeople(
+        employees.filter((employee) => normalize(mentionSearchText(employee)).includes(query)),
+        query,
+      );
       const suggestions = (!query || "all".includes(query) || "todos".includes(query)) ? [ALL_MENTION, ...people] : people;
       if (!suggestions.length) return close();
-      active = { element, context, suggestions }; index = Math.min(index, suggestions.length - 1); menu.hidden = false;
-      const rect = element.getBoundingClientRect(); menu.style.top = `${rect.bottom + 7}px`; menu.style.left = `${rect.left}px`; menu.style.width = `${rect.width}px`;
-      menu.replaceChildren(...suggestions.map((mention, itemIndex) => { const button = document.createElement("button"); button.type = "button"; button.className = `mention-suggestion ${itemIndex === index ? "is-active" : ""}`; button.textContent = `${mentionLabel(mention)} · ${mentionSubtitle(mention)}`; button.onmousedown = (event) => event.preventDefault(); button.onclick = () => choose(mention); return button; }));
+      active = { element, context, suggestions }; index = Math.min(index, suggestions.length - 1);
+      menu.replaceChildren(...suggestions.map((mention, itemIndex) => { const button = document.createElement("button"); button.type = "button"; button.className = `mention-suggestion ${itemIndex === index ? "is-active" : ""}`; button.textContent = mentionLabel(mention); button.setAttribute("aria-selected", itemIndex === index ? "true" : "false"); button.onmousedown = (event) => event.preventDefault(); button.onclick = () => choose(mention); return button; }));
+      positionMenu();
     };
     const choose = (mention) => { if (!active) return; const { element, context } = active; const caret = element.selectionStart ?? element.value.length; const token = mention.token || mentionLabel(mention); const next = `${element.value.slice(0, context.start)}@${token} ${element.value.slice(caret)}`; const setter = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(element), "value")?.set; setter?.call(element, next); element.dispatchEvent(new Event("input", { bubbles: true })); element.focus(); const nextCaret = context.start + token.length + 2; element.setSelectionRange(nextCaret, nextCaret); close(); };
     const onKeyDown = (event) => { if (!active || event.target !== active.element || !active.suggestions.length) return; if (event.key === "ArrowDown" || event.key === "ArrowUp") { event.preventDefault(); index = (index + (event.key === "ArrowDown" ? 1 : -1) + active.suggestions.length) % active.suggestions.length; refresh(); } else if (event.key === "Enter" || event.key === "Tab") { event.preventDefault(); choose(active.suggestions[index]); } };
-    document.addEventListener("input", refresh, true); document.addEventListener("keyup", refresh, true); document.addEventListener("click", refresh, true); document.addEventListener("keydown", onKeyDown, true);
-    return () => { document.removeEventListener("input", refresh, true); document.removeEventListener("keyup", refresh, true); document.removeEventListener("click", refresh, true); document.removeEventListener("keydown", onKeyDown, true); menu.remove(); };
+    document.addEventListener("input", refresh, true); document.addEventListener("keyup", refresh, true); document.addEventListener("click", refresh, true); document.addEventListener("keydown", onKeyDown, true); window.addEventListener("scroll", positionMenu, true); window.addEventListener("resize", positionMenu);
+    return () => { document.removeEventListener("input", refresh, true); document.removeEventListener("keyup", refresh, true); document.removeEventListener("click", refresh, true); document.removeEventListener("keydown", onKeyDown, true); window.removeEventListener("scroll", positionMenu, true); window.removeEventListener("resize", positionMenu); menu.remove(); };
   }, [employees]);
 }
