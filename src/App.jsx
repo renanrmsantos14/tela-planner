@@ -633,21 +633,22 @@ function NotificationsPanel({
             <X size={18} />
           </button>
         </header>
-        <div className="notification-panel-actions">
-          <span className="notification-action-summary" aria-live="polite">
-            {unread ? `${unread} \u00e3o lida${unread === 1 ? "" : "s"}` : "Tudo lido"}
-          </span>
-          <button
-            className="notification-mark-all"
-            type="button"
-            onClick={onMarkAllRead}
-            disabled={!unread}
-            aria-label="Marcar todas como lidas"
-          >
-            <Check size={14} strokeWidth={2.2} aria-hidden="true" />
-            <span>Marcar todas</span>
-          </button>
-        </div>
+        {unread > 0 && (
+          <div className="notification-panel-actions">
+            <span className="notification-action-summary" aria-live="polite">
+              {`${unread} não lida${unread === 1 ? "" : "s"}`}
+            </span>
+            <button
+              className="notification-mark-all"
+              type="button"
+              onClick={onMarkAllRead}
+              aria-label="Marcar todas como lidas"
+            >
+              <Check size={14} strokeWidth={2.2} aria-hidden="true" />
+              <span>Marcar todas</span>
+            </button>
+          </div>
+        )}
         <div className="notification-filters" role="tablist" aria-label="Filtrar notificações">
           {filterOptions.map((filter) => {
             const Icon = filter.icon;
