@@ -793,13 +793,6 @@ function AppShell({
           </button>
         ))}
       </nav>
-      <button
-        className="mobile-fab"
-        onClick={onCreate}
-        aria-label="Criar nova tarefa"
-      >
-        <Plus size={22} />
-      </button>
       {notificationsOpen && (
         <NotificationsPanel
           notifications={notifications}
