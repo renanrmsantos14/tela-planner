@@ -29,6 +29,7 @@ import {
   FileImage,
   FileSpreadsheet,
   FileText,
+  Flag,
   LayoutDashboard,
   ListFilter,
   LoaderCircle,
@@ -329,6 +330,81 @@ function InputSelect({
       options={normalizedOptions}
       onQueryChange={remoteSearch}
     />
+  );
+}
+
+function PriorityPicker({ value, onChange }) {
+  const selectedItem =
+    PRIORITIES.find((item) => item.id === value) || PRIORITIES[0];
+  return (
+    <div
+      className="priority-picker"
+      role="group"
+      aria-label={`Prioridade atual: ${selectedItem.label}`}
+    >
+      <div className="priority-picker-options">
+        {PRIORITIES.map((item) => {
+          const isSelected = value === item.id;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              className={`priority-option priority-option-${item.tone}${isSelected ? " is-selected" : ""}`}
+              aria-label={item.label}
+              aria-pressed={isSelected}
+              title={item.label}
+              onClick={() => onChange(item.id)}
+            >
+              <Flag size={18} strokeWidth={2.2} aria-hidden="true" />
+            </button>
+          );
+        })}
+      </div>
+      <span className={`priority-picker-current priority-current-${selectedItem.tone}`}>
+        {selectedItem.label}
+      </span>
+    </div>
+  );
+}
+
+function StatusPicker({ value, onChange }) {
+  const selectedItem =
+    STATUSES.find((item) => item.id === value) || STATUSES[0];
+  const selectedTone = selectedItem.tone;
+  return (
+    <div
+      className="status-picker"
+      role="group"
+      aria-label={`Status atual: ${selectedItem.label}`}
+    >
+      <div className="status-picker-options">
+        {STATUSES.map((item) => {
+          const Icon = {
+            todo: ClipboardList,
+            doing: LoaderCircle,
+            waiting: Clock3,
+            done: CheckCircle2,
+          }[item.id] || ClipboardList;
+          const isSelected = value === item.id;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              className={`status-option status-option-${item.tone}${isSelected ? " is-selected" : ""}`}
+              aria-label={item.label}
+              aria-pressed={isSelected}
+              title={item.label}
+              onClick={() => onChange(item.id)}
+            >
+              <Icon size={18} strokeWidth={2.2} aria-hidden="true" />
+            </button>
+          );
+        })}
+      </div>
+      <span className={`status-picker-current status-current-${selectedTone}`}>
+        {selectedItem.label}
+      </span>
+    </div>
   );
 }
 
@@ -3088,22 +3164,20 @@ function TaskDrawerContent({
             </button>
           )}
           <div className="drawer-field-grid">
-            <label>
-              Status
-              <InputSelect
+            <div className="status-field">
+              <span className="status-field-label">Status</span>
+              <StatusPicker
                 value={form.status}
                 onChange={(value) => set("status", value)}
-                options={STATUS_OPTIONS}
               />
-            </label>
-            <label>
-              Prioridade
-              <InputSelect
+            </div>
+            <div className="priority-field">
+              <span className="priority-field-label">Prioridade</span>
+              <PriorityPicker
                 value={form.priority}
                 onChange={(value) => set("priority", value)}
-                options={PRIORITY_OPTIONS}
               />
-            </label>
+            </div>
             <label>
               Responsável
               <InputSelect
@@ -3632,14 +3706,13 @@ function NewTaskDrawer({ employees = [], onClose, onSave }) {
             </label>
           </div>
           <div className="drawer-field-grid new-task-quick-fields">
-            <label>
-              Prioridade
-              <InputSelect
+            <div className="priority-field">
+              <span className="priority-field-label">Prioridade</span>
+              <PriorityPicker
                 value={form.priority}
                 onChange={(value) => set("priority", value)}
-                options={PRIORITY_OPTIONS}
               />
-            </label>
+            </div>
             <label>
               Responsável
               <InputSelect
