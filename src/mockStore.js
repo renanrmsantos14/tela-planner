@@ -202,7 +202,7 @@ export function updateTask(state, id, patch) {
     patch.assigneeNames !== undefined && JSON.stringify(normalizeAssigneeNames(patch.assigneeNames)) !== JSON.stringify(normalizeAssigneeNames(existing.assigneeNames)) ? "assignees" : "",
   ].filter(Boolean);
   const notifications = [...(state.notifications || [])];
-  changes.forEach((type) => notificationRecipients({ type, creatorEmployeeId: existing.creatorEmployeeId, assigneeIds: next.assigneeIds || employeeIdsByNames(state.employees, next.assigneeNames), previousAssigneeIds: existing.assigneeIds || employeeIdsByNames(state.employees, existing.assigneeNames), actorEmployeeId: patch.actorEmployeeId }).forEach((recipientEmployeeId) => {
+  changes.forEach((type) => notificationRecipients({ type, creatorEmployeeId: existing.creatorEmployeeId, assigneeIds: next.assigneeIds || employeeIdsByNames(state.employees, next.assigneeNames), previousAssigneeIds: existing.assigneeIds || employeeIdsByNames(state.employees, existing.assigneeNames), nextStatus: next.status, actorEmployeeId: patch.actorEmployeeId }).forEach((recipientEmployeeId) => {
     const eventId = uid("event");
     notifications.unshift({ id: uid("notification"), taskId: id, recipientEmployeeId, type, title: type === "deadline" ? "Prazo alterado" : type === "status" ? "Status alterado" : "Responsáveis alterados", message: next.title, occurredAt: new Date().toISOString(), readAt: "", dedupeKey: notificationDedupeKey({ recipientId: recipientEmployeeId, taskId: id, type, eventId }) });
   }));

@@ -25,7 +25,9 @@ test("criador altera prazo sem motivo e responsável exige motivo", () => {
 
 test("destinatários removem ator, duplicados e atribuições antigas", () => {
   assert.deepEqual(notificationRecipients({ type: "assignment", assigneeIds: ["a", "b"], previousAssigneeIds: ["a"], actorEmployeeId: "x" }), ["b"]);
-  assert.deepEqual(notificationRecipients({ type: "status", creatorEmployeeId: "c", assigneeIds: ["a", "b"], previousAssigneeIds: ["a"], actorEmployeeId: "a" }), ["c", "b"]);
+  assert.deepEqual(notificationRecipients({ type: "status", creatorEmployeeId: "c", assigneeIds: ["a", "b"], previousAssigneeIds: ["a"], nextStatus: "done", actorEmployeeId: "a" }), ["c", "b"]);
+  assert.deepEqual(notificationRecipients({ type: "status", creatorEmployeeId: "c", assigneeIds: ["a", "b"], previousAssigneeIds: ["a"], nextStatus: "doing", actorEmployeeId: "a" }), []);
+  assert.deepEqual(notificationRecipients({ type: "assignees", assigneeIds: ["a", "b"], previousAssigneeIds: ["a", "c"], actorEmployeeId: "a" }), ["b", "c"]);
   assert.deepEqual(notificationRecipients({ type: "mention", mentionedEmployeeIds: ["a", "a", "b"], actorEmployeeId: "b" }), ["a"]);
 });
 

@@ -41,11 +41,20 @@ export function validateDeadlineChange({ task, employee, nextDueDate, reason }) 
   return { allowed: false, role, requiresReason: false, error: "Somente o criador ou um responsável pode alterar o prazo." };
 }
 
-export function notificationRecipients({ creatorEmployeeId, assigneeIds = [], mentionedEmployeeIds = [], previousAssigneeIds = [], type, actorEmployeeId }) {
+export function notificationRecipients({ creatorEmployeeId, assigneeIds = [], mentionedEmployeeIds = [], previousAssigneeIds = [], nextStatus = "", type, actorEmployeeId }) {
   const actor = cleanId(actorEmployeeId);
   let values = [];
   if (type === "assignment") values = assigneeIds.filter((id) => !previousAssigneeIds.some((oldId) => cleanId(oldId) === cleanId(id)));
   else if (type === "mention") values = mentionedEmployeeIds;
+  else if (type === "status") values = ["done", "waiting"].includes(nextStatus) ? [creatorEmployeeId, ...assigneeIds] : [];
+  else if (type === "assignees") {
+    const current = new Set(assigneeIds.map(cleanId));
+    const previous = new Set(previousAssigneeIds.map(cleanId));
+    values = [
+      ...assigneeIds.filter((id) => !previous.has(cleanId(id))),
+      ...previousAssigneeIds.filter((id) => !current.has(cleanId(id))),
+    ];
+  }
   else values = [creatorEmployeeId, ...assigneeIds, ...previousAssigneeIds];
   return [...new Map(values.filter(Boolean).map((id) => [cleanId(id), id])).entries()]
     .filter(([key]) => key !== actor)

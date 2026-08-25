@@ -486,6 +486,101 @@ function DeleteTaskDialog({
   );
 }
 
+const ACTIONABLE_NOTIFICATION_TYPES = new Set([
+  "assignment",
+  "deadline",
+  "due_today",
+  "mention",
+  "overdue",
+]);
+
+function formatNotificationTime(value) {
+  const date = new Date(value || Date.now());
+  if (Number.isNaN(date.getTime())) return "Agora";
+  const elapsedMinutes = Math.max(0, Math.round((Date.now() - date.getTime()) / 60000));
+  if (elapsedMinutes < 1) return "agora";
+  if (elapsedMinutes < 60) return `há ${elapsedMinutes} min`;
+  if (elapsedMinutes < 1440) return `há ${Math.round(elapsedMinutes / 60)} h`;
+  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(date);
+}
+
+function notificationPresentation(item, task) {
+  const taskTitle = task?.title || item.message || "Atualização da tarefa";
+  const taskCode = task?.quoteCode || task?.sourceCode || "OPS";
+  const context = task ? `${taskCode} • ${task.teamName || "Operação"}` : "Central de avisos";
+  const type = item.type || "update";
+
+  if (["deadline", "due_today", "overdue"].includes(type)) {
+    return {
+      action: "Revisar tarefa",
+      context,
+      icon: type === "overdue" ? ShieldAlert : CalendarDays,
+      label: type === "overdue" ? "ATRASADA" : "PENDENTE",
+      message: item.message || "O prazo desta tarefa precisa de atenção.",
+      title: taskTitle,
+      tone: type === "overdue" ? "danger" : "warning",
+    };
+  }
+
+  if (type === "assignment") {
+    return {
+      action: "Abrir tarefa",
+      context,
+      icon: ClipboardList,
+      label: "TAREFA",
+      message: "Você recebeu uma nova tarefa para acompanhar.",
+      title: taskTitle,
+      tone: "success",
+    };
+  }
+
+  if (type === "mention") {
+    return {
+      action: "Abrir conversa",
+      context,
+      icon: MessageCircle,
+      label: "MENÇÃO",
+      message: item.message || "Há uma mensagem aguardando sua resposta.",
+      title: item.title || "Você foi mencionado",
+      tone: "info",
+    };
+  }
+
+  if (type === "status") {
+    return {
+      action: "Ver tarefa",
+      context,
+      icon: CheckCircle2,
+      label: "ATUALIZAÇÃO",
+      message: item.message || "O andamento desta tarefa foi alterado.",
+      title: `Status atualizado · ${taskTitle}`,
+      tone: "info",
+    };
+  }
+
+  if (type === "assignees") {
+    return {
+      action: "Ver equipe",
+      context,
+      icon: Users,
+      label: "EQUIPE",
+      message: item.message || "A equipe responsável foi atualizada.",
+      title: `Responsáveis atualizados · ${taskTitle}`,
+      tone: "info",
+    };
+  }
+
+  return {
+    action: task ? "Ver tarefa" : "Abrir aviso",
+    context,
+    icon: BellRing,
+    label: "INFORMATIVA",
+    message: item.message || "Há uma nova atualização no Planner.",
+    title: item.title || taskTitle,
+    tone: "neutral",
+  };
+}
+
 function NotificationsPanel({
   notifications,
   tasks,
@@ -494,6 +589,21 @@ function NotificationsPanel({
   onMarkRead,
   onMarkAllRead,
 }) {
+  const [notificationFilter, setNotificationFilter] = useState("all");
+  const unread = unreadCount(notifications);
+  const actionableNotifications = notifications.filter((item) => ACTIONABLE_NOTIFICATION_TYPES.has(item.type));
+  const informationalNotifications = notifications.filter((item) => !ACTIONABLE_NOTIFICATION_TYPES.has(item.type));
+  const filterOptions = [
+    { id: "all", label: "Todas", icon: BellRing, items: notifications },
+    { id: "actionable", label: "Pendentes", icon: ListChecks, items: actionableNotifications },
+    { id: "informational", label: "Informativas", icon: FileText, items: informationalNotifications },
+  ];
+  const visibleNotifications = [...(notificationFilter === "actionable" ? actionableNotifications : notificationFilter === "informational" ? informationalNotifications : notifications)].sort((left, right) => {
+    const unreadDelta = Number(Boolean(right.readAt)) - Number(Boolean(left.readAt));
+    if (unreadDelta !== 0) return unreadDelta;
+    return new Date(right.occurredAt || 0).getTime() - new Date(left.occurredAt || 0).getTime();
+  });
+
   return (
     <div
       className="notification-layer"
@@ -501,14 +611,19 @@ function NotificationsPanel({
         if (event.target === event.currentTarget) onClose();
       }}
     >
-      <aside className="notification-panel" aria-label="Notificações">
+      <aside className="notification-panel" aria-label="Caixa de entrada de notificações">
         <header>
-          <div>
-            <span className="eyebrow">CENTRAL DE AVISOS</span>
-            <h2>Notificações</h2>
+          <div className="notification-panel-heading">
+            <span className="notification-panel-heading-icon" aria-hidden="true">
+              <BellRing size={21} strokeWidth={2.1} />
+            </span>
+            <div>
+              <h2>Caixa de entrada</h2>
+              <p>{unread ? `${unread} não lida${unread === 1 ? "" : "s"}` : "Tudo em dia"}</p>
+            </div>
           </div>
           <button
-            className="icon-button"
+            className="icon-button notification-close"
             type="button"
             onClick={onClose}
             aria-label="Fechar notificações"
@@ -517,55 +632,87 @@ function NotificationsPanel({
           </button>
         </header>
         <div className="notification-panel-actions">
-          <span>{unreadCount(notifications)} não lidas</span>
           <button
             className="text-button"
             type="button"
             onClick={onMarkAllRead}
-            disabled={!unreadCount(notifications)}
+            disabled={!unread}
           >
-            Marcar todas como lidas
+            <Check size={15} strokeWidth={2.2} />
+            <span>Marcar tudo como lido</span>
           </button>
         </div>
+        <div className="notification-filters" role="tablist" aria-label="Filtrar notificações">
+          {filterOptions.map((filter) => {
+            const Icon = filter.icon;
+            const isActive = notificationFilter === filter.id;
+            return (
+              <button
+                aria-selected={isActive}
+                className={`notification-filter ${isActive ? "is-active" : ""}`}
+                key={filter.id}
+                onClick={() => setNotificationFilter(filter.id)}
+                role="tab"
+                type="button"
+              >
+                <Icon aria-hidden="true" size={20} strokeWidth={2} />
+                <span>{filter.label}</span>
+                <b>{filter.items.length}</b>
+              </button>
+            );
+          })}
+        </div>
         <div className="notification-list">
-          {notifications.length ? (
-            notifications.map((item) => {
+          {visibleNotifications.length ? (
+            visibleNotifications.map((item) => {
               const task = tasks.find((entry) => entry.id === item.taskId);
+              const presentation = notificationPresentation(item, task);
+              const Icon = presentation.icon;
               return (
                 <article
-                  className={`notification-item ${item.readAt ? "is-read" : "is-unread"}`}
+                  className={`notification-item is-${presentation.tone} ${item.readAt ? "is-read" : "is-unread"}`}
                   key={item.id}
                 >
-                  <span className="notification-dot" />
-                  <button type="button" onClick={() => onOpenTask(item)}>
-                    <strong>{item.title}</strong>
-                    <p>
-                      {item.message || task?.title || "Atualização da tarefa"}
-                    </p>
-                    <small>
-                      {new Date(item.occurredAt || Date.now()).toLocaleString(
-                        "pt-BR",
-                      )}
-                    </small>
-                  </button>
-                  {!item.readAt && (
-                    <button
-                      className="notification-read"
-                      type="button"
-                      onClick={() => onMarkRead(item.id)}
-                    >
-                      Marcar como lida
+                  <span className="notification-icon" aria-hidden="true">
+                    <Icon size={20} strokeWidth={2.1} />
+                  </span>
+                  <div className="notification-item-content">
+                    <button className="notification-item-main" type="button" onClick={() => onOpenTask(item)}>
+                      <span className="notification-kicker">{presentation.label}</span>
+                      <strong>{presentation.title}</strong>
+                      <p>{presentation.message}</p>
+                      <span className="notification-meta">
+                        <span>{presentation.context}</span>
+                        <time dateTime={item.occurredAt || undefined}>{formatNotificationTime(item.occurredAt)}</time>
+                      </span>
                     </button>
-                  )}
+                    <div className="notification-item-footer">
+                      <button className="notification-action" type="button" onClick={() => onOpenTask(item)}>
+                        <span>{presentation.action}</span>
+                        <ChevronRight aria-hidden="true" size={15} strokeWidth={2.4} />
+                      </button>
+                      {!item.readAt && (
+                        <button
+                          className="notification-read"
+                          type="button"
+                          onClick={() => onMarkRead(item.id)}
+                          aria-label={`Marcar como lida: ${presentation.title}`}
+                        >
+                          <Check aria-hidden="true" size={13} strokeWidth={2.4} />
+                          <span>Ler depois</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 </article>
               );
             })
           ) : (
-            <div className="notification-empty">
-              <BellRing size={24} />
-              <strong>Nenhuma notificação</strong>
+            <div className="notification-empty" role="status">
+              <CheckCircle2 size={28} strokeWidth={1.8} />
+              <strong>{notificationFilter === "all" ? "Nenhuma notificação" : "Nada por aqui"}</strong>
               <span>
-                Novas atribuições, menções e cobranças aparecerão aqui.
+                {notificationFilter === "actionable" ? "Você não tem pendências que exigem ação." : notificationFilter === "informational" ? "Novas atualizações informativas aparecerão aqui." : "Novas atribuições, menções e prazos aparecerão aqui."}
               </span>
             </div>
           )}

@@ -494,9 +494,9 @@ async function updateLiveTask(xrm, state, id, patch) {
   const eventContext = { actorEmployeeId: patch.actorEmployeeId || "", actorUserId: patch.actorUserId || "", creatorEmployeeId: existing?.creatorEmployeeId || "", assigneeIds: nextAssigneeIds, previousAssigneeIds };
   if (patch.mentionedEmployeeIds?.length) await createEvent(xrm, id, 100000001, "Menção na tarefa.", "notification:mention", "", JSON.stringify({ ...eventContext, mentionedEmployeeIds: patch.mentionedEmployeeIds }));
   if (statusChanged) await createEvent(xrm, id, 100000002, nextStatus === "done" ? "Tarefa concluída." : `Status alterado para ${STATUSES.find((item) => item.id === nextStatus)?.label || nextStatus}.`, "status", previousStatus, nextStatus);
-  if (statusChanged) await createEvent(xrm, id, 100000002, "Notificação de status pendente.", "notification:status", "", JSON.stringify({ ...eventContext, previousStatus, nextStatus }));
+  if (statusChanged && ["done", "waiting"].includes(nextStatus)) await createEvent(xrm, id, 100000002, nextStatus === "done" ? "Tarefa concluída por outro responsável." : "Tarefa aguardando retorno.", "notification:status", "", JSON.stringify({ ...eventContext, previousStatus, nextStatus }));
   if (dueDateChanged) await createEvent(xrm, id, 100000002, `Prazo alterado de ${previousDueDate || "sem prazo"} para ${patch.dueDate || "sem prazo"}.${patch.deadlineChangeReason ? ` Motivo: ${patch.deadlineChangeReason}` : ""}`, "notification:deadline", previousDueDate, JSON.stringify({ ...eventContext, nextDueDate: patch.dueDate || "", reason: patch.deadlineChangeReason || "" }));
-  if (assigneesChanged) await createEvent(xrm, id, 100000002, "Responsáveis alterados.", "notification:assignees", JSON.stringify(previousAssigneeIds), JSON.stringify(eventContext));
+  if (assigneesChanged) await createEvent(xrm, id, 100000002, "Responsáveis alterados.", "notification:assignees", JSON.stringify(previousAssigneeIds), JSON.stringify({ ...eventContext, addedAssigneeIds: nextAssigneeIds.filter((assigneeId) => !previousAssigneeIds.includes(assigneeId)), removedAssigneeIds: previousAssigneeIds.filter((assigneeId) => !nextAssigneeIds.includes(assigneeId)) }));
   if (!statusChanged && !dueDateChanged && !assigneesChanged) await createEvent(xrm, id, patch.status !== undefined ? 100000002 : 100000001, "Tarefa atualizada.");
   return loadLiveState(xrm);
 }
