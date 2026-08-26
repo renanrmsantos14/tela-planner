@@ -422,6 +422,7 @@ function AssignmentFields({ form, setForm, employees = [], teams = [] }) {
   }));
   const selectedTeam = teams.find((team) => String(team.id) === String(form.teamId || ""));
   const selectedMemberNames = (form.assigneeIds || []).map((id) => employeeById.get(String(id))?.name).filter(Boolean);
+  const selectedMemberLabels = selectedMemberNames.map((name) => employees.find((employee) => employee.name === name)?.apelido || name);
   const selectMode = (mode) => {
     setForm((current) => mode === "team"
       ? { ...current, assignmentMode: "team", teamId: "", teamName: "", assigneeName: [], assigneeIds: [] }
@@ -452,25 +453,28 @@ function AssignmentFields({ form, setForm, employees = [], teams = [] }) {
   };
   return (
     <div className="assignment-field">
-      <div className="assignment-mode" role="group" aria-label="Tipo de atribuição">
-        <button type="button" className={assignmentMode === "people" ? "is-selected" : ""} aria-label="Pessoas" title="Pessoas" aria-pressed={assignmentMode === "people"} onClick={() => selectMode("people")}>
-          <UserRound size={16} aria-hidden="true" />
-        </button>
-        <button type="button" className={assignmentMode === "team" ? "is-selected" : ""} aria-label="Equipe" title="Equipe" aria-pressed={assignmentMode === "team"} onClick={() => selectMode("team")}>
-          <Users size={16} aria-hidden="true" />
-        </button>
+      <div className="assignment-field-header">
+        <span>{assignmentMode === "team" ? "Equipe" : "Responsáveis"}</span>
+        <div className="assignment-mode" role="group" aria-label="Tipo de atribuição">
+          <button type="button" className={assignmentMode === "people" ? "is-selected" : ""} aria-label="Pessoas" title="Pessoas" aria-pressed={assignmentMode === "people"} onClick={() => selectMode("people")}>
+            <UserRound size={14} aria-hidden="true" />
+          </button>
+          <button type="button" className={assignmentMode === "team" ? "is-selected" : ""} aria-label="Equipe" title="Equipe" aria-pressed={assignmentMode === "team"} onClick={() => selectMode("team")}>
+            <Users size={14} aria-hidden="true" />
+          </button>
+        </div>
       </div>
       {assignmentMode === "team" ? (
         <>
-          <label>
-            Equipe
+          <label className="assignment-control">
+            <span className="sr-only">Equipe</span>
             <InputSelect value={form.teamId || ""} onChange={selectTeam} options={teamOptions} placeholder={teams.length ? "Selecione uma equipe" : "Nenhuma equipe cadastrada"} disabled={!teams.length} />
           </label>
           {selectedTeam && (
             <div className="assignment-members" aria-label={"Membros de " + selectedTeam.name}>
               <span className="assignment-members-label">Responsáveis desta equipe</span>
               <div className="assignment-members-list">
-                {(selectedMemberNames.length ? selectedMemberNames : selectedTeam.memberIds || []).map((member, index) => (
+                {(selectedMemberLabels.length ? selectedMemberLabels : selectedTeam.memberIds || []).map((member, index) => (
                   <span className="assignment-member-chip" key={String(member) + "-" + index}>
                     <span className="avatar avatar-small">{String(member).split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()}</span>
                     {member}
@@ -481,8 +485,8 @@ function AssignmentFields({ form, setForm, employees = [], teams = [] }) {
           )}
         </>
       ) : (
-        <label>
-          Responsáveis
+        <label className="assignment-control">
+          <span className="sr-only">Responsáveis</span>
           <InputSelect value={form.assigneeName || []} onChange={selectPeople} options={employeeOptions} placeholder="Selecione uma ou mais pessoas" multiple />
         </label>
       )}

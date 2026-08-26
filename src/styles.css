@@ -1257,16 +1257,25 @@ button { cursor: pointer; }
 }
 
 /* Atribuição única: pessoa e equipe compartilham o mesmo contrato visual. */
-.assignment-field { min-width: 0; display: grid; gap: 8px; }
-.assignment-field > span { color: var(--muted); font-size: 10px; font-weight: 800; }
+.assignment-field { min-width: 0; display: grid; gap: 5px; }
+.assignment-field-header { min-width: 0; min-height: 28px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.assignment-field-header > span { color: var(--muted); font-size: 10px; font-weight: 800; line-height: 14px; }
+.assignment-field .assignment-mode { grid-template-columns: repeat(2, 28px); gap: 2px; padding: 2px; border-radius: 7px; }
+.assignment-field .assignment-mode button { width: 28px; min-height: 20px; border-radius: 5px; }
+.assignment-field .assignment-mode button.is-selected { box-shadow: 0 1px 3px rgba(0,26,61,.08); }
+.assignment-control { min-width: 0; }
+.drawer-field-grid > .deadline-field { align-self: start; grid-template-rows: 28px auto; align-items: center; }
 .assignment-mode { width: max-content; display: grid; grid-template-columns: repeat(2, 42px); gap: 4px; padding: 3px; border: 1px solid var(--line); border-radius: 9px; background: var(--neutral); }
 .assignment-mode button { width: 42px; min-height: 30px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 7px; color: var(--muted); background: transparent; cursor: pointer; }
 .assignment-mode button:hover { color: var(--navy); background: #eef3fa; }
 .assignment-mode button.is-selected { color: var(--blue); background: var(--surface); box-shadow: 0 1px 4px rgba(0,26,61,.1); }
 .deadline-field { width: 160px; max-width: 100%; }
 .drawer-field-grid .deadline-field input { width: 160px; max-width: 100%; }
-.assignment-members { display: flex; flex-wrap: wrap; gap: 5px; min-height: 25px; }
-.assignment-member-chip { display: inline-flex; align-items: center; min-height: 24px; padding: 0 8px; border: 1px solid #cbdaf7; border-radius: 999px; color: var(--blue); background: var(--blue-soft); font-size: 10px; font-weight: 700; }
+.assignment-members { width: 100%; display: grid; gap: 7px; min-height: 25px; }
+.assignment-members-label { color: var(--muted); font-size: 10px; font-weight: 800; line-height: 14px; }
+.assignment-members-list { width: 100%; display: flex; flex-wrap: wrap; align-items: stretch; gap: 6px; }
+.assignment-member-chip { width: auto; max-width: 100%; min-width: 0; flex: 0 1 auto; display: inline-flex; align-items: center; justify-content: flex-start; gap: 5px; min-height: 28px; padding: 0 7px; overflow: hidden; border: 1px solid #c5d7f7; border-radius: 10px; color: var(--blue); background: linear-gradient(180deg, #f3f7ff 0%, var(--blue-soft) 100%); box-shadow: 0 2px 5px rgba(33,89,210,.07); font-size: 10px; font-weight: 700; line-height: 1.2; white-space: nowrap; }
+.assignment-member-chip .avatar-small { width: 20px; height: 20px; flex-basis: 20px; border: 1px solid rgba(33,89,210,.12); background: rgba(255,255,255,.82); font-size: 8px; }
 .assignment-empty { color: var(--tertiary); font-size: 10px; font-weight: 600; }
 .teams-settings-panel { margin-top: 18px; overflow: hidden; }
 .teams-panel-heading { padding: 25px 26px 21px; }
