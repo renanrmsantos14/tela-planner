@@ -3771,31 +3771,35 @@ function TaskDrawerContent({
             </button>
           )}
           <div className="drawer-field-grid">
-            <div className="status-field">
-              <span className="status-field-label">Status</span>
-              <StatusPicker
-                value={form.status}
-                onChange={(value) => set("status", value)}
-              />
+            <div className="drawer-status-priority-grid">
+              <div className="status-field">
+                <span className="status-field-label">Status</span>
+                <StatusPicker
+                  value={form.status}
+                  onChange={(value) => set("status", value)}
+                />
+              </div>
+              <div className="priority-field">
+                <span className="priority-field-label">Prioridade</span>
+                <PriorityPicker
+                  value={form.priority}
+                  onChange={(value) => set("priority", value)}
+                />
+              </div>
             </div>
-            <div className="priority-field">
-              <span className="priority-field-label">Prioridade</span>
-              <PriorityPicker
-                value={form.priority}
-                onChange={(value) => set("priority", value)}
-              />
+            <div className="drawer-assignment-deadline-grid">
+              <AssignmentFields form={form} setForm={setForm} employees={state.employees} teams={teams} />
+              <label className="deadline-field">
+                Prazo
+                <input
+                  type="date"
+                  value={form.dueDate || ""}
+                  onChange={(event) => set("dueDate", event.target.value)}
+                  disabled={currentDeadlineRole === "viewer"}
+                  title={currentDeadlineRole === "viewer" ? "Somente o criador ou um responsável pode alterar o prazo" : ""}
+                />
+              </label>
             </div>
-            <AssignmentFields form={form} setForm={setForm} employees={state.employees} teams={teams} />
-            <label className="deadline-field">
-              Prazo
-              <input
-                type="date"
-                value={form.dueDate || ""}
-                onChange={(event) => set("dueDate", event.target.value)}
-                disabled={currentDeadlineRole === "viewer"}
-                title={currentDeadlineRole === "viewer" ? "Somente o criador ou um responsável pode alterar o prazo" : ""}
-              />
-            </label>
           </div>
           {form.status === "waiting" && (
             <WaitingContextFields
@@ -4323,29 +4327,33 @@ function NewTaskDrawer({ employees = [], teams = [], initialStatus = "todo", onC
             </label>
           </div>
           <div className="drawer-field-grid new-task-quick-fields">
-            <div className="status-field">
-              <span className="status-field-label">Status</span>
-              <StatusPicker
-                value={form.status}
-                onChange={(value) => set("status", value)}
-              />
+            <div className="drawer-status-priority-grid">
+              <div className="status-field">
+                <span className="status-field-label">Status</span>
+                <StatusPicker
+                  value={form.status}
+                  onChange={(value) => set("status", value)}
+                />
+              </div>
+              <div className="priority-field">
+                <span className="priority-field-label">Prioridade</span>
+                <PriorityPicker
+                  value={form.priority}
+                  onChange={(value) => set("priority", value)}
+                />
+              </div>
             </div>
-            <div className="priority-field">
-              <span className="priority-field-label">Prioridade</span>
-              <PriorityPicker
-                value={form.priority}
-                onChange={(value) => set("priority", value)}
-              />
+            <div className="drawer-assignment-deadline-grid">
+              <AssignmentFields form={form} setForm={setForm} employees={employees} teams={teams} />
+              <label className="deadline-field">
+                Prazo
+                <input
+                  type="date"
+                  value={form.dueDate}
+                  onChange={(event) => set("dueDate", event.target.value)}
+                />
+              </label>
             </div>
-            <AssignmentFields form={form} setForm={setForm} employees={employees} teams={teams} />
-            <label className="deadline-field">
-              Prazo
-              <input
-                type="date"
-                value={form.dueDate}
-                onChange={(event) => set("dueDate", event.target.value)}
-              />
-            </label>
           </div>
           {form.status === "waiting" && (
             <WaitingContextFields
