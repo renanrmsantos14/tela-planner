@@ -3,6 +3,7 @@ import {
   addComment as addMockComment,
   createTask as createMockTask,
   createTeam as createMockTeam,
+  deleteTeam as deleteMockTeam,
   deleteAttachment as deleteMockAttachment,
   deleteTask as deleteMockTask,
   ensureQuoteTask as ensureMockQuoteTask,
@@ -405,6 +406,13 @@ async function updateLiveTeam(xrm, state, id, patch) {
   const primaryName = await primaryNameAttribute(xrm, TEAM_TABLE);
   await request(xrm, `/${entitySetName(TEAM_TABLE)}(${cleanId(id)})`, { method: "PATCH", body: JSON.stringify({ [primaryName]: name }) });
   await replacePlannerTeamMembers(xrm, id, patch.memberIds || []);
+  return loadLiveState(xrm);
+}
+
+async function deleteLiveTeam(xrm, state, id) {
+  if (!(state.teams || []).some((team) => team.id === id)) throw new Error("Equipe não encontrada.");
+  await replacePlannerTeamMembers(xrm, id, []);
+  await request(xrm, `/${entitySetName(TEAM_TABLE)}(${cleanId(id)})`, { method: "DELETE" });
   return loadLiveState(xrm);
 }
 
@@ -893,6 +901,7 @@ function createMockDataStore() {
     searchQuotes: async () => [],
     createTeam: async (state, input) => withMode(createMockTeam(state, input)),
     updateTeam: async (state, id, patch) => withMode(updateMockTeam(state, id, patch)),
+    deleteTeam: async (state, id) => withMode(deleteMockTeam(state, id)),
     createTask: async (state, input) => withMode(createMockTask(state, input)),
     createSubtask: async (state, parentId, input) => withMode(createMockTask(state, { ...input, parentTaskId: parentId })),
     createQualityTask: async (state, item) => withMode(createMockTask(state, { title: item.title, description: item.description, dueDate: item.dueDate, sourceType: "quality", sourceId: item.id, sourceCode: item.code, sourceLabel: item.type === "error" ? "Erro operacional" : "Ação operacional" })),
@@ -936,6 +945,7 @@ export function createDataStore() {
     searchQuotes: (query) => searchQuotes(xrm, query),
     createTeam: (state, input) => createLiveTeam(xrm, state, input),
     updateTeam: (state, id, patch) => updateLiveTeam(xrm, state, id, patch),
+    deleteTeam: (state, id) => deleteLiveTeam(xrm, state, id),
     createTask: (state, input) => createLiveTask(xrm, state, input),
     createSubtask: (state, parentId, input) => createLiveSubtask(xrm, state, parentId, input),
     createQualityTask: (state, item) => createLiveTask(xrm, state, { title: item.title, description: item.description, dueDate: item.dueDate, sourceType: "quality", sourceCode: item.code, qualityType: item.type, qualityId: item.id }),

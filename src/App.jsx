@@ -2534,10 +2534,11 @@ function QualityView({ state, onCreate, onCreateTask, filters, setFilters }) {
   );
 }
 
-function TeamManager({ teams = [], employees = [], onSave }) {
+function TeamManager({ teams = [], employees = [], onSave, onDelete }) {
   const emptyDraft = { id: "", name: "", memberIds: [] };
   const [draft, setDraft] = useState(emptyDraft);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [validationError, setValidationError] = useState("");
   const employeeOptions = employees.map((employee) => ({ value: employee.id, label: employee.name }));
   const employeeNameById = new Map(employees.map((employee) => [String(employee.id), employee.name]));
@@ -2567,6 +2568,19 @@ function TeamManager({ teams = [], employees = [], onSave }) {
       })
       .catch((failure) => setValidationError(failure.message || "Não foi possível salvar a equipe."))
       .finally(() => setSaving(false));
+  };
+  const remove = () => {
+    if (!draft.id || !window.confirm(`Apagar a equipe "${draft.name}"? As tarefas existentes serão preservadas.`)) return;
+    setDeleting(true);
+    Promise.resolve(onDelete(draft.id))
+      .then((success) => {
+        if (success) {
+          setDraft(emptyDraft);
+          setValidationError("");
+        }
+      })
+      .catch((failure) => setValidationError(failure.message || "Não foi possível apagar a equipe."))
+      .finally(() => setDeleting(false));
   };
   return (
     <section className="panel teams-settings-panel" aria-labelledby="teams-settings-title">
@@ -2614,7 +2628,13 @@ function TeamManager({ teams = [], employees = [], onSave }) {
               <strong>{draft.id ? "Atualize nome e membros" : "Crie um atalho de atribuição"}</strong>
               <p>{draft.id ? "As mudanças valem para novas tarefas; tarefas antigas preservam o snapshot salvo." : "Escolha quem receberá a tarefa quando esta equipe for selecionada."}</p>
             </div>
-            {draft.id && <button className="text-button" type="button" onClick={() => setDraft(emptyDraft)}>Nova equipe</button>}
+            {draft.id && <div className="team-form-actions">
+              <button className="text-button" type="button" onClick={() => setDraft(emptyDraft)} disabled={saving || deleting}>Nova equipe</button>
+              <button className="text-button team-delete-button" type="button" onClick={remove} disabled={saving || deleting}>
+                {deleting ? <LoaderCircle size={13} className="spin" /> : <Trash2 size={13} />}
+                Apagar
+              </button>
+            </div>}
           </div>
           <label className="team-form-field">
             Nome da equipe
@@ -2626,7 +2646,7 @@ function TeamManager({ teams = [], employees = [], onSave }) {
             <span className="team-form-hint">Você pode incluir a mesma pessoa em mais de uma equipe.</span>
           </label>
           {validationError && <div className="form-error" role="alert">{validationError}</div>}
-          <button className="button button-primary team-form-submit" type="button" onClick={submit} disabled={saving || !draft.name.trim()}>
+          <button className="button button-primary team-form-submit" type="button" onClick={submit} disabled={saving || deleting || !draft.name.trim()}>
             {saving ? <LoaderCircle size={15} className="spin" /> : <Check size={15} />}
             {saving ? "Salvando…" : draft.id ? "Salvar equipe" : "Cadastrar equipe"}
           </button>
@@ -2636,7 +2656,7 @@ function TeamManager({ teams = [], employees = [], onSave }) {
   );
 }
 
-function SettingsView({ onReset, live, teams = [], employees = [], onSaveTeam }) {
+function SettingsView({ onReset, live, teams = [], employees = [], onSaveTeam, onDeleteTeam }) {
   return (
     <div className="page-content">
       <PageHeader
@@ -2694,7 +2714,7 @@ function SettingsView({ onReset, live, teams = [], employees = [], onSaveTeam })
           </div>
         </div>
       </section>
-      <TeamManager teams={teams} employees={employees} onSave={onSaveTeam} />
+      <TeamManager teams={teams} employees={employees} onSave={onSaveTeam} onDelete={onDeleteTeam} />
     </div>
   );
 }
@@ -4974,6 +4994,20 @@ export default function App() {
     },
     [applyPendingMutations, showNotice, state, store],
   );
+  const deleteTeam = useCallback(
+    (id) => Promise.resolve(store.deleteTeam(state, id))
+      .then((next) => {
+        confirmedStateRef.current = next;
+        setState(applyPendingMutations(next));
+        showNotice("Equipe apagada.");
+        return true;
+      })
+      .catch((failure) => {
+        showNotice(failure.message || "Não foi possível apagar a equipe.", 5200);
+        return false;
+      }),
+    [applyPendingMutations, showNotice, state, store],
+  );
   const createNewTask = useCallback(
     (input) => {
       const {
@@ -5468,7 +5502,7 @@ export default function App() {
       );
     return (
       <Suspense fallback={<LoadingFallback />}>
-          <LazySettingsView onReset={reloadData} live={store.live} teams={state.teams} employees={state.employees} onSaveTeam={saveTeam} />
+          <LazySettingsView onReset={reloadData} live={store.live} teams={state.teams} employees={state.employees} onSaveTeam={saveTeam} onDeleteTeam={deleteTeam} />
       </Suspense>
     );
   };

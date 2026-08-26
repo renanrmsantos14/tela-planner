@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { addAttachment, addComment, createTask, createTeam, deleteAttachment, deleteTask, ensureQuoteTask, seedState, updateTask, updateTeam } from "../src/mockStore.js";
+import { addAttachment, addComment, createTask, createTeam, deleteAttachment, deleteTask, deleteTeam, ensureQuoteTask, seedState, updateTask, updateTeam } from "../src/mockStore.js";
 
 function withStorage() {
   const values = new Map();
@@ -103,6 +103,19 @@ test("salva equipe e snapshot de responsáveis sem reescrever tarefas antigas", 
   const savedTask = editedTeam.tasks.find((item) => item.id === task.id);
   assert.deepEqual(editedTeam.teams.at(-1).memberIds, ["employee-marina"]);
   assert.deepEqual(savedTask.assigneeIds, ["employee-marina", "employee-rafael"]);
+});
+
+test("apaga equipe sem alterar tarefas existentes", () => {
+  withStorage();
+  const initial = seedState();
+  const teamState = createTeam(initial, { name: "Equipe removível", memberIds: ["employee-marina"] });
+  const team = teamState.teams.at(-1);
+  const created = createTask(teamState, { title: "Tarefa preservada", assignmentMode: "team", teamId: team.id });
+  const deleted = deleteTeam(created, team.id);
+
+  assert.equal(deleted.teams.some((item) => item.id === team.id), false);
+  assert.deepEqual(deleted.tasks.find((item) => item.id === created.tasks.at(-1).id).assigneeIds, ["employee-marina"]);
+  assert.throws(() => deleteTeam(deleted, team.id), /Equipe não encontrada/);
 });
 
 test("registra aguardando e conclusão no histórico mock", () => {

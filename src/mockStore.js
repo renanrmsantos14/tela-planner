@@ -296,6 +296,16 @@ export function updateTeam(state, id, patch) {
   });
 }
 
+export function deleteTeam(state, id) {
+  if (!(state.teams || []).some((team) => team.id === id)) {
+    throw new Error("Equipe não encontrada.");
+  }
+  return saveState({
+    ...state,
+    teams: (state.teams || []).filter((team) => team.id !== id),
+  });
+}
+
 function employeeIdsByNames(employees = [], names = []) {
   const wanted = new Set(normalizeAssigneeNames(names));
   return employees.filter((employee) => wanted.has(employee.name)).map((employee) => employee.id);

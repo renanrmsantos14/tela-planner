@@ -1299,6 +1299,10 @@ button { cursor: pointer; }
 .team-form { display: grid; gap: 15px; align-content: start; padding: 20px; border: 1px solid #d2e0f5; border-radius: 12px; background: #f3f7ff; }
 .team-form-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
 .team-form-heading > div { min-width: 0; display: grid; gap: 5px; }
+.team-form-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: flex-end; }
+.team-form-actions .text-button:disabled { cursor: not-allowed; opacity: .45; }
+.team-delete-button { color: var(--red); }
+.team-delete-button:hover, .team-delete-button:focus-visible { color: #a43e4b; }
 .team-form-heading strong { color: var(--navy); font-size: 14px; line-height: 1.25; }
 .team-form-heading p { max-width: 360px; margin: 0; color: var(--muted); font-size: 10px; line-height: 1.45; }
 .team-form-field { display: grid; gap: 6px; color: var(--muted); font-size: 10px; font-weight: 800; }
