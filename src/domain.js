@@ -142,6 +142,25 @@ export function normalizeTeam(team = {}) {
   };
 }
 
+export function teamResponsibilitySummary(team = {}, tasks = [], employees = []) {
+  const normalizedTeam = normalizeTeam(team);
+  const teamTasks = tasks.filter((task) => {
+    if (["done", "cancelled"].includes(task?.status)) return false;
+    if (task?.assignmentMode !== "team") return false;
+    const taskTeamIds = uniqueStrings(task?.teamIds ?? task?.teamId);
+    return taskTeamIds.some((id) => sameIdentifier(id, normalizedTeam.id))
+      || (!taskTeamIds.length && normalizeText(task?.teamName) === normalizeText(normalizedTeam.name));
+  });
+
+  return {
+    totalTaskCount: teamTasks.length,
+    members: normalizedTeam.memberIds.map((memberId) => {
+      const employee = employees.find((item) => sameIdentifier(item.id, memberId));
+      return { id: memberId, name: employee?.name || "Membro sem cadastro", apelido: employee?.apelido || "" };
+    }),
+  };
+}
+
 export function resolveTaskAssignment(input = {}, teams = [], employees = []) {
   const assignmentMode = input.assignmentMode === "team" ? "team" : "people";
   const employeeById = new Map(employees.map((employee) => [String(employee.id), employee]));

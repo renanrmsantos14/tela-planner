@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { addOptimisticAttachment, addOptimisticComment, applyOptimisticTaskPatch, buildAssigneeOptions, buildOptimisticTask, buildTaskCreationInput, filterTasks, getDueBucket, isOverdue, mentionedEmployees, migrateLegacyTeams, normalizeAssigneeNames, normalizeTeam, quoteTaskTitle, resolveTaskAssignment, sortTasks, STATUSES, taskStats, validateWaitingContext, waitingContextSummary } from "../src/domain.js";
+import { addOptimisticAttachment, addOptimisticComment, applyOptimisticTaskPatch, buildAssigneeOptions, buildOptimisticTask, buildTaskCreationInput, filterTasks, getDueBucket, isOverdue, mentionedEmployees, migrateLegacyTeams, normalizeAssigneeNames, normalizeTeam, quoteTaskTitle, resolveTaskAssignment, sortTasks, STATUSES, taskStats, teamResponsibilitySummary, validateWaitingContext, waitingContextSummary } from "../src/domain.js";
 
 const tasks = [
   { id: "1", title: "Atrasada", quoteTitle: "Cotação A", assigneeName: "Marina", status: "todo", priority: "high", dueDate: "2026-08-01" },
@@ -61,6 +61,22 @@ test("normaliza equipe e expande seus membros no snapshot da tarefa", () => {
 
   assert.deepEqual(team.memberIds, ["e1", "e2"]);
   assert.deepEqual(assignment, { assignmentMode: "team", teamId: "team-op", teamName: "Operação", assigneeIds: ["e1", "e2"], assigneeNames: ["Marina", "Rafael"] });
+});
+
+test("resume somente tarefas abertas cuja responsabilidade é da equipe", () => {
+  const summary = teamResponsibilitySummary(
+    { id: "team-op", name: "Operação", memberIds: ["e1", "e2"] },
+    [
+      { id: "1", assignmentMode: "team", teamId: "{TEAM-OP}", assigneeIds: ["e1"], status: "todo" },
+      { id: "2", assignmentMode: "team", teamIds: ["team-op"], assigneeIds: ["e1", "e2"], status: "waiting" },
+      { id: "3", assignmentMode: "people", teamName: "Operação", assigneeIds: ["e2"], status: "doing" },
+      { id: "4", assignmentMode: "team", teamId: "team-op", assigneeIds: ["e2"], status: "done" },
+    ],
+    [{ id: "e1", name: "Marina" }, { id: "e2", name: "Rafael" }],
+  );
+
+  assert.equal(summary.totalTaskCount, 2);
+  assert.deepEqual(summary.members.map(({ name }) => name), ["Marina", "Rafael"]);
 });
 
 test("migra equipes legadas sem alterar tarefas fora de equipe", () => {

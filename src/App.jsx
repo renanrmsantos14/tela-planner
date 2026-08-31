@@ -79,6 +79,7 @@ import {
   statusById,
   TASK_SOURCES,
   taskStats,
+  teamResponsibilitySummary,
   validateWaitingContext,
   waitingContextSummary,
 } from "./domain";
@@ -2538,14 +2539,19 @@ function QualityView({ state, onCreate, onCreateTask, filters, setFilters }) {
   );
 }
 
-function TeamManager({ teams = [], employees = [], onSave, onDelete }) {
+function TeamManager({ teams = [], tasks = [], employees = [], onSave, onDelete }) {
   const emptyDraft = { id: "", name: "", memberIds: [] };
   const [draft, setDraft] = useState(emptyDraft);
+  const [expandedTeamId, setExpandedTeamId] = useState("");
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [validationError, setValidationError] = useState("");
   const employeeOptions = employees.map((employee) => ({ value: employee.id, label: employee.name }));
   const employeeNameById = new Map(employees.map((employee) => [String(employee.id), employee.name]));
+  const responsibilitiesByTeam = useMemo(
+    () => new Map(teams.map((team) => [String(team.id), teamResponsibilitySummary(team, tasks, employees)])),
+    [teams, tasks, employees],
+  );
   const memberSummary = (team) => {
     const names = (team.memberIds || []).map((id) => employeeNameById.get(String(id))).filter(Boolean);
     if (!names.length) return "Nenhum membro selecionado";
@@ -2554,6 +2560,7 @@ function TeamManager({ teams = [], employees = [], onSave, onDelete }) {
   };
   const startEdit = (team) => {
     setDraft({ id: team.id, name: team.name, memberIds: [...(team.memberIds || [])] });
+    setExpandedTeamId(team.id);
     setValidationError("");
   };
   const submit = () => {
@@ -2609,20 +2616,39 @@ function TeamManager({ teams = [], employees = [], onSave, onDelete }) {
             <span className="team-list-count">{teams.length}</span>
           </div>
           <div className="team-list">
-          {teams.length ? teams.map((team) => (
-            <button className={`team-list-row${draft.id === team.id ? " is-selected" : ""}`} type="button" key={team.id} onClick={() => startEdit(team)} aria-label={`Editar equipe ${team.name}`}>
-              <span className="team-list-icon" aria-hidden="true"><Users size={17} /></span>
-              <span className="team-list-copy">
-                <strong>{team.name}</strong>
-                <span className="team-list-meta">
-                  <span>{(team.memberIds || []).length} {(team.memberIds || []).length === 1 ? "membro" : "membros"}</span>
-                  <span aria-hidden="true">·</span>
-                  <span>{memberSummary(team)}</span>
-                </span>
-              </span>
-              <span className="team-list-action">Editar <ChevronRight size={15} aria-hidden="true" /></span>
-            </button>
-          )) : <div className="team-list-empty"><Users size={18} /><strong>Nenhuma equipe cadastrada</strong><span>Crie a primeira para acelerar a atribuição de tarefas.</span></div>}
+          {teams.length ? teams.map((team, index) => {
+            const isExpanded = expandedTeamId === team.id;
+            const summary = responsibilitiesByTeam.get(String(team.id)) || { totalTaskCount: 0, members: [] };
+            const detailsId = `team-details-${index}`;
+            return (
+              <article className={`team-list-item${isExpanded ? " is-expanded" : ""}`} key={team.id}>
+                <button className="team-list-row" type="button" onClick={() => setExpandedTeamId((current) => current === team.id ? "" : team.id)} aria-expanded={isExpanded} aria-controls={detailsId}>
+                  <span className="team-list-icon" aria-hidden="true"><Users size={17} /></span>
+                  <span className="team-list-copy">
+                    <strong>{team.name}</strong>
+                    <span className="team-list-meta">
+                      <span>{(team.memberIds || []).length} {(team.memberIds || []).length === 1 ? "membro" : "membros"}</span>
+                      <span aria-hidden="true">·</span>
+                      <span>{memberSummary(team)}</span>
+                    </span>
+                  </span>
+                  <span className="team-list-action"><span>{summary.totalTaskCount} {summary.totalTaskCount === 1 ? "tarefa aberta" : "tarefas abertas"}</span><ChevronDown size={15} aria-hidden="true" /></span>
+                </button>
+                <div className="team-expansion" id={detailsId} aria-hidden={!isExpanded}>
+                  <div className="team-expansion-content">
+                    <div className="team-expansion-heading"><span>Membros da equipe</span><span>{summary.totalTaskCount} {summary.totalTaskCount === 1 ? "tarefa aberta" : "tarefas abertas"}</span></div>
+                    {summary.members.length ? <div className="team-member-list">{summary.members.map((member) => (
+                      <div className="team-member-row" key={member.id}>
+                        <span className="team-member-avatar" aria-hidden="true">{(member.apelido || member.name).split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()}</span>
+                        <span className="team-member-copy"><strong>{member.name}</strong><span>Membro da equipe</span></span>
+                      </div>
+                    ))}</div> : <p className="team-members-empty">Inclua membros para identificar quem compõe esta equipe.</p>}
+                    <div className="team-expansion-footer"><span>{summary.totalTaskCount === 1 ? "1 tarefa aberta sob responsabilidade da equipe" : `${summary.totalTaskCount} tarefas abertas sob responsabilidade da equipe`}</span><button className="text-button" type="button" onClick={() => startEdit(team)}>Editar equipe <ChevronRight size={14} aria-hidden="true" /></button></div>
+                  </div>
+                </div>
+              </article>
+            );
+          }) : <div className="team-list-empty"><Users size={18} /><strong>Nenhuma equipe cadastrada</strong><span>Crie a primeira para acelerar a atribuição de tarefas.</span></div>}
           </div>
         </div>
         <div className="team-form">
@@ -2660,7 +2686,7 @@ function TeamManager({ teams = [], employees = [], onSave, onDelete }) {
   );
 }
 
-function SettingsView({ onReset, live, teams = [], employees = [], onSaveTeam, onDeleteTeam }) {
+function SettingsView({ onReset, live, teams = [], tasks = [], employees = [], onSaveTeam, onDeleteTeam }) {
   return (
     <div className="page-content">
       <PageHeader
@@ -2718,7 +2744,7 @@ function SettingsView({ onReset, live, teams = [], employees = [], onSaveTeam, o
           </div>
         </div>
       </section>
-      <TeamManager teams={teams} employees={employees} onSave={onSaveTeam} onDelete={onDeleteTeam} />
+      <TeamManager teams={teams} tasks={tasks} employees={employees} onSave={onSaveTeam} onDelete={onDeleteTeam} />
     </div>
   );
 }
@@ -5514,7 +5540,7 @@ export default function App() {
       );
     return (
       <Suspense fallback={<LoadingFallback />}>
-          <LazySettingsView onReset={reloadData} live={store.live} teams={state.teams} employees={state.employees} onSaveTeam={saveTeam} onDeleteTeam={deleteTeam} />
+          <LazySettingsView onReset={reloadData} live={store.live} teams={state.teams} tasks={state.tasks} employees={state.employees} onSaveTeam={saveTeam} onDeleteTeam={deleteTeam} />
       </Suspense>
     );
   };
