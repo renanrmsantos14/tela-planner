@@ -1,5 +1,6 @@
 import {
   migrateLegacyTeams,
+  canRegisterWaitingReturn,
   normalizeAssigneeNames,
   normalizeWaitingContext,
   resolveTaskAssignment,
@@ -270,6 +271,87 @@ export function updateTask(state, id, patch) {
   (patch.mentionedEmployeeIds || []).filter((employeeId) => employeeId !== patch.actorEmployeeId).forEach((recipientEmployeeId) => {
     const eventId = uid("event");
     notifications.unshift({ id: uid("notification"), taskId: id, recipientEmployeeId, type: "mention", title: "Você foi mencionado", message: next.title, occurredAt: new Date().toISOString(), readAt: "", dedupeKey: notificationDedupeKey({ recipientId: recipientEmployeeId, taskId: id, type: "mention", eventId }) });
+  });
+  return saveState({ ...state, tasks, notifications });
+}
+
+export function resolveWaitingReturn(state, id, input = {}) {
+  const existing = state.tasks.find((taskItem) => taskItem.id === id);
+  if (!existing || existing.status !== "waiting") {
+    throw new Error("A tarefa não está aguardando um retorno.");
+  }
+  const text = String(input.text || "").trim();
+  if (!text) throw new Error("Informe o retorno recebido.");
+  const actor = (state.employees || []).find((employee) =>
+    employee.id === input.actorEmployeeId || employee.userId === input.actorUserId,
+  );
+  if (!canRegisterWaitingReturn(existing, actor, state.teams || [])) {
+    throw new Error("Você não pode registrar este retorno.");
+  }
+  const occurredAt = new Date().toISOString();
+  const comment = {
+    id: uid("comment"),
+    text,
+    createdAt: occurredAt,
+    author: actor?.name || "Você",
+    authorId: input.actorUserId || actor?.userId || "",
+  };
+  const attachments = (input.files || []).map((file) => ({
+    id: uid("file"),
+    name: file?.name || "Arquivo",
+    mimeType: file?.type || "",
+    size: file?.size || 0,
+    previewUrl: "",
+    createdAt: occurredAt,
+  }));
+  const historyEntry = {
+    id: uid("history"),
+    text: "Retorno registrado. Tarefa retomada para Em andamento.",
+    createdAt: occurredAt,
+    author: actor?.name || "Você",
+  };
+  const tasks = state.tasks.map((taskItem) => taskItem.id === id ? {
+    ...taskItem,
+    status: "doing",
+    comments: [...(taskItem.comments || []), comment],
+    attachments: [...(taskItem.attachments || []), ...attachments],
+    history: [...(taskItem.history || []), historyEntry],
+    waitingContext: normalizeWaitingContext(taskItem.waitingContext),
+  } : taskItem);
+  const next = tasks.find((taskItem) => taskItem.id === id);
+  const notifications = [...(state.notifications || [])];
+  const assigneeIds = next.assigneeIds || employeeIdsByNames(state.employees, next.assigneeNames);
+  notificationRecipients({
+    type: "waiting_return",
+    creatorEmployeeId: next.creatorEmployeeId,
+    assigneeIds,
+    actorEmployeeId: input.actorEmployeeId,
+  }).forEach((recipientEmployeeId) => {
+    const eventId = historyEntry.id;
+    notifications.unshift({
+      id: uid("notification"),
+      taskId: id,
+      recipientEmployeeId,
+      type: "status",
+      title: "Retorno registrado",
+      message: text,
+      occurredAt,
+      readAt: "",
+      dedupeKey: notificationDedupeKey({ recipientId: recipientEmployeeId, taskId: id, type: "waiting_return", eventId }),
+    });
+  });
+  (input.mentionedEmployeeIds || []).filter((employeeId) => employeeId !== input.actorEmployeeId).forEach((recipientEmployeeId) => {
+    notifications.unshift({
+      id: uid("notification"),
+      taskId: id,
+      recipientEmployeeId,
+      type: "mention",
+      title: "Você foi mencionado",
+      message: text,
+      occurredAt,
+      readAt: "",
+      dedupeKey: notificationDedupeKey({ recipientId: recipientEmployeeId, taskId: id, type: "mention", eventId: historyEntry.id }),
+    });
   });
   return saveState({ ...state, tasks, notifications });
 }

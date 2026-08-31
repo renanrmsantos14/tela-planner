@@ -1,6 +1,7 @@
 import {
   addAttachment as addMockAttachment,
   addComment as addMockComment,
+  resolveWaitingReturn as resolveMockWaitingReturn,
   createTask as createMockTask,
   createTeam as createMockTeam,
   deleteTeam as deleteMockTeam,
@@ -16,6 +17,7 @@ import {
   updateTeam as updateMockTeam,
 } from "./mockStore.js";
 import {
+  canRegisterWaitingReturn,
   normalizeAssigneeNames,
   normalizeWaitingContext,
   STATUSES,
@@ -770,6 +772,53 @@ async function addLiveAttachment(xrm, taskId, file) {
   return loadTaskDetails(xrm, taskId);
 }
 
+async function resolveLiveWaitingReturn(xrm, state, id, input = {}) {
+  const existing = state.tasks.find((taskItem) => taskItem.id === id);
+  if (!existing || existing.status !== "waiting") {
+    throw new Error("A tarefa não está aguardando um retorno.");
+  }
+  const text = String(input.text || "").trim();
+  if (!text) throw new Error("Informe o retorno recebido.");
+  const actor = (state.employees || []).find((employee) =>
+    employee.id === input.actorEmployeeId || employee.userId === input.actorUserId,
+  );
+  if (!canRegisterWaitingReturn(existing, actor, state.teams || [])) {
+    throw new Error("Você não pode registrar este retorno.");
+  }
+  const files = Array.isArray(input.files) ? input.files.filter(Boolean) : [];
+  for (const file of files) await addLiveAttachment(xrm, id, file);
+  await addLiveComment(xrm, id, text, {
+    actorEmployeeId: input.actorEmployeeId || "",
+    actorUserId: input.actorUserId || "",
+    mentionedEmployeeIds: input.mentionedEmployeeIds || [],
+  });
+  const next = await updateLiveTask(xrm, state, id, {
+    status: "doing",
+    actorEmployeeId: input.actorEmployeeId || "",
+    actorUserId: input.actorUserId || "",
+  });
+  const nextTask = next.tasks.find((taskItem) => taskItem.id === id) || existing;
+  const assigneeIds = nextTask.assigneeIds || [];
+  await createEvent(
+    xrm,
+    id,
+    100000002,
+    "Retorno registrado. Tarefa retomada para Em andamento.",
+    "notification:status",
+    "waiting",
+    JSON.stringify({
+      actorEmployeeId: input.actorEmployeeId || "",
+      actorUserId: input.actorUserId || "",
+      creatorEmployeeId: nextTask.creatorEmployeeId || "",
+      assigneeIds,
+      previousStatus: "waiting",
+      nextStatus: "doing",
+      returnText: text,
+    }),
+  );
+  return loadLiveState(xrm);
+}
+
 async function loadLiveAttachmentContent(xrm, attachment) {
   const flowUrl = await resolveSharePointReadFlowUrl(xrm);
   if (!flowUrl) throw new Error(`URL do Flow de consulta não configurada: ${READ_FLOW_URL_SCHEMA}.`);
@@ -906,6 +955,7 @@ function createMockDataStore() {
     createSubtask: async (state, parentId, input) => withMode(createMockTask(state, { ...input, parentTaskId: parentId })),
     createQualityTask: async (state, item) => withMode(createMockTask(state, { title: item.title, description: item.description, dueDate: item.dueDate, sourceType: "quality", sourceId: item.id, sourceCode: item.code, sourceLabel: item.type === "error" ? "Erro operacional" : "Ação operacional" })),
     updateTask: async (state, id, patch) => withMode(updateMockTask(state, id, patch)),
+    resolveWaitingReturn: async (state, id, input) => withMode(resolveMockWaitingReturn(state, id, input)),
     deleteTask: async (state, id) => withMode(deleteMockTask(state, id)),
     addComment: async (state, id, text, context) => withMode(addMockComment(state, id, text, context)),
     addAttachment: async (state, id, file, previewUrl = "") => withMode(addMockAttachment(state, id, { name: file?.name || "Arquivo", mimeType: file?.type || "", size: file?.size || 0, previewUrl })),
@@ -950,6 +1000,7 @@ export function createDataStore() {
     createSubtask: (state, parentId, input) => createLiveSubtask(xrm, state, parentId, input),
     createQualityTask: (state, item) => createLiveTask(xrm, state, { title: item.title, description: item.description, dueDate: item.dueDate, sourceType: "quality", sourceCode: item.code, qualityType: item.type, qualityId: item.id }),
     updateTask: (state, id, patch) => updateLiveTask(xrm, state, id, patch),
+    resolveWaitingReturn: (state, id, input) => resolveLiveWaitingReturn(xrm, state, id, input),
     deleteTask: (state, id) => deleteLiveTask(xrm, state, id),
     addComment: (state, id, text, context) => addLiveComment(xrm, id, text, context),
     addAttachment: (state, id, file) => addLiveAttachment(xrm, id, file),

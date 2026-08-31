@@ -30,6 +30,7 @@ test("destinatários removem ator, duplicados e atribuições antigas", () => {
   assert.deepEqual(notificationRecipients({ type: "assignees", assigneeIds: ["a", "b"], previousAssigneeIds: ["a", "c"], actorEmployeeId: "a" }), ["b", "c"]);
   assert.deepEqual(notificationRecipients({ type: "mention", mentionedEmployeeIds: ["a", "a", "b"], actorEmployeeId: "b" }), ["a"]);
   assert.deepEqual(notificationRecipients({ type: "waiting", creatorEmployeeId: "c", assigneeIds: ["a"], mentionedEmployeeIds: ["b"], actorEmployeeId: "a" }), ["c", "b"]);
+  assert.deepEqual(notificationRecipients({ type: "waiting_return", creatorEmployeeId: "c", assigneeIds: ["a", "b"], actorEmployeeId: "a" }), ["c", "b"]);
 });
 
 test("sinaliza Aguardando apenas para criador ou responsável", () => {

@@ -56,6 +56,7 @@ export function notificationRecipients({ creatorEmployeeId, assigneeIds = [], me
   if (type === "assignment") values = assigneeIds.filter((id) => !previousAssigneeIds.some((oldId) => cleanId(oldId) === cleanId(id)));
   else if (type === "mention") values = mentionedEmployeeIds;
   else if (type === "waiting") values = [creatorEmployeeId, ...assigneeIds, ...mentionedEmployeeIds];
+  else if (type === "waiting_return") values = [creatorEmployeeId, ...assigneeIds];
   else if (type === "status") values = ["done", "waiting"].includes(nextStatus) ? [creatorEmployeeId, ...assigneeIds] : [];
   else if (type === "assignees") {
     const current = new Set(assigneeIds.map(cleanId));

@@ -60,12 +60,13 @@ import {
   buildEmployeeAssigneeOptions,
   buildOptimisticTask,
   buildTaskCreationInput,
+  canRegisterWaitingReturn,
   EMPTY_WAITING_CONTEXT,
   filterTasks,
   formatDate,
   formatLongDate,
+  getDueBucketForEmployee,
   isDueToday,
-  isOverdue,
   mentionedEmployees,
   normalizeWaitingContext,
   normalizeAssigneeNames,
@@ -78,6 +79,7 @@ import {
   STATUSES,
   statusById,
   TASK_SOURCES,
+  taskDisplayDueDate,
   taskStats,
   teamResponsibilitySummary,
   validateWaitingContext,
@@ -1302,11 +1304,13 @@ const TaskCard = memo(function TaskCard({
   task: taskItem,
   subtasks = [],
   currentEmployee,
+  teams = [],
   hasUnreadMention = false,
   showChecklistOnCard = false,
   onOpen,
   onToggleSubtask,
   onComplete,
+  onRegisterWaitingReturn,
   showQuickComplete = false,
   compact = false,
   enableDrag = true,
@@ -1316,8 +1320,10 @@ const TaskCard = memo(function TaskCard({
   onDragStart,
   onDragEnd,
 }) {
-  const overdue = isOverdue(taskItem);
+  const displayDueDate = taskDisplayDueDate(taskItem, currentEmployee, teams);
+  const overdue = getDueBucketForEmployee(taskItem, currentEmployee, teams) === "overdue";
   const waitingActionRequired = isTaskWaitingForEmployee(taskItem, currentEmployee);
+  const canRegisterReturn = canRegisterWaitingReturn(taskItem, currentEmployee, teams);
   const canOpen = !taskItem.id.startsWith("optimistic-");
   const completedSubtasks = subtasks.filter(
     (subtask) => subtask.status === "done",
@@ -1454,7 +1460,7 @@ const TaskCard = memo(function TaskCard({
         ) : (
           <span className={overdue ? "date-chip overdue" : "date-chip"}>
             <Clock3 size={13} />
-            {formatDate(taskItem.dueDate)}
+            {formatDate(displayDueDate)}
           </span>
         )}
         {showQuickComplete &&
@@ -1470,6 +1476,18 @@ const TaskCard = memo(function TaskCard({
               Concluir
             </button>
           )}
+        {canRegisterReturn && (
+          <button
+            className="task-quick-action task-return-action"
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              onRegisterWaitingReturn?.(taskItem.id);
+            }}
+          >
+            Registrar retorno
+          </button>
+        )}
       </div>
       {taskItem.parentTaskId && (
         <div className="subtask-mark">
@@ -1541,9 +1559,11 @@ const Board = memo(function Board({
   subtasksByParent,
   currentEmployee,
   checklistVisibility,
+  teams = [],
   unreadMentionTaskIds,
   onOpen,
   onToggleSubtask,
+  onRegisterWaitingReturn,
   onMove,
   onCreate,
 }) {
@@ -1941,10 +1961,12 @@ const Board = memo(function Board({
                     task={taskItem}
                     subtasks={subtasksByParent.get(taskItem.id) || []}
                     currentEmployee={currentEmployee}
+                    teams={teams}
                     hasUnreadMention={unreadMentionTaskIds.has(taskItem.id)}
                     showChecklistOnCard={checklistVisibility[taskItem.id]}
                     onOpen={onOpen}
                     onToggleSubtask={onToggleSubtask}
+                    onRegisterWaitingReturn={onRegisterWaitingReturn}
                     isDragging={dragState?.id === taskItem.id}
                     dropFeedback={
                       dropFeedback?.id === taskItem.id ? dropFeedback.phase : ""
@@ -2097,10 +2119,12 @@ function MobileBoardList({
   subtasksByParent,
   currentEmployee,
   checklistVisibility,
+  teams = [],
   unreadMentionTaskIds,
   onOpen,
   onToggleSubtask,
   onComplete,
+  onRegisterWaitingReturn,
 }) {
   return (
     <div className="mobile-board-list">
@@ -2125,11 +2149,13 @@ function MobileBoardList({
               task={taskItem}
               subtasks={subtasksByParent.get(taskItem.id) || []}
               currentEmployee={currentEmployee}
+              teams={teams}
               hasUnreadMention={unreadMentionTaskIds.has(taskItem.id)}
               showChecklistOnCard={checklistVisibility[taskItem.id]}
               onOpen={onOpen}
               onToggleSubtask={onToggleSubtask}
               onComplete={onComplete}
+              onRegisterWaitingReturn={onRegisterWaitingReturn}
               showQuickComplete
               enableDrag={false}
               compact
@@ -2149,6 +2175,7 @@ function BoardView({
   onToggleSubtask,
   onMove,
   onComplete,
+  onRegisterWaitingReturn,
   onCreate,
   filters,
   setFilters,
@@ -2222,10 +2249,12 @@ function BoardView({
           subtasksByParent={subtasksByParent}
           currentEmployee={currentEmployee}
           checklistVisibility={checklistVisibility}
+          teams={state.teams}
           unreadMentionTaskIds={unreadMentionTaskIds}
           onOpen={onOpen}
           onToggleSubtask={onToggleSubtask}
           onComplete={onComplete}
+          onRegisterWaitingReturn={onRegisterWaitingReturn}
         />
       ) : (
         <Board
@@ -2234,9 +2263,11 @@ function BoardView({
           subtasksByParent={subtasksByParent}
           currentEmployee={currentEmployee}
           checklistVisibility={checklistVisibility}
+          teams={state.teams}
           unreadMentionTaskIds={unreadMentionTaskIds}
           onOpen={onOpen}
           onToggleSubtask={onToggleSubtask}
+          onRegisterWaitingReturn={onRegisterWaitingReturn}
           onMove={onMove}
           onCreate={onCreate}
         />
@@ -2350,8 +2381,8 @@ function ListView({
               }
               small
             />
-            <span className={isOverdue(taskItem) ? "danger-text" : ""}>
-              {formatDate(taskItem.dueDate)}
+            <span className={getDueBucketForEmployee(taskItem, currentEmployee, state.teams) === "overdue" ? "danger-text" : ""}>
+              {formatDate(taskDisplayDueDate(taskItem, currentEmployee, state.teams))}
             </span>
             <div className="table-row-tags">
               <PriorityBadge priority={taskItem.priority} />
@@ -3376,6 +3407,7 @@ function TaskDrawerContent({
   showChecklistOnCard,
   onToggleChecklistOnCard,
   onClose,
+  onRegisterWaitingReturn,
   onSave,
   onDelete,
   onComment,
@@ -3419,6 +3451,8 @@ function TaskDrawerContent({
         ? {
             ...taskItem,
             assignmentMode: taskItem.assignmentMode || (taskItem.teamId ? "team" : "people"),
+            teamIds: taskItem.teamIds || (taskItem.teamId ? [taskItem.teamId] : []),
+            teamNames: taskItem.teamNames || [],
             teamId: taskItem.teamId || "",
             assigneeIds: taskItem.assigneeIds || [],
             assigneeName: normalizeAssigneeNames(
@@ -3535,6 +3569,7 @@ function TaskDrawerContent({
     reason: form.deadlineChangeReason,
   });
   const waitingValidation = validateWaitingContext(form.status, form.waitingContext);
+  const canRegisterReturn = canRegisterWaitingReturn(taskItem, currentEmployee, teams);
   const selectedEmployees = state.employees.filter((employee) =>
     normalizeAssigneeNames(form.assigneeName).includes(employee.name),
   );
@@ -3614,6 +3649,8 @@ function TaskDrawerContent({
         status: form.status,
         priority: form.priority,
         assignmentMode: form.assignmentMode,
+        teamIds: form.teamIds || [],
+        teamNames: form.teamNames || [],
         teamId: form.teamId || "",
         assigneeIds: form.assigneeIds || [],
         assigneeNames: normalizeAssigneeNames(form.assigneeName),
@@ -3759,6 +3796,17 @@ function TaskDrawerContent({
               </span>
             </div>
           </div>
+          {canRegisterReturn && (
+            <button
+              className="button button-secondary drawer-return-action"
+              type="button"
+              onClick={() => onRegisterWaitingReturn?.(taskItem.id)}
+              disabled={saveState !== "idle"}
+            >
+              <CheckCircle2 size={15} />
+              Registrar retorno
+            </button>
+          )}
           <button
             className="icon-button"
             onClick={requestClose}
@@ -4189,12 +4237,308 @@ function TaskDrawer({ task, onDelete, ...props }) {
   );
 }
 
+function WaitingStatusModal({ task, employees = [], teams = [], onClose, onSave }) {
+  const [waitingContext, setWaitingContext] = useState(() =>
+    normalizeWaitingContext(task?.waitingContext),
+  );
+  const [validationError, setValidationError] = useState("");
+  const [saveState, setSaveState] = useState("idle");
+  const closeButtonRef = useRef(null);
+  const titleId = useId();
+
+  useEffect(() => {
+    closeButtonRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape" && saveState === "idle") onClose();
+    };
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [onClose, saveState]);
+
+  if (!task) return null;
+
+  const handleSave = () => {
+    if (saveState !== "idle") return;
+    const waitingValidation = validateWaitingContext("waiting", waitingContext);
+    if (!waitingValidation.allowed) {
+      setValidationError(waitingValidation.error);
+      return;
+    }
+    setValidationError("");
+    setSaveState("saving");
+    Promise.resolve(onSave(task.id, waitingContext))
+      .then((success) => {
+        if (success) {
+          onClose();
+          return;
+        }
+        setSaveState("idle");
+        setValidationError("Não foi possível salvar a tarefa. Tente novamente.");
+      })
+      .catch(() => {
+        setSaveState("idle");
+        setValidationError("Não foi possível salvar a tarefa. Tente novamente.");
+      });
+  };
+
+  return (
+    <div
+      className="waiting-status-modal-layer"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget && saveState === "idle") onClose();
+      }}
+    >
+      <section
+        className="waiting-status-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+      >
+        <header className="waiting-status-modal-header">
+          <div className="waiting-status-modal-heading">
+            <span className="waiting-status-modal-icon" aria-hidden="true">
+              <Clock3 size={19} />
+            </span>
+            <div>
+              <span className="eyebrow">Alterar status</span>
+              <h2 id={titleId}>Mover para Aguardando</h2>
+              <p>{task.title}</p>
+            </div>
+          </div>
+          <button
+            ref={closeButtonRef}
+            className="icon-button"
+            type="button"
+            onClick={onClose}
+            aria-label="Fechar alteração de status"
+            disabled={saveState !== "idle"}
+          >
+            <X size={18} />
+          </button>
+        </header>
+        <div className="waiting-status-modal-body">
+          <p className="waiting-status-modal-intro">
+            Preencha o contexto para deixar claro de quem depende o próximo passo.
+          </p>
+          <WaitingContextFields
+            value={waitingContext}
+            onChange={setWaitingContext}
+            employees={employees}
+            teams={teams}
+            error={validationError}
+          />
+        </div>
+        <footer className="waiting-status-modal-footer">
+          <button
+            className="button button-secondary"
+            type="button"
+            onClick={onClose}
+            disabled={saveState !== "idle"}
+          >
+            Cancelar
+          </button>
+          <button
+            className="button button-primary"
+            type="button"
+            onClick={handleSave}
+            disabled={saveState !== "idle"}
+          >
+            {saveState === "saving" ? "Salvando…" : "Salvar e mover"}
+          </button>
+        </footer>
+      </section>
+    </div>
+  );
+}
+
+function WaitingReturnModal({ task, onClose, onSave }) {
+  const [text, setText] = useState("");
+  const [draftAttachments, setDraftAttachments] = useState([]);
+  const [validationError, setValidationError] = useState("");
+  const [saveState, setSaveState] = useState("idle");
+  const closeButtonRef = useRef(null);
+  const draftAttachmentsRef = useRef([]);
+  const textRef = useRef(null);
+  const titleId = useId();
+  draftAttachmentsRef.current = draftAttachments;
+
+  useEffect(() => {
+    textRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape" && saveState === "idle") onClose();
+    };
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [onClose, saveState]);
+
+  useEffect(
+    () => () => draftAttachmentsRef.current.forEach(releaseDraftAttachment),
+    [],
+  );
+
+  if (!task) return null;
+
+  const handleDraftAttachment = (id, filesOrFile) =>
+    setDraftAttachments((current) => [
+      ...current,
+      ...toAttachmentFiles(filesOrFile).map((file) =>
+        createDraftAttachment(file, "waiting-return"),
+      ),
+    ]);
+
+  const handleDraftAttachmentDelete = (id, attachment) => {
+    releaseDraftAttachment(attachment);
+    setDraftAttachments((current) =>
+      current.filter((item) => item.id !== attachment.id),
+    );
+  };
+
+  const handlePaste = (event) => {
+    const files = filesFromClipboard(event);
+    if (!files.length) return;
+    event.preventDefault();
+    handleDraftAttachment("paste", files);
+  };
+
+  const handleSave = () => {
+    if (saveState !== "idle") return;
+    const returnText = text.trim();
+    if (!returnText) {
+      setValidationError("Informe o retorno recebido.");
+      textRef.current?.focus();
+      return;
+    }
+    setValidationError("");
+    setSaveState("saving");
+    Promise.resolve(
+      onSave(task.id, {
+        text: returnText,
+        files: draftAttachments.map((attachment) => attachment.file).filter(Boolean),
+      }),
+    )
+      .then((success) => {
+        if (success) {
+          onClose();
+          return;
+        }
+        setSaveState("idle");
+        setValidationError("Não foi possível registrar o retorno. Tente novamente.");
+      })
+      .catch((failure) => {
+        setSaveState("idle");
+        setValidationError(failure.message || "Não foi possível registrar o retorno. Tente novamente.");
+      });
+  };
+
+  return (
+    <div
+      className="waiting-status-modal-layer waiting-return-modal-layer"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget && saveState === "idle") onClose();
+      }}
+    >
+      <section
+        className="waiting-status-modal waiting-return-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        onPaste={handlePaste}
+      >
+        <header className="waiting-status-modal-header">
+          <div className="waiting-status-modal-heading">
+            <span className="waiting-status-modal-icon waiting-return-modal-icon" aria-hidden="true">
+              <CheckCircle2 size={19} />
+            </span>
+            <div>
+              <span className="eyebrow">Atualizar andamento</span>
+              <h2 id={titleId}>Registrar retorno</h2>
+              <p>{task.title}</p>
+            </div>
+          </div>
+          <button
+            ref={closeButtonRef}
+            className="icon-button"
+            type="button"
+            onClick={onClose}
+            aria-label="Fechar registro de retorno"
+            disabled={saveState !== "idle"}
+          >
+            <X size={18} />
+          </button>
+        </header>
+        <div className="waiting-status-modal-body waiting-return-modal-body">
+          <div className="waiting-return-context">
+            <span>Contexto de Aguardando</span>
+            <strong>{waitingContextSummary(task.waitingContext) || "Nenhum contexto detalhado foi informado."}</strong>
+          </div>
+          <label className="waiting-return-field">
+            O que foi retornado?
+            <textarea
+              ref={textRef}
+              value={text}
+              onChange={(event) => setText(event.target.value)}
+              placeholder="Descreva o retorno recebido e o que muda na tarefa."
+              maxLength={1000}
+              rows="5"
+              aria-invalid={Boolean(validationError)}
+            />
+          </label>
+          {validationError && <div className="field-error" role="alert">{validationError}</div>}
+          <AttachmentSection
+            taskId="waiting-return"
+            attachments={draftAttachments}
+            onAttachment={handleDraftAttachment}
+            onDeleteAttachment={handleDraftAttachmentDelete}
+            helperText="Anexe um comprovante ou outra evidência, se necessário."
+          />
+        </div>
+        <footer className="waiting-status-modal-footer">
+          <button
+            className="button button-secondary"
+            type="button"
+            onClick={onClose}
+            disabled={saveState !== "idle"}
+          >
+            Cancelar
+          </button>
+          <button
+            className="button button-primary"
+            type="button"
+            onClick={handleSave}
+            disabled={saveState !== "idle"}
+          >
+            {saveState === "saving" ? <><LoaderCircle size={16} className="spin" /> Salvando…</> : <><Check size={16} /> Registrar retorno</>}
+          </button>
+        </footer>
+      </section>
+    </div>
+  );
+}
+
 function NewTaskDrawer({ employees = [], teams = [], initialStatus = "todo", onClose, onSave }) {
   const [form, setForm] = useState({
     title: "",
     status: initialStatus,
     priority: "medium",
     assignmentMode: "people",
+    teamIds: [],
+    teamNames: [],
     teamId: "",
     assigneeName: [],
     assigneeIds: [],
@@ -4495,6 +4839,8 @@ export default function App() {
     state.currentUserEmail,
   );
   const [selectedId, setSelectedId] = useState("");
+  const [waitingTaskId, setWaitingTaskId] = useState("");
+  const [waitingReturnTaskId, setWaitingReturnTaskId] = useState("");
   const [creating, setCreating] = useState(false);
   const [creatingStatus, setCreatingStatus] = useState("todo");
   const [filters, setFilters] = useState(createDefaultFilters);
@@ -4896,8 +5242,7 @@ export default function App() {
       if (status === "waiting" && task.status !== "waiting") {
         const waitingValidation = validateWaitingContext("waiting", task.waitingContext);
         if (!waitingValidation.allowed) {
-          setPendingTaskDraft({ id, patch: { status: "waiting" } });
-          setSelectedId(id);
+          setWaitingTaskId(id);
           return Promise.resolve(false);
         }
       }
@@ -4922,7 +5267,7 @@ export default function App() {
       ].filter((value) => typeof value === "string").join(" ");
       const nextPatch = {
         ...patch,
-        ...(patch.assignmentMode !== undefined || patch.teamId !== undefined || patch.assigneeIds !== undefined || patch.assigneeNames !== undefined
+        ...(patch.assignmentMode !== undefined || patch.teamIds !== undefined || patch.teamId !== undefined || patch.assigneeIds !== undefined || patch.assigneeNames !== undefined
           ? (() => {
               const assignment = resolveTaskAssignment(patch, state.teams || [], state.employees || []);
               return { ...assignment, assigneeName: assignment.assigneeNames.join(", ") };
@@ -4960,6 +5305,58 @@ export default function App() {
       });
     },
     [currentEmployee, state, store, runOptimisticMutation, selectedId, showNotice],
+  );
+  const waitingTask = useMemo(
+    () => state.tasks.find((item) => item.id === waitingTaskId),
+    [state.tasks, waitingTaskId],
+  );
+  const saveWaitingStatus = useCallback(
+    (id, waitingContext) =>
+      saveTask(id, { status: "waiting", waitingContext }),
+    [saveTask],
+  );
+  const waitingReturnTask = useMemo(
+    () => state.tasks.find((item) => item.id === waitingReturnTaskId),
+    [state.tasks, waitingReturnTaskId],
+  );
+  const openWaitingReturn = useCallback(
+    (id) => {
+      const task = state.tasks.find((item) => item.id === id);
+      if (canRegisterWaitingReturn(task, currentEmployee, state.teams)) {
+        setWaitingReturnTaskId(id);
+      }
+    },
+    [currentEmployee, state.tasks, state.teams],
+  );
+  const registerWaitingReturn = useCallback(
+    (id, input) => {
+      const task = state.tasks.find((item) => item.id === id);
+      if (!canRegisterWaitingReturn(task, currentEmployee, state.teams)) {
+        showNotice("Você não pode registrar este retorno.", 5200);
+        return Promise.resolve(false);
+      }
+      const mentionedEmployeeIds = mentionedEmployees(input.text, state.employees).map((employee) => employee.id);
+      const operationInput = {
+        ...input,
+        actorEmployeeId: currentEmployee?.id || "",
+        actorUserId: currentEmployee?.userId || "",
+        mentionedEmployeeIds,
+      };
+      return runOptimisticMutation(
+        (current) => addOptimisticComment(
+          applyOptimisticTaskPatch(current, id, { status: "doing" }),
+          id,
+          input.text,
+        ),
+        () => store.resolveWaitingReturn(state, id, operationInput),
+        store.live ? "Registrando retorno..." : "Registrando retorno no mock local...",
+        store.live ? "Retorno registrado." : "Retorno registrado localmente.",
+      ).then((success) => {
+        if (success && selectedId === id) setSelectedId("");
+        return success;
+      });
+    },
+    [currentEmployee, selectedId, showNotice, state, store, runOptimisticMutation],
   );
   const completeTask = useCallback(
     (id) => {
@@ -5312,8 +5709,8 @@ export default function App() {
     [state, store, runOptimisticMutation],
   );
   const workItems = useMemo(
-    () => normalizeWorkItems(state || {}),
-    [state?.tasks, state?.quality],
+    () => normalizeWorkItems(state || {}, currentEmployee),
+    [state?.tasks, state?.quality, state?.teams, currentEmployee?.id],
   );
   useEffect(() => {
     if (!currentEmployee?.id || !store.loadNotifications) return undefined;
@@ -5487,6 +5884,7 @@ export default function App() {
           onToggleSubtask={saveTask}
           onMove={moveTask}
           onComplete={completeTask}
+          onRegisterWaitingReturn={openWaitingReturn}
           onCreate={openCreate}
           filters={filters}
           setFilters={setFilters}
@@ -5599,6 +5997,22 @@ export default function App() {
           </button>
         </div>
       )}
+      {waitingTask && (
+        <WaitingStatusModal
+          task={waitingTask}
+          employees={state.employees}
+          teams={state.teams}
+          onClose={() => setWaitingTaskId("")}
+          onSave={saveWaitingStatus}
+        />
+      )}
+      {waitingReturnTask && (
+        <WaitingReturnModal
+          task={waitingReturnTask}
+          onClose={() => setWaitingReturnTaskId("")}
+          onSave={registerWaitingReturn}
+        />
+      )}
       {selected && (
         <TaskDrawer
           task={selected}
@@ -5610,6 +6024,7 @@ export default function App() {
             setChecklistVisibilityForTask(selected.id, visible)
           }
           onClose={closeTask}
+          onRegisterWaitingReturn={openWaitingReturn}
           onSave={saveTask}
           onDelete={deleteTask}
           onComment={addComment}

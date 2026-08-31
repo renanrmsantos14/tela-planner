@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { addAttachment, addComment, createTask, createTeam, deleteAttachment, deleteTask, deleteTeam, ensureQuoteTask, seedState, updateTask, updateTeam } from "../src/mockStore.js";
+import { addAttachment, addComment, createTask, createTeam, deleteAttachment, deleteTask, deleteTeam, ensureQuoteTask, resolveWaitingReturn, seedState, updateTask, updateTeam } from "../src/mockStore.js";
 
 function withStorage() {
   const values = new Map();
@@ -151,6 +151,35 @@ test("preserva contexto ao sair de Aguardando", () => {
   const doing = updateTask(waiting, task.id, { status: "doing" }).tasks.find((item) => item.id === task.id);
   assert.equal(doing.waitingContext.subject, "aprovação da proposta");
   assert.equal(doing.status, "doing");
+});
+
+test("registra retorno, evidência, histórico e notificação em uma operação", () => {
+  withStorage();
+  const initial = seedState();
+  const task = initial.tasks.find((item) => item.status === "waiting" && item.waitingContext.onType === "employee" && item.waitingContext.onId);
+  const next = resolveWaitingReturn(initial, task.id, {
+    text: "Rafael confirmou a disponibilidade do veículo.",
+    files: [{ name: "confirmacao.pdf", type: "application/pdf", size: 2048 }],
+    actorEmployeeId: "employee-rafael",
+    actorUserId: "user-rafael",
+  });
+  const resolved = next.tasks.find((item) => item.id === task.id);
+
+  assert.equal(resolved.status, "doing");
+  assert.equal(resolved.comments.at(-1).text, "Rafael confirmou a disponibilidade do veículo.");
+  assert.equal(resolved.attachments.at(-1).name, "confirmacao.pdf");
+  assert.equal(resolved.history.at(-1).text, "Retorno registrado. Tarefa retomada para Em andamento.");
+  assert.equal(resolved.waitingContext.subject, task.waitingContext.subject);
+  assert.ok(next.notifications.some((item) => item.taskId === task.id && item.type === "status" && item.message.includes("Rafael confirmou")));
+  assert.equal(task.status, "waiting");
+});
+
+test("exige relato e permissão para registrar retorno", () => {
+  withStorage();
+  const initial = seedState();
+  const task = initial.tasks.find((item) => item.status === "waiting" && item.waitingContext.onType === "employee" && item.waitingContext.onId);
+  assert.throws(() => resolveWaitingReturn(initial, task.id, { actorEmployeeId: "employee-rafael", actorUserId: "user-rafael" }), /Informe o retorno recebido/);
+  assert.throws(() => resolveWaitingReturn(initial, task.id, { text: "Retorno", actorEmployeeId: "employee-camila", actorUserId: "user-camila" }), /não pode registrar/);
 });
 
 test("semeia cenário operacional amplo e variado", () => {

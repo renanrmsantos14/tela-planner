@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { addOptimisticAttachment, addOptimisticComment, applyOptimisticTaskPatch, buildAssigneeOptions, buildOptimisticTask, buildTaskCreationInput, filterTasks, getDueBucket, isOverdue, mentionedEmployees, migrateLegacyTeams, normalizeAssigneeNames, normalizeTeam, quoteTaskTitle, resolveTaskAssignment, sortTasks, STATUSES, taskStats, teamResponsibilitySummary, validateWaitingContext, waitingContextSummary } from "../src/domain.js";
+import { addOptimisticAttachment, addOptimisticComment, applyOptimisticTaskPatch, buildAssigneeOptions, buildOptimisticTask, buildTaskCreationInput, canRegisterWaitingReturn, filterTasks, getDueBucket, getDueBucketForEmployee, isOverdue, mentionedEmployees, migrateLegacyTeams, normalizeAssigneeNames, normalizeTeam, quoteTaskTitle, resolveTaskAssignment, sortTasks, STATUSES, taskDisplayDueDate, taskStats, teamResponsibilitySummary, validateWaitingContext, waitingContextSummary } from "../src/domain.js";
 
 const tasks = [
   { id: "1", title: "Atrasada", quoteTitle: "Cotação A", assigneeName: "Marina", status: "todo", priority: "high", dueDate: "2026-08-01" },
@@ -132,6 +132,20 @@ test("valida contexto mínimo e monta resumo de Aguardando", () => {
   assert.equal(validateWaitingContext("waiting", context).allowed, true);
   assert.equal(waitingContextSummary(context), "Aguardando confirmação da segunda van · Operação · até 28 ago.");
   assert.equal(validateWaitingContext("doing", {}).allowed, true);
+});
+
+test("autoriza o criador, o responsável pelo retorno e membro da equipe", () => {
+  const task = {
+    status: "waiting",
+    creatorEmployeeId: "employee-renan",
+    creatorUserId: "user-renan",
+    waitingContext: { subject: "confirmação", onType: "employee", onId: "employee-rafael", onName: "Rafael Lima" },
+  };
+  assert.equal(canRegisterWaitingReturn(task, { id: "employee-renan", userId: "user-renan" }), true);
+  assert.equal(canRegisterWaitingReturn(task, { id: "employee-rafael", name: "Rafael Lima" }), true);
+  assert.equal(canRegisterWaitingReturn(task, { id: "employee-camila" }), false);
+  assert.equal(canRegisterWaitingReturn({ ...task, status: "doing" }, { id: "employee-rafael" }), false);
+  assert.equal(canRegisterWaitingReturn({ ...task, waitingContext: { ...task.waitingContext, onType: "team", onId: "team-operation", onName: "Operação" } }, { id: "employee-camila" }, [{ id: "team-operation", name: "Operação", memberIds: ["employee-camila"] }]), true);
 });
 
 test("monta responsáveis únicos em ordem alfabética", () => {

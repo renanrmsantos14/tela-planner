@@ -218,6 +218,24 @@ button { cursor: pointer; }
 .waiting-context textarea { resize: vertical; line-height: 1.45; }
 .waiting-context input:focus, .waiting-context textarea:focus { border-color: #6c91e8; box-shadow: 0 0 0 3px rgba(33,89,210,.11); }
 .waiting-context-grid { display: grid; grid-template-columns: 1fr 1.4fr 1fr; gap: 10px; }
+.waiting-context-type-field { display: flex; align-items: flex-end; min-width: 0; }
+.waiting-context-type-picker { width: 100%; }
+.waiting-context-type-picker button { display: inline-grid; min-height: 38px; place-items: center; }
+.waiting-context-type-picker button svg { stroke-width: 2.1; }
+.waiting-status-modal-layer { position: fixed; inset: 0; z-index: 220; display: grid; place-items: center; padding: 24px; background: rgba(4, 24, 48, .46); backdrop-filter: blur(2px); animation: waiting-status-modal-backdrop-in 160ms ease-out both; }
+.waiting-status-modal { width: min(620px, 100%); max-height: min(760px, calc(100dvh - 48px)); display: flex; flex-direction: column; overflow: hidden; border: 1px solid #d5e1f2; border-radius: 18px; background: var(--surface); box-shadow: 0 24px 70px rgba(4, 24, 48, .22); animation: waiting-status-modal-in 220ms cubic-bezier(.16, 1, .3, 1) both; }
+.waiting-status-modal-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 20px 22px 17px; border-bottom: 1px solid #e7edf5; }
+.waiting-status-modal-heading { min-width: 0; display: flex; align-items: flex-start; gap: 11px; }
+.waiting-status-modal-icon { width: 38px; height: 38px; display: grid; place-items: center; flex: 0 0 auto; border: 1px solid #f0dca5; border-radius: 11px; color: #946100; background: #fff8e7; }
+.waiting-status-modal-heading > div { min-width: 0; display: grid; gap: 4px; }
+.waiting-status-modal h2 { margin: 0; color: var(--navy); font-size: 18px; line-height: 1.2; letter-spacing: -.25px; }
+.waiting-status-modal-heading p { overflow: hidden; margin: 1px 0 0; color: var(--muted); font-size: 11px; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+.waiting-status-modal-body { min-height: 0; overflow: auto; padding: 18px 22px 4px; }
+.waiting-status-modal-intro { margin: 0 0 14px; color: var(--muted); font-size: 11px; line-height: 1.5; }
+.waiting-status-modal .waiting-context { margin: 0 0 12px; }
+.waiting-status-modal-footer { display: flex; justify-content: flex-end; gap: 9px; padding: 15px 22px 20px; border-top: 1px solid #e7edf5; background: #fbfdff; }
+@keyframes waiting-status-modal-backdrop-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes waiting-status-modal-in { from { transform: translateY(8px) scale(.98); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
 .task-waiting-summary { display: flex; gap: 5px; align-items: flex-start; margin: 7px 0 9px; color: #8b5b00; font-size: 10px; line-height: 1.35; }
 .task-waiting-summary svg { flex: 0 0 auto; margin-top: 1px; }
 .task-waiting-summary span { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
@@ -232,6 +250,16 @@ button { cursor: pointer; }
   .waiting-context-heading { display: grid; gap: 3px; }
   .waiting-context-heading > span { text-align: left; }
   .table-task-copy small { white-space: normal; }
+  .waiting-status-modal-layer { padding: 14px; }
+  .waiting-status-modal { max-height: calc(100dvh - 28px); border-radius: 16px; }
+  .waiting-status-modal-header { padding: 17px 16px 15px; }
+  .waiting-status-modal-body { padding: 16px 16px 2px; }
+  .waiting-status-modal-footer { padding: 13px 16px max(16px, env(safe-area-inset-bottom)); }
+  .waiting-status-modal-footer .button { min-height: 44px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .waiting-status-modal-layer, .waiting-status-modal { animation-duration: .01ms !important; animation-delay: 0ms !important; }
 }
 
 /* Ajuste fino da densidade do quadro: mais ritmo interno sem aumentar o card. */
@@ -1359,3 +1387,26 @@ button { cursor: pointer; }
 .drawer-assignment-deadline-grid .deadline-field { width: 100%; max-width: 100%; }
 .drawer-assignment-deadline-grid .deadline-field input { width: 100%; max-width: 100%; }
 @media (max-width: 820px) { .drawer-status-priority-grid, .drawer-assignment-deadline-grid { grid-template-columns: minmax(0, 1fr); gap: 11px; }.assignment-members { width: 100%; } }
+
+.task-return-action { color: var(--green); border-color: #b8e1c8; background: var(--green-soft); }
+.task-return-action:hover, .task-return-action:focus-visible { border-color: #8dccaa; background: #e4f7eb; }
+.drawer-return-action { min-height: 32px; padding: 0 10px; font-size: 10px; white-space: nowrap; }
+.waiting-return-modal { width: min(640px, 100%); }
+.waiting-return-modal-icon { color: var(--green); border-color: #b8e1c8; background: var(--green-soft); }
+.waiting-return-modal-body { padding-bottom: 20px; }
+.waiting-return-context { display: grid; gap: 5px; margin-bottom: 16px; padding: 11px 12px; border: 1px solid #dce7f4; border-radius: 10px; background: #f7faff; }
+.waiting-return-context span { color: var(--muted); font-size: 9px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; }
+.waiting-return-context strong { color: var(--navy); font-size: 11px; line-height: 1.45; }
+.waiting-return-field { display: grid; gap: 6px; color: var(--muted); font-size: 10px; font-weight: 800; }
+.waiting-return-field textarea { width: 100%; min-height: 112px; resize: vertical; padding: 10px; border: 1px solid var(--line); border-radius: var(--radius-md); outline: 0; color: var(--control); background: var(--neutral); font: inherit; font-size: 12px; line-height: 1.5; }
+.waiting-return-field textarea:focus { border-color: #6c91e8; box-shadow: 0 0 0 3px rgba(33,89,210,.11); }
+.waiting-return-modal .field-error { margin-top: 11px; }
+.waiting-return-modal .attachment-section { margin-top: 18px; padding-top: 17px; }
+.waiting-return-modal .attachment-helper { margin-top: -4px; }
+
+@media (max-width: 560px) {
+  .waiting-return-modal .waiting-status-modal-header { gap: 10px; }
+  .waiting-return-modal .waiting-status-modal-heading { gap: 8px; }
+  .waiting-return-modal .waiting-status-modal-icon { width: 34px; height: 34px; }
+  .waiting-return-modal .waiting-status-modal-heading p { white-space: normal; }
+}

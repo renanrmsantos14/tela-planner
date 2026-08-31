@@ -57,6 +57,46 @@ export function normalizeWaitingContext(value = {}) {
   };
 }
 
+function sameIdentifier(left, right) {
+  return String(left || "").replace(/[{}]/g, "").toLowerCase() === String(right || "").replace(/[{}]/g, "").toLowerCase();
+}
+
+export function waitingReturnTargetIds(task, teams = []) {
+  const context = normalizeWaitingContext(task?.waitingContext);
+  const targetIds = Array.isArray(context.onIds) && context.onIds.length
+    ? context.onIds
+    : context.onId ? [context.onId] : [];
+  const targetNames = Array.isArray(context.onNames) && context.onNames.length
+    ? context.onNames
+    : context.onName ? [context.onName] : [];
+  if (context.onType === "employee") return targetIds;
+  return teams
+    .filter((team) => targetIds.some((id) => sameIdentifier(id, team.id)) || targetNames.some((name) => normalizeText(name) === normalizeText(team.name)))
+    .flatMap((team) => team.memberIds || team.members || []);
+}
+
+export function isWaitingReturnResponsible(task, employee, teams = []) {
+  if (task?.status !== "waiting" || !employee?.id) return false;
+  const context = normalizeWaitingContext(task.waitingContext);
+  const targetNames = Array.isArray(context.onNames) && context.onNames.length
+    ? context.onNames
+    : context.onName ? [context.onName] : [];
+  return waitingReturnTargetIds(task, teams).some((id) => sameIdentifier(id, employee.id))
+    || (context.onType === "employee" && targetNames.some((name) => normalizeText(name) === normalizeText(employee.name)));
+}
+
+export function canRegisterWaitingReturn(task, employee, teams = []) {
+  if (task?.status !== "waiting" || !employee?.id) return false;
+  return (task.creatorEmployeeId && sameIdentifier(task.creatorEmployeeId, employee.id))
+    || (task.creatorUserId && employee.userId && sameIdentifier(task.creatorUserId, employee.userId))
+    || isWaitingReturnResponsible(task, employee, teams);
+}
+
+export function taskDisplayDueDate(task, employee, teams = []) {
+  const expectedDate = normalizeWaitingContext(task?.waitingContext).expectedDate;
+  return expectedDate && isWaitingReturnResponsible(task, employee, teams) ? expectedDate : task?.dueDate || "";
+}
+
 export function validateWaitingContext(status, value) {
   if (status !== "waiting") return { allowed: true, error: "" };
   const context = normalizeWaitingContext(value);
@@ -249,6 +289,10 @@ export function getDueBucket(task, today = new Date()) {
   if (dueDate === todayKey) return "today";
   if (dueDate === shiftDateKey(todayKey, 1)) return "tomorrow";
   return "upcoming";
+}
+
+export function getDueBucketForEmployee(task, employee, teams = [], today = new Date()) {
+  return getDueBucket({ ...task, dueDate: taskDisplayDueDate(task, employee, teams) }, today);
 }
 
 function updateTaskInState(state, taskId, update) {
