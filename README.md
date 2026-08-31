@@ -16,3 +16,11 @@ Build do webresource inline:
 ```powershell
 npm run check
 ```
+
+Publicação no Dataverse DEV:
+
+```powershell
+npm run push
+```
+
+Além de publicar o WebResource, o comando verifica/cria as tabelas próprias de equipes do Planner e seus relacionamentos na solution `AppBetinhos`.

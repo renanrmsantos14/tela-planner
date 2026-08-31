@@ -40,6 +40,147 @@ function Update-RecordWithRetry([hashtable] $Headers, [string] $Uri, [string] $B
   }
 }
 
+function Get-ResponseStatusCode($ErrorRecord) {
+  try { return [int] $ErrorRecord.Exception.Response.StatusCode } catch { return 0 }
+}
+
+function New-DataverseLabel([string] $Text) {
+  return @{
+    "@odata.type" = "Microsoft.Dynamics.CRM.Label"
+    LocalizedLabels = @(@{
+      "@odata.type" = "Microsoft.Dynamics.CRM.LocalizedLabel"
+      Label = $Text
+      LanguageCode = 1046
+    })
+  }
+}
+
+function Get-EntityMetadata([hashtable] $Headers, [string] $ApiBaseUrl, [string] $LogicalName) {
+  $escapedName = Escape-OData $LogicalName
+  try {
+    return Invoke-RestMethod -Method Get -Uri "$ApiBaseUrl/EntityDefinitions(LogicalName='$escapedName')?`$select=MetadataId,LogicalName,EntitySetName,PrimaryNameAttribute" -Headers $Headers -ErrorAction Stop
+  }
+  catch {
+    if ((Get-ResponseStatusCode $_) -eq 404) { return $null }
+    throw
+  }
+}
+
+function Invoke-MetadataPost([hashtable] $Headers, [string] $Uri, [string] $Body, [string] $Label) {
+  for ($attempt = 1; $attempt -le 7; $attempt++) {
+    try {
+      return Invoke-RestMethod -Method Post -Uri $Uri -Headers $Headers -ContentType "application/json; charset=utf-8" -Body $Body -ErrorAction Stop
+    }
+    catch {
+      $message = $_.Exception.Message
+      if ($message -notmatch "0x80040216|0x80060891|0x80071151|another customization operation|another \[Import\] running|currently being imported" -or $attempt -eq 7) { throw }
+      Write-Step "$Label aguardando propagação de metadata; nova tentativa em 5s ($attempt/6)"
+      Start-Sleep -Seconds 5
+    }
+  }
+}
+
+function Wait-EntityMetadata([hashtable] $Headers, [string] $ApiBaseUrl, [string] $LogicalName) {
+  for ($attempt = 1; $attempt -le 10; $attempt++) {
+    $metadata = Get-EntityMetadata -Headers $Headers -ApiBaseUrl $ApiBaseUrl -LogicalName $LogicalName
+    if ($metadata) { return $metadata }
+    Start-Sleep -Seconds 3
+  }
+  throw "Metadata da tabela $LogicalName não ficou disponível após a criação."
+}
+
+function Ensure-PlannerTable([hashtable] $Headers, [string] $ApiBaseUrl, [string] $LogicalName, [string] $SchemaName, [string] $PrimaryName, [string] $DisplayName, [string] $CollectionName, [string] $EntitySetName) {
+  $metadata = Get-EntityMetadata -Headers $Headers -ApiBaseUrl $ApiBaseUrl -LogicalName $LogicalName
+  if (-not $metadata) {
+    Write-Step "criando tabela $LogicalName na solution $solutionUniqueName"
+    $body = @{
+      "@odata.type" = "Microsoft.Dynamics.CRM.EntityMetadata"
+      SchemaName = $SchemaName
+      DisplayName = New-DataverseLabel $DisplayName
+      DisplayCollectionName = New-DataverseLabel $CollectionName
+      Description = New-DataverseLabel "Tabela própria do Planner interno."
+      OwnershipType = "OrganizationOwned"
+      HasActivities = $false
+      HasNotes = $false
+      IsActivity = $false
+      PrimaryNameAttribute = $PrimaryName.ToLowerInvariant()
+      Attributes = @(@{
+        "@odata.type" = "Microsoft.Dynamics.CRM.StringAttributeMetadata"
+        SchemaName = $PrimaryName
+        DisplayName = New-DataverseLabel "Nome"
+        RequiredLevel = @{ Value = "ApplicationRequired" }
+        MaxLength = 100
+        IsPrimaryName = $true
+      })
+    } | ConvertTo-Json -Depth 12
+    try {
+      Invoke-MetadataPost -Headers $Headers -Uri "$ApiBaseUrl/EntityDefinitions" -Body $body -Label $LogicalName | Out-Null
+    }
+    catch {
+      $metadata = Get-EntityMetadata -Headers $Headers -ApiBaseUrl $ApiBaseUrl -LogicalName $LogicalName
+      if (-not $metadata) { throw }
+    }
+    $metadata = Wait-EntityMetadata -Headers $Headers -ApiBaseUrl $ApiBaseUrl -LogicalName $LogicalName
+  }
+
+  if ($metadata.PrimaryNameAttribute -ne $PrimaryName.ToLowerInvariant()) {
+    throw "Tabela $LogicalName já existe, mas usa atributo principal '$($metadata.PrimaryNameAttribute)' em vez de '$($PrimaryName.ToLowerInvariant())'. Deploy abortado."
+  }
+  if ($metadata.EntitySetName -ne $EntitySetName) {
+    throw "Tabela $LogicalName já existe, mas EntitySetName é '$($metadata.EntitySetName)' em vez de '$EntitySetName'. Deploy abortado."
+  }
+  return $metadata
+}
+
+function Get-PlannerRelationship([hashtable] $Headers, [string] $ApiBaseUrl, [string] $ReferencingEntity, [string] $ReferencingAttribute, [string] $ReferencedEntity) {
+  $escapedEntity = Escape-OData $ReferencingEntity
+  $relationships = Invoke-RestMethod -Method Get -Uri "$ApiBaseUrl/EntityDefinitions(LogicalName='$escapedEntity')/ManyToOneRelationships?`$select=SchemaName,ReferencingAttribute,ReferencedEntity,ReferencingEntityNavigationPropertyName" -Headers $Headers -ErrorAction Stop
+  return @($relationships.value) | Where-Object {
+    $_.ReferencingAttribute -ieq $ReferencingAttribute -and $_.ReferencedEntity -ieq $ReferencedEntity
+  } | Select-Object -First 1
+}
+
+function Ensure-PlannerRelationship([hashtable] $Headers, [string] $ApiBaseUrl, [string] $SchemaName, [string] $ReferencingEntity, [string] $ReferencingAttribute, [string] $ReferencedEntity, [string] $DisplayName) {
+  $existing = Get-PlannerRelationship -Headers $Headers -ApiBaseUrl $ApiBaseUrl -ReferencingEntity $ReferencingEntity -ReferencingAttribute $ReferencingAttribute -ReferencedEntity $ReferencedEntity
+  if ($existing) { return }
+
+  Write-Step "criando relacionamento $SchemaName"
+  $body = @{
+    "@odata.type" = "Microsoft.Dynamics.CRM.OneToManyRelationshipMetadata"
+    SchemaName = $SchemaName
+    ReferencedEntity = $ReferencedEntity
+    ReferencingEntity = $ReferencingEntity
+    Lookup = @{
+      "@odata.type" = "Microsoft.Dynamics.CRM.LookupAttributeMetadata"
+      SchemaName = $ReferencingAttribute
+      DisplayName = New-DataverseLabel $DisplayName
+      RequiredLevel = @{ Value = "None" }
+    }
+    CascadeConfiguration = @{
+      Delete = "RemoveLink"
+      Assign = "NoCascade"
+      Share = "NoCascade"
+      Unshare = "NoCascade"
+      Merge = "NoCascade"
+      Reparent = "NoCascade"
+    }
+  } | ConvertTo-Json -Depth 12
+  try {
+    Invoke-MetadataPost -Headers $Headers -Uri "$ApiBaseUrl/RelationshipDefinitions" -Body $body -Label $SchemaName | Out-Null
+  }
+  catch {
+    $existing = Get-PlannerRelationship -Headers $Headers -ApiBaseUrl $ApiBaseUrl -ReferencingEntity $ReferencingEntity -ReferencingAttribute $ReferencingAttribute -ReferencedEntity $ReferencedEntity
+    if (-not $existing) { throw }
+  }
+}
+
+function Ensure-PlannerSchema([hashtable] $Headers, [string] $ApiBaseUrl) {
+  Ensure-PlannerTable -Headers $Headers -ApiBaseUrl $ApiBaseUrl -LogicalName "cr40f_plannerequipe" -SchemaName "cr40f_PlannerEquipe" -PrimaryName "cr40f_Nome" -DisplayName "Equipe do Planner" -CollectionName "Equipes do Planner" -EntitySetName "cr40f_plannerequipes" | Out-Null
+  Ensure-PlannerTable -Headers $Headers -ApiBaseUrl $ApiBaseUrl -LogicalName "cr40f_plannerequipemembro" -SchemaName "cr40f_PlannerEquipeMembro" -PrimaryName "cr40f_Name" -DisplayName "Membro da Equipe do Planner" -CollectionName "Membros das Equipes do Planner" -EntitySetName "cr40f_plannerequipemembros" | Out-Null
+  Ensure-PlannerRelationship -Headers $Headers -ApiBaseUrl $ApiBaseUrl -SchemaName "cr40f_PlannerEquipeMembro_Equipe" -ReferencingEntity "cr40f_plannerequipemembro" -ReferencingAttribute "cr40f_Equipe" -ReferencedEntity "cr40f_plannerequipe" -DisplayName "Equipe"
+  Ensure-PlannerRelationship -Headers $Headers -ApiBaseUrl $ApiBaseUrl -SchemaName "cr40f_PlannerEquipeMembro_Funcionario" -ReferencingEntity "cr40f_plannerequipemembro" -ReferencingAttribute "cr40f_Funcionario" -ReferencedEntity "cr40f_funcionarios" -DisplayName "Funcionário"
+}
+
 $root = Resolve-Path (Join-Path $PSScriptRoot "..")
 Set-Location $root
 $environmentBaseUrl = $EnvironmentUrl.TrimEnd("/")
@@ -77,6 +218,9 @@ $solutionFilter = Escape-OData $solutionUniqueName
 $solution = Invoke-RestMethod -Method Get -Uri "$apiBaseUrl/solutions?`$select=solutionid,uniquename&`$filter=uniquename eq '$solutionFilter'" -Headers $headers
 if (-not $solution.value -or $solution.value.Count -eq 0) { throw "Solution $solutionUniqueName não encontrada. Deploy abortado." }
 if ($solution.value.Count -gt 1) { throw "Mais de uma solution $solutionUniqueName encontrada. Deploy abortado." }
+
+Write-Step "validando schema do Planner"
+Ensure-PlannerSchema -Headers $headers -ApiBaseUrl $apiBaseUrl
 
 $escapedName = Escape-OData $resourceName
 $lookupUri = "$apiBaseUrl/webresourceset?`$select=webresourceid,name,displayname,webresourcetype&`$filter=name eq '$escapedName'"
