@@ -24,6 +24,33 @@ test("classifica prazos em atraso, hoje, amanhã e próximos no fuso do app", ()
   assert.equal(getDueBucket({ status: "todo" }, today), "none");
 });
 
+test("usa prazo do retorno apenas para responsável de Aguardando", () => {
+  const task = {
+    status: "waiting",
+    dueDate: "2026-08-20",
+    waitingContext: {
+      subject: "confirmação",
+      onType: "employee",
+      onIds: ["employee-marina"],
+      onNames: ["Marina Alves"],
+      expectedDate: "2026-08-28",
+    },
+  };
+  const responsible = { id: "employee-marina", name: "Marina Alves" };
+  const viewer = { id: "employee-rafael", name: "Rafael Lima" };
+
+  assert.equal(taskDisplayDueDate(task, responsible), "2026-08-28");
+  assert.equal(taskDisplayDueDate(task, viewer), "2026-08-20");
+  assert.equal(getDueBucketForEmployee(task, responsible, [], new Date("2026-08-28T12:00:00-03:00")), "today");
+  assert.equal(filterTasks([task], { assignee: ["Marina Alves"] }, responsible).length, 1);
+
+  const teamTask = {
+    ...task,
+    waitingContext: { ...task.waitingContext, onType: "team", onIds: ["team-operation"], onNames: ["Operação"] },
+  };
+  assert.equal(taskDisplayDueDate(teamTask, viewer, [{ id: "team-operation", name: "Operação", memberIds: ["employee-rafael"] }]), "2026-08-28");
+});
+
 test("filtra por texto, status e prioridade", () => {
   assert.equal(filterTasks(tasks, { query: "Rafael", status: "", priority: "" }).length, 1);
   assert.equal(filterTasks(tasks, { query: "", status: ["doing", "waiting"], priority: ["medium", "high"] }).length, 1);
@@ -60,7 +87,7 @@ test("normaliza equipe e expande seus membros no snapshot da tarefa", () => {
   const assignment = resolveTaskAssignment({ assignmentMode: "team", teamId: team.id }, [team], [{ id: "e1", name: "Marina" }, { id: "e2", name: "Rafael" }]);
 
   assert.deepEqual(team.memberIds, ["e1", "e2"]);
-  assert.deepEqual(assignment, { assignmentMode: "team", teamId: "team-op", teamName: "Operação", assigneeIds: ["e1", "e2"], assigneeNames: ["Marina", "Rafael"] });
+  assert.deepEqual(assignment, { assignmentMode: "team", teamIds: ["team-op"], teamNames: ["Operação"], teamId: "team-op", teamName: "Operação", assigneeIds: ["e1", "e2"], assigneeNames: ["Marina", "Rafael"] });
 });
 
 test("resume somente tarefas abertas cuja responsabilidade é da equipe", () => {
@@ -77,6 +104,18 @@ test("resume somente tarefas abertas cuja responsabilidade é da equipe", () => 
 
   assert.equal(summary.totalTaskCount, 2);
   assert.deepEqual(summary.members.map(({ name }) => name), ["Marina", "Rafael"]);
+});
+
+test("expande múltiplas equipes e deduplica membros compartilhados", () => {
+  const teams = [
+    { id: "team-a", name: "Operação", memberIds: ["e1", "e2"] },
+    { id: "team-b", name: "Comercial", memberIds: ["e2", "e3"] },
+  ];
+  const assignment = resolveTaskAssignment({ assignmentMode: "team", teamIds: ["team-a", "team-b"] }, teams, [{ id: "e1", name: "Marina" }, { id: "e2", name: "Rafael" }, { id: "e3", name: "Camila" }]);
+
+  assert.deepEqual(assignment.teamIds, ["team-a", "team-b"]);
+  assert.deepEqual(assignment.assigneeIds, ["e1", "e2", "e3"]);
+  assert.deepEqual(assignment.assigneeNames, ["Marina", "Rafael", "Camila"]);
 });
 
 test("migra equipes legadas sem alterar tarefas fora de equipe", () => {

@@ -104,3 +104,33 @@
 **Suggested improvement:** Ao criar uma visão de consulta sobre um registro existente, declarar o limite no cabeçalho e implementar somente busca, filtros, indicadores e vínculos de trabalho já existentes.
 
 **Principle:** Uma visão operacional deve tornar seu escopo explícito e não sugerir mutações que não fazem parte do objetivo.
+
+### Observation 8: Cobertura de eventos precisa ser verificada contra o automatizador real
+
+**Status:** OPEN
+**Date:** 2026-08-26
+**Session context:** Auditoria das notificações internas do Tela Planner.
+**Skill:** antigravity-protocol / database-sentinel
+**Type:** open-source
+**Phase/Area:** Integração frontend, Dataverse e Power Automate
+
+**Issue:** O frontend produz eventos para atribuição, menção, prazo, status, responsáveis e aguardando, mas o script versionado que cria o Flow imediato filtra somente `notification:mention`; o resumo diário existe apenas como especificação e funções puras, sem automatizador versionado. Testes locais verdes não comprovam a cobertura no ambiente.
+
+**Suggested improvement:** Auditar a matriz produtor -> Flow -> tabela de notificações -> leitura da UI em cada revisão de notificações, incluindo evidência de execução no ambiente e cobertura de idempotência.
+
+**Principle:** Uma integração de eventos só está funcional quando a cobertura do produtor, do consumidor e da persistência é comprovada no mesmo ambiente.
+
+### Observation 9: Estado expandido deve aparecer no próprio contexto da equipe
+
+**Status:** OPEN
+**Date:** 2026-08-31
+**Session context:** Redesign visual da tela de equipes com geração de mockup e definição do fluxo de expansão.
+**Skill:** imagegen / intent
+**Type:** open-source
+**Phase/Area:** Arquitetura de informação e prototipação visual
+
+**Issue:** O pedido começou como uma crítica visual à tela estática; a direção só ficou verificável quando o mockup mostrou a equipe expandida no mesmo card, com usuários e contagem de tarefas por responsabilidade.
+
+**Suggested improvement:** Em protótipos de interfaces com interação central, gerar ou apresentar explicitamente o estado acionado junto do estado inicial, mantendo identidade visual, conteúdo funcional e contexto espacial constantes.
+
+**Principle:** Para validar uma interação de UI, mostre o estado após a ação no mesmo contexto; aparência isolada não prova compreensão do fluxo.

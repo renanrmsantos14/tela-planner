@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { dailyReminderRows, deadlineReminderType, deadlineRole, groupDailyDigest, isTaskWaitingForEmployee, notificationDedupeKey, notificationRecipients, previousBusinessDay, unreadCount, validateDeadlineChange } from "../src/notifications.js";
+import { businessDaysSince, dailyReminderRows, deadlineReminderType, deadlineRole, groupDailyDigest, isTaskWaitingForEmployee, notificationDedupeKey, notificationRecipients, previousBusinessDay, unreadCount, validateDeadlineChange } from "../src/notifications.js";
 
 test("D-1 útil de segunda-feira cai na sexta-feira", () => {
   assert.equal(previousBusinessDay("2026-08-24"), "2026-08-21");
@@ -14,13 +14,14 @@ test("classifica vencimento, atraso e ignora status terminal", () => {
   assert.equal(deadlineReminderType({ dueDate: "2026-08-23", status: "cancelled" }, "2026-08-24"), "");
 });
 
-test("criador altera prazo sem motivo e responsável exige motivo", () => {
+test("criador altera prazo sem motivo e demais usuários justificam a mudança", () => {
   const task = { dueDate: "2026-08-24", creatorUserId: "user-owner", assigneeIds: ["employee-assignee"] };
   assert.equal(deadlineRole(task, { userId: "user-owner", id: "employee-assignee" }), "creator");
   assert.equal(validateDeadlineChange({ task, employee: { userId: "user-owner" }, nextDueDate: "2026-08-25" }).allowed, true);
   assert.equal(validateDeadlineChange({ task, employee: { id: "employee-assignee" }, nextDueDate: "2026-08-25" }).allowed, false);
   assert.equal(validateDeadlineChange({ task, employee: { id: "employee-assignee" }, nextDueDate: "2026-08-25", reason: "Cliente pediu nova data" }).allowed, true);
-  assert.equal(validateDeadlineChange({ task, employee: { id: "employee-other" }, nextDueDate: "2026-08-25", reason: "Teste" }).allowed, false);
+  assert.equal(validateDeadlineChange({ task, employee: { id: "employee-other" }, nextDueDate: "2026-08-25" }).allowed, false);
+  assert.equal(validateDeadlineChange({ task, employee: { id: "employee-other" }, nextDueDate: "2026-08-25", reason: "Ajuste operacional" }).allowed, true);
 });
 
 test("destinatários removem ator, duplicados e atribuições antigas", () => {
@@ -56,4 +57,15 @@ test("resumo diário expande múltiplos responsáveis uma vez e sinaliza identid
   const groups = groupDailyDigest(rows);
   assert.deepEqual(Object.keys(groups).sort(), ["a", "b"]);
   assert.equal(groups.a.due_today.length, 1);
+});
+
+test("cobrança diária inclui criador no primeiro dia útil e não dispara D-1", () => {
+  assert.equal(businessDaysSince("2026-08-21", "2026-08-24"), 1);
+  const tasks = [
+    { id: "late", dueDate: "2026-08-21", status: "doing", assigneeIds: ["a"], creatorEmployeeId: "c" },
+    { id: "tomorrow", dueDate: "2026-08-25", status: "doing", assigneeIds: ["a"], creatorEmployeeId: "c" },
+  ];
+  const rows = dailyReminderRows(tasks, [], "2026-08-24");
+  assert.deepEqual(rows.filter((row) => row.taskId === "late").map((row) => row.recipientEmployeeId).sort(), ["a", "c"]);
+  assert.equal(rows.some((row) => row.taskId === "tomorrow"), false);
 });

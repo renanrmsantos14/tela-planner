@@ -87,7 +87,7 @@ test("preserva origem na tarefa criada", () => {
   assert.equal(task.sourceId, "quality-1");
 });
 
-test("salva equipe e snapshot de responsáveis sem reescrever tarefas antigas", () => {
+test("salva equipe e acompanha membros atuais nas tarefas da equipe", () => {
   withStorage();
   const initial = seedState();
   const teamState = createTeam(initial, { name: "Equipe teste", memberIds: ["employee-marina", "employee-rafael"] });
@@ -102,7 +102,7 @@ test("salva equipe e snapshot de responsáveis sem reescrever tarefas antigas", 
   const editedTeam = updateTeam(created, team.id, { name: team.name, memberIds: ["employee-marina"] });
   const savedTask = editedTeam.tasks.find((item) => item.id === task.id);
   assert.deepEqual(editedTeam.teams.at(-1).memberIds, ["employee-marina"]);
-  assert.deepEqual(savedTask.assigneeIds, ["employee-marina", "employee-rafael"]);
+  assert.deepEqual(savedTask.assigneeIds, ["employee-marina"]);
 });
 
 test("apaga equipe sem alterar tarefas existentes", () => {
@@ -133,6 +133,21 @@ test("registra aguardando e conclusão no histórico mock", () => {
   assert.ok(waitingNotifications.length >= 1);
   assert.ok(waitingNotifications.every((item) => item.message.includes("retorno do parceiro")));
   assert.ok(completed.history.some((item) => item.text === "Tarefa concluída."));
+});
+
+test("notifica uma vez cada membro de múltiplas equipes aguardando", () => {
+  withStorage();
+  const initial = seedState();
+  const first = createTeam(initial, { name: "Equipe A", memberIds: ["employee-marina", "employee-rafael"] });
+  const second = createTeam(first, { name: "Equipe B", memberIds: ["employee-rafael", "employee-camila"] });
+  const task = second.tasks.find((item) => item.status === "todo");
+  const teamA = second.teams.at(-2);
+  const teamB = second.teams.at(-1);
+  const next = updateTask(second, task.id, { status: "waiting", waitingContext: { subject: "retorno", onType: "team", onIds: [teamA.id, teamB.id], onNames: [teamA.name, teamB.name] } });
+  const recipients = next.notifications.filter((item) => item.taskId === task.id && item.type === "waiting").map((item) => item.recipientEmployeeId);
+
+  assert.equal(new Set(recipients).size, recipients.length);
+  assert.ok(recipients.includes("employee-rafael"));
 });
 
 test("exige contexto ao entrar em Aguardando no mock", () => {

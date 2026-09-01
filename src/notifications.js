@@ -10,6 +10,20 @@ export function previousBusinessDay(value) {
   return date.toISOString().slice(0, 10);
 }
 
+export function businessDaysSince(startValue, endValue) {
+  const startKey = dateKey(startValue);
+  const endKey = dateKey(endValue);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(startKey) || !/^\d{4}-\d{2}-\d{2}$/.test(endKey) || startKey >= endKey) return 0;
+  const cursor = new Date(`${startKey}T12:00:00Z`);
+  const end = new Date(`${endKey}T12:00:00Z`);
+  let count = 0;
+  while (cursor < end) {
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+    if (![0, 6].includes(cursor.getUTCDay())) count += 1;
+  }
+  return count;
+}
+
 export function deadlineReminderType(task, todayKey) {
   const dueDate = dateKey(task?.dueDate);
   const today = dateKey(todayKey);
@@ -47,7 +61,8 @@ export function validateDeadlineChange({ task, employee, nextDueDate, reason }) 
     const hasReason = Boolean(String(reason || "").trim());
     return { allowed: hasReason, role, requiresReason: true, error: hasReason ? "" : "Informe o motivo da alteração do prazo." };
   }
-  return { allowed: false, role, requiresReason: false, error: "Somente o criador ou um responsável pode alterar o prazo." };
+  const hasReason = Boolean(String(reason || "").trim());
+  return { allowed: hasReason, role, requiresReason: true, error: hasReason ? "" : "Informe o motivo da alteração do prazo." };
 }
 
 export function notificationRecipients({ creatorEmployeeId, assigneeIds = [], mentionedEmployeeIds = [], previousAssigneeIds = [], nextStatus = "", type, actorEmployeeId }) {
@@ -84,9 +99,12 @@ export function dailyReminderRows(tasks = [], employees = [], todayKey) {
   const employeeById = new Map(employees.map((employee) => [cleanId(employee.id), employee]));
   return tasks.flatMap((task) => {
     const type = deadlineReminderType(task, todayKey);
-    if (!type) return [];
+    if (!type || type === "due_soon") return [];
     const uniqueAssigneeIds = [...new Set((task.assigneeIds || []).map(cleanId).filter(Boolean))];
-    return uniqueAssigneeIds.map((employeeId) => {
+    const recipientIds = type === "overdue" && task.creatorEmployeeId && businessDaysSince(task.dueDate, todayKey) >= 1
+      ? [...new Set([...uniqueAssigneeIds, cleanId(task.creatorEmployeeId)].filter(Boolean))]
+      : uniqueAssigneeIds;
+    return recipientIds.map((employeeId) => {
       const employee = employeeById.get(employeeId);
       return {
         taskId: task.id,

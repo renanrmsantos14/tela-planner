@@ -36,6 +36,22 @@ test("status vazio significa todos e uma seleção explícita continua disponív
   assert.equal(items.find((item) => item.sourceRecordId === "done").isTerminal, true);
 });
 
+test("inclui responsável do retorno em Minhas e usa seu prazo", () => {
+  const items = normalizeWorkItems({
+    teams: [],
+    tasks: [{
+      id: "waiting-return",
+      title: "Aguardar fornecedor",
+      status: "waiting",
+      dueDate: "2026-08-20",
+      waitingContext: { subject: "confirmação", onType: "employee", onIds: ["e2"], onNames: ["Marina"], expectedDate: "2026-08-28" },
+    }],
+  }, { id: "e2", name: "Marina" });
+
+  assert.equal(items[0].dueAt, "2026-08-28");
+  assert.equal(isAssignedToEmployee(items[0], { id: "e2", name: "Marina" }), true);
+});
+
 test("escopa itens por responsável sem perder itens não atribuídos na equipe", () => {
   const items = [
     { id: "mine", assigneeEmployeeId: "e1", assigneeName: "Renan", statusGroup: "todo", isTerminal: false },

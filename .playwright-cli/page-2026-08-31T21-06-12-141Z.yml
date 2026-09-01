@@ -1,0 +1,34 @@
+- generic [ref=e3]:
+  - main [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - strong [ref=e7]: Mais
+        - generic [ref=e8]: Central de Trabalho
+      - generic "Modo local" [ref=e9]: Local
+      - button "Abrir notificações, 2 não lidas" [ref=e11] [cursor=pointer]:
+        - generic [ref=e17]: "2"
+      - button "Atualizar dados" [ref=e18] [cursor=pointer]
+      - generic "Renan Martins" [ref=e22]: RM
+    - generic [ref=e1292]:
+      - generic [ref=e1294]:
+        - generic [ref=e1295]: Atalhos
+        - heading "Mais" [level=1] [ref=e1296]
+        - paragraph [ref=e1297]: Acesse origens e configurações sem tirar o foco das tarefas.
+      - generic [ref=e1298]:
+        - button "Qualidade Transforme erros e ações em tarefas" [ref=e1299] [cursor=pointer]:
+          - generic [ref=e1303]:
+            - strong [ref=e1304]: Qualidade
+            - generic [ref=e1305]: Transforme erros e ações em tarefas
+        - button "Configurações Dados, recarregamento e versão" [ref=e1308] [cursor=pointer]:
+          - generic [ref=e1313]:
+            - strong [ref=e1314]: Configurações
+            - generic [ref=e1315]: Dados, recarregamento e versão
+  - navigation "Navegação principal" [ref=e985]:
+    - button "Hoje 3" [ref=e986] [cursor=pointer]:
+      - generic [ref=e992]: Hoje
+      - generic [ref=e993]: "3"
+    - button "Tarefas 30" [ref=e994] [cursor=pointer]:
+      - generic [ref=e998]: Tarefas
+      - generic [ref=e999]: "30"
+    - button "Cotações" [ref=e1000] [cursor=pointer]
+    - button "Mais" [active] [ref=e1005] [cursor=pointer]

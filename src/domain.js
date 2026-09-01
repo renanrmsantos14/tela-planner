@@ -39,19 +39,31 @@ export const sourceById = (id) => TASK_SOURCES.find((item) => item.id === id) ||
 export const EMPTY_WAITING_CONTEXT = Object.freeze({
   subject: "",
   onType: "employee",
+  onIds: [],
+  onNames: [],
   onId: "",
   onName: "",
   expectedDate: "",
   note: "",
 });
 
+function uniqueStrings(value) {
+  const values = Array.isArray(value) ? value : value ? [value] : [];
+  return [...new Set(values.flatMap((item) => String(item || "").split(",")).map((item) => item.trim()).filter(Boolean))];
+}
+
 export function normalizeWaitingContext(value = {}) {
   const source = value && typeof value === "object" ? value : {};
+  const onIds = uniqueStrings(source.onIds ?? source.onId);
+  const onNames = uniqueStrings(source.onNames ?? source.onName);
+  const onType = ["employee", "team", "external"].includes(source.onType) ? source.onType : "employee";
   return {
     subject: String(source.subject || "").trim(),
-    onType: source.onType === "team" ? "team" : "employee",
-    onId: String(source.onId || "").trim(),
-    onName: String(source.onName || "").trim(),
+    onType,
+    onIds,
+    onNames,
+    onId: onIds[0] || "",
+    onName: onNames.join(", "),
     expectedDate: String(source.expectedDate || "").slice(0, 10),
     note: String(source.note || "").trim(),
   };
@@ -70,6 +82,7 @@ export function waitingReturnTargetIds(task, teams = []) {
     ? context.onNames
     : context.onName ? [context.onName] : [];
   if (context.onType === "employee") return targetIds;
+  if (context.onType === "external") return [];
   return teams
     .filter((team) => targetIds.some((id) => sameIdentifier(id, team.id)) || targetNames.some((name) => normalizeText(name) === normalizeText(team.name)))
     .flatMap((team) => team.memberIds || team.members || []);
@@ -103,7 +116,11 @@ export function validateWaitingContext(status, value) {
   if (!context.subject) {
     return { allowed: false, error: "Informe o que está sendo aguardado." };
   }
-  if (!context.onId || !context.onName) {
+  if (context.onType === "external") {
+    if (!context.onNames.length) return { allowed: false, error: "Informe quem está sendo aguardado." };
+    return { allowed: true, error: "" };
+  }
+  if (!context.onIds.length || !context.onNames.length) {
     return { allowed: false, error: "Informe de quem está sendo aguardado o retorno." };
   }
   return { allowed: true, error: "" };
@@ -111,8 +128,8 @@ export function validateWaitingContext(status, value) {
 
 export function waitingContextSummary(value) {
   const context = normalizeWaitingContext(value);
-  if (!context.subject || !context.onName) return "";
-  const parts = [`Aguardando ${context.subject}`, context.onName];
+  if (!context.subject || !context.onNames.length) return "";
+  const parts = [`Aguardando ${context.subject}`, context.onNames.join(", ")];
   if (context.expectedDate) parts.push(`até ${formatDate(context.expectedDate)}`);
   return parts.join(" · ");
 }
@@ -126,6 +143,11 @@ export function buildOptimisticTask(input, parentTaskId = null) {
   const quoteId = input.quoteId || null;
   const assigneeNames = normalizeAssigneeNames(input.assigneeNames || input.assigneeName);
   const assignmentMode = input.assignmentMode === "team" ? "team" : "people";
+  const teamIds = assignmentMode === "team" ? uniqueStrings(input.teamIds ?? input.teamId) : [];
+  const optimisticAssigneeNames = assignmentMode === "team"
+    ? normalizeAssigneeNames(input.assigneeNames || input.assigneeName)
+    : assigneeNames;
+  const optimisticTeamNames = assignmentMode === "team" ? uniqueStrings(input.teamNames ?? input.teamName) : [];
   return {
     id: `optimistic-${globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`}`,
     title: String(input.title || "Nova tarefa").trim(),
@@ -134,10 +156,12 @@ export function buildOptimisticTask(input, parentTaskId = null) {
     priority: input.priority || "medium",
     dueDate: input.dueDate || "",
     assignmentMode,
-    teamId: input.teamId || "",
-    assigneeNames,
-    assigneeName: assigneeNames.join(", "),
-    teamName: input.teamName || "Sem equipe",
+    teamIds,
+    teamNames: optimisticTeamNames,
+    teamId: teamIds[0] || "",
+    assigneeNames: optimisticAssigneeNames,
+    assigneeName: optimisticAssigneeNames.join(", "),
+    teamName: optimisticTeamNames.join(", ") || "Sem equipe",
     quoteId,
     quoteCode: input.quoteCode || "",
     quoteTitle: input.quoteTitle || "",
@@ -202,17 +226,21 @@ export function teamResponsibilitySummary(team = {}, tasks = [], employees = [])
 }
 
 export function resolveTaskAssignment(input = {}, teams = [], employees = []) {
-  const assignmentMode = input.assignmentMode === "team" ? "team" : "people";
+  const requestedMode = input.assignmentMode === "team" ? "team" : "people";
   const employeeById = new Map(employees.map((employee) => [String(employee.id), employee]));
   const employeeByName = new Map(employees.map((employee) => [String(employee.name), employee]));
-  if (assignmentMode === "team" && input.teamId) {
-    const team = teams.map(normalizeTeam).find((item) => item.id === String(input.teamId));
-    const memberIds = team?.memberIds || [...new Set((input.assigneeIds || []).map((id) => String(id || "")).filter(Boolean))];
+  const teamIds = uniqueStrings(input.teamIds ?? input.teamId);
+  if (requestedMode === "team" && teamIds.length) {
+    const selectedTeams = teams.map(normalizeTeam).filter((team) => teamIds.includes(team.id));
+    const memberIds = [...new Set(selectedTeams.flatMap((team) => team.memberIds).concat((selectedTeams.length ? [] : input.assigneeIds || []).map((id) => String(id || "")).filter(Boolean)))];
     const memberNames = memberIds.map((id) => employeeById.get(id)?.name).filter(Boolean);
+    const teamNames = selectedTeams.map((team) => team.name).filter(Boolean);
     return {
-      assignmentMode,
-      teamId: String(input.teamId),
-      teamName: team?.name || String(input.teamName || "").trim(),
+      assignmentMode: "team",
+      teamIds,
+      teamNames: teamNames.length ? teamNames : uniqueStrings(input.teamNames ?? input.teamName),
+      teamId: teamIds[0] || "",
+      teamName: teamNames.length ? teamNames.join(", ") : String(input.teamName || "").trim(),
       assigneeIds: memberIds,
       assigneeNames: memberNames.length ? memberNames : normalizeAssigneeNames(input.assigneeNames || input.assigneeName),
     };
@@ -221,6 +249,8 @@ export function resolveTaskAssignment(input = {}, teams = [], employees = []) {
   const assigneeIds = [...new Set((input.assigneeIds || assigneeNames.map((name) => employeeByName.get(name)?.id)).filter(Boolean).map(String))];
   return {
     assignmentMode: "people",
+    teamIds: [],
+    teamNames: [],
     teamId: "",
     teamName: input.assignmentMode === "people" ? "" : String(input.teamName || "").trim(),
     assigneeIds,
@@ -244,13 +274,13 @@ export function migrateLegacyTeams(tasks = [], employees = [], teamNames = []) {
     tasks: tasks.map((task) => {
       const team = teamByName.get(task.teamName);
       const waitingContext = normalizeWaitingContext(task.waitingContext);
-      const waitingTeam = waitingContext.onType === "team"
-        ? teams.find((item) => item.id === waitingContext.onId || item.name === waitingContext.onName)
-        : null;
-      const next = waitingTeam
-        ? { waitingContext: { ...waitingContext, onId: waitingTeam.id, onName: waitingTeam.name } }
+      const waitingTeams = waitingContext.onType === "team"
+        ? teams.filter((item) => waitingContext.onIds.includes(item.id) || waitingContext.onNames.includes(item.name))
+        : [];
+      const next = waitingTeams.length
+        ? { waitingContext: { ...waitingContext, onIds: waitingTeams.map((item) => item.id), onNames: waitingTeams.map((item) => item.name), onId: waitingTeams[0]?.id || "", onName: waitingTeams.map((item) => item.name).join(", ") } }
         : { waitingContext };
-      return team ? { ...task, ...next, assignmentMode: "team", teamId: team.id } : { ...task, ...next, assignmentMode: "people", teamId: "", teamName: "" };
+      return team ? { ...task, ...next, assignmentMode: "team", teamIds: [team.id], teamNames: [team.name], teamId: team.id } : { ...task, ...next, assignmentMode: "people", teamIds: [], teamNames: [], teamId: "", teamName: "" };
     }),
   };
 }
@@ -349,7 +379,7 @@ export function formatLongDate(value) {
   return LONG_DATE_FORMATTER.format(new Date(`${value}T12:00:00`));
 }
 
-export function filterTasks(tasks, filters = {}) {
+export function filterTasks(tasks, filters = {}, employee, teams = []) {
   const query = normalizeText(filters.query);
   const queryTokens = query.split(/\s+/).filter(Boolean);
   const selectedValues = (value) => Array.isArray(value) ? value : value ? [value] : [];
@@ -363,7 +393,9 @@ export function filterTasks(tasks, filters = {}) {
     if (sourceValues.size && !sourceValues.has(task.sourceType)) return false;
     if (assigneeValues.length) {
       const taskAssignees = task.assigneeNames || normalizeAssigneeNames(task.assigneeName);
-      if (!assigneeValues.some((value) => taskAssignees.includes(value))) return false;
+      const matchesWaitingReturn = employee && isWaitingReturnResponsible(task, employee, teams)
+        && assigneeValues.some((value) => normalizeText(value) === normalizeText(employee.name));
+      if (!assigneeValues.some((value) => taskAssignees.includes(value)) && !matchesWaitingReturn) return false;
     }
     if (filters.team && task.teamName !== filters.team) return false;
     if (!query) return true;
@@ -375,11 +407,11 @@ export function filterTasks(tasks, filters = {}) {
   });
 }
 
-export function sortTasks(tasks) {
+export function sortTasks(tasks, employee, teams = []) {
   return [...tasks].sort((a, b) => {
     if (a.status === "done" && b.status !== "done") return 1;
     if (a.status !== "done" && b.status === "done") return -1;
-    return (a.dueDate || "9999-12-31").localeCompare(b.dueDate || "9999-12-31");
+    return (taskDisplayDueDate(a, employee, teams) || "9999-12-31").localeCompare(taskDisplayDueDate(b, employee, teams) || "9999-12-31");
   });
 }
 

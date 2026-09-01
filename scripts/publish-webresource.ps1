@@ -174,11 +174,95 @@ function Ensure-PlannerRelationship([hashtable] $Headers, [string] $ApiBaseUrl, 
   }
 }
 
+function Get-PlannerAttribute([hashtable] $Headers, [string] $ApiBaseUrl, [string] $Entity, [string] $LogicalName) {
+  $escapedEntity = Escape-OData $Entity
+  $escapedAttribute = Escape-OData $LogicalName
+  try {
+    return Invoke-RestMethod -Method Get -Uri "$ApiBaseUrl/EntityDefinitions(LogicalName='$escapedEntity')/Attributes(LogicalName='$escapedAttribute')?`$select=LogicalName" -Headers $Headers -ErrorAction Stop
+  }
+  catch {
+    if ((Get-ResponseStatusCode $_) -eq 404) { return $null }
+    throw
+  }
+}
+
+function Ensure-PlannerStringAttribute([hashtable] $Headers, [string] $ApiBaseUrl, [string] $Entity, [string] $SchemaName, [string] $DisplayName, [int] $MaxLength = 500) {
+  $logicalName = $SchemaName.ToLowerInvariant()
+  if (Get-PlannerAttribute -Headers $Headers -ApiBaseUrl $ApiBaseUrl -Entity $Entity -LogicalName $logicalName) { return }
+  $body = @{
+    "@odata.type" = "Microsoft.Dynamics.CRM.StringAttributeMetadata"
+    SchemaName = $SchemaName
+    DisplayName = New-DataverseLabel $DisplayName
+    RequiredLevel = @{ Value = "None" }
+    MaxLength = $MaxLength
+  } | ConvertTo-Json -Depth 10
+  Invoke-MetadataPost -Headers $Headers -Uri "$ApiBaseUrl/EntityDefinitions(LogicalName='$Entity')/Attributes" -Body $body -Label "$Entity.$logicalName" | Out-Null
+}
+
+function Ensure-PlannerDateAttribute([hashtable] $Headers, [string] $ApiBaseUrl, [string] $Entity, [string] $SchemaName, [string] $DisplayName, [string] $Format = "DateAndTime") {
+  $logicalName = $SchemaName.ToLowerInvariant()
+  if (Get-PlannerAttribute -Headers $Headers -ApiBaseUrl $ApiBaseUrl -Entity $Entity -LogicalName $logicalName) { return }
+  $body = @{
+    "@odata.type" = "Microsoft.Dynamics.CRM.DateTimeAttributeMetadata"
+    SchemaName = $SchemaName
+    DisplayName = New-DataverseLabel $DisplayName
+    RequiredLevel = @{ Value = "None" }
+    Format = $Format
+    DateTimeBehavior = if ($Format -eq "DateOnly") { "DateOnly" } else { "UserLocal" }
+  } | ConvertTo-Json -Depth 10
+  Invoke-MetadataPost -Headers $Headers -Uri "$ApiBaseUrl/EntityDefinitions(LogicalName='$Entity')/Attributes" -Body $body -Label "$Entity.$logicalName" | Out-Null
+}
+
+function Ensure-PlannerAlternateKey([hashtable] $Headers, [string] $ApiBaseUrl, [string] $Entity, [string] $SchemaName, [string] $DisplayName, [string] $Attribute) {
+  $escapedEntity = Escape-OData $Entity
+  $keys = Invoke-RestMethod -Method Get -Uri "$ApiBaseUrl/EntityDefinitions(LogicalName='$escapedEntity')/Keys?`$select=SchemaName,KeyAttributes" -Headers $Headers -ErrorAction Stop
+  $existing = @($keys.value) | Where-Object { @($_.KeyAttributes) -contains $Attribute.ToLowerInvariant() } | Select-Object -First 1
+  if ($existing) { return }
+  $body = @{
+    SchemaName = $SchemaName
+    DisplayName = New-DataverseLabel $DisplayName
+    KeyAttributes = @($Attribute.ToLowerInvariant())
+  } | ConvertTo-Json -Depth 10
+  Invoke-MetadataPost -Headers $Headers -Uri "$ApiBaseUrl/EntityDefinitions(LogicalName='$escapedEntity')/Keys" -Body $body -Label "$Entity.$Attribute" | Out-Null
+}
+
+function Ensure-PlannerSchemaAttributes([hashtable] $Headers, [string] $ApiBaseUrl) {
+  $notification = "cr40f_plannernotificacao"
+  Ensure-PlannerStringAttribute $Headers $ApiBaseUrl $notification "cr40f_Titulo" "Título" 200
+  Ensure-PlannerStringAttribute $Headers $ApiBaseUrl $notification "cr40f_Mensagem" "Mensagem" 2000
+  Ensure-PlannerStringAttribute $Headers $ApiBaseUrl $notification "cr40f_Tipo" "Tipo" 100
+  Ensure-PlannerStringAttribute $Headers $ApiBaseUrl $notification "cr40f_ChaveDedupe" "Chave de deduplicação" 500
+  Ensure-PlannerDateAttribute $Headers $ApiBaseUrl $notification "cr40f_OcorridoEm" "Ocorrido em"
+  Ensure-PlannerDateAttribute $Headers $ApiBaseUrl $notification "cr40f_LidoEm" "Lido em"
+  Ensure-PlannerDateAttribute $Headers $ApiBaseUrl $notification "cr40f_DataReferencia" "Data de referência" "DateOnly"
+  Ensure-PlannerRelationship $Headers $ApiBaseUrl "cr40f_PlannerNotificacao_Tarefa" $notification "cr40f_Tarefa" "cr40f_plannertarefa" "Tarefa"
+  Ensure-PlannerRelationship $Headers $ApiBaseUrl "cr40f_PlannerNotificacao_Destinatario" $notification "cr40f_Destinatario" "cr40f_funcionarios" "Destinatário"
+  Ensure-PlannerRelationship $Headers $ApiBaseUrl "cr40f_PlannerNotificacao_Evento" $notification "cr40f_EventoOrigem" "cr40f_plannertarefaevento" "Evento de origem"
+  Ensure-PlannerAlternateKey $Headers $ApiBaseUrl $notification "cr40f_PlannerNotificacao_DedupeKey" "Chave de deduplicação" "cr40f_chavededupe"
+
+  $dispatch = "cr40f_plannerdisparo"
+  Ensure-PlannerStringAttribute $Headers $ApiBaseUrl $dispatch "cr40f_DestinatarioTexto" "Destinatário" 200
+  Ensure-PlannerStringAttribute $Headers $ApiBaseUrl $dispatch "cr40f_Canal" "Canal" 100
+  Ensure-PlannerStringAttribute $Headers $ApiBaseUrl $dispatch "cr40f_Categoria" "Categoria" 100
+  Ensure-PlannerStringAttribute $Headers $ApiBaseUrl $dispatch "cr40f_ChaveIdempotente" "Chave idempotente" 500
+  Ensure-PlannerStringAttribute $Headers $ApiBaseUrl $dispatch "cr40f_StatusTexto" "Status" 100
+  Ensure-PlannerStringAttribute $Headers $ApiBaseUrl $dispatch "cr40f_Erro" "Erro" 2000
+  Ensure-PlannerStringAttribute $Headers $ApiBaseUrl $dispatch "cr40f_IdentificadorExterno" "Identificador externo" 500
+  Ensure-PlannerDateAttribute $Headers $ApiBaseUrl $dispatch "cr40f_EnviadoEm" "Enviado em"
+  Ensure-PlannerAlternateKey $Headers $ApiBaseUrl $dispatch "cr40f_PlannerDisparo_IdempotencyKey" "Chave idempotente" "cr40f_chaveidempotente"
+}
+
 function Ensure-PlannerSchema([hashtable] $Headers, [string] $ApiBaseUrl) {
   Ensure-PlannerTable -Headers $Headers -ApiBaseUrl $ApiBaseUrl -LogicalName "cr40f_plannerequipe" -SchemaName "cr40f_PlannerEquipe" -PrimaryName "cr40f_Nome" -DisplayName "Equipe do Planner" -CollectionName "Equipes do Planner" -EntitySetName "cr40f_plannerequipes" | Out-Null
   Ensure-PlannerTable -Headers $Headers -ApiBaseUrl $ApiBaseUrl -LogicalName "cr40f_plannerequipemembro" -SchemaName "cr40f_PlannerEquipeMembro" -PrimaryName "cr40f_Name" -DisplayName "Membro da Equipe do Planner" -CollectionName "Membros das Equipes do Planner" -EntitySetName "cr40f_plannerequipemembros" | Out-Null
   Ensure-PlannerRelationship -Headers $Headers -ApiBaseUrl $ApiBaseUrl -SchemaName "cr40f_PlannerEquipeMembro_Equipe" -ReferencingEntity "cr40f_plannerequipemembro" -ReferencingAttribute "cr40f_Equipe" -ReferencedEntity "cr40f_plannerequipe" -DisplayName "Equipe"
   Ensure-PlannerRelationship -Headers $Headers -ApiBaseUrl $ApiBaseUrl -SchemaName "cr40f_PlannerEquipeMembro_Funcionario" -ReferencingEntity "cr40f_plannerequipemembro" -ReferencingAttribute "cr40f_Funcionario" -ReferencedEntity "cr40f_funcionarios" -DisplayName "Funcionário"
+  Ensure-PlannerTable -Headers $Headers -ApiBaseUrl $ApiBaseUrl -LogicalName "cr40f_plannertarefaequipe" -SchemaName "cr40f_PlannerTarefaEquipe" -PrimaryName "cr40f_Name" -DisplayName "Equipe da tarefa Planner" -CollectionName "Equipes das tarefas Planner" -EntitySetName "cr40f_plannertarefaequipes" | Out-Null
+  Ensure-PlannerRelationship -Headers $Headers -ApiBaseUrl $ApiBaseUrl -SchemaName "cr40f_PlannerTarefaEquipe_Tarefa" -ReferencingEntity "cr40f_plannertarefaequipe" -ReferencingAttribute "cr40f_Tarefa" -ReferencedEntity "cr40f_plannertarefa" -DisplayName "Tarefa"
+  Ensure-PlannerRelationship -Headers $Headers -ApiBaseUrl $ApiBaseUrl -SchemaName "cr40f_PlannerTarefaEquipe_Equipe" -ReferencingEntity "cr40f_plannertarefaequipe" -ReferencingAttribute "cr40f_Equipe" -ReferencedEntity "cr40f_plannerequipe" -DisplayName "Equipe"
+  Ensure-PlannerTable -Headers $Headers -ApiBaseUrl $ApiBaseUrl -LogicalName "cr40f_plannernotificacao" -SchemaName "cr40f_PlannerNotificacao" -PrimaryName "cr40f_Name" -DisplayName "Notificação do Planner" -CollectionName "Notificações do Planner" -EntitySetName "cr40f_plannernotificacaos" | Out-Null
+  Ensure-PlannerTable -Headers $Headers -ApiBaseUrl $ApiBaseUrl -LogicalName "cr40f_plannerdisparo" -SchemaName "cr40f_PlannerDisparo" -PrimaryName "cr40f_Name" -DisplayName "Disparo do Planner" -CollectionName "Disparos do Planner" -EntitySetName "cr40f_plannerdisparos" | Out-Null
+  Ensure-PlannerSchemaAttributes -Headers $Headers -ApiBaseUrl $ApiBaseUrl
 }
 
 $root = Resolve-Path (Join-Path $PSScriptRoot "..")

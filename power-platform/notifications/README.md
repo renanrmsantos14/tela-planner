@@ -11,6 +11,8 @@ Antes de ativar os fluxos, crie chaves alternativas para `cr40f_chavededupe` e `
 
 ## Flow `Planner | Notificação imediata`
 
+Provisionamento versionado: `powershell -ExecutionPolicy Bypass -File scripts/create-planner-immediate-flow.ps1` (o script atualiza pelo nome, sem duplicar).
+
 1. Gatilho Dataverse: linha adicionada em `cr40f_plannertarefaevento`, escopo Organização.
 2. Condição: `cr40f_campo` começa com `notification:`.
 3. Interpretar `cr40f_valornovo` como JSON. O produtor grava `actorEmployeeId`, `creatorEmployeeId`, `previousAssigneeIds`, `assigneeIds` e, para menção, `mentionedEmployeeIds`.
@@ -26,14 +28,17 @@ Antes de ativar os fluxos, crie chaves alternativas para `cr40f_chavededupe` e `
 
 ## Flow `Planner | Cobrança diária`
 
+Provisionamento versionado: `powershell -ExecutionPolicy Bypass -File scripts/create-planner-daily-flow.ps1` (o script atualiza pelo nome, sem duplicar).
+
 1. Recorrência semanal: segunda a sexta, 08:00, fuso `America/Sao_Paulo`.
 2. Buscar tarefas não concluídas/canceladas e seus vínculos em `cr40f_plannertarearesponsavel`.
 3. Classificar usando a data local:
    - `due_today`: prazo igual a hoje;
    - `overdue`: prazo menor que hoje;
-   - `due_soon`: hoje é o dia útil anterior ao prazo, considerando apenas sábado e domingo.
+   - cobrança começa no vencimento e repete em cada dia útil enquanto a tarefa estiver aberta;
+   - no primeiro dia útil após o vencimento, incluir também o criador.
 4. Criar uma notificação interna por tarefa/destinatário/tipo/data. Chave: `<destinatario>|<tarefa>|<tipo>|<yyyy-MM-dd>`.
-5. Agrupar por destinatário e enviar exatamente um Teams e um e-mail, com seções D-1, vencem hoje e atrasadas.
+5. Agrupar por destinatário e enviar exatamente um resumo no Teams, com seções vencem hoje e atrasadas. Não enviar e-mail nesta primeira versão.
 6. Link de cada tarefa: `new_TelaPlanner.html?data=taskId=<guid>`.
 7. Registrar um disparo por canal com chave `<destinatario>|<yyyy-MM-dd>|ResumoDiario|<canal>` e os mesmos estados do fluxo imediato.
 
@@ -48,3 +53,4 @@ Os flows devem usar referências de conexão da solução para Dataverse, Teams 
 - Confirmar `Sem identidade` com funcionário sem `cr40f_usuariodataverse`.
 - Confirmar isolamento de notificações entre criador, responsável e terceiro.
 - Confirmar retry e erro final em `cr40f_plannerdisparo`.
+- Confirmar que uma cobrança manual da mesma tarefa não é aceita duas vezes no mesmo dia.

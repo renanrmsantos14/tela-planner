@@ -1,0 +1,238 @@
+- generic [ref=e3]:
+  - main [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - strong [ref=e7]: Cotações
+        - generic [ref=e8]: Central de Trabalho
+      - generic "Modo local" [ref=e9]: Local
+      - button "Abrir notificações, 2 não lidas" [ref=e11] [cursor=pointer]:
+        - generic [ref=e17]: "2"
+      - button "Atualizar dados" [ref=e18] [cursor=pointer]
+      - generic "Renan Martins" [ref=e22]: RM
+    - generic [ref=e1318]:
+      - generic [ref=e1319]:
+        - generic [ref=e1320]:
+          - generic [ref=e1321]: ACOMPANHAMENTO COMERCIAL
+          - heading "Cotações" [level=1] [ref=e1322]
+          - paragraph [ref=e1323]: Consulte status, prazos e valores das cotações em andamento.
+        - generic [ref=e1324]: Consulta operacional
+      - generic [ref=e1328]:
+        - generic [ref=e1334]:
+          - generic [ref=e1335]: Total
+          - strong [ref=e1336]: "17"
+        - generic [ref=e1342]:
+          - generic [ref=e1343]: Em andamento
+          - strong [ref=e1344]: "13"
+        - generic [ref=e1350]:
+          - generic [ref=e1351]: Respondidas
+          - strong [ref=e1352]: "4"
+        - generic [ref=e1357]:
+          - generic [ref=e1358]: Prazo vencido
+          - strong [ref=e1359]: "0"
+      - generic [ref=e1360]:
+        - generic [ref=e1361]:
+          - generic [ref=e1362]:
+            - generic [ref=e1363]: REGISTROS DISPONÍVEIS
+            - heading "Base de cotações" [level=2] [ref=e1364]
+          - generic [ref=e1365]: "17"
+        - generic [ref=e1366]:
+          - textbox [ref=e1371]:
+            - /placeholder: Buscar número, cliente ou serviço
+          - generic [ref=e1372]:
+            - generic [ref=e1373]: Status
+            - combobox "Status" [ref=e1374]:
+              - option "Todos os status" [selected]
+              - option "Nova"
+              - option "Em análise"
+              - option "Aguardando fornecedor"
+              - option "Respondida"
+        - table "Cotações" [ref=e1375]:
+          - button "Abrir detalhes de COT-1008" [active] [ref=e1376] [cursor=pointer]:
+            - generic [ref=e1377]:
+              - generic [ref=e1378]: COT-1008
+              - strong [ref=e1379]: Transfer executivo · Aeroporto GRU
+            - generic [ref=e1380]: Grupo Horizonte
+            - generic [ref=e1381]: Em análise
+            - generic [ref=e1383]: 31 ago.
+            - strong [ref=e1386]: R$ 1.280,00
+            - button "Ver tarefa" [ref=e1387]
+          - button "Abrir detalhes de COT-1007" [ref=e1391] [cursor=pointer]:
+            - generic [ref=e1392]:
+              - generic [ref=e1393]: COT-1007
+              - strong [ref=e1394]: Van executiva · Evento corporativo
+            - generic [ref=e1395]: Norte & Sul Eventos
+            - generic [ref=e1396]: Aguardando fornecedor
+            - generic [ref=e1398]: 02 set.
+            - strong [ref=e1401]: R$ 4.950,00
+            - button "Ver tarefa" [ref=e1402]
+          - button "Abrir detalhes de COT-1006" [ref=e1406] [cursor=pointer]:
+            - generic [ref=e1407]:
+              - generic [ref=e1408]: COT-1006
+              - strong [ref=e1409]: Carro blindado · Diretoria
+            - generic [ref=e1410]: Alvorada Capital
+            - generic [ref=e1411]: Em análise
+            - generic [ref=e1413]: 01 set.
+            - strong [ref=e1416]: R$ 2.400,00
+            - button "Ver tarefa" [ref=e1417]
+          - button "Abrir detalhes de COT-1005" [ref=e1421] [cursor=pointer]:
+            - generic [ref=e1422]:
+              - generic [ref=e1423]: COT-1005
+              - strong [ref=e1424]: Recepção de convidados · Congonhas
+            - generic [ref=e1425]: Casa 9 Produções
+            - generic [ref=e1426]: Respondida
+            - generic [ref=e1428]: 30 ago.
+            - strong [ref=e1431]: R$ 860,00
+            - button "Ver tarefa" [ref=e1432]
+          - button "Abrir detalhes de COT-1004" [ref=e1436] [cursor=pointer]:
+            - generic [ref=e1437]:
+              - generic [ref=e1438]: COT-1004
+              - strong [ref=e1439]: Roadshow executivo · São Paulo e Campinas
+            - generic [ref=e1440]: Vértice Tecnologia
+            - generic [ref=e1441]: Nova
+            - generic [ref=e1443]: 03 set.
+            - strong [ref=e1446]: R$ 8.740,00
+            - button "Ver tarefa" [ref=e1447]
+          - button "Abrir detalhes de COT-1003" [ref=e1451] [cursor=pointer]:
+            - generic [ref=e1452]:
+              - generic [ref=e1453]: COT-1003
+              - strong [ref=e1454]: Traslado de palestrantes · Expo Center Norte
+            - generic [ref=e1455]: Mosaico Eventos
+            - generic [ref=e1456]: Em análise
+            - generic [ref=e1458]: 04 set.
+            - strong [ref=e1461]: R$ 3.260,00
+            - button "Ver tarefa" [ref=e1462]
+          - button "Abrir detalhes de COT-1002" [ref=e1466] [cursor=pointer]:
+            - generic [ref=e1467]:
+              - generic [ref=e1468]: COT-1002
+              - strong [ref=e1469]: Disposição diária · Alphaville
+            - generic [ref=e1470]: Lumen Energia
+            - generic [ref=e1471]: Aguardando fornecedor
+            - generic [ref=e1473]: 05 set.
+            - strong [ref=e1476]: R$ 6.180,00
+            - button "Ver tarefa" [ref=e1477]
+          - button "Abrir detalhes de COT-1001" [ref=e1481] [cursor=pointer]:
+            - generic [ref=e1482]:
+              - generic [ref=e1483]: COT-1001
+              - strong [ref=e1484]: Transfer internacional · GRU–Faria Lima
+            - generic [ref=e1485]: Kairós Health
+            - generic [ref=e1486]: Nova
+            - generic [ref=e1488]: 01 set.
+            - strong [ref=e1491]: R$ 1.960,00
+            - button "Ver tarefa" [ref=e1492]
+          - button "Abrir detalhes de COT-0999" [ref=e1496] [cursor=pointer]:
+            - generic [ref=e1497]:
+              - generic [ref=e1498]: COT-0999
+              - strong [ref=e1499]: Transporte de equipe · Guarujá
+            - generic [ref=e1500]: Aurora Produções
+            - generic [ref=e1501]: Respondida
+            - generic [ref=e1503]: 28 ago.
+            - strong [ref=e1506]: R$ 5.480,00
+            - button "Ver tarefa" [ref=e1507]
+          - button "Abrir detalhes de COT-0998" [ref=e1511] [cursor=pointer]:
+            - generic [ref=e1512]:
+              - generic [ref=e1513]: COT-0998
+              - strong [ref=e1514]: Transfer para conselho · Itaim Bibi
+            - generic [ref=e1515]: Orbe Consultoria
+            - generic [ref=e1516]: Em análise
+            - generic [ref=e1518]: 31 ago.
+            - strong [ref=e1521]: R$ 2.150,00
+            - button "Ver tarefa" [ref=e1522]
+          - button "Abrir detalhes de COT-0997" [ref=e1526] [cursor=pointer]:
+            - generic [ref=e1527]:
+              - generic [ref=e1528]: COT-0997
+              - strong [ref=e1529]: Operação de embarque · Viracopos
+            - generic [ref=e1530]: Delta Foods
+            - generic [ref=e1531]: Nova
+            - generic [ref=e1533]: 06 set.
+            - strong [ref=e1536]: R$ 3.890,00
+            - button "Ver tarefa" [ref=e1537]
+          - button "Abrir detalhes de COT-0996" [ref=e1541] [cursor=pointer]:
+            - generic [ref=e1542]:
+              - generic [ref=e1543]: COT-0996
+              - strong [ref=e1544]: Apoio logístico · Hotel Fasano
+            - generic [ref=e1545]: Estação 21
+            - generic [ref=e1546]: Respondida
+            - generic [ref=e1548]: 26 ago.
+            - strong [ref=e1551]: R$ 1.740,00
+            - button "Ver tarefa" [ref=e1552]
+          - button "Abrir detalhes de COT-0995" [ref=e1556] [cursor=pointer]:
+            - generic [ref=e1557]:
+              - generic [ref=e1558]: COT-0995
+              - strong [ref=e1559]: Transfer de executivos · São José dos Campos
+            - generic [ref=e1560]: Nexa Industrial
+            - generic [ref=e1561]: Nova
+            - generic [ref=e1563]: 07 set.
+            - strong [ref=e1566]: R$ 4.620,00
+            - button "Ver tarefa" [ref=e1567]
+          - button "Abrir detalhes de COT-0994" [ref=e1571] [cursor=pointer]:
+            - generic [ref=e1572]:
+              - generic [ref=e1573]: COT-0994
+              - strong [ref=e1574]: Frota dedicada · Convenção anual
+            - generic [ref=e1575]: Pilar Seguros
+            - generic [ref=e1576]: Em análise
+            - generic [ref=e1578]: 08 set.
+            - strong [ref=e1581]: R$ 12.900,00
+            - button "Ver tarefa" [ref=e1582]
+          - button "Abrir detalhes de COT-0993" [ref=e1586] [cursor=pointer]:
+            - generic [ref=e1587]:
+              - generic [ref=e1588]: COT-0993
+              - strong [ref=e1589]: Recepção VIP · Hotel Unique
+            - generic [ref=e1590]: Leste Mídia
+            - generic [ref=e1591]: Aguardando fornecedor
+            - generic [ref=e1593]: 02 set.
+            - strong [ref=e1596]: R$ 2.780,00
+            - button "Ver tarefa" [ref=e1597]
+          - button "Abrir detalhes de COT-0992" [ref=e1601] [cursor=pointer]:
+            - generic [ref=e1602]:
+              - generic [ref=e1603]: COT-0992
+              - strong [ref=e1604]: Transfer noturno · Santos–GRU
+            - generic [ref=e1605]: Maré Logística
+            - generic [ref=e1606]: Nova
+            - generic [ref=e1608]: 09 set.
+            - strong [ref=e1611]: R$ 2.340,00
+            - button "Ver tarefa" [ref=e1612]
+          - button "Abrir detalhes de COT-0991" [ref=e1616] [cursor=pointer]:
+            - generic [ref=e1617]:
+              - generic [ref=e1618]: COT-0991
+              - strong [ref=e1619]: Veículo executivo · Diretoria regional
+            - generic [ref=e1620]: Horizon Bio
+            - generic [ref=e1621]: Respondida
+            - generic [ref=e1623]: 24 ago.
+            - strong [ref=e1626]: R$ 7.350,00
+            - button "Ver tarefa" [ref=e1627]
+      - complementary "Detalhes da cotação COT-1008" [ref=e1632]:
+        - generic [ref=e1633]:
+          - generic [ref=e1634]:
+            - generic [ref=e1635]: CONSULTA DE COTAÇÃO
+            - generic [ref=e1636]: COT-1008
+          - button "Fechar detalhes da cotação" [ref=e1637] [cursor=pointer]
+        - generic [ref=e1641]:
+          - generic [ref=e1642]:
+            - generic [ref=e1643]: COT-1008
+            - heading "Transfer executivo · Aeroporto GRU" [level=2] [ref=e1644]
+          - generic [ref=e1645]:
+            - generic [ref=e1646]:
+              - generic [ref=e1647]: Cliente
+              - strong [ref=e1648]: Grupo Horizonte
+            - generic [ref=e1649]:
+              - generic [ref=e1650]: Status
+              - generic [ref=e1651]: Em análise
+            - generic [ref=e1653]:
+              - generic [ref=e1654]: Prazo de resposta
+              - strong [ref=e1655]: 31 ago.
+            - generic [ref=e1656]:
+              - generic [ref=e1657]: Valor cotado
+              - strong [ref=e1658]: R$ 1.280,00
+          - generic [ref=e1659]: Esta tela é somente para consulta. A criação e a solicitação de cotações acontecem fora do Planner.
+        - generic [ref=e1664]:
+          - button "Ver tarefa vinculada" [ref=e1665] [cursor=pointer]
+          - button "Fechar" [ref=e1669] [cursor=pointer]
+  - navigation "Navegação principal" [ref=e985]:
+    - button "Hoje 3" [ref=e986] [cursor=pointer]:
+      - generic [ref=e992]: Hoje
+      - generic [ref=e993]: "3"
+    - button "Tarefas 30" [ref=e994] [cursor=pointer]:
+      - generic [ref=e998]: Tarefas
+      - generic [ref=e999]: "30"
+    - button "Cotações" [ref=e1000] [cursor=pointer]
+    - button "Mais" [ref=e1005] [cursor=pointer]

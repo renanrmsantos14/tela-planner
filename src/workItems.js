@@ -1,4 +1,4 @@
-import { getDueBucket, normalizeAssigneeNames } from "./domain.js";
+import { getDueBucket, normalizeAssigneeNames, taskDisplayDueDate, waitingReturnTargetIds } from "./domain.js";
 
 const TERMINAL_QUALITY_STATUSES = new Set(["resolvido", "encerrado", "cancelado", "concluida", "cancelada"]);
 const TASK_STATUS_LABELS = Object.freeze({ todo: "A fazer", doing: "Em andamento", waiting: "Aguardando", done: "Concluído", cancelled: "Cancelado" });
@@ -67,35 +67,39 @@ function qualityWorkItem(item) {
   };
 }
 
-export function normalizeWorkItems(state = {}) {
-  const tasks = (state.tasks || []).map((task) => ({
-    id: `task:${task.id}`,
-    source: task.sourceType === "quote" ? "quote_followup" : "task",
-    sourceRecordId: task.id,
-    sourceCode: cleanText(task.sourceCode || task.quoteCode),
-    title: taskTitle(task),
-    context: taskContext(task),
-    assigneeEmployeeId: task.assigneeId || task.assigneeIds?.[0] || "",
-    assigneeIds: task.assigneeIds || (task.assigneeId ? [task.assigneeId] : []),
-    assigneeNames: task.assigneeNames || normalizeAssigneeNames(task.assigneeName),
-    assigneeName: cleanText(task.assigneeName, "Não atribuído"),
-    assigneeProfiles: task.assigneeProfiles || [],
-    dueAt: cleanText(task.dueDate),
-    dueBucket: getDueBucket(task),
-    priority: cleanText(task.priority),
-    priorityRank: ({ urgent: 0, high: 1, medium: 2, low: 3 }[task.priority] ?? 2),
-    teamName: cleanText(task.teamName),
-    sourceStatus: cleanText(task.status),
-    statusGroup: task.status,
-    statusLabel: TASK_STATUS_LABELS[task.status] || cleanText(task.status, "A fazer"),
-    isTerminal: ["done", "cancelled"].includes(task.status),
-    isOverdue: getDueBucket(task) === "overdue",
-    quickTransitions: ["done", "cancelled"].includes(task.status) ? [] : ["doing", "waiting", "done"],
-    openTarget: task.quoteId
-      ? { resource: "cr40f_TelaPedirCotacao.html", params: { view: "recent", recordId: task.quoteId } }
-      : { resource: "new_TelaPlanner.html", params: { taskId: task.id } },
-    parentTaskId: task.parentTaskId || null,
-  }));
+export function normalizeWorkItems(state = {}, employee) {
+  const tasks = (state.tasks || []).map((task) => {
+    const dueAt = taskDisplayDueDate(task, employee, state.teams);
+    return {
+      id: `task:${task.id}`,
+      source: task.sourceType === "quote" ? "quote_followup" : "task",
+      sourceRecordId: task.id,
+      sourceCode: cleanText(task.sourceCode || task.quoteCode),
+      title: taskTitle(task),
+      context: taskContext(task),
+      assigneeEmployeeId: task.assigneeId || task.assigneeIds?.[0] || "",
+      assigneeIds: task.assigneeIds || (task.assigneeId ? [task.assigneeId] : []),
+      assigneeNames: task.assigneeNames || normalizeAssigneeNames(task.assigneeName),
+      assigneeName: cleanText(task.assigneeName, "Não atribuído"),
+      assigneeProfiles: task.assigneeProfiles || [],
+      dueAt: cleanText(dueAt),
+      dueBucket: getDueBucket({ ...task, dueDate: dueAt }),
+      waitingTargetIds: waitingReturnTargetIds(task, state.teams),
+      priority: cleanText(task.priority),
+      priorityRank: ({ urgent: 0, high: 1, medium: 2, low: 3 }[task.priority] ?? 2),
+      teamName: cleanText(task.teamName),
+      sourceStatus: cleanText(task.status),
+      statusGroup: task.status,
+      statusLabel: TASK_STATUS_LABELS[task.status] || cleanText(task.status, "A fazer"),
+      isTerminal: ["done", "cancelled"].includes(task.status),
+      isOverdue: getDueBucket({ ...task, dueDate: dueAt }) === "overdue",
+      quickTransitions: ["done", "cancelled"].includes(task.status) ? [] : ["doing", "waiting", "done"],
+      openTarget: task.quoteId
+        ? { resource: "cr40f_TelaPedirCotacao.html", params: { view: "recent", recordId: task.quoteId } }
+        : { resource: "new_TelaPlanner.html", params: { taskId: task.id } },
+      parentTaskId: task.parentTaskId || null,
+    };
+  });
   return [...tasks, ...(state.quality || []).map(qualityWorkItem)];
 }
 
@@ -138,7 +142,7 @@ export function isAssignedToEmployee(item, employee) {
   if (!employee) return false;
   const employeeId = String(employee.id || "");
   const employeeName = String(employee.name || "");
-  const assigneeIds = [item.assigneeEmployeeId, ...(item.assigneeIds || [])].filter(Boolean).map(String);
+  const assigneeIds = [item.assigneeEmployeeId, ...(item.assigneeIds || []), ...(item.waitingTargetIds || [])].filter(Boolean).map(String);
   const assigneeNames = item.assigneeNames || (item.assigneeName ? [item.assigneeName] : []);
   return assigneeIds.includes(employeeId) || assigneeNames.includes(employeeName);
 }

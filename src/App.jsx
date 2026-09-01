@@ -90,6 +90,7 @@ import SearchableSelect, {
   SearchableMultiSelect,
 } from "./SearchableSelect.jsx";
 import CentralView from "./CentralView.jsx";
+import ManagementView from "./ManagementView.jsx";
 import QuotesView from "./QuotesView.jsx";
 import AssigneeDisplay from "./AssigneeDisplay.jsx";
 import { MentionableField, useMentionController } from "./MentionableField.jsx";
@@ -107,10 +108,12 @@ import {
   unreadCount,
   validateDeadlineChange,
 } from "./notifications.js";
+import { localDateKey } from "./management.js";
 
 const CENTRAL_NAV_ITEMS = [
   ["dashboard", "Início", LayoutDashboard],
   ["board", "Tarefas", ClipboardList],
+  ["management", "Gestão", Target],
   ["quotes", "Cotações", FileText],
   ["quality", "Qualidade", ShieldAlert],
   ["settings", "Configurações", Settings],
@@ -352,9 +355,12 @@ function WaitingContextFields({ value, onChange, employees = [], teams = [], err
     ? (teams.length ? teams.map((team) => ({ value: team.id, label: team.name })) : TEAM_OPTIONS.map((team) => ({ value: team, label: team })))
     : employeeOptions;
   const update = (patch) => onChange({ ...context, ...patch });
-  const selectTarget = (id) => {
-    const option = targetOptions.find((item) => String(item.value) === String(id));
-    update({ onId: id || "", onName: option?.label || "" });
+  const selectTarget = (ids) => {
+    const selectedIds = Array.isArray(ids) ? ids : ids ? [ids] : [];
+    const selectedNames = selectedIds
+      .map((id) => targetOptions.find((item) => String(item.value) === String(id))?.label)
+      .filter(Boolean);
+    update({ onIds: selectedIds, onNames: selectedNames, onId: selectedIds[0] || "", onName: selectedNames.join(", ") });
   };
   return (
     <section className="waiting-context" aria-labelledby="waiting-context-title">
@@ -363,7 +369,7 @@ function WaitingContextFields({ value, onChange, employees = [], teams = [], err
           <span className="status-field-label">Contexto do retorno</span>
           <strong id="waiting-context-title">O que está sendo aguardado?</strong>
         </div>
-        <span>Obrigatório para entrar em Aguardando</span>
+        <span>O prazo do retorno é opcional; sem ele, entra na fila de acompanhamento</span>
       </div>
       <label>
         O que está sendo aguardado?
@@ -374,22 +380,58 @@ function WaitingContextFields({ value, onChange, employees = [], teams = [], err
         />
       </label>
       <div className="waiting-context-grid">
+        <div className="waiting-context-type-field">
+          <span className="sr-only">Tipo de destinatário</span>
+          <div className="assignment-mode waiting-context-type-picker" role="group" aria-label="Tipo de destinatário">
+            <button
+              type="button"
+              className={context.onType === "employee" ? "is-selected" : ""}
+              aria-label="Funcionário"
+              aria-pressed={context.onType === "employee"}
+              title="Funcionário"
+              onClick={() => update({ onType: "employee", onIds: [], onNames: [], onId: "", onName: "" })}
+            >
+              <UserRound size={15} aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              className={context.onType === "team" ? "is-selected" : ""}
+              aria-label="Equipe"
+              aria-pressed={context.onType === "team"}
+              title="Equipe"
+              onClick={() => update({ onType: "team", onIds: [], onNames: [], onId: "", onName: "" })}
+            >
+              <Users size={15} aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              className={context.onType === "external" ? "is-selected" : ""}
+              aria-label="Externo"
+              aria-pressed={context.onType === "external"}
+              title="Cliente ou fornecedor"
+              onClick={() => update({ onType: "external", onIds: [], onNames: [], onId: "", onName: "" })}
+            >
+              <ArrowUpRight size={15} aria-hidden="true" />
+            </button>
+          </div>
+        </div>
         <label>
-          Tipo
-          <InputSelect
-            value={context.onType}
-            onChange={(onType) => update({ onType, onId: "", onName: "" })}
-            options={[{ value: "employee", label: "Funcionário" }, { value: "team", label: "Equipe" }]}
-          />
-        </label>
-        <label>
-          De quem?
-          <InputSelect
-            value={context.onId}
-            onChange={selectTarget}
-            options={targetOptions}
-            placeholder={context.onType === "team" ? "Selecione a equipe" : "Selecione o funcionário"}
-          />
+          {context.onType === "external" ? "Quem está sendo aguardado?" : "De quem?"}
+          {context.onType === "external" ? (
+            <input
+              value={context.onNames.join(", ")}
+              onChange={(event) => update({ onIds: [], onNames: event.target.value.split(",").map((item) => item.trim()).filter(Boolean), onId: "", onName: event.target.value.trim() })}
+              placeholder="Ex.: cliente ou fornecedor"
+            />
+          ) : (
+            <InputSelect
+              value={context.onIds}
+              onChange={selectTarget}
+              options={targetOptions}
+              placeholder={context.onType === "team" ? "Selecione a equipe" : "Selecione o funcionário"}
+              multiple
+            />
+          )}
         </label>
         <label>
           Retorno previsto
@@ -423,22 +465,26 @@ function AssignmentFields({ form, setForm, employees = [], teams = [] }) {
     label: team.name,
     subtitle: String((team.memberIds || []).length) + ((team.memberIds || []).length === 1 ? " membro" : " membros"),
   }));
-  const selectedTeam = teams.find((team) => String(team.id) === String(form.teamId || ""));
-  const selectedMemberNames = (form.assigneeIds || []).map((id) => employeeById.get(String(id))?.name).filter(Boolean);
+  const selectedTeamIds = Array.isArray(form.teamIds) ? form.teamIds : form.teamId ? [form.teamId] : [];
+  const selectedTeams = teams.filter((team) => selectedTeamIds.some((id) => String(id) === String(team.id)));
+  const selectedMemberNames = [...new Set((form.assigneeIds || []).map((id) => employeeById.get(String(id))?.name).filter(Boolean))];
   const selectedMemberLabels = selectedMemberNames.map((name) => employees.find((employee) => employee.name === name)?.apelido || name);
   const selectMode = (mode) => {
     setForm((current) => mode === "team"
-      ? { ...current, assignmentMode: "team", teamId: "", teamName: "", assigneeName: [], assigneeIds: [] }
-      : { ...current, assignmentMode: "people", teamId: "", teamName: "", assigneeName: [], assigneeIds: [] });
+      ? { ...current, assignmentMode: "team", teamIds: [], teamNames: [], teamId: "", teamName: "", assigneeName: [], assigneeIds: [] }
+      : { ...current, assignmentMode: "people", teamIds: [], teamNames: [], teamId: "", teamName: "", assigneeName: [], assigneeIds: [] });
   };
-  const selectTeam = (teamId) => {
-    const team = teams.find((item) => String(item.id) === String(teamId));
-    const memberIds = team?.memberIds || [];
+  const selectTeam = (teamIds) => {
+    const selectedIds = Array.isArray(teamIds) ? teamIds : teamIds ? [teamIds] : [];
+    const selected = teams.filter((team) => selectedIds.some((id) => String(id) === String(team.id)));
+    const memberIds = [...new Set(selected.flatMap((team) => team.memberIds || []))];
     setForm((current) => ({
       ...current,
       assignmentMode: "team",
-      teamId: team?.id || "",
-      teamName: team?.name || "",
+      teamIds: selectedIds,
+      teamNames: selected.map((team) => team.name),
+      teamId: selectedIds[0] || "",
+      teamName: selected.map((team) => team.name).join(", "),
       assigneeIds: memberIds,
       assigneeName: memberIds.map((id) => employeeById.get(String(id))?.name).filter(Boolean),
     }));
@@ -448,6 +494,8 @@ function AssignmentFields({ form, setForm, employees = [], teams = [] }) {
     setForm((current) => ({
       ...current,
       assignmentMode: "people",
+      teamIds: [],
+      teamNames: [],
       teamId: "",
       teamName: "",
       assigneeName: selectedNames,
@@ -471,13 +519,13 @@ function AssignmentFields({ form, setForm, employees = [], teams = [] }) {
         <>
           <label className="assignment-control">
             <span className="sr-only">Equipe</span>
-            <InputSelect value={form.teamId || ""} onChange={selectTeam} options={teamOptions} placeholder={teams.length ? "Selecione uma equipe" : "Nenhuma equipe cadastrada"} disabled={!teams.length} />
+            <InputSelect value={selectedTeamIds} onChange={selectTeam} options={teamOptions} placeholder={teams.length ? "Selecione uma ou mais equipes" : "Nenhuma equipe cadastrada"} disabled={!teams.length} multiple />
           </label>
-          {selectedTeam && (
-            <div className="assignment-members" aria-label={"Membros de " + selectedTeam.name}>
-              <span className="assignment-members-label">Responsáveis desta equipe</span>
+          {selectedTeams.length > 0 && (
+            <div className="assignment-members" aria-label={"Membros de " + selectedTeams.map((team) => team.name).join(", ")}>
+              <span className="assignment-members-label">Responsáveis destas equipes</span>
               <div className="assignment-members-list">
-                {(selectedMemberLabels.length ? selectedMemberLabels : selectedTeam.memberIds || []).map((member, index) => (
+                {selectedMemberLabels.map((member, index) => (
                   <span className="assignment-member-chip" key={String(member) + "-" + index}>
                     <span className="avatar avatar-small">{String(member).split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()}</span>
                     {member}
@@ -769,6 +817,7 @@ function isActionableNotification(item, tasks) {
 function NotificationsPanel({
   notifications,
   tasks,
+  error = "",
   onClose,
   onOpenTask,
   onMarkRead,
@@ -850,6 +899,7 @@ function NotificationsPanel({
             );
           })}
         </div>
+        {error && <div className="notification-degraded" role="alert"><strong>Notificações indisponíveis</strong><span>{error}</span></div>}
         <div className="notification-list">
           {visibleNotifications.length ? (
             visibleNotifications.map((item) => {
@@ -923,6 +973,7 @@ function AppShell({
   openTaskCount,
   mentionEmployees = [],
   notifications = [],
+  notificationError = "",
   onOpenNotification,
   onMarkNotificationRead,
   onMarkAllNotificationsRead,
@@ -1145,6 +1196,7 @@ function AppShell({
         <NotificationsPanel
           notifications={notifications}
           tasks={tasks}
+          error={notificationError}
           onClose={() => setNotificationsOpen(false)}
           onOpenTask={(item) => {
             onOpenNotification?.(item);
@@ -1244,10 +1296,10 @@ const LIST_SORT_COLUMNS = [
   ["status", "Status"],
 ];
 
-function compareListTasks(left, right, key) {
+function compareListTasks(left, right, key, employee, teams) {
   if (key === "dueDate") {
-    const leftDate = left.dueDate || "9999-12-31";
-    const rightDate = right.dueDate || "9999-12-31";
+    const leftDate = taskDisplayDueDate(left, employee, teams) || "9999-12-31";
+    const rightDate = taskDisplayDueDate(right, employee, teams) || "9999-12-31";
     return leftDate.localeCompare(rightDate);
   }
   if (key === "status")
@@ -1264,11 +1316,11 @@ function compareListTasks(left, right, key) {
   return normalizeText(value(left)).localeCompare(normalizeText(value(right)));
 }
 
-function sortListTasks(tasks, sort) {
+function sortListTasks(tasks, sort, employee, teams) {
   const direction = sort.direction === "desc" ? -1 : 1;
   return [...tasks].sort(
     (left, right) =>
-      compareListTasks(left, right, sort.key) * direction ||
+      compareListTasks(left, right, sort.key, employee, teams) * direction ||
       String(left.id).localeCompare(String(right.id)),
   );
 }
@@ -1358,7 +1410,7 @@ const TaskCard = memo(function TaskCard({
         {waitingActionRequired && (
           <span className="task-waiting-action" title="Aguardando sua atuação" aria-label="Aguardando sua atuação">
             <BellRing size={13} aria-hidden="true" />
-            <span>Pendente para você</span>
+            <span>Pendente</span>
           </span>
         )}
         {canOpen && (
@@ -2190,9 +2242,11 @@ function BoardView({
   const filtered = useMemo(
     () =>
       sortTasks(
-        filterTasks(state.tasks.filter((taskItem) => !taskItem.parentTaskId), filters),
+        filterTasks(state.tasks.filter((taskItem) => !taskItem.parentTaskId), filters, currentEmployee, state.teams),
+        currentEmployee,
+        state.teams,
       ),
-    [state.tasks, filters],
+    [state.tasks, state.teams, filters, currentEmployee?.id],
   );
   const tasksByStatus = useMemo(
     () => {
@@ -2289,9 +2343,9 @@ function ListView({
 }) {
   const [sort, setSort] = useState({ key: "", direction: "asc" });
   const filtered = useMemo(() => {
-    const tasks = filterTasks(tasksForView(state.tasks, filters), filters);
-    return sort.key ? sortListTasks(tasks, sort) : sortTasks(tasks);
-  }, [state.tasks, filters, sort]);
+    const tasks = filterTasks(tasksForView(state.tasks, filters), filters, currentEmployee, state.teams);
+    return sort.key ? sortListTasks(tasks, sort, currentEmployee, state.teams) : sortTasks(tasks, currentEmployee, state.teams);
+  }, [state.tasks, state.teams, filters, sort, currentEmployee]);
   const selectSort = (key) =>
     setSort((current) => ({
       key,
@@ -2412,8 +2466,8 @@ function CalendarView({
     return date;
   });
   const openTasks = useMemo(
-    () => sortTasks(filterTasks(tasksForView(state.tasks, filters), filters)),
-    [state.tasks, filters],
+    () => sortTasks(filterTasks(tasksForView(state.tasks, filters), filters, currentEmployee, state.teams), currentEmployee, state.teams),
+    [state.tasks, state.teams, filters, currentEmployee],
   );
   return (
     <div className="page-content">
@@ -2462,7 +2516,7 @@ function CalendarView({
             key={taskItem.id}
             onClick={() => onOpen(taskItem.id)}
           >
-            <span className="agenda-time">{formatDate(taskItem.dueDate)}</span>
+            <span className="agenda-time">{formatDate(taskDisplayDueDate(taskItem, currentEmployee, state.teams))}</span>
             <div className="agenda-line" />
             <div className="agenda-info">
               <strong>{taskItem.title}</strong>
@@ -2573,6 +2627,7 @@ function QualityView({ state, onCreate, onCreateTask, filters, setFilters }) {
 function TeamManager({ teams = [], tasks = [], employees = [], onSave, onDelete }) {
   const emptyDraft = { id: "", name: "", memberIds: [] };
   const [draft, setDraft] = useState(emptyDraft);
+  const [teamDrawerOpen, setTeamDrawerOpen] = useState(false);
   const [expandedTeamId, setExpandedTeamId] = useState("");
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -2592,6 +2647,7 @@ function TeamManager({ teams = [], tasks = [], employees = [], onSave, onDelete 
   const startEdit = (team) => {
     setDraft({ id: team.id, name: team.name, memberIds: [...(team.memberIds || [])] });
     setExpandedTeamId(team.id);
+    setTeamDrawerOpen(true);
     setValidationError("");
   };
   const submit = () => {
@@ -2606,6 +2662,7 @@ function TeamManager({ teams = [], tasks = [], employees = [], onSave, onDelete 
         if (success) {
           setDraft(emptyDraft);
           setValidationError("");
+          setTeamDrawerOpen(false);
         }
       })
       .catch((failure) => setValidationError(failure.message || "Não foi possível salvar a equipe."))
@@ -2632,9 +2689,9 @@ function TeamManager({ teams = [], tasks = [], employees = [], onSave, onDelete 
           <h2 id="teams-settings-title">Equipes do Planner</h2>
           <p className="panel-copy">Cadastre grupos de trabalho e use seus membros ao criar uma tarefa.</p>
         </div>
-        <div className="team-total" aria-label={`${teams.length} ${teams.length === 1 ? "equipe cadastrada" : "equipes cadastradas"}`}>
-          <strong>{teams.length}</strong>
-          <span>{teams.length === 1 ? "equipe" : "equipes"}</span>
+        <div className="team-panel-actions">
+          <div className="team-total" aria-label={`${teams.length} ${teams.length === 1 ? "equipe cadastrada" : "equipes cadastradas"}`}><strong>{teams.length}</strong><span>{teams.length === 1 ? "equipe" : "equipes"}</span></div>
+          <button className="button button-primary team-new-button" type="button" onClick={() => { setDraft(emptyDraft); setValidationError(""); setTeamDrawerOpen(true); }}><Users size={15} />Nova equipe</button>
         </div>
       </div>
       <div className="team-manager-body">
@@ -2682,36 +2739,48 @@ function TeamManager({ teams = [], tasks = [], employees = [], onSave, onDelete 
           }) : <div className="team-list-empty"><Users size={18} /><strong>Nenhuma equipe cadastrada</strong><span>Crie a primeira para acelerar a atribuição de tarefas.</span></div>}
           </div>
         </div>
+        {teamDrawerOpen && <div className="drawer-layer team-drawer-layer" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setTeamDrawerOpen(false); }}>
+          <aside className="task-drawer team-editor-drawer" role="dialog" aria-modal="true" aria-labelledby="team-editor-title">
+            <header className="drawer-header"><div><span className="eyebrow">Atribuição rápida</span><h2 id="team-editor-title">{draft.id ? "Editar equipe" : "Nova equipe"}</h2></div><button className="icon-button" type="button" aria-label="Fechar formulário" onClick={() => setTeamDrawerOpen(false)}><X size={19} /></button></header>
+            <div className="drawer-body">
         <div className="team-form">
-          <div className="team-form-heading">
+          <div className="team-form-intro">
+            <span className="team-form-icon" aria-hidden="true"><Users size={19} /></span>
             <div>
               <span className="eyebrow">{draft.id ? "Editar equipe" : "Nova equipe"}</span>
-              <strong>{draft.id ? "Atualize nome e membros" : "Crie um atalho de atribuição"}</strong>
-              <p>{draft.id ? "As mudanças valem para novas tarefas; tarefas antigas preservam o snapshot salvo." : "Escolha quem receberá a tarefa quando esta equipe for selecionada."}</p>
+              <strong>{draft.id ? "Ajuste a composição da equipe" : "Monte seu atalho de atribuição"}</strong>
+              <p>{draft.id ? "As tarefas existentes mantêm o snapshot salvo. Alterações valem para as próximas atribuições." : "Ao selecionar esta equipe numa tarefa, seus membros entram como responsáveis."}</p>
             </div>
-            {draft.id && <div className="team-form-actions">
-              <button className="text-button" type="button" onClick={() => setDraft(emptyDraft)} disabled={saving || deleting}>Nova equipe</button>
+          </div>
+          <div className="team-form-fields">
+            <label className="team-form-field">
+              <span className="team-form-label"><span>Nome da equipe</span><span className="team-form-required">Obrigatório</span></span>
+              <input value={draft.name} onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))} placeholder="Ex.: Operação" />
+            </label>
+            <label className="team-form-field">
+              <span className="team-form-label"><span>Quem faz parte?</span><span className="team-form-selection">{draft.memberIds.length} {draft.memberIds.length === 1 ? "membro" : "membros"}</span></span>
+              <SearchableMultiSelect value={draft.memberIds} onChange={(memberIds) => setDraft((current) => ({ ...current, memberIds }))} options={employeeOptions} placeholder="Buscar e adicionar membros" />
+              <span className="team-form-hint">A mesma pessoa pode estar em mais de uma equipe.</span>
+            </label>
+          </div>
+          {validationError && <div className="form-error" role="alert">{validationError}</div>}
+          <div className="team-form-footer">
+            {draft.id ? <div className="team-form-secondary-actions">
+              <button className="text-button" type="button" onClick={() => setDraft(emptyDraft)} disabled={saving || deleting}>Cancelar edição</button>
               <button className="text-button team-delete-button" type="button" onClick={remove} disabled={saving || deleting}>
                 {deleting ? <LoaderCircle size={13} className="spin" /> : <Trash2 size={13} />}
-                Apagar
+                Apagar equipe
               </button>
-            </div>}
+            </div> : <span className="team-form-footer-hint">Você poderá editar membros depois.</span>}
+            <button className="button button-primary team-form-submit" type="button" onClick={submit} disabled={saving || deleting || !draft.name.trim()}>
+              {saving ? <LoaderCircle size={15} className="spin" /> : <Check size={15} />}
+              {saving ? "Salvando…" : draft.id ? "Salvar alterações" : "Criar equipe"}
+            </button>
           </div>
-          <label className="team-form-field">
-            Nome da equipe
-            <input value={draft.name} onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))} placeholder="Ex.: Operação" />
-          </label>
-          <label className="team-form-field">
-            Membros
-            <SearchableMultiSelect value={draft.memberIds} onChange={(memberIds) => setDraft((current) => ({ ...current, memberIds }))} options={employeeOptions} placeholder="Selecione os membros" />
-            <span className="team-form-hint">Você pode incluir a mesma pessoa em mais de uma equipe.</span>
-          </label>
-          {validationError && <div className="form-error" role="alert">{validationError}</div>}
-          <button className="button button-primary team-form-submit" type="button" onClick={submit} disabled={saving || deleting || !draft.name.trim()}>
-            {saving ? <LoaderCircle size={15} className="spin" /> : <Check size={15} />}
-            {saving ? "Salvando…" : draft.id ? "Salvar equipe" : "Cadastrar equipe"}
-          </button>
         </div>
+            </div>
+          </aside>
+        </div>}
       </div>
     </section>
   );
@@ -3361,6 +3430,20 @@ function MoreView({ onNavigate }) {
         <button
           className="panel more-action"
           type="button"
+          onClick={() => onNavigate("management")}
+        >
+          <span className="more-action-icon more-action-icon-action">
+            <Target size={19} />
+          </span>
+          <span>
+            <strong>Gestão</strong>
+            <small>Cobranças, carga e retornos pendentes</small>
+          </span>
+          <ChevronRight size={17} />
+        </button>
+        <button
+          className="panel more-action"
+          type="button"
           onClick={() => onNavigate("quality")}
         >
           <span className="more-action-icon more-action-icon-warning">
@@ -3542,7 +3625,7 @@ function TaskDrawerContent({
     ...draftAttachments,
   ];
   const isDirty =
-    ["title", "status", "priority", "assignmentMode", "teamId", "teamName", "dueDate", "description", "waitingContext"].some(
+    ["title", "status", "priority", "assignmentMode", "teamIds", "teamNames", "teamId", "teamName", "dueDate", "description", "waitingContext"].some(
       (key) =>
         JSON.stringify(form[key] || "") !== JSON.stringify(taskItem[key] || ""),
     ) ||
@@ -3869,8 +3952,7 @@ function TaskDrawerContent({
                   type="date"
                   value={form.dueDate || ""}
                   onChange={(event) => set("dueDate", event.target.value)}
-                  disabled={currentDeadlineRole === "viewer"}
-                  title={currentDeadlineRole === "viewer" ? "Somente o criador ou um responsável pode alterar o prazo" : ""}
+                  title={currentDeadlineRole === "viewer" ? "Qualquer usuário pode alterar; informe o motivo" : ""}
                 />
               </label>
             </div>
@@ -3884,7 +3966,7 @@ function TaskDrawerContent({
               error={validationError && !waitingValidation.allowed ? validationError : ""}
             />
           )}
-          {dueDateChanged && currentDeadlineRole === "assignee" && (
+          {dueDateChanged && currentDeadlineRole !== "creator" && (
             <label className="deadline-reason">
               Motivo da alteração do prazo
               <textarea value={form.deadlineChangeReason || ""} onChange={(event) => set("deadlineChangeReason", event.target.value)} rows="2" placeholder="Explique por que o prazo precisa mudar" />
@@ -4488,7 +4570,7 @@ function WaitingReturnModal({ task, onClose, onSave }) {
             <strong>{waitingContextSummary(task.waitingContext) || "Nenhum contexto detalhado foi informado."}</strong>
           </div>
           <label className="waiting-return-field">
-            O que foi retornado?
+            <span>O que foi retornado?</span>
             <textarea
               ref={textRef}
               value={text}
@@ -4829,6 +4911,7 @@ export default function App() {
     currentUserEmail: "",
     quality: [],
     notifications: [],
+    collectionEvents: [],
     live: store.live,
     loading: { core: true, quotes: true, quality: true, photos: true },
     loadErrors: {},
@@ -5392,6 +5475,19 @@ export default function App() {
     },
     [state, store, runOptimisticMutation, showNotice],
   );
+  const collectTask = useCallback(
+    (id) => {
+      if (!store.collectTask) return Promise.resolve(false);
+      const input = { actorEmployeeId: currentEmployee?.id || "", actorUserId: currentEmployee?.userId || "", actorName: currentEmployee?.name || "Você" };
+      return runOptimisticMutation(
+        (current) => ({ ...current, collectionEvents: [...(current.collectionEvents || []), { taskId: id, referenceDate: localDateKey(), occurredAt: new Date().toISOString(), actorEmployeeId: input.actorEmployeeId }] }),
+        () => store.collectTask(state, id, input),
+        store.live ? "Enviando cobrança..." : "Registrando cobrança local...",
+        store.live ? "Cobrança enviada." : "Cobrança registrada.",
+      );
+    },
+    [currentEmployee, runOptimisticMutation, state, store],
+  );
   const deleteTask = useCallback(
     (id) => {
       const shouldCloseDrawer = selectedId === id;
@@ -5715,7 +5811,9 @@ export default function App() {
   useEffect(() => {
     if (!currentEmployee?.id || !store.loadNotifications) return undefined;
     let activeRequest = true;
-    const refresh = () => store.loadNotifications(currentEmployee.id).then((notifications) => { if (activeRequest) setState((current) => ({ ...current, notifications })); });
+    const refresh = () => store.loadNotifications(currentEmployee.id)
+      .then((notifications) => { if (activeRequest) setState((current) => ({ ...current, notifications, loadErrors: { ...current.loadErrors, notifications: undefined } })); })
+      .catch((failure) => { if (activeRequest) setState((current) => ({ ...current, loadErrors: { ...current.loadErrors, notifications: failure.message || "Notificações indisponíveis." } })); });
     refresh();
     const timer = window.setInterval(refresh, 60000);
     return () => { activeRequest = false; window.clearInterval(timer); };
@@ -5872,6 +5970,8 @@ export default function App() {
           onCreate={openCreate}
         />
       );
+    if (active === "management")
+      return <ManagementView state={state} onOpenTask={openTask} onCollect={collectTask} onRegisterWaitingReturn={openWaitingReturn} onCreate={openCreate} />;
     if (active === "quotes")
       return <QuotesView state={state} onOpenTask={openTask} />;
     if (active === "board")
@@ -5953,6 +6053,7 @@ export default function App() {
       personalStats={personalStats}
       openTaskCount={openTaskCount}
       notifications={(state.notifications || []).filter((item) => item.recipientEmployeeId === currentEmployee?.id)}
+      notificationError={state.loadErrors?.notifications || ""}
       onOpenNotification={openNotification}
       onMarkNotificationRead={markNotificationRead}
       onMarkAllNotificationsRead={markAllNotificationsRead}

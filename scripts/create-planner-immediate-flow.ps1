@@ -32,7 +32,7 @@ $definition = @'
           "subscriptionRequest/message": 1,
           "subscriptionRequest/entityname": "cr40f_plannertarefaevento",
           "subscriptionRequest/scope": 4,
-          "subscriptionRequest/filterexpression": "cr40f_campo eq 'notification:mention'"
+          "subscriptionRequest/filterexpression": "startswith(cr40f_campo, 'notification:')"
         },
         "host": {
           "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
@@ -50,7 +50,7 @@ $definition = @'
     },
     "Compose_Recipients": {
       "type": "Compose",
-      "inputs": "@coalesce(outputs('Compose_Context')?['mentionedEmployeeIds'], createArray())",
+      "inputs": "@union(coalesce(outputs('Compose_Context')?['notificationRecipientIds'], createArray()), coalesce(outputs('Compose_Context')?['mentionedEmployeeIds'], createArray()), coalesce(outputs('Compose_Context')?['waitingTargetIds'], createArray()), coalesce(outputs('Compose_Context')?['assigneeIds'], createArray()), if(empty(outputs('Compose_Context')?['creatorEmployeeId']), createArray(), createArray(outputs('Compose_Context')?['creatorEmployeeId'])))",
       "runAfter": { "Compose_Context": [ "Succeeded" ] }
     },
     "For_each_recipient": {
@@ -71,7 +71,7 @@ $definition = @'
               "inputs": {
                 "parameters": {
                   "entityName": "cr40f_plannernotificacaos",
-                  "$filter": "cr40f_chavededupe eq '@{concat(triggerOutputs()?['body/cr40f_plannertarefaeventoid'], '|', item(), '|mention')}'",
+                  "$filter": "cr40f_chavededupe eq '@{concat(triggerOutputs()?['body/cr40f_plannertarefaeventoid'], '|', item(), '|', coalesce(outputs('Compose_Context')?['collectionType'], triggerOutputs()?['body/cr40f_campo'], 'update'))}'",
                   "$top": 1,
                   "accept": "application/json;odata.metadata=minimal"
                 },
@@ -94,11 +94,11 @@ $definition = @'
                   "inputs": {
                     "parameters": {
                       "entityName": "cr40f_plannernotificacaos",
-                      "item/cr40f_titulo": "Você foi mencionado",
+                      "item/cr40f_titulo": "@if(equals(coalesce(outputs('Compose_Context')?['collectionType'], triggerOutputs()?['body/cr40f_campo'], 'update'), 'overdue'), 'Cobrança de prazo', if(equals(coalesce(outputs('Compose_Context')?['collectionType'], triggerOutputs()?['body/cr40f_campo'], 'update'), 'assignment'), 'Nova tarefa atribuída', 'Atualização da tarefa'))",
                       "item/cr40f_mensagem": "@triggerOutputs()?['body/cr40f_descricao']",
-                      "item/cr40f_tipo": "mention",
+                      "item/cr40f_tipo": "@coalesce(outputs('Compose_Context')?['collectionType'], triggerOutputs()?['body/cr40f_campo'], 'update')",
                       "item/cr40f_ocorridoem": "@coalesce(triggerOutputs()?['body/cr40f_ocorridoem'], utcNow())",
-                      "item/cr40f_chavededupe": "@concat(triggerOutputs()?['body/cr40f_plannertarefaeventoid'], '|', item(), '|mention')",
+                      "item/cr40f_chavededupe": "@concat(triggerOutputs()?['body/cr40f_plannertarefaeventoid'], '|', item(), '|', coalesce(outputs('Compose_Context')?['collectionType'], triggerOutputs()?['body/cr40f_campo'], 'update'))",
                       "item/cr40f_tarefa@odata.bind": "@concat('/cr40f_plannertarefas(', triggerOutputs()?['body/_cr40f_tarefa_value'], ')')",
                       "item/cr40f_destinatario@odata.bind": "@concat('/cr40f_funcionarioses(', item(), ')')",
                       "item/cr40f_eventoorigem@odata.bind": "@concat('/cr40f_plannertarefaeventos(', triggerOutputs()?['body/cr40f_plannertarefaeventoid'], ')')"
