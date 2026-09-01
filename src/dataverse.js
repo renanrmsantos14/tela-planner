@@ -962,7 +962,7 @@ async function loadLiveAttachmentContent(xrm, attachment) {
   const responseText = await response.text();
   const result = extractFlowRecord(responseText) || {};
   if (!response.ok || result.sucesso !== true || !result.conteudoBase64) throw new Error(result.erro || `Flow de consulta SharePoint falhou: HTTP ${response.status}.`);
-  const mimeType = result.mimeType || attachment.mimeType || "application/octet-stream";
+  const mimeType = attachment.mimeType || result.mimeType || "application/octet-stream";
   return { ...attachment, mimeType, dataUrl: `data:${mimeType};base64,${result.conteudoBase64}` };
 }
 

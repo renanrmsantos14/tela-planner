@@ -9,4 +9,6 @@ test('webresource inline não injeta tags dentro do bundle JavaScript', async ()
   assert.equal(closingScriptTags.length, 1);
   assert.match(html, /<script type="module">[^]*<\/script>/);
   assert.doesNotMatch(html, /<script[^>]+src="\/assets\//);
+  assert.doesNotMatch(html, /\/sounds\/task-completed\.m4a/);
+  assert.match(html, /data:audio\/mp4;base64,/);
 });

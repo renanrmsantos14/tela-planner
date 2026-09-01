@@ -58,7 +58,9 @@ export function normalizeWaitingContext(value = {}) {
   const onNames = uniqueStrings(source.onNames ?? source.onName);
   const onType = ["employee", "team", "external"].includes(source.onType) ? source.onType : "employee";
   return {
-    subject: String(source.subject || "").trim(),
+    // Preserve o texto enquanto ele está sendo editado; trim em cada render
+    // remove o espaço recém-digitado antes que o usuário consiga continuar.
+    subject: String(source.subject ?? ""),
     onType,
     onIds,
     onNames,
@@ -113,7 +115,7 @@ export function taskDisplayDueDate(task, employee, teams = []) {
 export function validateWaitingContext(status, value) {
   if (status !== "waiting") return { allowed: true, error: "" };
   const context = normalizeWaitingContext(value);
-  if (!context.subject) {
+  if (!context.subject.trim()) {
     return { allowed: false, error: "Informe o que está sendo aguardado." };
   }
   if (context.onType === "external") {
@@ -128,8 +130,9 @@ export function validateWaitingContext(status, value) {
 
 export function waitingContextSummary(value) {
   const context = normalizeWaitingContext(value);
-  if (!context.subject || !context.onNames.length) return "";
-  const parts = [`Aguardando ${context.subject}`, context.onNames.join(", ")];
+  const subject = context.subject.trim();
+  if (!subject || !context.onNames.length) return "";
+  const parts = [`Aguardando ${subject}`, context.onNames.join(", ")];
   if (context.expectedDate) parts.push(`até ${formatDate(context.expectedDate)}`);
   return parts.join(" · ");
 }

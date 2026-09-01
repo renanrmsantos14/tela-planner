@@ -85,6 +85,7 @@ import {
   validateWaitingContext,
   waitingContextSummary,
 } from "./domain";
+import { playCompletionSound, prepareCompletionSound } from "./completionSound";
 import { createDataStore } from "./dataverse";
 import SearchableSelect, {
   SearchableMultiSelect,
@@ -380,9 +381,10 @@ function WaitingContextFields({ value, onChange, employees = [], teams = [], err
         />
       </label>
       <div className="waiting-context-grid">
-        <div className="waiting-context-type-field">
-          <span className="sr-only">Tipo de destinatário</span>
-          <div className="assignment-mode waiting-context-type-picker" role="group" aria-label="Tipo de destinatário">
+        <div className="waiting-context-recipient-field">
+          <div className="waiting-context-recipient-header">
+            <span>{context.onType === "external" ? "Contato externo" : context.onType === "team" ? "Equipe responsável" : "Responsáveis"}</span>
+            <div className="assignment-mode waiting-context-type-picker" role="group" aria-label="Tipo de destinatário">
             <button
               type="button"
               className={context.onType === "employee" ? "is-selected" : ""}
@@ -413,27 +415,28 @@ function WaitingContextFields({ value, onChange, employees = [], teams = [], err
             >
               <ArrowUpRight size={15} aria-hidden="true" />
             </button>
+            </div>
           </div>
+          <label className="waiting-context-recipient-control">
+            <span className="sr-only">{context.onType === "external" ? "Quem está sendo aguardado?" : "De quem?"}</span>
+            {context.onType === "external" ? (
+              <input
+                value={context.onNames.join(", ")}
+                onChange={(event) => update({ onIds: [], onNames: event.target.value.split(",").map((item) => item.trim()).filter(Boolean), onId: "", onName: event.target.value.trim() })}
+                placeholder="Ex.: cliente ou fornecedor"
+              />
+            ) : (
+              <InputSelect
+                value={context.onIds}
+                onChange={selectTarget}
+                options={targetOptions}
+                placeholder={context.onType === "team" ? "Selecione uma ou mais equipes" : "Selecione uma ou mais pessoas"}
+                multiple
+              />
+            )}
+          </label>
         </div>
-        <label>
-          {context.onType === "external" ? "Quem está sendo aguardado?" : "De quem?"}
-          {context.onType === "external" ? (
-            <input
-              value={context.onNames.join(", ")}
-              onChange={(event) => update({ onIds: [], onNames: event.target.value.split(",").map((item) => item.trim()).filter(Boolean), onId: "", onName: event.target.value.trim() })}
-              placeholder="Ex.: cliente ou fornecedor"
-            />
-          ) : (
-            <InputSelect
-              value={context.onIds}
-              onChange={selectTarget}
-              options={targetOptions}
-              placeholder={context.onType === "team" ? "Selecione a equipe" : "Selecione o funcionário"}
-              multiple
-            />
-          )}
-        </label>
-        <label>
+        <label className="waiting-context-deadline-field">
           Retorno previsto
           <input
             type="date"
@@ -5328,6 +5331,8 @@ export default function App() {
     (id, status) => {
       const task = state.tasks.find((item) => item.id === id);
       if (!task) return Promise.resolve(false);
+      const isCompleting = status === "done" && task.status !== "done";
+      if (isCompleting) prepareCompletionSound();
       if (status === "waiting" && task.status !== "waiting") {
         const waitingValidation = validateWaitingContext("waiting", task.waitingContext);
         if (!waitingValidation.allowed) {
@@ -5343,7 +5348,10 @@ export default function App() {
           ? "Status alterado. Sincronizando..."
           : "Status alterado no mock local.",
         store.live ? "Status sincronizado." : "Status atualizado localmente.",
-      );
+      ).then((success) => {
+        if (success && isCompleting) playCompletionSound();
+        return success;
+      });
     },
     [state, store, runOptimisticMutation, showNotice],
   );
@@ -5366,6 +5374,8 @@ export default function App() {
         actorUserId: currentEmployee?.userId || "",
         mentionedEmployeeIds: mentionText ? mentionedEmployees(mentionText, state.employees).map((employee) => employee.id) : [],
       };
+      const isCompleting = existingTask?.status !== "done" && nextPatch.status === "done";
+      if (isCompleting) prepareCompletionSound();
       const shouldReopen = id === selectedId;
       return runOptimisticMutation(
         (current) => applyOptimisticTaskPatch(current, id, nextPatch),
@@ -5374,6 +5384,7 @@ export default function App() {
         "",
       ).then((success) => {
         if (success) {
+          if (isCompleting) playCompletionSound();
           setPendingTaskDraft((current) => current?.id === id ? null : current);
           if (shouldReopen)
             setFailedTaskDraft((current) =>
@@ -5454,6 +5465,7 @@ export default function App() {
         return Promise.resolve(false);
       const previousPatch = { status: task.status };
       const completePatch = { status: "done" };
+      prepareCompletionSound();
       return runOptimisticMutation(
         (current) => applyOptimisticTaskPatch(current, id, completePatch),
         () => store.updateTask(state, id, completePatch),
@@ -5461,6 +5473,7 @@ export default function App() {
         "",
       ).then((success) => {
         if (!success) return false;
+        playCompletionSound();
         showNotice("Tarefa concluída.", 5600, {
           label: "Desfazer",
           onClick: () =>

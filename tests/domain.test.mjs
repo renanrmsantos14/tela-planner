@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { addOptimisticAttachment, addOptimisticComment, applyOptimisticTaskPatch, buildAssigneeOptions, buildOptimisticTask, buildTaskCreationInput, canRegisterWaitingReturn, filterTasks, getDueBucket, getDueBucketForEmployee, isOverdue, mentionedEmployees, migrateLegacyTeams, normalizeAssigneeNames, normalizeTeam, quoteTaskTitle, resolveTaskAssignment, sortTasks, STATUSES, taskDisplayDueDate, taskStats, teamResponsibilitySummary, validateWaitingContext, waitingContextSummary } from "../src/domain.js";
+import { addOptimisticAttachment, addOptimisticComment, applyOptimisticTaskPatch, buildAssigneeOptions, buildOptimisticTask, buildTaskCreationInput, canRegisterWaitingReturn, filterTasks, getDueBucket, getDueBucketForEmployee, isOverdue, mentionedEmployees, migrateLegacyTeams, normalizeAssigneeNames, normalizeTeam, normalizeWaitingContext, quoteTaskTitle, resolveTaskAssignment, sortTasks, STATUSES, taskDisplayDueDate, taskStats, teamResponsibilitySummary, validateWaitingContext, waitingContextSummary } from "../src/domain.js";
 
 const tasks = [
   { id: "1", title: "Atrasada", quoteTitle: "Cotação A", assigneeName: "Marina", status: "todo", priority: "high", dueDate: "2026-08-01" },
@@ -177,6 +177,21 @@ test("valida contexto mínimo e monta resumo de Aguardando", () => {
   assert.equal(validateWaitingContext("waiting", context).allowed, true);
   assert.equal(waitingContextSummary(context), "Aguardando confirmação da segunda van · Operação · até 28 ago.");
   assert.equal(validateWaitingContext("doing", {}).allowed, true);
+});
+
+test("preserva espaços no assunto de Aguardando durante a edição", () => {
+  assert.equal(
+    normalizeWaitingContext({ subject: "confirmação da segunda van " }).subject,
+    "confirmação da segunda van ",
+  );
+  assert.equal(
+    validateWaitingContext("waiting", {
+      subject: "   ",
+      onType: "external",
+      onNames: ["Cliente XPTO"],
+    }).allowed,
+    false,
+  );
 });
 
 test("autoriza o criador, o responsável pelo retorno e membro da equipe", () => {
