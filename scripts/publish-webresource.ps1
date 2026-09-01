@@ -132,16 +132,27 @@ function Ensure-PlannerTable([hashtable] $Headers, [string] $ApiBaseUrl, [string
   return $metadata
 }
 
-function Get-PlannerRelationship([hashtable] $Headers, [string] $ApiBaseUrl, [string] $ReferencingEntity, [string] $ReferencingAttribute, [string] $ReferencedEntity) {
+function Get-PlannerRelationships([hashtable] $Headers, [string] $ApiBaseUrl, [string] $ReferencingEntity) {
   $escapedEntity = Escape-OData $ReferencingEntity
   $relationships = Invoke-RestMethod -Method Get -Uri "$ApiBaseUrl/EntityDefinitions(LogicalName='$escapedEntity')/ManyToOneRelationships?`$select=SchemaName,ReferencingAttribute,ReferencedEntity,ReferencingEntityNavigationPropertyName" -Headers $Headers -ErrorAction Stop
-  return @($relationships.value) | Where-Object {
+  return @($relationships.value)
+}
+
+function Get-PlannerRelationship([hashtable] $Headers, [string] $ApiBaseUrl, [string] $ReferencingEntity, [string] $ReferencingAttribute, [string] $ReferencedEntity) {
+  return @(Get-PlannerRelationships -Headers $Headers -ApiBaseUrl $ApiBaseUrl -ReferencingEntity $ReferencingEntity) | Where-Object {
     $_.ReferencingAttribute -ieq $ReferencingAttribute -and $_.ReferencedEntity -ieq $ReferencedEntity
   } | Select-Object -First 1
 }
 
 function Ensure-PlannerRelationship([hashtable] $Headers, [string] $ApiBaseUrl, [string] $SchemaName, [string] $ReferencingEntity, [string] $ReferencingAttribute, [string] $ReferencedEntity, [string] $DisplayName) {
-  $existing = Get-PlannerRelationship -Headers $Headers -ApiBaseUrl $ApiBaseUrl -ReferencingEntity $ReferencingEntity -ReferencingAttribute $ReferencingAttribute -ReferencedEntity $ReferencedEntity
+  $relationships = Get-PlannerRelationships -Headers $Headers -ApiBaseUrl $ApiBaseUrl -ReferencingEntity $ReferencingEntity
+  $existingForAttribute = @($relationships) | Where-Object { $_.ReferencingAttribute -ieq $ReferencingAttribute } | Select-Object -First 1
+  if ($existingForAttribute -and $existingForAttribute.ReferencedEntity -ine $ReferencedEntity) {
+    throw "Lookup $ReferencingEntity.$($ReferencingAttribute.ToLowerInvariant()) já aponta para '$($existingForAttribute.ReferencedEntity)', mas o contrato exige '$ReferencedEntity'. Deploy abortado; não altere nem apague o lookup existente automaticamente."
+  }
+  $existing = @($relationships) | Where-Object {
+    $_.ReferencingAttribute -ieq $ReferencingAttribute -and $_.ReferencedEntity -ieq $ReferencedEntity
+  } | Select-Object -First 1
   if ($existing) { return }
 
   Write-Step "criando relacionamento $SchemaName"
@@ -260,6 +271,7 @@ function Ensure-PlannerSchema([hashtable] $Headers, [string] $ApiBaseUrl) {
   Ensure-PlannerTable -Headers $Headers -ApiBaseUrl $ApiBaseUrl -LogicalName "cr40f_plannertarefaequipe" -SchemaName "cr40f_PlannerTarefaEquipe" -PrimaryName "cr40f_Name" -DisplayName "Equipe da tarefa Planner" -CollectionName "Equipes das tarefas Planner" -EntitySetName "cr40f_plannertarefaequipes" | Out-Null
   Ensure-PlannerRelationship -Headers $Headers -ApiBaseUrl $ApiBaseUrl -SchemaName "cr40f_PlannerTarefaEquipe_Tarefa" -ReferencingEntity "cr40f_plannertarefaequipe" -ReferencingAttribute "cr40f_Tarefa" -ReferencedEntity "cr40f_plannertarefa" -DisplayName "Tarefa"
   Ensure-PlannerRelationship -Headers $Headers -ApiBaseUrl $ApiBaseUrl -SchemaName "cr40f_PlannerTarefaEquipe_Equipe" -ReferencingEntity "cr40f_plannertarefaequipe" -ReferencingAttribute "cr40f_Equipe" -ReferencedEntity "cr40f_plannerequipe" -DisplayName "Equipe"
+  Ensure-PlannerRelationship -Headers $Headers -ApiBaseUrl $ApiBaseUrl -SchemaName "cr40f_PlannerTarefa_EquipePlanner" -ReferencingEntity "cr40f_plannertarefa" -ReferencingAttribute "cr40f_EquipePlanner" -ReferencedEntity "cr40f_plannerequipe" -DisplayName "Equipe do Planner"
   Ensure-PlannerTable -Headers $Headers -ApiBaseUrl $ApiBaseUrl -LogicalName "cr40f_plannernotificacao" -SchemaName "cr40f_PlannerNotificacao" -PrimaryName "cr40f_Name" -DisplayName "Notificação do Planner" -CollectionName "Notificações do Planner" -EntitySetName "cr40f_plannernotificacaos" | Out-Null
   Ensure-PlannerTable -Headers $Headers -ApiBaseUrl $ApiBaseUrl -LogicalName "cr40f_plannerdisparo" -SchemaName "cr40f_PlannerDisparo" -PrimaryName "cr40f_Name" -DisplayName "Disparo do Planner" -CollectionName "Disparos do Planner" -EntitySetName "cr40f_plannerdisparos" | Out-Null
   Ensure-PlannerSchemaAttributes -Headers $Headers -ApiBaseUrl $ApiBaseUrl
@@ -278,6 +290,20 @@ $plannerSubAreaId = "subarea_tela_planner"
 
 if (-not (Test-Path -LiteralPath $resourcePath)) { throw "Webresource não encontrado: $resourcePath. Execute npm run build primeiro." }
 if (-not (Get-Module -ListAvailable MSAL.PS)) { throw "Módulo MSAL.PS não encontrado. Instale com: Install-Module MSAL.PS -Scope CurrentUser" }
+Import-Module Microsoft.PowerShell.Utility -ErrorAction Stop
+if (-not (Get-Command Import-PowerShellDataFile -ErrorAction SilentlyContinue)) {
+  function global:Import-PowerShellDataFile([string] $Path) {
+    $tokens = $null
+    $parseErrors = $null
+    $ast = [System.Management.Automation.Language.Parser]::ParseFile($Path, [ref] $tokens, [ref] $parseErrors)
+    if ($parseErrors.Count) { throw "Manifest PowerShell inválido: $Path" }
+    $hash = $ast.Find({ param($node) $node -is [System.Management.Automation.Language.HashtableAst] }, $true)
+    if (-not $hash) { throw "Manifest PowerShell sem Hashtable: $Path" }
+    $result = @{}
+    foreach ($pair in $hash.KeyValuePairs) { $result[$pair.Item1.Value] = $pair.Item2.SafeGetValue() }
+    return $result
+  }
+}
 Import-Module MSAL.PS -ErrorAction Stop
 
 Write-Step "validando solution $solutionUniqueName"
