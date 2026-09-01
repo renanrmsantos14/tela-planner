@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { AlertTriangle, ArrowUpRight, BellRing, CalendarDays, CheckCircle2, Clock3, RotateCcw, Users, UserRound } from "lucide-react";
 import { formatDate, getDueBucket } from "./domain.js";
-import { collectionRows, collectionSummary, localDateKey, waitingRows, workloadGroups, workloadTotals } from "./management.js";
+import { collectionRows, localDateKey, waitingRows, workloadGroups, workloadTotals } from "./management.js";
 
 function daysLabel(days) {
   return days === 1 ? "1 dia" : `${days} dias`;
@@ -40,38 +40,7 @@ export default function ManagementView({ state, onOpenTask, onCollect, onRegiste
 }
 
 function CollectionTable({ rows, today, onOpenTask, onCollect }) {
-  const pendingRows = rows.filter((row) => row.collectionDate !== today);
-  const collectedRows = rows.filter((row) => row.collectionDate === today);
-  const summary = collectionSummary(rows, today);
-  const [feedbackId, setFeedbackId] = useState("");
-  const [feedbackTimer, setFeedbackTimer] = useState(null);
-
-  useEffect(() => () => feedbackTimer && clearTimeout(feedbackTimer), [feedbackTimer]);
-
-  const collect = (id) => Promise.resolve(onCollect(id)).then((success) => {
-    if (success === false) return success;
-    if (feedbackTimer) clearTimeout(feedbackTimer);
-    setFeedbackId(id);
-    setFeedbackTimer(setTimeout(() => setFeedbackId(""), 1800));
-    return success;
-  });
-
-  return <section className="panel management-panel"><div className="panel-heading"><div><span className="eyebrow">PRAZO ESTOURADO</span><h2>Central de cobrança</h2><p className="panel-subtitle">Resolva primeiro o que ainda precisa de contato.</p></div><span className="panel-count">{rows.length}</span></div><CollectionSummary {...summary} />{rows.length ? <div className="collection-groups"><CollectionGroup title="Cobrar hoje" detail="Tarefas sem cobrança registrada hoje." rows={pendingRows} today={today} feedbackId={feedbackId} onOpenTask={onOpenTask} onCollect={collect} /><CollectionGroup title="Cobrança registrada hoje" detail="Tarefas já acionadas. Acompanhe novo retorno quando necessário." rows={collectedRows} today={today} feedbackId={feedbackId} onOpenTask={onOpenTask} onCollect={collect} /></div> : <EmptyState icon={CheckCircle2} title="Nenhuma tarefa atrasada" detail="A Central de cobrança está em dia." />}</section>;
-}
-
-function CollectionSummary({ total, pending, collected }) {
-  return <div className="collection-summary" aria-label="Resumo da cobrança"><div className="collection-summary-card is-total"><span><AlertTriangle size={15} />Atrasadas</span><strong>{total}</strong><small>exigem acompanhamento</small></div><div className="collection-summary-card is-pending"><span><BellRing size={15} />A cobrar hoje</span><strong>{pending}</strong><small>sem registro de hoje</small></div><div className="collection-summary-card is-collected"><span><CheckCircle2 size={15} />Cobradas hoje</span><strong>{collected}</strong><small>contato já registrado</small></div></div>;
-}
-
-function CollectionGroup({ title, detail, rows, today, feedbackId, onOpenTask, onCollect }) {
-  if (!rows.length) return null;
-  return <section className="collection-group" aria-labelledby={`collection-group-${title.replace(/\s+/g, "-").toLowerCase()}`}><div className="collection-group-heading"><div><h3 id={`collection-group-${title.replace(/\s+/g, "-").toLowerCase()}`}>{title}</h3><p>{detail}</p></div><span>{rows.length}</span></div><div className="management-list">{rows.map((row) => <CollectionRow key={row.id} row={row} today={today} isFeedback={feedbackId === row.id} onOpenTask={onOpenTask} onCollect={onCollect} />)}</div></section>;
-}
-
-function CollectionRow({ row, today, isFeedback, onOpenTask, onCollect }) {
-  const collected = row.collectionDate === today;
-  const lastCollection = row.lastCollectionAt && new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(new Date(row.lastCollectionAt));
-  return <article className={`management-row collection-row${isFeedback ? " is-feedback" : ""}`}><div className="management-row-main"><strong>{row.title}</strong><span>{row.assignmentLabel}: {row.assigneeNames.join(", ") || "Sem responsável"}</span><small>Criada por {row.creatorName}</small></div><div className="management-row-due"><strong className="danger-text">{daysLabel(row.overdueDays)} em atraso</strong><span><CalendarDays size={14} />{formatDate(row.dueDate)}</span>{lastCollection && <small>Última cobrança: {lastCollection}</small>}</div><div className="management-row-actions"><button className="button button-secondary button-small" type="button" onClick={() => onOpenTask(row.id)}><ArrowUpRight size={14} />Abrir</button><button className={`button button-small ${collected ? "button-collection-done" : "button-primary"}`} type="button" disabled={collected} onClick={() => onCollect(row.id)}>{collected ? <><CheckCircle2 size={14} />Cobrada hoje</> : <><BellRing size={14} />Cobrar agora</>}</button></div></article>;
+  return <section className="panel management-panel"><div className="panel-heading"><div><span className="eyebrow">PRAZO ESTOURADO</span><h2>Central de cobrança</h2></div><span className="panel-count">{rows.length}</span></div>{rows.length ? <div className="management-list">{rows.map((row) => <article className="management-row" key={row.id}><div className="management-row-main"><strong>{row.title}</strong><span>{row.assignmentLabel}: {row.assigneeNames.join(", ") || "Sem responsável"}</span><small>Criada por {row.creatorName}</small></div><div className="management-row-due"><strong className="danger-text">{daysLabel(row.overdueDays)} em atraso</strong><span><CalendarDays size={14} />{formatDate(row.dueDate)}</span>{row.lastCollectionAt && <small>Última cobrança: {new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(new Date(row.lastCollectionAt))}</small>}</div><div className="management-row-actions"><button className="button button-secondary button-small" type="button" onClick={() => onOpenTask(row.id)}><ArrowUpRight size={14} />Abrir</button><button className="button button-primary button-small" type="button" disabled={row.collectionDate === today} onClick={() => onCollect(row.id)}>{row.collectionDate === today ? "Cobrada hoje" : "Cobrar agora"}</button></div></article>)}</div> : <EmptyState icon={CheckCircle2} title="Nenhuma tarefa atrasada" detail="A Central de cobrança está em dia." />}</section>;
 }
 
 function WorkloadTable({ groups, totals, onOpenTask }) {
