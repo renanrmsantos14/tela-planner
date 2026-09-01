@@ -67,6 +67,11 @@ export function collectionRows(tasks = [], employees = [], teams = [], collectio
     .sort((left, right) => right.overdueDays - left.overdueDays || String(left.dueDate || "").localeCompare(String(right.dueDate || "")));
 }
 
+export function collectionSummary(rows = [], today = localDateKey()) {
+  const collected = rows.filter((row) => row.collectionDate === today).length;
+  return { total: rows.length, pending: rows.length - collected, collected };
+}
+
 export function workloadGroups(tasks = [], teams = [], today = new Date()) {
   const byTeam = teamById(teams);
   const groups = new Map();

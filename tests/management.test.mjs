@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { collectionRows, daysOverdue, localDateKey, waitingRows, workloadGroups, workloadTotals } from "../src/management.js";
+import { collectionRows, collectionSummary, daysOverdue, localDateKey, waitingRows, workloadGroups, workloadTotals } from "../src/management.js";
 import { normalizeWaitingContext, validateWaitingContext } from "../src/domain.js";
 import { collectTask, createTask, seedState } from "../src/mockStore.js";
 
@@ -15,6 +15,20 @@ test("calcula atraso e centraliza cobrança por pessoa ou equipe", () => {
   assert.equal(rows[0].overdueDays, 3);
   assert.equal(daysOverdue(tasks[1], new Date("2026-09-01T12:00:00-03:00")), 2);
   assert.equal(localDateKey(new Date("2026-09-01T02:00:00Z")), "2026-08-31");
+});
+
+test("resume tarefas sem cobrança, cobrança parcial e todas cobradas hoje", () => {
+  const today = "2026-09-01";
+  assert.deepEqual(collectionSummary([], today), { total: 0, pending: 0, collected: 0 });
+  assert.deepEqual(collectionSummary([
+    { id: "pending" },
+    { id: "collected", collectionDate: today },
+    { id: "old", collectionDate: "2026-08-31" },
+  ], today), { total: 3, pending: 2, collected: 1 });
+  assert.deepEqual(collectionSummary([
+    { id: "one", collectionDate: today },
+    { id: "two", collectionDate: today },
+  ], today), { total: 2, pending: 0, collected: 2 });
 });
 
 test("carga separa pessoas e equipes e não inclui tarefas terminadas", () => {
