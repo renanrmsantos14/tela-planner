@@ -632,7 +632,7 @@ function buildCoreState(xrm, rows, relations, assigneeRelations, employees, curr
     const creator = employeeRecords.find((employee) => cleanId(employee.userId).toLowerCase() === cleanId(task.creatorUserId).toLowerCase());
     return { ...applyDynamicTeamAssignment(task, teams, employeeRecords), creatorEmployeeId: creator?.id || "", parentTaskId: relationByChild.get(row.cr40f_plannertarefaid) || null, detailsLoaded: false };
   });
-  return { quotes: [], employees: employeeRecords, teams, currentUserEmail, quality: [], tasks, notifications: [], lastUpdated: new Date().toISOString(), live: true, loading: { core: false, quotes: true, quality: true, notifications: true } };
+  return { quotes: [], employees: employeeRecords, teams, currentUserEmail, currentUserId: cleanId(xrm.Utility?.getGlobalContext?.().userSettings?.userId), quality: [], tasks, notifications: [], lastUpdated: new Date().toISOString(), live: true, loading: { core: false, quotes: true, quality: true, notifications: true } };
 }
 
 export async function loadCoreState(xrm) {
@@ -721,7 +721,7 @@ async function loadLiveState(xrm) {
   const employeesWithProfiles = employeeRecords;
   const quality = [...qualityErrors.map((row) => normalizeQuality(row, "error")), ...qualityActions.map((row) => normalizeQuality(row, "action"))].map((item) => ({ ...item, assigneeProfiles: employeeById.has(cleanId(item.assigneeId).toLowerCase()) ? [employeesWithProfiles.find((employee) => cleanId(employee.id).toLowerCase() === cleanId(item.assigneeId).toLowerCase())] : [] }));
   const tasksWithProfiles = tasks.map((task) => ({ ...task, assigneeProfiles: task.assigneeProfiles?.length ? task.assigneeProfiles : task.assigneeIds.map((id) => employeesWithProfiles.find((employee) => cleanId(employee.id).toLowerCase() === cleanId(id).toLowerCase())).filter(Boolean), quoteCode: quoteById.get(task.quoteId)?.code || "", quoteTitle: quoteById.get(task.quoteId)?.title || "" }));
-  return { quotes: [...quoteById.values()], employees: employeesWithProfiles, teams, currentUserEmail, quality, tasks: tasksWithProfiles, notifications: [], collectionEvents: normalizeCollectionEvents(events), lastUpdated: new Date().toISOString(), live: true };
+  return { quotes: [...quoteById.values()], employees: employeesWithProfiles, teams, currentUserEmail, currentUserId: cleanId(xrm.Utility?.getGlobalContext?.().userSettings?.userId), quality, tasks: tasksWithProfiles, notifications: [], collectionEvents: normalizeCollectionEvents(events), lastUpdated: new Date().toISOString(), live: true };
 }
 
 function normalizeNotification(row) {

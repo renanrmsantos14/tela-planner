@@ -3609,6 +3609,11 @@ function TaskDrawerContent({
   const mentionSuggestions = [];
   const isOwnComment = (item) =>
     item.author === "Você" ||
+    (state.currentUserId &&
+      String(item.authorId || "")
+        .replace(/[{}]/g, "")
+        .toLowerCase() ===
+      String(state.currentUserId).replace(/[{}]/g, "").toLowerCase()) ||
     (currentEmployee?.userId &&
       String(item.authorId || "")
         .replace(/[{}]/g, "")
@@ -4909,6 +4914,7 @@ export default function App() {
     employees: [],
     teams: [],
     currentUserEmail: "",
+    currentUserId: "",
     quality: [],
     notifications: [],
     collectionEvents: [],
