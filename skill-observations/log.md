@@ -134,3 +134,18 @@
 **Suggested improvement:** Em protótipos de interfaces com interação central, gerar ou apresentar explicitamente o estado acionado junto do estado inicial, mantendo identidade visual, conteúdo funcional e contexto espacial constantes.
 
 **Principle:** Para validar uma interação de UI, mostre o estado após a ação no mesmo contexto; aparência isolada não prova compreensão do fluxo.
+
+### Observation 10: Provisionamento parcial precisa falhar antes da publicação
+
+**Status:** OPEN
+**Date:** 2026-09-01
+**Session context:** Diagnóstico de erro de metadata do lookup de equipe no Planner em PROD.
+**Skill:** antigravity-protocol / dataverse:dv-metadata
+**Type:** open-source
+**Phase/Area:** Schema Dataverse e publicação de webresource
+
+**Issue:** O runtime validava em tempo de uso um lookup obrigatório, mas o script de publicação validava apenas tabelas e Entity Sets e permitia ambiente com schema parcial. O erro só apareceu quando uma operação tentou resolver a navegação do lookup.
+
+**Suggested improvement:** Tratar cada campo lookup usado pelo runtime como contrato de publicação: validar atributo, entidade referenciada, nome de navegação e tabelas relacionais antes de publicar o webresource; abortar com diagnóstico explícito quando qualquer item divergir.
+
+**Principle:** Deploy de integração só deve ser considerado válido quando o metadata mínimo exigido pelo caminho de execução foi verificado, não apenas quando tabelas principais existem.

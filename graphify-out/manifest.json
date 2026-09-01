@@ -1,7 +1,7 @@
 {
   "package.json": {
-    "mtime": 1788278042.4719565,
-    "ast_hash": "7e7a5a436b27761826b15942afa9f67e",
+    "mtime": 1788280591.6205573,
+    "ast_hash": "3c8d200eeb8b5b4dc9bb426602c67be4",
     "semantic_hash": ""
   },
   "scripts/inline-webresource.mjs": {
@@ -165,8 +165,8 @@
     "semantic_hash": ""
   },
   "src/version.js": {
-    "mtime": 1788278058.9012542,
-    "ast_hash": "fc04ac14febc3990b5740280953d3e7f",
+    "mtime": 1788280591.6315603,
+    "ast_hash": "1af18aa96686a2dc293b2f910b8e6919",
     "semantic_hash": ""
   },
   "tests/versioning.test.mjs": {
@@ -200,8 +200,8 @@
     "semantic_hash": ""
   },
   "skill-observations/log.md": {
-    "mtime": 1788183925.381981,
-    "ast_hash": "8d2a86431a9cbacf3260fd08f9553781",
+    "mtime": 1788280050.9030461,
+    "ast_hash": "bf78aaa27bf204129be9b591b2e0e406",
     "semantic_hash": ""
   },
   "REVISAO_2026-08-20.md": {

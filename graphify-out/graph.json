@@ -5386,6 +5386,14 @@
       "source_file": "skill-observations/log.md",
       "source_location": "L123",
       "_origin": "ast"
+    },
+    {
+      "id": "skill_observations_log_observation_10_provisionamento_parcial_precisa_falhar_antes_da_publicação",
+      "label": "Observation 10: Provisionamento parcial precisa falhar antes da publicação",
+      "file_type": "document",
+      "source_file": "skill-observations/log.md",
+      "source_location": "L138",
+      "_origin": "ast"
     }
   ],
   "links": [
@@ -18383,6 +18391,15 @@
       "confidence": "EXTRACTED",
       "source_file": "skill-observations/log.md",
       "source_location": "L123",
+      "weight": 1.0
+    },
+    {
+      "source": "skill_observations_log_skill_observations",
+      "target": "skill_observations_log_observation_10_provisionamento_parcial_precisa_falhar_antes_da_publicação",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "skill-observations/log.md",
+      "source_location": "L138",
       "weight": 1.0
     },
     {
