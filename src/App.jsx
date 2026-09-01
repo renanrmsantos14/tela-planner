@@ -5967,7 +5967,6 @@ export default function App() {
           onOpenTask={openTask}
           onOpenSource={(item) => store.openSource?.(item)}
           onCompleteTask={completeTask}
-          onCreate={openCreate}
         />
       );
     if (active === "management")

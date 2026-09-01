@@ -22,7 +22,7 @@ function hasActiveFilters(filters) {
   return Boolean(filters?.query?.trim()) || Boolean(filters?.assignee?.length) || Boolean(filters?.status?.length) || Boolean(filters?.priority?.length) || Boolean(filters?.source?.length) || Boolean(filters?.team);
 }
 
-export default function CentralView({ state, mode = "mine", currentEmployee, filters, filterBar, onClearFilters, onChangeMode, onOpenTask, onOpenSource, onCompleteTask, onCreate }) {
+export default function CentralView({ state, mode = "mine", currentEmployee, filters, filterBar, onClearFilters, onChangeMode, onOpenTask, onOpenSource, onCompleteTask }) {
   const mineOnly = mode === "mine";
   const allItems = state.workItems || [];
   const scopedItems = mineOnly && !currentEmployee ? [] : allItems;
@@ -50,7 +50,7 @@ export default function CentralView({ state, mode = "mine", currentEmployee, fil
       : { title: "Nenhum resultado", detail: "Tente remover um filtro ou buscar por outro termo." };
 
   return <div className="page-content">
-    <PageHeader mode={mode} onChangeMode={onChangeMode} onCreate={onCreate} />
+    <PageHeader mode={mode} onChangeMode={onChangeMode} />
     {filterBar}
     <div className="metric-grid central-metrics"><Metric label="Pendências abertas" value={stats.open} icon={CheckCircle2} /><Metric label="Atrasadas" value={stats.overdue} icon={Clock3} tone="danger" /><Metric label="Em andamento" value={stats.doing} icon={ArrowUpRight} tone="action" /><Metric label="Aguardando" value={stats.waiting} icon={Users} tone="warning" /></div>
     <section className="panel central-panel">
@@ -82,9 +82,9 @@ const CentralRow = memo(function CentralRow({ item, onOpen, onComplete }) {
   </article>;
 });
 
-function PageHeader({ mode, onChangeMode, onCreate }) {
+function PageHeader({ mode, onChangeMode }) {
   const mine = mode === "mine";
-  return <div className="page-header"><div><span className="eyebrow">OPERAÇÃO ADMINISTRATIVA</span><h1>{mine ? "Minhas pendências" : "Equipe"}</h1><p>{mine ? "Veja o que precisa da sua atenção e qual é o próximo movimento." : "Acompanhe atrasos, responsáveis e obrigações da equipe."}</p></div><div className="header-actions"><div className="central-mode-selector" aria-label="Escopo das pendências"><button className={mine ? "central-mode-button active" : "central-mode-button"} type="button" onClick={() => onChangeMode("mine")} aria-pressed={mine}><CheckCircle2 size={15} />Minhas</button><button className={!mine ? "central-mode-button active" : "central-mode-button"} type="button" onClick={() => onChangeMode("team")} aria-pressed={!mine}><Users size={15} />Equipe</button></div><button className="button button-primary" onClick={onCreate}>Nova tarefa</button></div></div>;
+  return <div className="page-header"><div><span className="eyebrow">OPERAÇÃO ADMINISTRATIVA</span><h1>{mine ? "Minhas pendências" : "Equipe"}</h1><p>{mine ? "Veja o que precisa da sua atenção e qual é o próximo movimento." : "Acompanhe atrasos, responsáveis e obrigações da equipe."}</p></div><div className="header-actions"><div className="task-scope-selector" aria-label="Escopo das pendências"><button className={mine ? "task-scope-button active" : "task-scope-button"} type="button" onClick={() => onChangeMode("mine")} aria-pressed={mine}><CheckCircle2 size={15} />Minhas</button><button className={!mine ? "task-scope-button active" : "task-scope-button"} type="button" onClick={() => onChangeMode("team")} aria-pressed={!mine}><Users size={15} />Equipe</button></div></div></div>;
 }
 
 function Metric({ label, value, icon: Icon, tone = "neutral" }) {
