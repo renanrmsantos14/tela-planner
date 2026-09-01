@@ -91,6 +91,12 @@ button { cursor: pointer; }
 .drawer-title input::placeholder { color: #91a0b2; font-size: 17px; font-weight: 600; }
 .drawer-title input:hover { border-color: #c6d3e2; background: #fff; }
 .drawer-title input:focus { border-color: #7b9de8; background: #fff; box-shadow: 0 0 0 3px rgba(33, 89, 210, .1); }
+.drawer-description textarea { border-color: #d9e2ed; background: #fbfcfe; transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease; }
+.drawer-description textarea:hover { border-color: #c6d3e2; background: #fff; }
+.drawer-description textarea:focus { border-color: #7b9de8; background: #fff; box-shadow: 0 0 0 3px rgba(33, 89, 210, .1); }
+.comment-compose { border-color: #d9e2ed; transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease; }
+.comment-compose:hover { border-color: #c6d3e2; background: #fff; }
+.comment-compose:focus-within { border-color: #7b9de8; background: #fff; box-shadow: 0 0 0 3px rgba(33, 89, 210, .1); }
 .board-grid { grid-template-columns: repeat(4, minmax(210px, 1fr)); overscroll-behavior-inline: contain; scrollbar-width: thin; }
 .board-column, .column-body, .task-card { min-width: 0; }
 .board-page-content { height: 100%; box-sizing: border-box; display: flex; flex-direction: column; padding-bottom: 0; }
