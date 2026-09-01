@@ -5971,7 +5971,7 @@ export default function App() {
         />
       );
     if (active === "management")
-      return <ManagementView state={state} onOpenTask={openTask} onCollect={collectTask} onRegisterWaitingReturn={openWaitingReturn} onCreate={openCreate} />;
+      return <ManagementView state={state} onOpenTask={openTask} onCollect={collectTask} onRegisterWaitingReturn={openWaitingReturn} />;
     if (active === "quotes")
       return <QuotesView state={state} onOpenTask={openTask} />;
     if (active === "board")

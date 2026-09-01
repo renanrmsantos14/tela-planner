@@ -1508,3 +1508,9 @@ button { cursor: pointer; }
 @media (prefers-reduced-motion: reduce) {
   .workload-card, .workload-more { transition: none; }
 }
+
+/* Topbar acompanha borda interna do mesmo container do conteúdo. */
+.app-topbar { right: max(42px, calc((100% - 1500px) / 2 + 42px)); }
+@media (max-width: 1120px) and (min-width: 821px) {
+  .app-topbar { right: 26px; }
+}

@@ -16,7 +16,7 @@ function duePresentation(task) {
   return { accessibleLabel: "Sem prazo", className: "is-no-due", Icon: CalendarDays };
 }
 
-export default function ManagementView({ state, onOpenTask, onCollect, onRegisterWaitingReturn, onCreate }) {
+export default function ManagementView({ state, onOpenTask, onCollect, onRegisterWaitingReturn }) {
   const [tab, setTab] = useState("collection");
   const collections = useMemo(() => collectionRows(state.tasks, state.employees, state.teams, state.collectionEvents, new Date()), [state.tasks, state.employees, state.teams, state.collectionEvents]);
   const workload = useMemo(() => workloadGroups(state.tasks, state.teams, new Date()), [state.tasks, state.teams]);
@@ -26,7 +26,6 @@ export default function ManagementView({ state, onOpenTask, onCollect, onRegiste
   return <div className="page-content management-page">
     <div className="page-header">
       <div><span className="eyebrow">GESTÃO OPERACIONAL</span><h1>Acompanhamento</h1><p>Veja onde o trabalho está parado e cobre o próximo movimento.</p></div>
-      <button className="button button-primary" type="button" onClick={onCreate}>Nova tarefa</button>
     </div>
     <div className="management-tabs" role="tablist" aria-label="Visões de gestão">
       <button type="button" role="tab" aria-selected={tab === "collection"} className={tab === "collection" ? "is-active" : ""} onClick={() => setTab("collection")}><BellRing size={16} />Cobrança <b>{collections.length}</b></button>
