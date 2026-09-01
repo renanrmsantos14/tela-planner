@@ -70,6 +70,7 @@ test("expõe e aplica prioridade, equipe e status nos itens agregados", () => {
   assert.equal(items[0].teamName, "Operação");
   assert.equal(items[0].statusGroup, "waiting");
   assert.deepEqual(filterWorkItems(items, { priority: ["high"], team: "Operação", status: ["waiting"] }).map((item) => item.sourceRecordId), ["waiting"]);
+  assert.deepEqual(filterWorkItems(items, { team: ["Operação", "Comercial"] }).map((item) => item.sourceRecordId), ["waiting", "open"]);
 });
 
 test("inclui tarefa compartilhada nas pendências de cada responsável", () => {

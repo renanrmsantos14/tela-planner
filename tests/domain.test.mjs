@@ -56,6 +56,12 @@ test("filtra por texto, status e prioridade", () => {
   assert.equal(filterTasks(tasks, { query: "", status: ["doing", "waiting"], priority: ["medium", "high"] }).length, 1);
 });
 
+test("filtra por uma ou mais equipes", () => {
+  const teamTasks = tasks.map((task, index) => ({ ...task, teamName: index === 0 ? "Operação" : "Comercial" }));
+  assert.deepEqual(filterTasks(teamTasks, { team: ["Operação", "Comercial"] }).map((task) => task.id), ["1", "2", "3"]);
+  assert.equal(filterTasks(teamTasks, { team: "Operação" }).length, 1);
+});
+
 test("filtra por um ou mais responsáveis", () => {
   assert.deepEqual(filterTasks(tasks, { query: "", assignee: ["Marina", "Camila"] }).map((task) => task.id), ["1", "3"]);
   assert.equal(filterTasks(tasks, { query: "", assignee: "Rafael" }).length, 1);

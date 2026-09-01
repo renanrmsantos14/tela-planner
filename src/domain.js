@@ -387,6 +387,7 @@ export function filterTasks(tasks, filters = {}, employee, teams = []) {
   const assigneeValues = selectedValues(filters.assignee);
   const priorityValues = new Set(selectedValues(filters.priority));
   const sourceValues = new Set(selectedValues(filters.source));
+  const teamValues = selectedValues(filters.team);
   return tasks.filter((task) => {
     if (statusValues.size && !statusValues.has(task.status)) return false;
     if (priorityValues.size && !priorityValues.has(task.priority)) return false;
@@ -397,7 +398,10 @@ export function filterTasks(tasks, filters = {}, employee, teams = []) {
         && assigneeValues.some((value) => normalizeText(value) === normalizeText(employee.name));
       if (!assigneeValues.some((value) => taskAssignees.includes(value)) && !matchesWaitingReturn) return false;
     }
-    if (filters.team && task.teamName !== filters.team) return false;
+    if (teamValues.length) {
+      const taskTeams = task.teamNames?.length ? task.teamNames : [task.teamName].filter(Boolean);
+      if (!teamValues.some((value) => taskTeams.includes(value))) return false;
+    }
     if (!query) return true;
     const assigneeSearch = [task.assigneeName, ...(Array.isArray(task.assigneeNames) ? task.assigneeNames : [])].filter(Boolean).join(" ");
     return [task.title, task.quoteTitle, assigneeSearch, task.teamName].some((value) => {

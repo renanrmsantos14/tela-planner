@@ -121,6 +121,7 @@ export function filterWorkItems(items = [], filters = {}) {
   const assigneeValues = selectedValues(filters.assignee);
   const priorityValues = new Set(selectedValues(filters.priority));
   const sourceValues = new Set(selectedValues(filters.source));
+  const teamValues = selectedValues(filters.team);
   return items.filter((item) => {
     const assigneeNames = item.assigneeNames || (item.assigneeName ? [item.assigneeName] : []);
     if (assigneeValues.length && !assigneeValues.some((value) => String(value) === String(item.assigneeEmployeeId) || assigneeNames.includes(value) || String(item.assigneeName || "").includes(String(value)))) return false;
@@ -133,7 +134,7 @@ export function filterWorkItems(items = [], filters = {}) {
         || (sourceValues.has("quality") && ["quality_error", "quality_action"].includes(item.source));
       if (!matchesSource) return false;
     }
-    if (filters.team && item.teamName !== filters.team) return false;
+    if (teamValues.length && !teamValues.includes(item.teamName)) return false;
     return !query || [item.title, item.context, item.assigneeName, item.sourceCode, item.teamName].join(" ").toLocaleLowerCase("pt-BR").includes(query);
   });
 }

@@ -173,7 +173,7 @@ function createDefaultFilters() {
     status: [],
     priority: [],
     source: [],
-    team: "",
+    team: [],
   };
 }
 
@@ -2076,7 +2076,7 @@ const FilterBar = memo(function FilterBar({
     filters.status?.length,
     filters.priority?.length,
     filters.source?.length,
-    filters.team,
+    filters.team?.length || filters.team,
   ].filter(Boolean).length;
   return (
     <div className={`filter-bar ${expanded ? "is-expanded" : "is-collapsed"}`}>
@@ -2137,8 +2137,8 @@ const FilterBar = memo(function FilterBar({
           placeholder="Todas as origens"
           options={SOURCE_OPTIONS}
         />
-        <SearchableSelect
-          value={filters.team || ""}
+        <SearchableMultiSelect
+          value={Array.isArray(filters.team) ? filters.team : filters.team ? [filters.team] : []}
           onChange={(value) =>
             setFilters((current) => ({ ...current, team: value }))
           }
@@ -2559,7 +2559,7 @@ function QualityView({ state, onCreate, onCreateTask, filters, setFilters }) {
           : !filters.assignee?.length &&
             !filters.priority?.length &&
             !filters.source?.length &&
-            !filters.team;
+            !filters.team?.length;
         return matchesQuery && matchesTaskFilters;
       }),
     [quality, taskBySourceId, query, taskFilters, filters],
