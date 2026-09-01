@@ -33,14 +33,29 @@ export default function ManagementView({ state, onOpenTask, onCollect, onRegiste
       <button type="button" role="tab" aria-selected={tab === "workload"} className={tab === "workload" ? "is-active" : ""} onClick={() => setTab("workload")}><Users size={16} />Carga <b>{workload.length}</b></button>
       <button type="button" role="tab" aria-selected={tab === "waiting"} className={tab === "waiting" ? "is-active" : ""} onClick={() => setTab("waiting")}><RotateCcw size={16} />Retornos <b>{waiting.length}</b></button>
     </div>
-    {tab === "collection" && <CollectionTable rows={collections} today={collectionToday} onOpenTask={onOpenTask} onCollect={onCollect} />}
+    {tab === "collection" && <CollectionTable rows={collections} employees={state.employees} today={collectionToday} onOpenTask={onOpenTask} onCollect={onCollect} />}
     {tab === "workload" && <WorkloadTable groups={workload} totals={workloadTotal} onOpenTask={onOpenTask} />}
     {tab === "waiting" && <WaitingTable rows={waiting} onOpenTask={onOpenTask} onRegisterWaitingReturn={onRegisterWaitingReturn} />}
   </div>;
 }
 
-function CollectionTable({ rows, today, onOpenTask, onCollect }) {
-  return <section className="panel management-panel"><div className="panel-heading"><div><span className="eyebrow">PRAZO ESTOURADO</span><h2>Central de cobrança</h2></div><span className="panel-count">{rows.length}</span></div>{rows.length ? <div className="management-list">{rows.map((row) => <article className="management-row" key={row.id}><div className="management-row-main"><strong>{row.title}</strong><span>{row.assignmentLabel}: {row.assigneeNames.join(", ") || "Sem responsável"}</span><small>Criada por {row.creatorName}</small></div><div className="management-row-due"><strong className="danger-text">{daysLabel(row.overdueDays)} em atraso</strong><span><CalendarDays size={14} />{formatDate(row.dueDate)}</span>{row.lastCollectionAt && <small>Última cobrança: {new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(new Date(row.lastCollectionAt))}</small>}</div><div className="management-row-actions"><button className="button button-secondary button-small" type="button" onClick={() => onOpenTask(row.id)}><ArrowUpRight size={14} />Abrir</button><button className="button button-primary button-small" type="button" disabled={row.collectionDate === today} onClick={() => onCollect(row.id)}>{row.collectionDate === today ? "Cobrada hoje" : "Cobrar agora"}</button></div></article>)}</div> : <EmptyState icon={CheckCircle2} title="Nenhuma tarefa atrasada" detail="A Central de cobrança está em dia." />}</section>;
+function CollectionTable({ rows, employees = [], today, onOpenTask, onCollect }) {
+  return <section className="panel management-panel"><div className="panel-heading"><div><span className="eyebrow">PRAZO ESTOURADO</span><h2>Central de cobrança</h2></div><span className="panel-count">{rows.length}</span></div>{rows.length ? <div className="management-list">{rows.map((row) => <article className="management-row" key={row.id}><div className="management-row-main"><strong>{row.title}</strong><ResponsibleDisplay row={row} employees={employees} /><small>Criada por {row.creatorName}</small></div><div className="management-row-due"><strong className="danger-text">{daysLabel(row.overdueDays)} em atraso</strong><span><CalendarDays size={14} />{formatDate(row.dueDate)}</span>{row.lastCollectionAt && <small>Última cobrança: {new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(new Date(row.lastCollectionAt))}</small>}</div><div className="management-row-actions"><button className="button button-secondary button-small" type="button" onClick={() => onOpenTask(row.id)}><ArrowUpRight size={14} />Abrir</button><button className="button button-primary button-small" type="button" disabled={row.collectionDate === today} onClick={() => onCollect(row.id)}>{row.collectionDate === today ? "Cobrada hoje" : "Cobrar agora"}</button></div></article>)}</div> : <EmptyState icon={CheckCircle2} title="Nenhuma tarefa atrasada" detail="A Central de cobrança está em dia." />}</section>;
+}
+
+function ResponsibleDisplay({ row, employees }) {
+  const employeeById = new Map(employees.map((employee) => [String(employee.id), employee]));
+  const profiles = (row.assigneeIds || []).map((id) => employeeById.get(String(id))).filter(Boolean);
+  const fallbackNames = row.assignmentMode === "team" ? [] : (row.assigneeNames || []);
+  const names = profiles.length ? profiles.map((employee) => employee.name) : fallbackNames;
+  const visibleNames = names.slice(0, 4);
+  const hiddenCount = names.length - visibleNames.length;
+  const label = names.length ? names.join(", ") : "Sem responsável";
+  return <div className="responsible-display" title={label} aria-label={`${row.assignmentMode === "team" ? "Responsáveis da equipe" : "Responsáveis"}: ${label}`}><span className="responsible-display-label">{row.assignmentMode === "team" ? "Responsáveis desta equipe" : "Responsáveis"}</span>{names.length ? <span className="responsible-chip-list">{visibleNames.map((name, index) => <span className="responsible-chip" key={`${name}-${index}`}><span className="avatar avatar-small" aria-hidden="true">{initials(name)}</span>{name}</span>)}{hiddenCount > 0 && <span className="responsible-chip responsible-chip-more">+{hiddenCount}</span>}</span> : <span className="responsible-empty">Sem responsável</span>}</div>;
+}
+
+function initials(name) {
+  return String(name || "?").split(/\s+/).filter(Boolean).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
 }
 
 function WorkloadTable({ groups, totals, onOpenTask }) {

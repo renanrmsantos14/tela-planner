@@ -13,6 +13,8 @@ test("calcula atraso e centraliza cobrança por pessoa ou equipe", () => {
   const rows = collectionRows(tasks, [{ id: "e2", name: "Rafael" }], [{ id: "t1", name: "Operação", memberIds: ["e1", "e2"] }], [], new Date("2026-09-01T12:00:00-03:00"));
   assert.deepEqual(rows.map((row) => row.id), ["people", "team"]);
   assert.equal(rows[0].overdueDays, 3);
+  assert.deepEqual(rows[0].assigneeIds, ["e1"]);
+  assert.deepEqual(rows[1].assigneeIds, ["e1", "e2"]);
   assert.equal(daysOverdue(tasks[1], new Date("2026-09-01T12:00:00-03:00")), 2);
   assert.equal(localDateKey(new Date("2026-09-01T02:00:00Z")), "2026-08-31");
 });
