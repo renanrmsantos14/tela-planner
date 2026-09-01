@@ -51,7 +51,7 @@ function ResponsibleDisplay({ row, employees }) {
   const visibleNames = names.slice(0, 4);
   const hiddenCount = names.length - visibleNames.length;
   const label = names.length ? names.join(", ") : "Sem responsável";
-  return <div className="responsible-display" title={label} aria-label={`${row.assignmentMode === "team" ? "Responsáveis da equipe" : "Responsáveis"}: ${label}`}><span className="responsible-display-label">{row.assignmentMode === "team" ? "Responsáveis desta equipe" : "Responsáveis"}</span>{names.length ? <span className="responsible-chip-list">{visibleNames.map((name, index) => <span className="responsible-chip" key={`${name}-${index}`}><span className="avatar avatar-small" aria-hidden="true">{initials(name)}</span>{name}</span>)}{hiddenCount > 0 && <span className="responsible-chip responsible-chip-more">+{hiddenCount}</span>}</span> : <span className="responsible-empty">Sem responsável</span>}</div>;
+  return <div className="responsible-display" title={label} aria-label={`${row.assignmentMode === "team" ? "Responsáveis da equipe" : "Responsáveis"}: ${label}`}>{row.assignmentMode !== "team" && <span className="responsible-display-label">Responsáveis</span>}{names.length ? <span className="responsible-chip-list">{visibleNames.map((name, index) => <span className="responsible-chip" key={`${name}-${index}`}><span className="avatar avatar-small" aria-hidden="true">{initials(name)}</span>{name}</span>)}{hiddenCount > 0 && <span className="responsible-chip responsible-chip-more">+{hiddenCount}</span>}</span> : <span className="responsible-empty">Sem responsável</span>}</div>;
 }
 
 function initials(name) {
