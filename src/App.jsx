@@ -421,8 +421,8 @@ function WaitingContextFields({ value, onChange, employees = [], teams = [], err
             <span className="sr-only">{context.onType === "external" ? "Quem está sendo aguardado?" : "De quem?"}</span>
             {context.onType === "external" ? (
               <input
-                value={context.onNames.join(", ")}
-                onChange={(event) => update({ onIds: [], onNames: event.target.value.split(",").map((item) => item.trim()).filter(Boolean), onId: "", onName: event.target.value.trim() })}
+                value={context.onName}
+                onChange={(event) => update({ onIds: [], onNames: event.target.value.split(",").map((item) => item.trim()).filter(Boolean), onId: "", onName: event.target.value })}
                 placeholder="Ex.: cliente ou fornecedor"
               />
             ) : (

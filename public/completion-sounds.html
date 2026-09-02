@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sons de conclusão</title>
+    <style>
+      :root { font-family: system-ui, sans-serif; color: #172033; background: #f5f7fb; }
+      body { display: grid; min-height: 100vh; place-items: center; margin: 0; }
+      main { width: min(420px, calc(100% - 32px)); padding: 28px; background: white; border: 1px solid #e1e6ef; border-radius: 16px; box-shadow: 0 12px 35px #17203312; }
+      h1 { margin: 0 0 8px; font-size: 22px; }
+      p { margin: 0 0 22px; color: #68738a; }
+      .options { display: grid; gap: 10px; }
+      button { padding: 14px 16px; border: 1px solid #d9dfeb; border-radius: 10px; background: #fff; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+      button:hover, button:focus-visible, button.is-selected { border-color: #3867ff; background: #eef2ff; outline: none; }
+      button span { display: block; margin-top: 3px; color: #718096; font-size: 13px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Escolha o som de conclusão</h1>
+      <p>Clique em cada opção para escutar.</p>
+      <div class="options">
+        <button type="button" data-sound="1">1. Cristal <span>Brilho agudo e delicado</span></button>
+        <button type="button" data-sound="2">2. Brilho duplo <span>Duas faíscas rápidas</span></button>
+        <button type="button" data-sound="3">3. Concluído <span>Subida clara com final brilhante</span></button>
+        <button type="button" data-sound="4">4. Tada <span>Acorde feliz e luminoso</span></button>
+        <button type="button" data-sound="5">5. Vitória <span>Pequena fanfarra de sucesso</span></button>
+      </div>
+    </main>
+    <script>
+      let audioContext;
+      let audioOutput;
+      let selectedAudio;
+      let selectedAudioSource;
+      let selectedAudioGain;
+
+      function getContext() {
+        const AudioContextConstructor = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextConstructor) return null;
+        audioContext ||= new AudioContextConstructor();
+        if (!audioOutput) {
+          audioOutput = audioContext.createDynamicsCompressor();
+          audioOutput.threshold.value = -16;
+          audioOutput.knee.value = 12;
+          audioOutput.ratio.value = 8;
+          audioOutput.attack.value = 0.003;
+          audioOutput.release.value = 0.15;
+          audioOutput.connect(audioContext.destination);
+        }
+        if (audioContext.state === "suspended") audioContext.resume();
+        return audioContext;
+      }
+
+      function note(context, frequency, start, duration, type = "sine", volume = 0.16) {
+        const oscillator = context.createOscillator();
+        const gain = context.createGain();
+        oscillator.type = type;
+        oscillator.frequency.setValueAtTime(frequency, start);
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.exponentialRampToValueAtTime(volume, start + 0.015);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+        oscillator.connect(gain);
+        gain.connect(audioOutput);
+        oscillator.start(start);
+        oscillator.stop(start + duration + 0.02);
+      }
+
+      function playSound(option) {
+        const context = getContext();
+        if (!context) return;
+        if (option === 3) {
+          selectedAudio ||= new Audio("/sounds/task-completed.m4a");
+          selectedAudio.preload = "auto";
+          if (!selectedAudioSource) {
+            selectedAudioSource = context.createMediaElementSource(selectedAudio);
+            selectedAudioGain = context.createGain();
+            selectedAudioGain.gain.value = 1.5;
+            selectedAudioSource.connect(selectedAudioGain);
+            selectedAudioGain.connect(audioOutput);
+          }
+          selectedAudio.currentTime = 0;
+          void selectedAudio.play().catch(() => undefined);
+          return;
+        }
+        const start = context.currentTime;
+        const sounds = {
+          1: [[1319, 0, 0.18, "sine", 0.13], [1976, 0.04, 0.32, "sine", 0.15]],
+          2: [[784, 0, 0.16, "triangle", 0.13], [1175, 0.08, 0.18, "sine", 0.14], [1568, 0.16, 0.3, "sine", 0.16]],
+          3: [[523, 0, 0.18, "triangle", 0.72], [659, 0.06, 0.18, "triangle", 0.78], [784, 0.12, 0.18, "triangle", 0.84], [1047, 0.18, 0.25, "sine", 0.9], [1568, 0.24, 0.38, "sine", 0.95]],
+          4: [[523, 0, 0.28, "sine", 0.11], [659, 0, 0.28, "sine", 0.11], [784, 0, 0.28, "sine", 0.12], [1047, 0.12, 0.34, "sine", 0.17], [1319, 0.16, 0.38, "sine", 0.15]],
+          5: [[330, 0, 0.12, "square", 0.05], [659, 0.05, 0.16, "triangle", 0.12], [988, 0.12, 0.16, "triangle", 0.13], [1319, 0.19, 0.18, "sine", 0.15], [1760, 0.25, 0.4, "sine", 0.18]],
+        };
+        sounds[option].forEach(([frequency, offset, duration, type, volume]) => note(context, frequency, start + offset, duration, type, volume));
+      }
+
+      document.querySelectorAll("[data-sound]").forEach((button) => {
+        button.addEventListener("click", () => {
+          document.querySelector(".is-selected")?.classList.remove("is-selected");
+          button.classList.add("is-selected");
+          playSound(Number(button.dataset.sound));
+        });
+      });
+    </script>
+  </body>
+</html>

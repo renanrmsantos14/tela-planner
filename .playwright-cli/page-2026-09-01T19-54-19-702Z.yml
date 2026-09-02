@@ -1,0 +1,143 @@
+- generic [ref=e3]:
+  - main [ref=e76]:
+    - generic [ref=e1476]:
+      - generic [ref=e1477]:
+        - strong [ref=e1478]: Tarefas
+        - generic [ref=e1479]: Central de Trabalho
+      - button "Abrir notificações, 5 não lidas" [ref=e1701] [cursor=pointer]:
+        - generic [ref=e1486]: "5"
+      - button "Atualizar dados" [ref=e1487] [cursor=pointer]
+      - generic "Renan Martins" [ref=e1491]: RM
+    - generic [ref=e89]:
+      - generic [ref=e90]:
+        - generic [ref=e91]:
+          - generic [ref=e92]: Tarefas
+          - heading "Operação em movimento" [level=1] [ref=e93]
+          - paragraph [ref=e94]: Escolha a próxima ação e atualize o andamento da tarefa.
+        - generic [ref=e95]:
+          - generic "Escopo das tarefas" [ref=e96]:
+            - button "Todas" [ref=e97] [cursor=pointer]
+            - button "Minhas" [pressed] [ref=e103] [cursor=pointer]
+          - generic "Modo de visualização das tarefas" [ref=e107]:
+            - button "Quadro" [pressed] [ref=e108] [cursor=pointer]
+            - button "Lista" [ref=e114] [cursor=pointer]
+            - button "Agenda" [ref=e116] [cursor=pointer]
+      - generic [ref=e119]:
+        - button "Filtros 2" [ref=e1492] [cursor=pointer]:
+          - generic [ref=e1494]: Filtros
+          - generic [ref=e1495]: "2"
+        - textbox "Buscar tarefas, cotações, qualidade ou pessoas" [ref=e124]
+      - generic [ref=e1498]:
+        - generic [ref=e1500]:
+          - heading "A fazer" [level=2] [ref=e1504]
+          - generic [ref=e1505]: "0"
+        - generic [ref=e1506]:
+          - generic [ref=e1507]:
+            - heading "Aguardando" [level=2] [ref=e1511]
+            - generic [ref=e1512]: "2"
+          - article [ref=e1513] [cursor=pointer]:
+            - generic [ref=e1514]:
+              - generic [ref=e1515]: Média
+              - generic "Aguardando sua atuação" [ref=e1516]: Pendente
+              - button "Abrir tarefa" [ref=e1523]
+            - heading "Acompanhar retorno do fornecedor" [level=3] [ref=e1527]
+            - generic [ref=e1528]:
+              - generic [ref=e1529]: Cotação
+              - generic [ref=e1530]: COT-1007
+              - emphasis [ref=e1531]: Pedido de cotação
+            - generic [ref=e1532]: Você foi mencionado
+            - generic "Aguardando disponibilidade da segunda van · Rafael Lima · até 02 set." [ref=e1539]
+            - generic [ref=e1544]:
+              - 'generic "Responsáveis: Renan Martins, Rafael Lima" [ref=e1545]':
+                - generic [ref=e1546]:
+                  - generic [ref=e1547]: RM
+                  - generic [ref=e1549]: RL
+              - generic [ref=e1551]: 02 set.
+              - button "Concluir" [ref=e1555]
+              - button "Registrar retorno" [ref=e1556]
+          - article [ref=e1557] [cursor=pointer]:
+            - generic [ref=e1558]:
+              - generic [ref=e1559]: Média
+              - generic "Aguardando sua atuação" [ref=e1560]: Pendente
+              - button "Abrir tarefa" [ref=e1567]
+            - heading "Confirmar disponibilidade de veículo" [level=3] [ref=e1571]
+            - generic [ref=e1572]:
+              - generic [ref=e1573]: Cotação
+              - generic [ref=e1574]: COT-1007
+              - emphasis [ref=e1575]: Pedido de cotação
+            - generic "Aguardando confirmação da segunda van · Operação · até 03 set." [ref=e1576]
+            - generic [ref=e1581]:
+              - 'generic "Responsável: Rafael Lima" [ref=e1582]':
+                - generic [ref=e1583]: RL
+                - generic [ref=e1585]: Rafael Lima
+              - generic [ref=e1586]: 03 set.
+              - button "Concluir" [ref=e1590]
+              - button "Registrar retorno" [ref=e1591]
+        - generic [ref=e1592]:
+          - generic [ref=e1593]:
+            - heading "Em andamento" [level=2] [ref=e1596]
+            - generic [ref=e1597]: "1"
+          - article [ref=e1598] [cursor=pointer]:
+            - generic [ref=e1599]:
+              - generic [ref=e1600]: Alta
+              - button "Abrir tarefa" [ref=e1601]
+            - heading "Revisar pendências prioritárias do dia" [level=3] [ref=e1605]
+            - generic [ref=e1606]:
+              - generic [ref=e1607]: Manual
+              - generic [ref=e1608]: OPS-040
+              - emphasis [ref=e1609]: Tarefa manual
+            - generic [ref=e1610]:
+              - 'generic "Responsável: Renan Martins" [ref=e1611]':
+                - generic [ref=e1612]: RM
+                - generic [ref=e1614]: Renan Martins
+              - generic [ref=e1615]: 01 set.
+              - button "Concluir" [ref=e1619]
+        - generic [ref=e1648]:
+          - generic [ref=e1649]:
+            - heading "Concluído" [level=2] [ref=e1653]
+            - generic [ref=e1654]: "2"
+          - article [ref=e1655] [cursor=pointer]:
+            - generic [ref=e1656]:
+              - generic [ref=e1657]: Baixa
+              - button "Abrir tarefa" [ref=e1658]
+            - heading "Confirmar fechamento semanal" [level=3] [ref=e1662]
+            - generic [ref=e1663]:
+              - generic [ref=e1664]: Manual
+              - generic [ref=e1665]: OPS-044
+              - emphasis [ref=e1666]: Tarefa manual
+            - generic [ref=e1667]:
+              - 'generic "Responsável: Renan Martins" [ref=e1668]':
+                - generic [ref=e1669]: RM
+                - generic [ref=e1671]: Renan Martins
+              - generic [ref=e1672]: 31 ago.
+          - article [ref=e1702] [cursor=pointer]:
+            - generic [ref=e1703]:
+              - generic [ref=e1704]: Média
+              - button "Abrir tarefa" [ref=e1705]
+            - heading "Revisar comentário QAL-205 · QA MVP" [level=3] [ref=e1709]
+            - generic [ref=e1710]:
+              - generic [ref=e1711]: Qualidade
+              - generic [ref=e1712]: QAL-205
+              - emphasis [ref=e1713]: Erro operacional
+            - generic [ref=e1714]:
+              - 'generic "Responsáveis: Rafael Lima, João Mendes, Marina Alves, Renan Martins" [ref=e1715]':
+                - generic [ref=e1716]:
+                  - generic [ref=e1717]: RL
+                  - generic [ref=e1719]: JM
+                  - generic [ref=e1721]: MA
+                  - generic [ref=e1723]: RM
+              - generic [ref=e1725]: 03 set.
+    - status [ref=e1729]:
+      - generic [ref=e1733]: Tarefa concluída.
+      - button "Desfazer" [ref=e1734] [cursor=pointer]
+      - button "Fechar notificação" [ref=e1735] [cursor=pointer]
+  - navigation "Navegação principal" [ref=e1676]:
+    - button "Hoje 3" [ref=e1677] [cursor=pointer]:
+      - generic [ref=e1683]: Hoje
+      - generic [ref=e1684]: "3"
+    - button "Tarefas 29" [ref=e1739] [cursor=pointer]:
+      - generic [ref=e1689]: Tarefas
+      - generic [ref=e1690]: "29"
+    - button "Cotações" [ref=e1691] [cursor=pointer]
+    - button "Mais" [ref=e1696] [cursor=pointer]
+  - button "Criar nova tarefa" [ref=e1699] [cursor=pointer]

@@ -149,3 +149,93 @@
 **Suggested improvement:** Tratar cada campo lookup usado pelo runtime como contrato de publicação: validar atributo, entidade referenciada, nome de navegação e tabelas relacionais antes de publicar o webresource; abortar com diagnóstico explícito quando qualquer item divergir.
 
 **Principle:** Deploy de integração só deve ser considerado válido quando o metadata mínimo exigido pelo caminho de execução foi verificado, não apenas quando tabelas principais existem.
+
+### Observation 11: Feedback sonoro precisa separar gesto e confirmação
+
+**Status:** OPEN
+**Date:** 2026-09-01
+**Session context:** Adição de efeito sonoro ao concluir tarefas no Tela Planner.
+**Skill:** antigravity-protocol / karpathy-coder
+**Type:** open-source
+**Phase/Area:** Feedback de operações assíncronas
+
+**Issue:** A persistência da conclusão pode terminar depois do clique que iniciou a operação; criar o contexto de áudio somente no callback de sucesso pode ser bloqueado pela política de autoplay do navegador.
+
+**Suggested improvement:** Preparar o recurso de áudio dentro do gesto do usuário, tocar somente após a confirmação da operação e tratar bloqueios do navegador como fallback silencioso que nunca altera o resultado da mutação.
+
+**Principle:** Feedback multimídia de uma operação assíncrona deve respeitar tanto a confirmação do estado quanto as políticas de ativação do ambiente.
+
+### Observation 12: Comparação sonora deve ser iterável antes da escolha
+
+**Status:** OPEN
+**Date:** 2026-09-01
+**Session context:** Criação de prévia local para escolher o efeito de conclusão do Tela Planner.
+**Skill:** antigravity-protocol / karpathy-coder
+**Type:** open-source
+**Phase/Area:** Prototipação de feedback multimídia
+
+**Issue:** Uma descrição subjetiva como “mais de conclusão” não define timbre, duração ou grau de comemoração com precisão suficiente para escolher um único efeito por inspeção de código.
+
+**Suggested improvement:** Oferecer uma página local mínima com variações nomeadas e acionáveis, mantendo a implementação produtiva separada até o usuário selecionar uma opção.
+
+**Principle:** Para decisões subjetivas de feedback, comparação direta reduz ciclos e evita codificar preferências presumidas.
+
+### Observation 13: Brilho percebido exige variação de registro e textura
+
+**Status:** OPEN
+**Date:** 2026-09-01
+**Session context:** Refinamento da prévia local de sons de conclusão do Tela Planner.
+**Skill:** antigravity-protocol / karpathy-coder
+**Type:** open-source
+**Phase/Area:** Design sonoro de feedback
+
+**Issue:** Cinco variações com a mesma faixa de frequência e envelope soam como pequenas mudanças do mesmo efeito, mesmo quando recebem nomes diferentes.
+
+**Suggested improvement:** Variar deliberadamente registro, onda, sobreposição e desenho temporal entre opções, mantendo cada uma curta e comparável.
+
+**Principle:** Variação perceptível depende de propriedades sonoras distintas, não apenas de rótulos ou pequenas mudanças de frequência.
+
+### Observation 14: Escolha explícita deve fechar o ciclo da prévia
+
+**Status:** OPEN
+**Date:** 2026-09-01
+**Session context:** Aplicação da opção 3 escolhida pelo usuário no som de conclusão do Tela Planner.
+**Skill:** antigravity-protocol / karpathy-coder
+**Type:** open-source
+**Phase/Area:** Seleção e implementação de feedback multimídia
+
+**Issue:** A prévia local só gera valor quando a opção escolhida é aplicada ao fluxo produtivo sem alterar as demais regras da operação.
+
+**Suggested improvement:** Manter a opção selecionada reproduzível entre prévia e produção e validar que a mudança ficou restrita ao feedback, sem tocar na persistência da task.
+
+**Principle:** Protótipo comparável precisa ter caminho direto e verificável até a implementação escolhida.
+
+### Observation 15: Volume percebido precisa ser validado no ambiente real
+
+**Status:** OPEN
+**Date:** 2026-09-01
+**Session context:** Ajuste de volume do som de conclusão do Tela Planner após teste do usuário.
+**Skill:** antigravity-protocol / karpathy-coder
+**Type:** open-source
+**Phase/Area:** Feedback multimídia e validação
+
+**Issue:** Limites de ganho escolhidos no código podem deixar o efeito inaudível dependendo do volume do dispositivo e do ambiente de reprodução.
+
+**Suggested improvement:** Tratar volume como parte da validação interativa, aumentando o ganho com margem segura e mantendo a prévia alinhada ao efeito produtivo.
+
+**Principle:** Feedback sonoro deve ser calibrado por escuta no ambiente-alvo, não apenas por valores numéricos no código.
+
+### Observation 16: Normalização não deve interromper digitação textual
+
+**Status:** OPEN
+**Date:** 2026-09-02
+**Session context:** Correção dos campos textuais do modal de Aguardando no Tela Planner.
+**Skill:** systematic-debugging / antigravity-protocol
+**Type:** open-source
+**Phase/Area:** Formulários React controlados e normalização de domínio
+
+**Issue:** O estado normalizado era reaplicado a cada tecla e removia espaços finais; isso impedia continuar palavras em inputs e textareas controlados.
+
+**Suggested improvement:** Preservar o valor bruto durante a edição e aplicar trim somente em validação, resumo ou persistência; cobrir cada campo textual com regressão de espaço.
+
+**Principle:** Normalização de domínio não deve destruir caracteres transitórios necessários para a próxima edição do usuário.

@@ -54,9 +54,10 @@ function uniqueStrings(value) {
 
 export function normalizeWaitingContext(value = {}) {
   const source = value && typeof value === "object" ? value : {};
+  const onType = ["employee", "team", "external"].includes(source.onType) ? source.onType : "employee";
   const onIds = uniqueStrings(source.onIds ?? source.onId);
   const onNames = uniqueStrings(source.onNames ?? source.onName);
-  const onType = ["employee", "team", "external"].includes(source.onType) ? source.onType : "employee";
+  const externalName = source.onName ?? (Array.isArray(source.onNames) ? source.onNames.join(", ") : source.onNames);
   return {
     // Preserve o texto enquanto ele está sendo editado; trim em cada render
     // remove o espaço recém-digitado antes que o usuário consiga continuar.
@@ -65,9 +66,9 @@ export function normalizeWaitingContext(value = {}) {
     onIds,
     onNames,
     onId: onIds[0] || "",
-    onName: onNames.join(", "),
+    onName: onType === "external" ? String(externalName ?? "") : onNames.join(", "),
     expectedDate: String(source.expectedDate || "").slice(0, 10),
-    note: String(source.note || "").trim(),
+    note: String(source.note ?? ""),
   };
 }
 

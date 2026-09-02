@@ -185,6 +185,14 @@ test("preserva espaços no assunto de Aguardando durante a edição", () => {
     "confirmação da segunda van ",
   );
   assert.equal(
+    normalizeWaitingContext({ onType: "external", onName: "Cliente " }).onName,
+    "Cliente ",
+  );
+  assert.equal(
+    normalizeWaitingContext({ note: "Cobrar retorno " }).note,
+    "Cobrar retorno ",
+  );
+  assert.equal(
     validateWaitingContext("waiting", {
       subject: "   ",
       onType: "external",
