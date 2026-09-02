@@ -239,3 +239,18 @@
 **Suggested improvement:** Preservar o valor bruto durante a edição e aplicar trim somente em validação, resumo ou persistência; cobrir cada campo textual com regressão de espaço.
 
 **Principle:** Normalização de domínio não deve destruir caracteres transitórios necessários para a próxima edição do usuário.
+
+### Observation 17: Loader de save não deve aguardar refresh global
+
+**Status:** OPEN
+**Date:** 2026-09-02
+**Session context:** Otimização do salvamento no drawer do Tela Planner.
+**Skill:** web-performance-optimization / antigravity-protocol
+**Type:** open-source
+**Phase/Area:** Persistência otimista e feedback assíncrono
+
+**Issue:** A confirmação de uma edição de tarefa aguardava uma leitura global de todas as entidades, fazendo o loader variar com o volume e a latência de dados não necessários para concluir a ação.
+
+**Suggested improvement:** Separar a confirmação mínima da mutação do refresh completo; atualizar o estado local confirmado e invalidar somente detalhes que precisam ser reconsultados.
+
+**Principle:** Feedback de uma mutação deve depender do trabalho necessário para confirmar aquela mutação, não de uma atualização global não relacionada.

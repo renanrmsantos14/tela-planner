@@ -1,7 +1,7 @@
 {
   "package.json": {
-    "mtime": 1788351865.6711264,
-    "ast_hash": "eba8802aa92a541ee331070de298e06b",
+    "mtime": 1788353211.36891,
+    "ast_hash": "941029d4591fc44f7c95db6febee75dd",
     "semantic_hash": ""
   },
   "scripts/inline-webresource.mjs": {
@@ -15,8 +15,8 @@
     "semantic_hash": ""
   },
   "src/App.jsx": {
-    "mtime": 1788351009.8135233,
-    "ast_hash": "58a40f979a2ceb8c0f8c9fbb6203b8ce",
+    "mtime": 1788352757.377,
+    "ast_hash": "225cd36a571d71222bb534b052b65095",
     "semantic_hash": ""
   },
   "src/SearchableSelect.jsx": {
@@ -75,8 +75,8 @@
     "semantic_hash": ""
   },
   "src/dataverse.js": {
-    "mtime": 1788301511.8888283,
-    "ast_hash": "92df53b40e6c5ddbde2e199fa6e058af",
+    "mtime": 1788352967.3569205,
+    "ast_hash": "b61ddd8b95e00e81a817b171f58aea2f",
     "semantic_hash": ""
   },
   "src/mountApp.js": {
@@ -165,8 +165,8 @@
     "semantic_hash": ""
   },
   "src/version.js": {
-    "mtime": 1788351865.677125,
-    "ast_hash": "b37d6992b10747725668d80c4e04a4f0",
+    "mtime": 1788353211.371208,
+    "ast_hash": "40f8c18ebbce520c9cf137f2ce813a4b",
     "semantic_hash": ""
   },
   "tests/versioning.test.mjs": {
@@ -200,8 +200,8 @@
     "semantic_hash": ""
   },
   "skill-observations/log.md": {
-    "mtime": 1788351315.7782054,
-    "ast_hash": "cb6b7706b5e7233eb89763dd8c176abd",
+    "mtime": 1788353017.5551577,
+    "ast_hash": "1d6830098c56e7c6518d8273b933f7ab",
     "semantic_hash": ""
   },
   "REVISAO_2026-08-20.md": {
@@ -1167,6 +1167,11 @@
   ".playwright-cli/page-2026-09-02T12-12-39-784Z.yml": {
     "mtime": 1788351159.7880342,
     "ast_hash": "e247d85959930dd737c97f7eb116f0c4",
+    "semantic_hash": ""
+  },
+  "tests/savePerformance.test.mjs": {
+    "mtime": 1788352816.1929498,
+    "ast_hash": "d81a42f5572f97aa139e8fced62e0b44",
     "semantic_hash": ""
   }
 }
