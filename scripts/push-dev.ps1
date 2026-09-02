@@ -33,9 +33,8 @@ npm run build
 Assert-ExitCode "npm run build"
 
 Write-Step "publicacao do WebResource no Dataverse DEV"
-$publishArgs = @("-EnvironmentUrl", $EnvironmentUrl)
-if ($DeviceCode) { $publishArgs += "-DeviceCode" }
-& (Join-Path $PSScriptRoot "publish-webresource.ps1") @publishArgs
+$publishScript = Join-Path $PSScriptRoot "publish-webresource.ps1"
+& $publishScript -EnvironmentUrl $EnvironmentUrl -DeviceCode:$DeviceCode
 Assert-ExitCode "publish-webresource"
 
 Write-Step "build do plugin PlannerNotifications"
@@ -46,16 +45,13 @@ $dllPath = Join-Path $root "power-platform\plugins\PlannerNotifications\bin\Rele
 if (-not (Test-Path -LiteralPath $dllPath -PathType Leaf)) { throw "DLL do plugin nao foi gerada: $dllPath" }
 
 Write-Step "registro/atualizacao do plugin na solucao AppBetinhos"
-$pluginArgs = @(
-  "-EnvironmentUrl", $EnvironmentUrl,
-  "-DllPath", $dllPath,
-  "-SolutionUniqueName", "AppBetinhos",
-  "-Apply",
-  "-AddExistingToSolution"
-)
-if ($TechnicalUserEmail) { $pluginArgs += @("-TechnicalUserEmail", $TechnicalUserEmail) }
-if ($DeviceCode) { $pluginArgs += "-DeviceCode" }
-& (Join-Path $PSScriptRoot "register-planner-notification-plugin.ps1") @pluginArgs
+$pluginScript = Join-Path $PSScriptRoot "register-planner-notification-plugin.ps1"
+if ($TechnicalUserEmail) {
+  & $pluginScript -EnvironmentUrl $EnvironmentUrl -DllPath $dllPath -SolutionUniqueName "AppBetinhos" -TechnicalUserEmail $TechnicalUserEmail -Apply -AddExistingToSolution -DeviceCode:$DeviceCode
+}
+else {
+  & $pluginScript -EnvironmentUrl $EnvironmentUrl -DllPath $dllPath -SolutionUniqueName "AppBetinhos" -Apply -AddExistingToSolution -DeviceCode:$DeviceCode
+}
 Assert-ExitCode "registro do plugin"
 
 Write-Step "push concluido: WebResource e plugin atualizados"

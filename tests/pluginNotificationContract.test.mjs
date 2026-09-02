@@ -36,6 +36,7 @@ test("npm run push executa build, publicação e atualização do plugin", async
   assert.match(pushScript, /publish-webresource\.ps1/);
   assert.match(pushScript, /PlannerNotifications\.csproj/);
   assert.match(pushScript, /register-planner-notification-plugin\.ps1/);
-  assert.match(pushScript, /"-Apply"/);
-  assert.match(pushScript, /"-AddExistingToSolution"/);
+  assert.match(pushScript, /-DeviceCode:\$DeviceCode/);
+  assert.match(pushScript, /\s-Apply\s/);
+  assert.match(pushScript, /\s-AddExistingToSolution\s/);
 });
