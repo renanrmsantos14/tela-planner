@@ -30,3 +30,5 @@ O usuário autenticado precisa ter permissão para atualizar a solução. Para e
 ```powershell
 .\scripts\push-dev.ps1 -DeviceCode -TechnicalUserEmail $env:DV_PLUGIN_USER
 ```
+
+Se o login MSAL exigir outro aplicativo público, defina também `DV_CLIENT_ID` com o GUID (não o nome) do registro Azure AD. Sem essa variável, o push usa o ClientId público padrão.

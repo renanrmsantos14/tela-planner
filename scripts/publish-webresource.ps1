@@ -1,7 +1,7 @@
 param(
   [string] $EnvironmentUrl = "https://org23b93544.crm2.dynamics.com/",
   [string] $TenantId = "organizations",
-  [string] $ClientId = "51f81489-12ee-4a9e-aaae-a2591f45987d",
+  [string] $ClientId = "",
   [switch] $DeviceCode,
   [switch] $NoPublish
 )
@@ -288,6 +288,13 @@ $sitemapId = "787c8fda-53d0-f011-8543-6045bd3a51ea"
 $operationalGroupId = "group_16b0a016"
 $plannerSubAreaId = "subarea_tela_planner"
 
+$configuredClientId = [Environment]::GetEnvironmentVariable("DV_CLIENT_ID")
+if ([string]::IsNullOrWhiteSpace($ClientId) -and -not [string]::IsNullOrWhiteSpace($configuredClientId)) {
+  $ClientId = $configuredClientId
+}
+if ([string]::IsNullOrWhiteSpace($ClientId)) {
+  $ClientId = "51f81489-12ee-4a9e-aaae-a2591f45987d"
+}
 $clientIdGuid = [Guid]::Empty
 if (-not [Guid]::TryParse($ClientId, [ref] $clientIdGuid)) {
   throw "ClientId inválido: '$ClientId'. Informe um GUID Azure AD em -ClientId."
