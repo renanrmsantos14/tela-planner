@@ -52,3 +52,5 @@ dotnet build power-platform/plugins/PlannerNotifications/PlannerNotifications.cs
 ```
 
 Para registrar/atualizar de forma idempotente, use `scripts/register-planner-notification-plugin.ps1`. Sem `-Apply`, o script apenas valida; nenhuma chamada mutável é feita.
+
+O login usa `Enable-MsalTokenCacheOnDisk`: na primeira execução com `-DeviceCode`, conclua o código uma vez. As execuções seguintes tentam o token silencioso/refresh token persistido antes de abrir outro Device Code. Execute com o mesmo usuário Windows e o mesmo `ClientId` para reutilizar o cache.

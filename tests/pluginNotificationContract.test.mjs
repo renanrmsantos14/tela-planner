@@ -26,6 +26,9 @@ test("registro do plugin é idempotente e inclui assembly e step na AppBetinhos"
   assert.match(script, /asyncautodelete = \$false/);
   assert.match(script, /ismanaged/);
   assert.match(script, /-not \$Apply/);
+  assert.match(script, /refresh token persistido/);
+  assert.match(script, /Get-MsalToken[^\n]+-Silent/);
+  assert.match(script, /Get-MsalToken[^\n]+-DeviceCode/);
 });
 
 test("npm run push executa build, publicação e atualização do plugin", async () => {

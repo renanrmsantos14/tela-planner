@@ -25,9 +25,16 @@ function Get-AccessToken([string] $BaseUrl, [switch] $UseDeviceCode) {
   $client = New-MsalClientApplication -ClientId "51f81489-12ee-4a9e-aaae-a2591f45987d" -TenantId "organizations" -RedirectUri ([Uri] "http://localhost")
   Enable-MsalTokenCacheOnDisk -PublicClientApplication $client
   $scope = "$BaseUrl/user_impersonation"
+  try {
+    # Reutiliza o refresh token persistido; Device Code so e necessario na primeira execucao.
+    $silentToken = (Get-MsalToken -PublicClientApplication $client -Scopes $scope -Silent).AccessToken
+    if (-not [string]::IsNullOrWhiteSpace($silentToken)) { return $silentToken }
+  }
+  catch {
+    if (-not $UseDeviceCode) { return (Get-MsalToken -PublicClientApplication $client -Scopes $scope).AccessToken }
+  }
   if ($UseDeviceCode) { return (Get-MsalToken -PublicClientApplication $client -Scopes $scope -DeviceCode).AccessToken }
-  try { return (Get-MsalToken -PublicClientApplication $client -Scopes $scope -Silent).AccessToken }
-  catch { return (Get-MsalToken -PublicClientApplication $client -Scopes $scope).AccessToken }
+  return (Get-MsalToken -PublicClientApplication $client -Scopes $scope).AccessToken
 }
 
 $script:baseUrl = $EnvironmentUrl.TrimEnd("/")
