@@ -288,6 +288,12 @@ $sitemapId = "787c8fda-53d0-f011-8543-6045bd3a51ea"
 $operationalGroupId = "group_16b0a016"
 $plannerSubAreaId = "subarea_tela_planner"
 
+$clientIdGuid = [Guid]::Empty
+if (-not [Guid]::TryParse($ClientId, [ref] $clientIdGuid)) {
+  throw "ClientId inválido: '$ClientId'. Informe um GUID Azure AD em -ClientId."
+}
+$ClientId = $clientIdGuid.ToString()
+
 if (-not (Test-Path -LiteralPath $resourcePath)) { throw "Webresource não encontrado: $resourcePath. Execute npm run build primeiro." }
 if (-not (Get-Module -ListAvailable MSAL.PS)) { throw "Módulo MSAL.PS não encontrado. Instale com: Install-Module MSAL.PS -Scope CurrentUser" }
 Import-Module Microsoft.PowerShell.Utility -ErrorAction Stop

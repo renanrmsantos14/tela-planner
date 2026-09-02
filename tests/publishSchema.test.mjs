@@ -28,4 +28,5 @@ test("npm run push usa Windows PowerShell para carregar MSAL.PS", () => {
   assert.match(wrapper, /-DeviceCode/);
   assert.match(script, /Import-Module Microsoft\.PowerShell\.Utility/);
   assert.match(script, /function global:Import-PowerShellDataFile/);
+  assert.match(script, /Guid\]::TryParse\(\$ClientId/);
 });
