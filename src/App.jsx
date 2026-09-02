@@ -1370,8 +1370,6 @@ const TaskCard = memo(function TaskCard({
   compact = false,
   enableDrag = true,
   isDragging = false,
-  dropFeedback = "",
-  style,
   onDragStart,
   onDragEnd,
 }) {
@@ -1386,8 +1384,7 @@ const TaskCard = memo(function TaskCard({
   const visibleSubtasks = subtasks.slice(0, 3);
   return (
     <article
-      className={`task-card ${compact ? "task-card-compact" : ""} ${overdue ? "task-overdue" : ""} ${taskItem.syncStatus === "syncing" ? "task-syncing" : ""} ${isDragging ? "task-card-dragging" : ""} ${dropFeedback ? "task-card-drop-active" : ""}`}
-      style={style}
+      className={`task-card ${compact ? "task-card-compact" : ""} ${overdue ? "task-overdue" : ""} ${taskItem.syncStatus === "syncing" ? "task-syncing" : ""} ${isDragging ? "task-card-dragging" : ""}`}
       draggable={enableDrag && taskItem.syncStatus !== "syncing"}
       tabIndex={canOpen ? "0" : "-1"}
       data-task-id={taskItem.id}
@@ -1550,58 +1547,21 @@ const TaskCard = memo(function TaskCard({
           Subtarefa
         </div>
       )}
-      {dropFeedback === "loading" && (
-        <div
-          className="task-drop-feedback task-drop-feedback-loading"
-          role="status"
-          aria-label="Salvando mudança de coluna"
-        >
-          <LoaderCircle size={22} aria-hidden="true" />
-        </div>
-      )}
-      {dropFeedback === "success" && (
-        <div
-          className="task-drop-feedback task-drop-feedback-success"
-          role="status"
-          aria-label="Mudança de coluna concluída"
-        >
-          <Check size={22} strokeWidth={2.6} aria-hidden="true" />
-        </div>
-      )}
     </article>
   );
 });
 
-function getDropIndex(column, pointerY, draggedId) {
-  const body = column.querySelector(".column-body");
-  const bodyRect = body?.getBoundingClientRect();
-  const pointerLayoutY = bodyRect
-    ? pointerY - bodyRect.top - body.clientTop + body.scrollTop
-    : null;
-  const cards = [...column.querySelectorAll(".task-card[data-task-id]")].filter(
-    (card) => card.dataset.taskId !== draggedId,
-  );
-  for (let index = 0; index < cards.length; index += 1) {
-    const card = cards[index];
-    const layoutTop = pointerLayoutY === null
-      ? card.getBoundingClientRect().top
-      : card.offsetTop;
-    const layoutHeight = pointerLayoutY === null
-      ? card.getBoundingClientRect().height
-      : card.offsetHeight;
-    const comparisonY = pointerLayoutY === null ? pointerY : pointerLayoutY;
-    if (comparisonY < layoutTop + layoutHeight / 2) return index;
-  }
-  return cards.length;
+function getDropIndex(tasksByStatus, statusId, draggedTask, employee, teams) {
+  if (!draggedTask) return 0;
+  const destination = tasksByStatus[statusId] || [];
+  return sortTasks(
+    [...destination, { ...draggedTask, status: statusId }],
+    employee,
+    teams,
+  ).findIndex((taskItem) => taskItem.id === draggedTask.id);
 }
 
-const DRAG_TRANSFER_DURATION = 230;
-const DRAG_SETTLE_DURATION = 36;
-const DRAG_REORDER_DURATION = 180;
-const DRAG_MIN_LOADING_DURATION = 220;
-const DRAG_TOTAL_DURATION =
-  DRAG_TRANSFER_DURATION + DRAG_SETTLE_DURATION + DRAG_REORDER_DURATION;
-const DRAG_TRANSFER_EASING = "cubic-bezier(.22, .61, .36, 1)";
+const DRAG_REORDER_DURATION = 220;
 const DRAG_REORDER_EASING = "cubic-bezier(.77, 0, .175, 1)";
 
 function translateBetween(previous, next) {
@@ -1624,22 +1584,11 @@ const Board = memo(function Board({
 }) {
   const [dragState, setDragState] = useState(null);
   const [dropExit, setDropExit] = useState(null);
-  const [dropFeedback, setDropFeedback] = useState(null);
   const boardRef = useRef(null);
   const cardRectsRef = useRef(new Map());
   const animateLayoutRef = useRef(false);
   const layoutAnimationsRef = useRef(new Map());
   const pendingTransferRef = useRef(null);
-  const feedbackTimerRef = useRef(null);
-  const feedbackClearTimerRef = useRef(null);
-  const clearFeedbackTimers = useCallback(() => {
-    if (feedbackTimerRef.current) window.clearTimeout(feedbackTimerRef.current);
-    if (feedbackClearTimerRef.current)
-      window.clearTimeout(feedbackClearTimerRef.current);
-    feedbackTimerRef.current = null;
-    feedbackClearTimerRef.current = null;
-  }, []);
-  useEffect(() => () => clearFeedbackTimers(), [clearFeedbackTimers]);
   useLayoutEffect(() => {
     const cards = [
       ...(boardRef.current?.querySelectorAll(".task-card[data-task-id]") || []),
@@ -1655,33 +1604,6 @@ const Board = memo(function Board({
       ? 1
       : undefined;
     const pendingTransfer = pendingTransferRef.current;
-    if (pendingTransfer && !pendingTransfer.ready) {
-      const movedCard = cards.find(
-        (card) => card.dataset.taskId === pendingTransfer.id,
-      );
-      const movedNext = movedCard && nextRects.get(pendingTransfer.id);
-      const movedStatusId =
-        movedCard?.closest(".board-column")?.dataset.statusId;
-      if (
-        movedCard &&
-        movedNext &&
-        pendingTransfer.slotRect &&
-        movedStatusId === pendingTransfer.statusId &&
-        typeof movedCard.animate === "function"
-      ) {
-        const slotTransform = `translate(${pendingTransfer.slotRect.left - movedNext.left}px, ${pendingTransfer.slotRect.top - movedNext.top}px)`;
-        layoutAnimationsRef.current.set(
-          pendingTransfer.id,
-          movedCard.animate([{ transform: slotTransform }], {
-            duration: motionDuration ?? 1,
-            fill: "both",
-            composite: "replace",
-          }),
-        );
-      }
-      cardRectsRef.current = nextRects;
-      return;
-    }
     if (pendingTransfer) {
       const movedCard = cards.find(
         (card) => card.dataset.taskId === pendingTransfer.id,
@@ -1695,14 +1617,10 @@ const Board = memo(function Board({
         pendingTransfer.slotRect &&
         movedStatusId === pendingTransfer.statusId
       ) {
-        const transferOffset = DRAG_TRANSFER_DURATION / DRAG_TOTAL_DURATION;
-        const reorderOffset =
-          (DRAG_TRANSFER_DURATION + DRAG_SETTLE_DURATION) / DRAG_TOTAL_DURATION;
-        const slotTransform = `translate(${pendingTransfer.slotRect.left - movedNext.left}px, ${pendingTransfer.slotRect.top - movedNext.top}px)`;
-        const entryTransform = `${slotTransform} translateY(-6px) scale(.97)`;
         cards.forEach((card) => {
-          if (card.dataset.taskId === pendingTransfer.id) return;
-          const previous = cardRectsRef.current.get(card.dataset.taskId);
+          const previous = card.dataset.taskId === pendingTransfer.id
+            ? pendingTransfer.slotRect
+            : cardRectsRef.current.get(card.dataset.taskId);
           const next = nextRects.get(card.dataset.taskId);
           if (!previous || !next || typeof card.animate !== "function") return;
           if (
@@ -1714,45 +1632,18 @@ const Board = memo(function Board({
             card.dataset.taskId,
             card.animate(
               [
-                { transform: translateBetween(previous, next), offset: 0 },
-                { transform: translateBetween(previous, next), offset: reorderOffset },
-                { transform: "translate(0, 0)", offset: 1 },
+                { transform: translateBetween(previous, next) },
+                { transform: "translate(0, 0)" },
               ],
               {
-                duration: motionDuration ?? DRAG_TOTAL_DURATION,
-                easing: "linear",
+                duration: motionDuration ?? DRAG_REORDER_DURATION,
+                easing: DRAG_REORDER_EASING,
                 fill: "both",
                 composite: "replace",
               },
             ),
           );
         });
-        layoutAnimationsRef.current.set(
-          pendingTransfer.id,
-          movedCard.animate(
-            [
-              {
-                transform: entryTransform,
-                opacity: 0,
-                offset: 0,
-                easing: DRAG_TRANSFER_EASING,
-              },
-              { transform: slotTransform, opacity: 1, offset: transferOffset },
-              {
-                transform: slotTransform,
-                offset: reorderOffset,
-                easing: DRAG_REORDER_EASING,
-              },
-              { transform: "translate(0, 0)", offset: 1 },
-            ],
-            {
-              duration: motionDuration ?? DRAG_TOTAL_DURATION,
-              easing: "linear",
-              fill: "both",
-              composite: "replace",
-            },
-          ),
-        );
         pendingTransferRef.current = null;
         animateLayoutRef.current = false;
       } else if (
@@ -1799,7 +1690,6 @@ const Board = memo(function Board({
     dragState?.statusId,
     dragState?.insertAt,
     dropExit,
-    dropFeedback === null,
     tasks,
   ]);
   useEffect(() => {
@@ -1809,15 +1699,13 @@ const Board = memo(function Board({
         animateLayoutRef.current = true;
         setDropExit(null);
       },
-      dropExit.isMove ? DRAG_TOTAL_DURATION : 160,
+      160,
     );
     return () => window.clearTimeout(timer);
   }, [dropExit]);
   const handleDragStart = useCallback(
     (taskId, event) => {
       const task = tasks.find((item) => item.id === taskId);
-      clearFeedbackTimers();
-      setDropFeedback(null);
       setDropExit(null);
       setDragState({
         id: taskId,
@@ -1827,16 +1715,22 @@ const Board = memo(function Board({
         height: event.currentTarget.getBoundingClientRect().height,
       });
     },
-    [clearFeedbackTimers, tasks],
+    [tasks],
   );
   const handleDragOver = useCallback(
     (statusId, event) => {
       event.preventDefault();
       event.dataTransfer.dropEffect = "move";
-      const column = event.currentTarget;
       const draggedId =
         dragState?.id || event.dataTransfer.getData("text/task-id");
-      const insertAt = getDropIndex(column, event.clientY, draggedId);
+      const draggedTask = tasks.find((item) => item.id === draggedId);
+      const insertAt = getDropIndex(
+        tasksByStatus,
+        statusId,
+        draggedTask,
+        currentEmployee,
+        teams,
+      );
       setDragState((current) => {
         if (
           current &&
@@ -1848,7 +1742,7 @@ const Board = memo(function Board({
         return { ...(current || {}), statusId, insertAt };
       });
     },
-    [dragState?.id],
+    [currentEmployee, dragState?.id, tasks, tasksByStatus, teams],
   );
   const getExitMetrics = useCallback(() => {
     const slot = boardRef.current?.querySelector(".card-drop-placeholder");
@@ -1880,56 +1774,19 @@ const Board = memo(function Board({
           statusId,
           slotRect,
           insertAt: dragState.insertAt,
-          ready: false,
         };
-        setDropFeedback({
-          id,
-          statusId,
-          insertAt: dragState.insertAt,
-          phase: "loading",
-        });
         setDropExit(null);
       } else if (dragState) {
         setDropExit({ ...dragState, isMove: false, slotRect });
       }
       setDragState(null);
       if (shouldAttemptMove) {
-        const dropStartedAt = performance.now();
         Promise.resolve(onMove(id, statusId)).then((success) => {
-          const finish = () => {
-            feedbackTimerRef.current = null;
-            if (!success) {
-              pendingTransferRef.current = null;
-              animateLayoutRef.current = true;
-              setDropFeedback((current) =>
-                current?.id === id ? null : current,
-              );
-              return;
-            }
-            setDropFeedback((current) =>
-              current?.id === id ? { ...current, phase: "success" } : current,
-            );
-            feedbackClearTimerRef.current = window.setTimeout(() => {
-              feedbackClearTimerRef.current = null;
-              if (pendingTransferRef.current?.id === id)
-                pendingTransferRef.current = {
-                  ...pendingTransferRef.current,
-                  ready: true,
-                };
-              setDropFeedback((current) =>
-                current?.id === id ? null : current,
-              );
-            }, 520);
-          };
-          const elapsed = performance.now() - dropStartedAt;
-          feedbackTimerRef.current = window.setTimeout(
-            finish,
-            Math.max(0, DRAG_MIN_LOADING_DURATION - elapsed),
-          );
+          if (!success) pendingTransferRef.current = null;
         });
       }
     },
-    [clearFeedbackTimers, dragState, getExitMetrics, onMove, tasks],
+    [dragState, getExitMetrics, onMove, tasks],
   );
   const clearDrag = useCallback(() => {
     if (dragState && !pendingTransferRef.current)
@@ -1944,10 +1801,6 @@ const Board = memo(function Board({
     <div className="board-grid" ref={boardRef}>
       {STATUSES.map((status) => {
         const items = tasksByStatus[status.id] || [];
-        const hasActiveDropCard =
-          dropFeedback?.statusId === status.id &&
-          dropFeedback.insertAt !== undefined &&
-          pendingTransferRef.current?.slotRect;
         const visibleDropState = dragState || dropExit;
         const isExiting = !dragState && Boolean(dropExit);
         const hasExitMetrics = isExiting && visibleDropState.slotRect;
@@ -2023,18 +1876,6 @@ const Board = memo(function Board({
                     onToggleSubtask={onToggleSubtask}
                     onRegisterWaitingReturn={onRegisterWaitingReturn}
                     isDragging={dragState?.id === taskItem.id}
-                    dropFeedback={
-                      dropFeedback?.id === taskItem.id ? dropFeedback.phase : ""
-                    }
-                    style={
-                      hasActiveDropCard && taskItem.id === dropFeedback.id
-                        ? {
-                            "--drop-card-top": `${pendingTransferRef.current.slotRect.localTop}px`,
-                            "--drop-card-left": `${pendingTransferRef.current.slotRect.localLeft}px`,
-                            "--drop-card-width": `${pendingTransferRef.current.slotRect.width}px`,
-                          }
-                        : undefined
-                    }
                     onDragStart={handleDragStart}
                     onDragEnd={clearDrag}
                   />

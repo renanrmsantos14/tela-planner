@@ -1,7 +1,7 @@
 {
   "package.json": {
-    "mtime": 1788353211.36891,
-    "ast_hash": "941029d4591fc44f7c95db6febee75dd",
+    "mtime": 1788356234.6100109,
+    "ast_hash": "a7bf594ee5b6cf33cfe2e1327c43cebd",
     "semantic_hash": ""
   },
   "scripts/inline-webresource.mjs": {
@@ -15,8 +15,8 @@
     "semantic_hash": ""
   },
   "src/App.jsx": {
-    "mtime": 1788352757.377,
-    "ast_hash": "225cd36a571d71222bb534b052b65095",
+    "mtime": 1788354214.0130708,
+    "ast_hash": "c19f943509a57ec3fea742a913aa5909",
     "semantic_hash": ""
   },
   "src/SearchableSelect.jsx": {
@@ -60,8 +60,8 @@
     "semantic_hash": ""
   },
   "index.html": {
-    "mtime": 1785767243.8308449,
-    "ast_hash": "632b604c39f9e44126740627cc341690",
+    "mtime": 1788354992.5184495,
+    "ast_hash": "78c999e6a4f2c5c9d823d2700fc6a224",
     "semantic_hash": ""
   },
   "scripts/publish-webresource.ps1": {
@@ -165,8 +165,8 @@
     "semantic_hash": ""
   },
   "src/version.js": {
-    "mtime": 1788353211.371208,
-    "ast_hash": "40f8c18ebbce520c9cf137f2ce813a4b",
+    "mtime": 1788356234.6170087,
+    "ast_hash": "24ebb92bbc9bc1834be49e1d315996f2",
     "semantic_hash": ""
   },
   "tests/versioning.test.mjs": {

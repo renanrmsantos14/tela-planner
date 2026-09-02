@@ -1360,7 +1360,7 @@
       "label": "getDropIndex()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L1575",
+      "source_location": "L1554",
       "_origin": "ast"
     },
     {
@@ -1368,7 +1368,7 @@
       "label": "translateBetween()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L1607",
+      "source_location": "L1567",
       "_origin": "ast"
     },
     {
@@ -1376,7 +1376,7 @@
       "label": "Board",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L1611",
+      "source_location": "L1571",
       "_origin": "ast"
     },
     {
@@ -1384,7 +1384,7 @@
       "label": "FilterBar",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L2060",
+      "source_location": "L1901",
       "_origin": "ast"
     },
     {
@@ -1392,7 +1392,7 @@
       "label": "MobileBoardList()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L2172",
+      "source_location": "L2013",
       "_origin": "ast"
     },
     {
@@ -1400,7 +1400,7 @@
       "label": "BoardView()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L2225",
+      "source_location": "L2066",
       "_origin": "ast"
     },
     {
@@ -1408,7 +1408,7 @@
       "label": "ListView()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L2336",
+      "source_location": "L2177",
       "_origin": "ast"
     },
     {
@@ -1416,7 +1416,7 @@
       "label": "CalendarView()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L2455",
+      "source_location": "L2296",
       "_origin": "ast"
     },
     {
@@ -1424,7 +1424,7 @@
       "label": "QualityView()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L2539",
+      "source_location": "L2380",
       "_origin": "ast"
     },
     {
@@ -1432,7 +1432,7 @@
       "label": "TeamManager()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L2630",
+      "source_location": "L2471",
       "_origin": "ast"
     },
     {
@@ -1440,7 +1440,7 @@
       "label": "SettingsView()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L2792",
+      "source_location": "L2633",
       "_origin": "ast"
     },
     {
@@ -1448,7 +1448,7 @@
       "label": "attachmentPreviewCache",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L2855",
+      "source_location": "L2696",
       "_origin": "ast"
     },
     {
@@ -1456,7 +1456,7 @@
       "label": "isImageAttachment()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L2857",
+      "source_location": "L2698",
       "_origin": "ast"
     },
     {
@@ -1464,7 +1464,7 @@
       "label": "isPdfAttachment()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L2866",
+      "source_location": "L2707",
       "_origin": "ast"
     },
     {
@@ -1472,7 +1472,7 @@
       "label": "attachmentCacheKey()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L2873",
+      "source_location": "L2714",
       "_origin": "ast"
     },
     {
@@ -1480,7 +1480,7 @@
       "label": "toAttachmentFiles()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L2882",
+      "source_location": "L2723",
       "_origin": "ast"
     },
     {
@@ -1488,7 +1488,7 @@
       "label": "fileToDataUrl()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L2890",
+      "source_location": "L2731",
       "_origin": "ast"
     },
     {
@@ -1496,7 +1496,7 @@
       "label": "filesFromClipboard()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L2905",
+      "source_location": "L2746",
       "_origin": "ast"
     },
     {
@@ -1504,7 +1504,7 @@
       "label": "createDraftAttachment()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L2915",
+      "source_location": "L2756",
       "_origin": "ast"
     },
     {
@@ -1512,7 +1512,7 @@
       "label": "releaseDraftAttachment()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L2930",
+      "source_location": "L2771",
       "_origin": "ast"
     },
     {
@@ -1520,7 +1520,7 @@
       "label": "mergeAttachmentDetailsIntoState()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L2938",
+      "source_location": "L2779",
       "_origin": "ast"
     },
     {
@@ -1528,7 +1528,7 @@
       "label": "formatAttachmentSize()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L2956",
+      "source_location": "L2797",
       "_origin": "ast"
     },
     {
@@ -1536,7 +1536,7 @@
       "label": "attachmentTypeLabel()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L2964",
+      "source_location": "L2805",
       "_origin": "ast"
     },
     {
@@ -1544,7 +1544,7 @@
       "label": "AttachmentTypeIcon()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L2982",
+      "source_location": "L2823",
       "_origin": "ast"
     },
     {
@@ -1552,7 +1552,7 @@
       "label": "AttachmentPreview()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L3004",
+      "source_location": "L2845",
       "_origin": "ast"
     },
     {
@@ -1560,7 +1560,7 @@
       "label": "AttachmentSection()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L3146",
+      "source_location": "L2987",
       "_origin": "ast"
     },
     {
@@ -1568,7 +1568,7 @@
       "label": "MoreView()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L3424",
+      "source_location": "L3265",
       "_origin": "ast"
     },
     {
@@ -1576,7 +1576,7 @@
       "label": "formatCommentTimestamp()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L3480",
+      "source_location": "L3321",
       "_origin": "ast"
     },
     {
@@ -1584,7 +1584,7 @@
       "label": "TaskDrawerContent()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L3487",
+      "source_location": "L3328",
       "_origin": "ast"
     },
     {
@@ -1592,7 +1592,7 @@
       "label": "TaskDrawer()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L4322",
+      "source_location": "L4163",
       "_origin": "ast"
     },
     {
@@ -1600,7 +1600,7 @@
       "label": "WaitingStatusModal()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L4350",
+      "source_location": "L4191",
       "_origin": "ast"
     },
     {
@@ -1608,7 +1608,7 @@
       "label": "WaitingReturnModal()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L4472",
+      "source_location": "L4313",
       "_origin": "ast"
     },
     {
@@ -1616,7 +1616,7 @@
       "label": "NewTaskDrawer()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L4644",
+      "source_location": "L4485",
       "_origin": "ast"
     },
     {
@@ -1624,7 +1624,7 @@
       "label": "LazyQualityView",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L4928",
+      "source_location": "L4769",
       "_origin": "ast"
     },
     {
@@ -1632,7 +1632,7 @@
       "label": "LazySettingsView",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L4929",
+      "source_location": "L4770",
       "_origin": "ast"
     },
     {
@@ -1640,7 +1640,7 @@
       "label": "App()",
       "file_type": "code",
       "source_file": "src/App.jsx",
-      "source_location": "L4931",
+      "source_location": "L4772",
       "_origin": "ast"
     },
     {
@@ -8349,7 +8349,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L1575",
+      "source_location": "L1554",
       "weight": 1.0
     },
     {
@@ -8358,7 +8358,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L1607",
+      "source_location": "L1567",
       "weight": 1.0
     },
     {
@@ -8367,7 +8367,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L1611",
+      "source_location": "L1571",
       "weight": 1.0
     },
     {
@@ -8376,7 +8376,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L2060",
+      "source_location": "L1901",
       "weight": 1.0
     },
     {
@@ -8385,7 +8385,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L2172",
+      "source_location": "L2013",
       "weight": 1.0
     },
     {
@@ -8394,7 +8394,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L2225",
+      "source_location": "L2066",
       "weight": 1.0
     },
     {
@@ -8403,7 +8403,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L2336",
+      "source_location": "L2177",
       "weight": 1.0
     },
     {
@@ -8412,7 +8412,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L2455",
+      "source_location": "L2296",
       "weight": 1.0
     },
     {
@@ -8421,7 +8421,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L2539",
+      "source_location": "L2380",
       "weight": 1.0
     },
     {
@@ -8430,7 +8430,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L2630",
+      "source_location": "L2471",
       "weight": 1.0
     },
     {
@@ -8439,7 +8439,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L2792",
+      "source_location": "L2633",
       "weight": 1.0
     },
     {
@@ -8448,7 +8448,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L2855",
+      "source_location": "L2696",
       "weight": 1.0
     },
     {
@@ -8457,7 +8457,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L2857",
+      "source_location": "L2698",
       "weight": 1.0
     },
     {
@@ -8466,7 +8466,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L2866",
+      "source_location": "L2707",
       "weight": 1.0
     },
     {
@@ -8475,7 +8475,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L2873",
+      "source_location": "L2714",
       "weight": 1.0
     },
     {
@@ -8484,7 +8484,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L2882",
+      "source_location": "L2723",
       "weight": 1.0
     },
     {
@@ -8493,7 +8493,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L2890",
+      "source_location": "L2731",
       "weight": 1.0
     },
     {
@@ -8502,7 +8502,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L2905",
+      "source_location": "L2746",
       "weight": 1.0
     },
     {
@@ -8511,7 +8511,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L2915",
+      "source_location": "L2756",
       "weight": 1.0
     },
     {
@@ -8520,7 +8520,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L2930",
+      "source_location": "L2771",
       "weight": 1.0
     },
     {
@@ -8529,7 +8529,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L2938",
+      "source_location": "L2779",
       "weight": 1.0
     },
     {
@@ -8538,7 +8538,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L2956",
+      "source_location": "L2797",
       "weight": 1.0
     },
     {
@@ -8547,7 +8547,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L2964",
+      "source_location": "L2805",
       "weight": 1.0
     },
     {
@@ -8556,7 +8556,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L2982",
+      "source_location": "L2823",
       "weight": 1.0
     },
     {
@@ -8565,7 +8565,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L3004",
+      "source_location": "L2845",
       "weight": 1.0
     },
     {
@@ -8574,7 +8574,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L3146",
+      "source_location": "L2987",
       "weight": 1.0
     },
     {
@@ -8583,7 +8583,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L3424",
+      "source_location": "L3265",
       "weight": 1.0
     },
     {
@@ -8592,7 +8592,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L3480",
+      "source_location": "L3321",
       "weight": 1.0
     },
     {
@@ -8601,7 +8601,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L3487",
+      "source_location": "L3328",
       "weight": 1.0
     },
     {
@@ -8610,7 +8610,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L4322",
+      "source_location": "L4163",
       "weight": 1.0
     },
     {
@@ -8619,7 +8619,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L4350",
+      "source_location": "L4191",
       "weight": 1.0
     },
     {
@@ -8628,7 +8628,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L4472",
+      "source_location": "L4313",
       "weight": 1.0
     },
     {
@@ -8637,7 +8637,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L4644",
+      "source_location": "L4485",
       "weight": 1.0
     },
     {
@@ -8646,7 +8646,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L4928",
+      "source_location": "L4769",
       "weight": 1.0
     },
     {
@@ -8655,7 +8655,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L4929",
+      "source_location": "L4770",
       "weight": 1.0
     },
     {
@@ -8664,7 +8664,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L4931",
+      "source_location": "L4772",
       "weight": 1.0
     },
     {
@@ -8714,7 +8714,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L2264",
+      "source_location": "L2105",
       "weight": 1.0
     },
     {
@@ -8724,7 +8724,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L2349",
+      "source_location": "L2190",
       "weight": 1.0
     },
     {
@@ -8734,7 +8734,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L2350",
+      "source_location": "L2191",
       "weight": 1.0
     },
     {
@@ -8744,7 +8744,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L2472",
+      "source_location": "L2313",
       "weight": 1.0
     },
     {
@@ -8754,7 +8754,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L2983",
+      "source_location": "L2824",
       "weight": 1.0
     },
     {
@@ -8764,7 +8764,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L3005",
+      "source_location": "L2846",
       "weight": 1.0
     },
     {
@@ -8774,7 +8774,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L3007",
+      "source_location": "L2848",
       "weight": 1.0
     },
     {
@@ -8784,7 +8784,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L3007",
+      "source_location": "L2848",
       "weight": 1.0
     },
     {
@@ -8794,7 +8794,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L3162",
+      "source_location": "L3003",
       "weight": 1.0
     },
     {
@@ -8804,7 +8804,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L3172",
+      "source_location": "L3013",
       "weight": 1.0
     },
     {
@@ -8814,7 +8814,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L3300",
+      "source_location": "L3141",
       "weight": 1.0
     },
     {
@@ -8824,7 +8824,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L3301",
+      "source_location": "L3142",
       "weight": 1.0
     },
     {
@@ -8834,7 +8834,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L3405",
+      "source_location": "L3246",
       "weight": 1.0
     },
     {
@@ -8844,7 +8844,7 @@
       "context": "argument",
       "confidence": "INFERRED",
       "source_file": "src/App.jsx",
-      "source_location": "L3584",
+      "source_location": "L3425",
       "weight": 1.0
     },
     {
@@ -8854,7 +8854,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L3698",
+      "source_location": "L3539",
       "weight": 1.0
     },
     {
@@ -8864,7 +8864,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L3699",
+      "source_location": "L3540",
       "weight": 1.0
     },
     {
@@ -8874,7 +8874,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L3703",
+      "source_location": "L3544",
       "weight": 1.0
     },
     {
@@ -8884,7 +8884,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L3710",
+      "source_location": "L3551",
       "weight": 1.0
     },
     {
@@ -8894,7 +8894,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L4147",
+      "source_location": "L3988",
       "weight": 1.0
     },
     {
@@ -8904,7 +8904,7 @@
       "context": "argument",
       "confidence": "INFERRED",
       "source_file": "src/App.jsx",
-      "source_location": "L4501",
+      "source_location": "L4342",
       "weight": 1.0
     },
     {
@@ -8914,7 +8914,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L4510",
+      "source_location": "L4351",
       "weight": 1.0
     },
     {
@@ -8924,7 +8924,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L4511",
+      "source_location": "L4352",
       "weight": 1.0
     },
     {
@@ -8934,7 +8934,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L4516",
+      "source_location": "L4357",
       "weight": 1.0
     },
     {
@@ -8944,7 +8944,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L4523",
+      "source_location": "L4364",
       "weight": 1.0
     },
     {
@@ -8954,7 +8954,7 @@
       "context": "argument",
       "confidence": "INFERRED",
       "source_file": "src/App.jsx",
-      "source_location": "L4678",
+      "source_location": "L4519",
       "weight": 1.0
     },
     {
@@ -8964,7 +8964,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L4698",
+      "source_location": "L4539",
       "weight": 1.0
     },
     {
@@ -8974,7 +8974,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L4699",
+      "source_location": "L4540",
       "weight": 1.0
     },
     {
@@ -8984,7 +8984,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L4703",
+      "source_location": "L4544",
       "weight": 1.0
     },
     {
@@ -8994,7 +8994,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L4709",
+      "source_location": "L4550",
       "weight": 1.0
     },
     {
@@ -9004,7 +9004,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L4948",
+      "source_location": "L4789",
       "weight": 1.0
     },
     {
@@ -9014,7 +9014,7 @@
       "context": "argument",
       "confidence": "INFERRED",
       "source_file": "src/App.jsx",
-      "source_location": "L4958",
+      "source_location": "L4799",
       "weight": 1.0
     },
     {
@@ -9024,7 +9024,7 @@
       "context": "argument",
       "confidence": "INFERRED",
       "source_file": "src/App.jsx",
-      "source_location": "L4961",
+      "source_location": "L4802",
       "weight": 1.0
     },
     {
@@ -9034,7 +9034,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L5230",
+      "source_location": "L5071",
       "weight": 1.0
     },
     {
@@ -9044,7 +9044,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L5655",
+      "source_location": "L5496",
       "weight": 1.0
     },
     {
@@ -9054,7 +9054,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L5772",
+      "source_location": "L5613",
       "weight": 1.0
     },
     {
@@ -9064,7 +9064,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L5784",
+      "source_location": "L5625",
       "weight": 1.0
     },
     {
@@ -9074,7 +9074,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L6004",
+      "source_location": "L5845",
       "weight": 1.0
     },
     {
@@ -19286,13 +19286,23 @@
       "weight": 1.0
     },
     {
+      "source": "src_app_getdropindex",
+      "target": "src_domain_sorttasks",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/App.jsx",
+      "source_location": "L1557",
+      "weight": 1.0
+    },
+    {
       "source": "src_app_boardview",
       "target": "src_domain_sorttasks",
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L2247",
+      "source_location": "L2088",
       "weight": 1.0
     },
     {
@@ -19302,7 +19312,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L2248",
+      "source_location": "L2089",
       "weight": 1.0
     },
     {
@@ -19312,7 +19322,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L2349",
+      "source_location": "L2190",
       "weight": 1.0
     },
     {
@@ -19322,7 +19332,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L2350",
+      "source_location": "L2191",
       "weight": 1.0
     },
     {
@@ -19332,7 +19342,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L2420",
+      "source_location": "L2261",
       "weight": 1.0
     },
     {
@@ -19342,7 +19352,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L2427",
+      "source_location": "L2268",
       "weight": 1.0
     },
     {
@@ -19352,7 +19362,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L2441",
+      "source_location": "L2282",
       "weight": 1.0
     },
     {
@@ -19362,7 +19372,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L2442",
+      "source_location": "L2283",
       "weight": 1.0
     },
     {
@@ -19372,7 +19382,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L2442",
+      "source_location": "L2283",
       "weight": 1.0
     },
     {
@@ -19382,7 +19392,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L2472",
+      "source_location": "L2313",
       "weight": 1.0
     },
     {
@@ -19392,7 +19402,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L2472",
+      "source_location": "L2313",
       "weight": 1.0
     },
     {
@@ -19402,7 +19412,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L2522",
+      "source_location": "L2363",
       "weight": 1.0
     },
     {
@@ -19412,7 +19422,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L2522",
+      "source_location": "L2363",
       "weight": 1.0
     },
     {
@@ -19422,7 +19432,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L2541",
+      "source_location": "L2382",
       "weight": 1.0
     },
     {
@@ -19432,7 +19442,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L2561",
+      "source_location": "L2402",
       "weight": 1.0
     },
     {
@@ -19442,7 +19452,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L2608",
+      "source_location": "L2449",
       "weight": 1.0
     },
     {
@@ -19452,7 +19462,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L2641",
+      "source_location": "L2482",
       "weight": 1.0
     },
     {
@@ -19462,7 +19472,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L3546",
+      "source_location": "L3387",
       "weight": 1.0
     },
     {
@@ -19472,7 +19482,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L3549",
+      "source_location": "L3390",
       "weight": 1.0
     },
     {
@@ -19482,7 +19492,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L3618",
+      "source_location": "L3459",
       "weight": 1.0
     },
     {
@@ -19492,7 +19502,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L3657",
+      "source_location": "L3498",
       "weight": 1.0
     },
     {
@@ -19502,7 +19512,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L3658",
+      "source_location": "L3499",
       "weight": 1.0
     },
     {
@@ -19512,7 +19522,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L3660",
+      "source_location": "L3501",
       "weight": 1.0
     },
     {
@@ -19522,7 +19532,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L3663",
+      "source_location": "L3504",
       "weight": 1.0
     },
     {
@@ -19532,7 +19542,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L3669",
+      "source_location": "L3510",
       "weight": 1.0
     },
     {
@@ -19542,7 +19552,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L3670",
+      "source_location": "L3511",
       "weight": 1.0
     },
     {
@@ -19552,7 +19562,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L4352",
+      "source_location": "L4193",
       "weight": 1.0
     },
     {
@@ -19562,7 +19572,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L4380",
+      "source_location": "L4221",
       "weight": 1.0
     },
     {
@@ -19572,7 +19582,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L4598",
+      "source_location": "L4439",
       "weight": 1.0
     },
     {
@@ -19582,7 +19592,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L4716",
+      "source_location": "L4557",
       "weight": 1.0
     },
     {
@@ -20054,7 +20064,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/App.jsx",
-      "source_location": "L4933",
+      "source_location": "L4774",
       "weight": 1.0
     },
     {
@@ -20065,7 +20075,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/App.jsx",
-      "source_location": "L5300",
+      "source_location": "L5141",
       "weight": 1.0
     },
     {
@@ -20076,7 +20086,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/App.jsx",
-      "source_location": "L5355",
+      "source_location": "L5196",
       "weight": 1.0
     },
     {
@@ -20087,7 +20097,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/App.jsx",
-      "source_location": "L5357",
+      "source_location": "L5198",
       "weight": 1.0
     },
     {
@@ -20098,7 +20108,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/App.jsx",
-      "source_location": "L5365",
+      "source_location": "L5206",
       "weight": 1.0
     },
     {
@@ -20109,7 +20119,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/App.jsx",
-      "source_location": "L5372",
+      "source_location": "L5213",
       "weight": 1.0
     },
     {
@@ -20120,7 +20130,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/App.jsx",
-      "source_location": "L5389",
+      "source_location": "L5230",
       "weight": 1.0
     },
     {
@@ -20131,7 +20141,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/App.jsx",
-      "source_location": "L5395",
+      "source_location": "L5236",
       "weight": 1.0
     },
     {
@@ -20142,7 +20152,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/App.jsx",
-      "source_location": "L5445",
+      "source_location": "L5286",
       "weight": 1.0
     },
     {
@@ -20153,7 +20163,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "src/App.jsx",
-      "source_location": "L5445",
+      "source_location": "L5286",
       "weight": 1.0
     },
     {
@@ -20164,7 +20174,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/App.jsx",
-      "source_location": "L5466",
+      "source_location": "L5307",
       "weight": 1.0
     },
     {
@@ -20175,7 +20185,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/App.jsx",
-      "source_location": "L5522",
+      "source_location": "L5363",
       "weight": 1.0
     },
     {
@@ -20186,7 +20196,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/App.jsx",
-      "source_location": "L5591",
+      "source_location": "L5432",
       "weight": 1.0
     },
     {
@@ -20197,7 +20207,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/App.jsx",
-      "source_location": "L5723",
+      "source_location": "L5564",
       "weight": 1.0
     },
     {
@@ -20208,7 +20218,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/App.jsx",
-      "source_location": "L5788",
+      "source_location": "L5629",
       "weight": 1.0
     },
     {
@@ -20219,7 +20229,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/App.jsx",
-      "source_location": "L5847",
+      "source_location": "L5688",
       "weight": 1.0
     },
     {
@@ -20230,7 +20240,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/App.jsx",
-      "source_location": "L5967",
+      "source_location": "L5808",
       "weight": 1.0
     },
     {
@@ -20241,7 +20251,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/App.jsx",
-      "source_location": "L5980",
+      "source_location": "L5821",
       "weight": 1.0
     },
     {
@@ -20252,7 +20262,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/App.jsx",
-      "source_location": "L5982",
+      "source_location": "L5823",
       "weight": 1.0
     },
     {
@@ -20263,7 +20273,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/App.jsx",
-      "source_location": "L5982",
+      "source_location": "L5823",
       "weight": 1.0
     },
     {
@@ -20978,7 +20988,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/App.jsx",
-      "source_location": "L2503",
+      "source_location": "L2344",
       "weight": 1.0
     },
     {
@@ -20989,7 +20999,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/App.jsx",
-      "source_location": "L3659",
+      "source_location": "L3500",
       "weight": 1.0
     },
     {
@@ -21000,7 +21010,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/App.jsx",
-      "source_location": "L5330",
+      "source_location": "L5171",
       "weight": 1.0
     },
     {
