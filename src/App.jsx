@@ -3514,6 +3514,7 @@ function TaskDrawerContent({
   const [isAddingSubtask, setIsAddingSubtask] = useState(false);
   const [subtaskToDelete, setSubtaskToDelete] = useState(null);
   const [saveState, setSaveState] = useState("idle");
+  const [showSaveOverlay, setShowSaveOverlay] = useState(false);
   const [saveProgress, setSaveProgress] = useState({
     label: "Salvando tarefa…",
     detail: "Validando alterações",
@@ -3529,6 +3530,7 @@ function TaskDrawerContent({
   const draftAttachmentsRef = useRef([]);
   const drawerBodyRef = useRef(null);
   const commentExpansionAnchorRef = useRef(null);
+  const saveOverlayTimerRef = useRef(null);
   draftAttachmentsRef.current = draftAttachments;
   const saveCloseTimerRef = useRef(null);
   useEffect(() => {
@@ -3556,6 +3558,7 @@ function TaskDrawerContent({
     setIsAddingSubtask(false);
     setSubtaskToDelete(null);
     setSaveState("idle");
+    setShowSaveOverlay(false);
     setSaveProgress({
       label: "Salvando tarefa…",
       detail: "Validando alterações",
@@ -3568,9 +3571,13 @@ function TaskDrawerContent({
     setPendingAttachmentRemovals([]);
     if (saveCloseTimerRef.current)
       window.clearTimeout(saveCloseTimerRef.current);
+    if (saveOverlayTimerRef.current)
+      window.clearTimeout(saveOverlayTimerRef.current);
     return () => {
       if (saveCloseTimerRef.current)
         window.clearTimeout(saveCloseTimerRef.current);
+      if (saveOverlayTimerRef.current)
+        window.clearTimeout(saveOverlayTimerRef.current);
     };
   }, [taskItem?.id]);
   useEffect(
@@ -3734,6 +3741,11 @@ function TaskDrawerContent({
       total,
     });
     setSaveState("saving");
+    setShowSaveOverlay(false);
+    saveOverlayTimerRef.current = window.setTimeout(() => {
+      saveOverlayTimerRef.current = null;
+      setShowSaveOverlay(true);
+    }, 180);
     Promise.resolve(
       onSave(taskItem.id, {
         title: form.title,
@@ -3823,10 +3835,18 @@ function TaskDrawerContent({
       })
       .then((success) => {
         if (!success) throw new Error("Não foi possível enviar um dos anexos.");
+        if (saveOverlayTimerRef.current)
+          window.clearTimeout(saveOverlayTimerRef.current);
+        saveOverlayTimerRef.current = null;
+        setShowSaveOverlay(false);
         setSaveState("success");
         saveCloseTimerRef.current = window.setTimeout(onClose, 620);
       })
       .catch((error) => {
+        if (saveOverlayTimerRef.current)
+          window.clearTimeout(saveOverlayTimerRef.current);
+        saveOverlayTimerRef.current = null;
+        setShowSaveOverlay(false);
         setSaveState("idle");
         setValidationError(
           error.message || "Não foi possível salvar as alterações.",
@@ -3841,7 +3861,7 @@ function TaskDrawerContent({
       }}
     >
       <aside className="task-drawer">
-        {saveState === "saving" && (
+        {saveState === "saving" && showSaveOverlay && (
           <div
             className="drawer-save-feedback drawer-progress-feedback"
             role="status"

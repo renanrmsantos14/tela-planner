@@ -19,6 +19,7 @@ import {
   updateTeam as updateMockTeam,
 } from "./mockStore.js";
 import {
+  applyOptimisticTaskPatch,
   canRegisterWaitingReturn,
   normalizeAssigneeNames,
   normalizeWaitingContext,
@@ -841,23 +842,31 @@ async function updateLiveTask(xrm, state, id, patch) {
   if (patch.priority !== undefined) payload.cr40f_prioridade = PRIORITY_VALUES[patch.priority];
   if (patch.dueDate !== undefined) payload.cr40f_prazo = patch.dueDate ? `${patch.dueDate}T12:00:00Z` : null;
   if (patch.waitingContext !== undefined || (patch.status !== undefined && nextStatus === "waiting")) Object.assign(payload, waitingContextPayload(waitingContext));
+  const relationUpdates = [];
   if (patch.assigneeId !== undefined || patch.assigneeName !== undefined || patch.assigneeNames !== undefined || patch.assigneeIds !== undefined || patch.teamIds !== undefined || patch.teamId !== undefined) {
-    const navigation = await resolveLookupNavigation(xrm, TASK_TABLE, EMPLOYEE_ASSIGNEE_FIELD, EMPLOYEE_TABLE);
-    const assigneeIds = effectiveAssignmentMode === "team"
-      ? []
-      : [...new Set(await resolveAssigneeIds(xrm, patch))];
-    const employeeId = assigneeIds[0] || "";
-    payload[`${navigation}@odata.bind`] = employeeId ? `/${entitySetName(EMPLOYEE_TABLE)}(${cleanId(employeeId)})` : null;
-    await replaceTaskAssignees(xrm, id, { ...patch, assigneeIds });
+    relationUpdates.push((async () => {
+      const navigation = await resolveLookupNavigation(xrm, TASK_TABLE, EMPLOYEE_ASSIGNEE_FIELD, EMPLOYEE_TABLE);
+      const assigneeIds = effectiveAssignmentMode === "team"
+        ? []
+        : [...new Set(await resolveAssigneeIds(xrm, patch))];
+      const employeeId = assigneeIds[0] || "";
+      payload[`${navigation}@odata.bind`] = employeeId ? `/${entitySetName(EMPLOYEE_TABLE)}(${cleanId(employeeId)})` : null;
+      await replaceTaskAssignees(xrm, id, { ...patch, assigneeIds });
+    })());
   }
   if (patch.assignmentMode !== undefined || patch.teamIds !== undefined || patch.teamId !== undefined) {
-    const navigation = await resolveLookupNavigation(xrm, TASK_TABLE, TASK_TEAM_FIELD, TEAM_TABLE);
-    const primaryTeamId = patch.teamIds?.[0] || patch.teamId;
-    payload[`${navigation}@odata.bind`] = patch.assignmentMode === "team" && primaryTeamId ? `/${entitySetName(TEAM_TABLE)}(${cleanId(primaryTeamId)})` : null;
-    await replaceTaskTeams(xrm, id, { ...existing, ...patch });
+    relationUpdates.push((async () => {
+      const navigation = await resolveLookupNavigation(xrm, TASK_TABLE, TASK_TEAM_FIELD, TEAM_TABLE);
+      const primaryTeamId = patch.teamIds?.[0] || patch.teamId;
+      payload[`${navigation}@odata.bind`] = patch.assignmentMode === "team" && primaryTeamId ? `/${entitySetName(TEAM_TABLE)}(${cleanId(primaryTeamId)})` : null;
+      await replaceTaskTeams(xrm, id, { ...existing, ...patch });
+    })());
   }
-  await request(xrm, `/${entitySetName(TASK_TABLE)}(${cleanId(id)})`, { method: "PATCH", body: JSON.stringify(payload) });
-  await markQuoteOrigin(xrm, existing?.quoteId);
+  await Promise.all(relationUpdates);
+  await Promise.all([
+    request(xrm, `/${entitySetName(TASK_TABLE)}(${cleanId(id)})`, { method: "PATCH", body: JSON.stringify(payload) }),
+    markQuoteOrigin(xrm, existing?.quoteId),
+  ]);
   const statusChanged = patch.status !== undefined && nextStatus !== previousStatus;
   const dueDateChanged = patch.dueDate !== undefined && patch.dueDate !== previousDueDate;
   const waitingChanged = patch.waitingContext !== undefined && JSON.stringify(waitingContext) !== JSON.stringify(normalizeWaitingContext(existing?.waitingContext));
@@ -866,16 +875,23 @@ async function updateLiveTask(xrm, state, id, patch) {
     : [...new Set(patch.assigneeIds || await resolveAssigneeIds(xrm, patch))];
   const assigneesChanged = (patch.assigneeNames !== undefined || patch.assigneeIds !== undefined || patch.assignmentMode !== undefined || patch.teamIds !== undefined || patch.teamId !== undefined) && JSON.stringify([...previousAssigneeIds].sort()) !== JSON.stringify([...nextAssigneeIds].sort());
   const eventContext = { actorEmployeeId: patch.actorEmployeeId || "", actorUserId: patch.actorUserId || "", creatorEmployeeId: existing?.creatorEmployeeId || "", assigneeIds: nextAssigneeIds, previousAssigneeIds };
-  if (patch.mentionedEmployeeIds?.length) await createEvent(xrm, id, 100000001, "Menção na tarefa.", "notification:mention", "", JSON.stringify({ ...eventContext, mentionedEmployeeIds: patch.mentionedEmployeeIds }));
-  if (statusChanged) await createEvent(xrm, id, 100000002, nextStatus === "done" ? "Tarefa concluída." : `Status alterado para ${STATUSES.find((item) => item.id === nextStatus)?.label || nextStatus}.`, "status", previousStatus, nextStatus);
-  if (statusChanged && nextStatus === "waiting") await createEvent(xrm, id, 100000002, waitingContextSummary(waitingContext), "waitingContext", JSON.stringify(normalizeWaitingContext(existing?.waitingContext)), JSON.stringify(waitingContext));
-  if (waitingChanged && !statusChanged) await createEvent(xrm, id, 100000002, `Contexto de Aguardando atualizado: ${waitingContextSummary(waitingContext)}.`, "waitingContext", JSON.stringify(normalizeWaitingContext(existing?.waitingContext)), JSON.stringify(waitingContext));
-  if (statusChanged && nextStatus === "done") await createEvent(xrm, id, 100000002, "Tarefa concluída por outro responsável.", "notification:status", "", JSON.stringify({ ...eventContext, previousStatus, nextStatus }));
-  if ((statusChanged && nextStatus === "waiting") || (waitingChanged && !statusChanged)) await createEvent(xrm, id, 100000002, waitingContextSummary(waitingContext) || "Tarefa aguardando retorno.", "notification:waiting", "", JSON.stringify({ ...eventContext, previousStatus, nextStatus, waitingContext, waitingTargetIds: waitingTargetIds(state, waitingContext) }));
-  if (dueDateChanged) await createEvent(xrm, id, 100000002, `Prazo alterado de ${previousDueDate || "sem prazo"} para ${patch.dueDate || "sem prazo"}.${patch.deadlineChangeReason ? ` Motivo: ${patch.deadlineChangeReason}` : ""}`, "notification:deadline", previousDueDate, JSON.stringify({ ...eventContext, nextDueDate: patch.dueDate || "", reason: patch.deadlineChangeReason || "" }));
-  if (assigneesChanged) await createEvent(xrm, id, 100000002, "Responsáveis alterados.", "notification:assignees", JSON.stringify(previousAssigneeIds), JSON.stringify({ ...eventContext, addedAssigneeIds: nextAssigneeIds.filter((assigneeId) => !previousAssigneeIds.includes(assigneeId)), removedAssigneeIds: previousAssigneeIds.filter((assigneeId) => !nextAssigneeIds.includes(assigneeId)) }));
-  if (!statusChanged && !dueDateChanged && !assigneesChanged && !waitingChanged) await createEvent(xrm, id, patch.status !== undefined ? 100000002 : 100000001, "Tarefa atualizada.");
-  return loadLiveState(xrm);
+  const eventWrites = [];
+  if (patch.mentionedEmployeeIds?.length) eventWrites.push(createEvent(xrm, id, 100000001, "Menção na tarefa.", "notification:mention", "", JSON.stringify({ ...eventContext, mentionedEmployeeIds: patch.mentionedEmployeeIds })));
+  if (statusChanged) eventWrites.push(createEvent(xrm, id, 100000002, nextStatus === "done" ? "Tarefa concluída." : `Status alterado para ${STATUSES.find((item) => item.id === nextStatus)?.label || nextStatus}.`, "status", previousStatus, nextStatus));
+  if (statusChanged && nextStatus === "waiting") eventWrites.push(createEvent(xrm, id, 100000002, waitingContextSummary(waitingContext), "waitingContext", JSON.stringify(normalizeWaitingContext(existing?.waitingContext)), JSON.stringify(waitingContext)));
+  if (waitingChanged && !statusChanged) eventWrites.push(createEvent(xrm, id, 100000002, `Contexto de Aguardando atualizado: ${waitingContextSummary(waitingContext)}.`, "waitingContext", JSON.stringify(normalizeWaitingContext(existing?.waitingContext)), JSON.stringify(waitingContext)));
+  if (statusChanged && nextStatus === "done") eventWrites.push(createEvent(xrm, id, 100000002, "Tarefa concluída por outro responsável.", "notification:status", "", JSON.stringify({ ...eventContext, previousStatus, nextStatus })));
+  if ((statusChanged && nextStatus === "waiting") || (waitingChanged && !statusChanged)) eventWrites.push(createEvent(xrm, id, 100000002, waitingContextSummary(waitingContext) || "Tarefa aguardando retorno.", "notification:waiting", "", JSON.stringify({ ...eventContext, previousStatus, nextStatus, waitingContext, waitingTargetIds: waitingTargetIds(state, waitingContext) })));
+  if (dueDateChanged) eventWrites.push(createEvent(xrm, id, 100000002, `Prazo alterado de ${previousDueDate || "sem prazo"} para ${patch.dueDate || "sem prazo"}.${patch.deadlineChangeReason ? ` Motivo: ${patch.deadlineChangeReason}` : ""}`, "notification:deadline", previousDueDate, JSON.stringify({ ...eventContext, nextDueDate: patch.dueDate || "", reason: patch.deadlineChangeReason || "" })));
+  if (assigneesChanged) eventWrites.push(createEvent(xrm, id, 100000002, "Responsáveis alterados.", "notification:assignees", JSON.stringify(previousAssigneeIds), JSON.stringify({ ...eventContext, addedAssigneeIds: nextAssigneeIds.filter((assigneeId) => !previousAssigneeIds.includes(assigneeId)), removedAssigneeIds: previousAssigneeIds.filter((assigneeId) => !nextAssigneeIds.includes(assigneeId)) })));
+  if (!statusChanged && !dueDateChanged && !assigneesChanged && !waitingChanged) eventWrites.push(createEvent(xrm, id, patch.status !== undefined ? 100000002 : 100000001, "Tarefa atualizada."));
+  await Promise.all(eventWrites);
+  const confirmedPatch = Object.fromEntries(Object.entries(patch).filter(([key]) => !["actorEmployeeId", "actorUserId", "mentionedEmployeeIds", "deadlineChangeReason"].includes(key)));
+  const nextState = applyOptimisticTaskPatch(state, id, confirmedPatch);
+  return {
+    ...nextState,
+    tasks: nextState.tasks.map((task) => task.id === id ? { ...task, syncStatus: undefined, detailsLoaded: false, detailsLoading: false, detailsError: undefined } : task),
+  };
 }
 
 async function addLiveComment(xrm, taskId, text, context = {}) {
@@ -884,8 +900,8 @@ async function addLiveComment(xrm, taskId, text, context = {}) {
   return loadLiveState(xrm);
 }
 
-async function addLiveAttachment(xrm, taskId, file) {
-  if (!file) return loadLiveState(xrm);
+async function addLiveAttachment(xrm, state, taskId, file) {
+  if (!file) return state;
   const uploadFile = await optimizeAttachmentFile(file);
   if (uploadFile.size > MAX_ATTACHMENT_SIZE) throw new Error("O anexo deve ter no máximo 5 MB após a compressão.");
   const taskRows = await retrieveMany(xrm, TASK_TABLE, `?$select=cr40f_titulo,cr40f_codigoorigem&$filter=cr40f_plannertarefaid eq ${cleanId(taskId)}&$top=1`);
@@ -904,7 +920,15 @@ async function addLiveAttachment(xrm, taskId, file) {
   const attachment = { name: result.nomeArquivo || result.Name || fileName, id: sharePointId, sharePointId, fileLocator: result.fileLocator || result.identificador || result.Identifier || "", path: result.caminhoSharePoint || result.caminhoCompleto || result.Path || "", mimeType: result.mimeType || result.MediaType || uploadFile.type || "application/octet-stream", size: result.tamanho ?? result.Size ?? uploadFile.size };
   if (!attachment.id && !attachment.fileLocator && !attachment.path) throw new Error("Flow SharePoint não retornou identificador ou caminho do arquivo.");
   await createEvent(xrm, taskId, 100000001, "Anexo adicionado.", "anexo", "", JSON.stringify(attachment));
-  return loadTaskDetails(xrm, taskId);
+  return {
+    ...state,
+    tasks: state.tasks.map((task) => task.id === taskId ? {
+      ...task,
+      attachments: [...(task.attachments || []), attachment],
+      detailsLoaded: false,
+      detailsLoading: false,
+    } : task),
+  };
 }
 
 async function resolveLiveWaitingReturn(xrm, state, id, input = {}) {
@@ -921,7 +945,7 @@ async function resolveLiveWaitingReturn(xrm, state, id, input = {}) {
     throw new Error("Você não pode registrar este retorno.");
   }
   const files = Array.isArray(input.files) ? input.files.filter(Boolean) : [];
-  for (const file of files) await addLiveAttachment(xrm, id, file);
+  for (const file of files) await addLiveAttachment(xrm, state, id, file);
   await addLiveComment(xrm, id, text, {
     actorEmployeeId: input.actorEmployeeId || "",
     actorUserId: input.actorUserId || "",
@@ -975,7 +999,15 @@ async function deleteLiveAttachment(xrm, state, taskId, attachment) {
   const result = extractFlowRecord(responseText) || {};
   if (!response.ok || result.sucesso !== true) throw new Error(result.erro || `Flow de exclusão SharePoint falhou: HTTP ${response.status}.`);
   if (attachment.eventId) await request(xrm, `/${entitySetName(EVENT_TABLE)}(${cleanId(attachment.eventId)})`, { method: "DELETE" });
-  return loadLiveState(xrm);
+  return {
+    ...state,
+    tasks: state.tasks.map((task) => task.id === taskId ? {
+      ...task,
+      attachments: (task.attachments || []).filter((item) => item.id !== attachment.id),
+      detailsLoaded: false,
+      detailsLoading: false,
+    } : task),
+  };
 }
 
 async function createLiveSubtask(xrm, state, parentId, input) {
@@ -1142,7 +1174,7 @@ export function createDataStore() {
     resolveWaitingReturn: (state, id, input) => resolveLiveWaitingReturn(xrm, state, id, input),
     deleteTask: (state, id) => deleteLiveTask(xrm, state, id),
     addComment: (state, id, text, context) => addLiveComment(xrm, id, text, context),
-    addAttachment: (state, id, file) => addLiveAttachment(xrm, id, file),
+    addAttachment: (state, id, file) => addLiveAttachment(xrm, state, id, file),
     deleteAttachment: (state, taskId, attachment) => deleteLiveAttachment(xrm, state, taskId, attachment),
     ensureQuoteTask: (state, quote) => ensureLiveQuoteTask(xrm, state, quote),
     save: (state) => loadLiveState(xrm),
