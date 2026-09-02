@@ -17,10 +17,16 @@ Build do webresource inline:
 npm run check
 ```
 
-Publicação no Dataverse DEV:
+Publicação no Dataverse DEV (WebResource + plugin nativo de notificações):
 
 ```powershell
 npm run push
 ```
 
-Além de publicar o WebResource, o comando verifica/cria as tabelas próprias de equipes do Planner e seus relacionamentos na solution `AppBetinhos`.
+Além de publicar o WebResource e verificar/criar as tabelas próprias de equipes do Planner, o comando compila e cria/atualiza o plugin `PlannerTaskEventNotificationPlugin` na solução `AppBetinhos`.
+
+O usuário autenticado precisa ter permissão para atualizar a solução. Para executar o plugin com uma conta técnica dedicada, defina `DV_PLUGIN_USER` e use o script diretamente:
+
+```powershell
+.\scripts\push-dev.ps1 -DeviceCode -TechnicalUserEmail $env:DV_PLUGIN_USER
+```
