@@ -12,6 +12,10 @@ test("Flow imediato cobre todos os eventos e usa array vazio válido", async () 
   assert.match(source, /json\('\[\]'\)/);
   assert.doesNotMatch(source, /createArray\(\)/);
   assert.match(source, /item\/cr40f_Destinatario@odata\.bind/);
+  assert.match(source, /__PLANNER_BASE_URL__/);
+  assert.match(source, /Replace\('__PLANNER_BASE_URL__', \$EnvironmentUrl\.TrimEnd\('\/'\)\)/);
+  assert.match(source, /\?data=taskId%3D/);
+  assert.doesNotMatch(source, /https:\/\/org23b93544\.crm2\.dynamics\.com\/WebResources/);
 });
 
 test("prévia preserva o MIME persistido quando o Flow retorna rótulo incorreto", async () => {

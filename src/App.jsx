@@ -87,6 +87,7 @@ import {
 } from "./domain";
 import { playCompletionSound, prepareCompletionSound } from "./completionSound";
 import { createDataStore } from "./dataverse";
+import { plannerUrlForState, readPlannerUrlState } from "./plannerUrl";
 import SearchableSelect, {
   SearchableMultiSelect,
 } from "./SearchableSelect.jsx";
@@ -4770,7 +4771,8 @@ const LazyQualityView = lazy(() => Promise.resolve({ default: QualityView }));
 const LazySettingsView = lazy(() => Promise.resolve({ default: SettingsView }));
 
 export default function App() {
-  const [active, setActive] = useState("board");
+  const initialUrlStateRef = useRef(readPlannerUrlState(window.location.search));
+  const [active, setActive] = useState(initialUrlStateRef.current.view);
   const [store] = useState(() => createDataStore());
   const [state, setState] = useState(() => ({
     tasks: [],
@@ -4791,7 +4793,7 @@ export default function App() {
     store.live,
     state.currentUserEmail,
   );
-  const [selectedId, setSelectedId] = useState("");
+  const [selectedId, setSelectedId] = useState(initialUrlStateRef.current.taskId);
   const [waitingTaskId, setWaitingTaskId] = useState("");
   const [waitingReturnTaskId, setWaitingReturnTaskId] = useState("");
   const [creating, setCreating] = useState(false);
@@ -4812,7 +4814,36 @@ export default function App() {
   const refreshInFlightRef = useRef(false);
   const noticeTimerRef = useRef(null);
   const launchHandledRef = useRef(false);
+  const urlStateRef = useRef(initialUrlStateRef.current);
+  const handlingHistoryRef = useRef(false);
   const failedTaskReopenTimerRef = useRef(null);
+  useEffect(() => {
+    const handlePopState = () => {
+      const next = readPlannerUrlState(window.location.search);
+      handlingHistoryRef.current = true;
+      urlStateRef.current = next;
+      setActive(next.view);
+      setSelectedId(next.taskId);
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+  useEffect(() => {
+    const next = { view: active, taskId: selectedId };
+    if (
+      next.view === urlStateRef.current.view &&
+      next.taskId === urlStateRef.current.taskId
+    ) {
+      handlingHistoryRef.current = false;
+      return;
+    }
+    urlStateRef.current = next;
+    if (handlingHistoryRef.current) {
+      handlingHistoryRef.current = false;
+      return;
+    }
+    window.history.pushState(null, "", plannerUrlForState(window.location, next));
+  }, [active, selectedId]);
   const dismissNotice = useCallback(() => {
     if (noticeTimerRef.current) window.clearTimeout(noticeTimerRef.current);
     noticeTimerRef.current = null;
@@ -5062,11 +5093,9 @@ export default function App() {
   useEffect(() => {
     if (!state || launchHandledRef.current) return;
     launchHandledRef.current = true;
+    const { taskId } = readPlannerUrlState(window.location.search);
     const params = new URLSearchParams(window.location.search);
-    const data = new URLSearchParams(
-      (params.get("data") || "").replace(/^\?/, ""),
-    );
-    const taskId = params.get("taskId") || data.get("taskId") || "";
+    const data = new URLSearchParams((params.get("data") || "").replace(/^\?/, ""));
     const mode = params.get("mode") || data.get("mode") || "";
     const quoteSourceId = launchQuoteId();
     if (taskId) setSelectedId(taskId);
