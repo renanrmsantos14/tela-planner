@@ -338,6 +338,51 @@ async function bindLookup(xrm, payload, entity, attribute, target, id) {
   payload[`${navigation}@odata.bind`] = `/${entitySetName(target)}(${cleanId(id)})`;
 }
 
+export function normalizeMicrosoftEmail(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+async function reconcileEmployeeUserLinks(xrm, employees = []) {
+  const missingByEmail = new Map();
+  employees.forEach((employee) => {
+    if (employee._cr40f_usuariodataverse_value) return;
+    const email = normalizeMicrosoftEmail(employee.cr40f_emailmicrosoft);
+    if (!email) return;
+    const matches = missingByEmail.get(email) || [];
+    matches.push(employee);
+    missingByEmail.set(email, matches);
+  });
+
+  await Promise.all([...missingByEmail.entries()].map(async ([email, matches]) => {
+    try {
+      const escapedEmail = email.replace(/'/g, "''");
+      const users = await retrieveMany(
+        xrm,
+        "systemuser",
+        `?$select=systemuserid,internalemailaddress,isdisabled&$filter=internalemailaddress eq '${escapedEmail}' and isdisabled eq false&$top=2`,
+      );
+      const exactUsers = users.filter(
+        (user) => normalizeMicrosoftEmail(user.internalemailaddress) === email && !user.isdisabled,
+      );
+      if (exactUsers.length !== 1) {
+        console.warn(`[Planner] vínculo Microsoft não aplicado para ${email}: ${exactUsers.length} usuário(s) ativo(s) correspondente(s).`);
+        return;
+      }
+      const userId = cleanId(exactUsers[0].systemuserid);
+      await Promise.all(matches.map(async (employee) => {
+        const payload = {};
+        await bindLookup(xrm, payload, EMPLOYEE_TABLE, "cr40f_usuariodataverse", "systemuser", userId);
+        await request(xrm, `/${entitySetName(EMPLOYEE_TABLE)}(${cleanId(employee.cr40f_funcionariosid)})`, { method: "PATCH", body: JSON.stringify(payload) });
+        employee._cr40f_usuariodataverse_value = userId;
+      }));
+    } catch (error) {
+      console.warn(`[Planner] falha ao vincular usuário Microsoft para ${email}`, error);
+    }
+  }));
+
+  return employees;
+}
+
 async function resolveIdByName(xrm, table, field, value) {
   if (!value || value === "Não atribuído" || value === "Sem equipe") return "";
   const escaped = String(value).replace(/'/g, "''");
@@ -646,6 +691,7 @@ export async function loadCoreState(xrm) {
     measureStage("equipes do Planner", () => loadPlannerTeams(xrm)),
     measureStage("equipes das tarefas", () => retrieveOptional(xrm, TASK_TEAM_RELATION_TABLE, "?$select=cr40f_plannertarefaequipeid,_cr40f_tarefa_value,_cr40f_equipe_value&$filter=statecode eq 0", "relação tarefa/equipe")),
   ]);
+  await measureStage("vínculos Microsoft", () => reconcileEmployeeUserLinks(xrm, employees));
   return buildCoreState(xrm, rows, relations, assigneeRelations, employees, currentUserEmail, teams, teamRelations.map(normalizeTaskTeamRelation));
 }
 
@@ -701,6 +747,7 @@ async function loadLiveState(xrm) {
     loadPlannerTeams(xrm),
     retrieveOptional(xrm, TASK_TEAM_RELATION_TABLE, "?$select=cr40f_plannertarefaequipeid,_cr40f_tarefa_value,_cr40f_equipe_value&$filter=statecode eq 0", "relação tarefa/equipe"),
   ]);
+  await measureStage("vínculos Microsoft", () => reconcileEmployeeUserLinks(xrm, employees));
   const employeeRecords = employees.map((row) => ({ id: row.cr40f_funcionariosid, name: row.cr40f_nomecompleto || row.new_apelido || "Sem nome", apelido: row.new_apelido || "", emailMicrosoft: row.cr40f_emailmicrosoft || "", mentionSearchText: [row.cr40f_nomecompleto, row.new_apelido].filter(Boolean).join(" "), userId: row._cr40f_usuariodataverse_value || "", externalNotificationsAvailable: Boolean(row._cr40f_usuariodataverse_value) }));
   const employeeById = new Map(employeeRecords.map((employee) => [cleanId(employee.id).toLowerCase(), employee]));
   const relationByChild = new Map(relations.map(normalizeRelation).map((item) => [item.childTaskId, item.parentTaskId]));

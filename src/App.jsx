@@ -3041,7 +3041,12 @@ function AttachmentSection({
       if (!response.ok)
         throw new Error("O conteúdo do anexo não respondeu corretamente.");
       const blobUrl = URL.createObjectURL(await response.blob());
-      popup.location.href = blobUrl;
+      const downloadLink = popup.document.createElement("a");
+      downloadLink.href = blobUrl;
+      downloadLink.download = attachment.name || "Anexo";
+      downloadLink.textContent = "Download iniciado.";
+      popup.document.body.append(downloadLink);
+      downloadLink.click();
       window.setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
     } catch (error) {
       popup.close();

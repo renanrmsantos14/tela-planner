@@ -26,3 +26,11 @@ test("prévia preserva o MIME persistido quando o Flow retorna rótulo incorreto
     /const mimeType = attachment\.mimeType \|\| result\.mimeType \|\| "application\/octet-stream";/,
   );
 });
+
+test("download de anexo preserva o nome exibido do arquivo", async () => {
+  const source = await readSource("../src/App.jsx");
+
+  assert.match(source, /downloadLink\.download = attachment\.name \|\| "Anexo";/);
+  assert.match(source, /downloadLink\.click\(\);/);
+  assert.doesNotMatch(source, /popup\.location\.href = blobUrl;/);
+});
