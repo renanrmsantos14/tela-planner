@@ -3,6 +3,7 @@ const VALID_VIEWS = new Set([
   "dashboard",
   "team",
   "management",
+  "contacts",
   "quotes",
   "board",
   "list",
@@ -24,10 +25,11 @@ export function readPlannerUrlState(search = "") {
   return {
     view: VALID_VIEWS.has(requestedView) ? requestedView : DEFAULT_VIEW,
     taskId: params.get("taskId") || data.get("taskId") || "",
+    contactId: params.get("contactId") || data.get("contactId") || "",
   };
 }
 
-export function plannerUrlForState(location, { view = DEFAULT_VIEW, taskId = "" }) {
+export function plannerUrlForState(location, { view = DEFAULT_VIEW, taskId = "", contactId = "" }) {
   const { params, data } = readDataParams(location.search);
 
   if (view && view !== DEFAULT_VIEW) data.set("view", view);
@@ -41,6 +43,9 @@ export function plannerUrlForState(location, { view = DEFAULT_VIEW, taskId = "" 
   } else {
     data.delete("taskId");
   }
+
+  if (contactId && !taskId) data.set("contactId", contactId);
+  else data.delete("contactId");
 
   params.delete("view");
   params.delete("taskId");

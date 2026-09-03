@@ -1,5 +1,7 @@
 import {
   addAttachment as addMockAttachment,
+  addContactAttachment as addMockContactAttachment,
+  addContactNote as addMockContactNote,
   addComment as addMockComment,
   collectTask as collectMockTask,
   withDailyNotifications,
@@ -8,6 +10,7 @@ import {
   createTeam as createMockTeam,
   deleteTeam as deleteMockTeam,
   deleteAttachment as deleteMockAttachment,
+  deleteContactAttachment as deleteMockContactAttachment,
   deleteTask as deleteMockTask,
   ensureQuoteTask as ensureMockQuoteTask,
   loadState as loadMockState,
@@ -17,6 +20,8 @@ import {
   saveState as saveMockState,
   updateTask as updateMockTask,
   updateTeam as updateMockTeam,
+  createContact as createMockContact,
+  updateContact as updateMockContact,
 } from "./mockStore.js";
 import {
   applyOptimisticTaskPatch,
@@ -28,6 +33,22 @@ import {
   waitingContextSummary,
 } from "./domain.js";
 import { localDateKey, manualCollectionKey } from "./management.js";
+import { normalizeContact } from "./contactDomain.js";
+
+// Os nomes lógicos finais dependem da metadata DEV. Não preencha com nomes
+// presumidos: o adapter live permanece desativado até a solução provisionar o contrato.
+export const CONTACT_SCHEMA = Object.freeze({
+  table: "",
+  eventTable: "",
+  taskLookup: "",
+  fields: Object.freeze({}),
+});
+
+const CONTACT_SCHEMA_ERROR = "Metadata DEV de Contatos não configurada. Provisione a tabela, os eventos e o lookup da tarefa antes de usar o modo live.";
+const requireContactSchema = () => {
+  if (!CONTACT_SCHEMA.table || !CONTACT_SCHEMA.eventTable || !CONTACT_SCHEMA.taskLookup) throw new Error(CONTACT_SCHEMA_ERROR);
+  return CONTACT_SCHEMA;
+};
 
 const API_VERSION = "v9.2";
 const QUOTE_TABLE = "cr40f_pedidodecotacao";
@@ -856,6 +877,10 @@ async function createLiveTask(xrm, state, input) {
   const waitingValidation = validateWaitingContext(status, waitingContext);
   if (!waitingValidation.allowed) throw new Error(waitingValidation.error);
   const payload = { cr40f_titulo: input.title.trim(), cr40f_descricao: input.description || "", cr40f_status: STATUS_VALUES[status], cr40f_prioridade: PRIORITY_VALUES[input.priority] || PRIORITY_VALUES.medium, cr40f_prazo: input.dueDate ? `${input.dueDate}T12:00:00Z` : null, ...waitingContextPayload(waitingContext), cr40f_origem: ORIGIN_VALUES[input.sourceType || (input.quoteId ? "quote" : "manual")], cr40f_codigoorigem: input.sourceCode || input.quoteCode || "" };
+  if (input.contactId) {
+    const schema = requireContactSchema();
+    await bindLookup(xrm, payload, TASK_TABLE, schema.taskLookup, schema.table, input.contactId);
+  }
   await bindLookup(xrm, payload, TASK_TABLE, "cr40f_pedidocotacao", QUOTE_TABLE, input.quoteId);
   await bindLookup(xrm, payload, TASK_TABLE, "cr40f_errooperacional", QUALITY_ERROR_TABLE, input.qualityType === "error" ? input.qualityId : "");
   await bindLookup(xrm, payload, TASK_TABLE, "cr40f_acaooperacional", QUALITY_ACTION_TABLE, input.qualityType === "action" ? input.qualityId : "");
@@ -1168,6 +1193,7 @@ function createMockDataStore() {
     live: false,
     load: async () => withMode(loadMockState()),
     loadCore: async () => ({ ...withMode(loadMockState()), loading: { core: false, quotes: false, quality: false, photos: false } }),
+    loadContacts: async (state) => (state?.contacts || loadMockState().contacts || []).map((item) => normalizeContact(item)),
     loadSupplemental: async (state) => ({ ...state, loading: { ...(state.loading || {}), quotes: false, quality: false } }),
     loadNotifications: async (employeeId) => (withDailyNotifications(loadMockState()).notifications || []).filter((item) => !employeeId || item.recipientEmployeeId === employeeId),
     markNotificationRead: async (state, notificationId) => withMode(markMockNotificationRead(state, notificationId)),
@@ -1180,6 +1206,12 @@ function createMockDataStore() {
     updateTeam: async (state, id, patch) => withMode(updateMockTeam(state, id, patch)),
     deleteTeam: async (state, id) => withMode(deleteMockTeam(state, id)),
     createTask: async (state, input) => withMode(createMockTask(state, input)),
+    createContact: async (state, input) => withMode(createMockContact(state, input)),
+    updateContact: async (state, id, patch) => withMode(updateMockContact(state, id, patch)),
+    addContactNote: async (state, id, input, context) => withMode(addMockContactNote(state, id, input, context)),
+    addContactAttachment: async (state, id, file, previewUrl = "") => withMode(addMockContactAttachment(state, id, { name: file?.name || "Arquivo", mimeType: file?.type || "", size: file?.size || 0, previewUrl })),
+    deleteContactAttachment: async (state, id, attachment) => withMode(deleteMockContactAttachment(state, id, attachment?.id)),
+    loadRelatedTasks: async (state, contactId) => (state?.tasks || []).filter((task) => task.contactId === contactId || (state.contacts || []).find((contact) => contact.id === contactId)?.linkedTaskIds?.includes(task.id)),
     createSubtask: async (state, parentId, input) => withMode(createMockTask(state, { ...input, parentTaskId: parentId })),
     createQualityTask: async (state, item) => withMode(createMockTask(state, { title: item.title, description: item.description, dueDate: item.dueDate, sourceType: "quality", sourceId: item.id, sourceCode: item.code, sourceLabel: item.type === "error" ? "Erro operacional" : "Ação operacional" })),
     updateTask: async (state, id, patch) => withMode(updateMockTask(state, id, patch)),
@@ -1209,6 +1241,7 @@ export function createDataStore() {
     live: true,
     load: () => loadLiveState(xrm),
     loadCore: () => loadCoreState(xrm),
+    loadContacts: async () => { requireContactSchema(); return []; },
     loadSupplemental: (state) => loadSupplementalState(xrm, state),
     loadNotifications: (employeeId) => loadLiveNotifications(xrm, employeeId),
     collectTask: (state, id, input) => collectLiveTask(xrm, state, id, input),
@@ -1227,6 +1260,12 @@ export function createDataStore() {
     updateTeam: (state, id, patch) => updateLiveTeam(xrm, state, id, patch),
     deleteTeam: (state, id) => deleteLiveTeam(xrm, state, id),
     createTask: (state, input) => createLiveTask(xrm, state, input),
+    createContact: async () => { requireContactSchema(); return null; },
+    updateContact: async () => { requireContactSchema(); return null; },
+    addContactNote: async () => { requireContactSchema(); return null; },
+    addContactAttachment: async () => { requireContactSchema(); return null; },
+    deleteContactAttachment: async () => { requireContactSchema(); return null; },
+    loadRelatedTasks: async () => { requireContactSchema(); return []; },
     createSubtask: (state, parentId, input) => createLiveSubtask(xrm, state, parentId, input),
     createQualityTask: (state, item) => createLiveTask(xrm, state, { title: item.title, description: item.description, dueDate: item.dueDate, sourceType: "quality", sourceCode: item.code, qualityType: item.type, qualityId: item.id }),
     updateTask: (state, id, patch) => updateLiveTask(xrm, state, id, patch),

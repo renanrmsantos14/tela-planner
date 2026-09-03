@@ -10,6 +10,15 @@ import {
 } from "./domain.js";
 import { dailyReminderRows, notificationDedupeKey, notificationRecipients } from "./notifications.js";
 import { localDateKey, manualCollectionKey } from "./management.js";
+import {
+  CONTACT_CHANNELS,
+  CONTACT_STATUSES,
+  canTransitionContactStatus,
+  createContactEvent,
+  createContactPayload,
+  normalizeContact,
+  validateContact,
+} from "./contactDomain.js";
 
 export const STORAGE_KEY = "betinhos-tela-planner-mock-v2";
 
@@ -166,11 +175,66 @@ export function seedState() {
     item.teamName = assignment.teamName;
     item.assigneeName = item.assigneeNames.join(", ");
   });
+  const contacts = [
+    normalizeContact({
+      id: "contact-001",
+      subject: "Confirmação de embarque para diretoria",
+      senderName: "Mariana Costa",
+      senderPhone: "+55 11 98888-1200",
+      channel: "whatsapp",
+      receivedAt: new Date(Date.now() - 32 * 60000).toISOString(),
+      lastMessageAt: new Date(Date.now() - 8 * 60000).toISOString(),
+      summary: "Cliente solicita confirmação do motorista e da janela de embarque.",
+      lastMessage: "Conseguem confirmar o nome do motorista ainda hoje?",
+      priority: "high",
+      ownerEmployeeId: "employee-renan",
+      ownerName: "Renan Martins",
+      dueDate: dateFromToday(0),
+      quoteId: "quote-1008",
+      notes: [{ id: "contact-note-001", text: "Priorizar antes da reunião das 16h.", author: "Você", createdAt: new Date(Date.now() - 20 * 60000).toISOString() }],
+      history: [createContactEvent("created", {}, { text: "Caso recebido via WhatsApp.", author: "Sistema" })],
+    }),
+    normalizeContact({
+      id: "contact-002",
+      subject: "Ajuste de horário do transfer",
+      senderName: "Eduardo Nogueira",
+      senderEmail: "eduardo.nogueira@vertice.example",
+      channel: "email",
+      receivedAt: new Date(Date.now() - 4 * 3600000).toISOString(),
+      lastMessageAt: new Date(Date.now() - 2 * 3600000).toISOString(),
+      summary: "Solicitação de alteração do horário de retorno do roadshow.",
+      lastMessage: "Podemos antecipar o retorno para 18h30?",
+      priority: "medium",
+      status: "in_progress",
+      ownerEmployeeId: "employee-marina",
+      ownerName: "Marina Alves",
+      dueDate: dateFromToday(1),
+      quoteId: "quote-1004",
+      history: [createContactEvent("created", {}, { text: "Caso recebido por e-mail.", author: "Sistema" })],
+    }),
+    normalizeContact({
+      id: "contact-003",
+      subject: "Retorno sobre disponibilidade de van",
+      senderName: "Carlos Ribeiro",
+      senderPhone: "+55 11 97777-4433",
+      channel: "phone",
+      receivedAt: new Date(Date.now() - 26 * 3600000).toISOString(),
+      lastMessageAt: new Date(Date.now() - 25 * 3600000).toISOString(),
+      summary: "Fornecedor pediu retorno sobre a segunda van para o evento.",
+      lastMessage: "Ligo novamente amanhã pela manhã para confirmar.",
+      priority: "low",
+      status: "waiting",
+      ownerEmployeeId: "employee-rafael",
+      ownerName: "Rafael Lima",
+      dueDate: dateFromToday(-1),
+      history: [createContactEvent("created", {}, { text: "Caso recebido por telefone.", author: "Sistema" })],
+    }),
+  ];
   const notifications = [
     { id: "notification-1", taskId: "task-42", recipientEmployeeId: "employee-renan", type: "mention", title: "Rafael mencionou você", message: "Preciso do retorno do parceiro até o fim do dia.", occurredAt: new Date().toISOString(), readAt: "" },
     { id: "notification-2", taskId: "task-40", recipientEmployeeId: "employee-renan", type: "due_today", title: "Tarefa vence hoje", message: "Revisar pendências prioritárias do dia", occurredAt: new Date(Date.now() - 3600000).toISOString(), readAt: "" },
   ];
-  return { quotes, tasks: migrated.tasks, employees, teams: migrated.teams, quality, notifications, collectionEvents: [], lastUpdated: new Date().toISOString() };
+  return { quotes, tasks: migrated.tasks, contacts, employees, teams: migrated.teams, quality, notifications, collectionEvents: [], lastUpdated: new Date().toISOString() };
 }
 
 function task(id, title, quoteId, quoteCode, quoteTitle, status, priority, assigneeName, teamName, dueDate, description, parentTaskId = null, context = {}) {
@@ -187,9 +251,9 @@ export function loadState() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return seedState();
     const state = JSON.parse(raw);
-    if (state.teams) return { collectionEvents: [], ...state };
+    if (state.teams) return { collectionEvents: [], contacts: [], ...state };
     const migrated = migrateLegacyTeams(state.tasks || [], state.employees || [], ["Comercial", "Financeiro", "Operação", "Qualidade"]);
-    return { collectionEvents: [], ...state, tasks: migrated.tasks, teams: migrated.teams };
+    return { collectionEvents: [], contacts: [], ...state, tasks: migrated.tasks, teams: migrated.teams };
   } catch {
     return seedState();
   }
@@ -230,7 +294,7 @@ export function createTask(state, input) {
     id: uid("task"), parentTaskId: input.parentTaskId || null, quoteId: input.quoteId || null,
     quoteCode: input.quoteCode || "", quoteTitle: input.quoteTitle || "Sem vínculo", title: input.title.trim(),
     status, priority: input.priority || "medium", assignmentMode: assignment.assignmentMode, teamIds: assignment.teamIds, teamNames: assignment.teamNames, teamId: assignment.teamId, assigneeNames, assigneeName: assigneeNames.join(", "), assigneeIds,
-    creatorEmployeeId: input.actorEmployeeId || "", creatorUserId: input.actorUserId || "",
+    creatorEmployeeId: input.actorEmployeeId || "", creatorUserId: input.actorUserId || "", contactId: input.contactId || "",
     teamName: assignment.teamName || input.teamName || "", dueDate: input.dueDate || "", description: input.description || "", waitingContext,
     checklist: input.checklist || [], labels: input.quoteCode ? [input.quoteCode] : [], sourceType, sourceId: input.sourceId || input.quoteId || null, sourceLabel: input.sourceLabel || (sourceType === "quality" ? "Ação de qualidade" : sourceType === "quote" ? "Pedido de cotação" : "Tarefa manual"), sourceCode: input.sourceCode || input.quoteCode || "", comments: [], attachments: [],
     history: [{ id: uid("history"), text: "Tarefa criada no mock.", createdAt: new Date().toISOString(), author: "Você" }],
@@ -241,7 +305,10 @@ export function createTask(state, input) {
     const message = creationNotificationType === "waiting" ? waitingContextSummary(waitingContext) : nextTask.title;
     notifications.unshift({ id: uid("notification"), taskId: nextTask.id, recipientEmployeeId, type: creationNotificationType, title: creationNotificationType === "waiting" ? "Retorno aguardado" : "Nova tarefa atribuída", message, occurredAt: new Date().toISOString(), readAt: "", dedupeKey: notificationDedupeKey({ recipientId: recipientEmployeeId, taskId: nextTask.id, type: creationNotificationType, eventId: nextTask.id }) });
   });
-  return saveState({ ...state, tasks: [...state.tasks, nextTask], notifications });
+  const contacts = (state.contacts || []).map((contact) => contact.id === input.contactId
+    ? { ...contact, linkedTaskIds: [...new Set([...(contact.linkedTaskIds || []), nextTask.id])], history: [...(contact.history || []), createContactEvent("task", contact, { actorEmployeeId: input.actorEmployeeId })] }
+    : contact);
+  return saveState({ ...state, tasks: [...state.tasks, nextTask], contacts, notifications });
 }
 
 export function updateTask(state, id, patch) {
@@ -492,6 +559,110 @@ function waitingTargetIds(state, context) {
 
 export function deleteTask(state, id) {
   return saveState({ ...state, tasks: state.tasks.filter((taskItem) => taskItem.id !== id) });
+}
+
+export function createContact(state, input = {}) {
+  const contact = createContactPayload(input, {
+    id: input.ownerEmployeeId || input.actorEmployeeId || "",
+    name: input.ownerName || "Não atribuído",
+  });
+  const validation = validateContact(contact);
+  if (!validation.allowed) throw new Error(validation.error);
+  const created = {
+    ...contact,
+    id: contact.id || uid("contact"),
+    history: [
+      createContactEvent("created", contact, {
+        text: `Caso recebido por ${CONTACT_CHANNELS.find((item) => item.id === contact.channel)?.label || contact.channel}.`,
+        author: input.actorName || "Você",
+        actorEmployeeId: input.actorEmployeeId || "",
+      }),
+      ...(contact.history || []),
+    ],
+  };
+  const notifications = [...(state.notifications || [])];
+  if (created.ownerEmployeeId && created.ownerEmployeeId !== input.actorEmployeeId) {
+    notifications.unshift({
+      id: uid("notification"),
+      contactId: created.id,
+      recipientEmployeeId: created.ownerEmployeeId,
+      type: "contact_assignment",
+      title: "Novo caso atribuído",
+      message: created.subject,
+      occurredAt: new Date().toISOString(),
+      readAt: "",
+    });
+  }
+  return saveState({ ...state, contacts: [created, ...(state.contacts || [])], notifications });
+}
+
+export function updateContact(state, id, patch = {}) {
+  const existing = (state.contacts || []).find((item) => item.id === id);
+  if (!existing) throw new Error("Caso de atendimento não encontrado.");
+  const next = normalizeContact({ ...existing, ...patch, id }, { now: new Date().toISOString() });
+  if (patch.status !== undefined && !canTransitionContactStatus(existing.status, next.status)) {
+    throw new Error(`Não é possível mudar o status de ${existing.status} para ${next.status}.`);
+  }
+  const validation = validateContact(next);
+  if (!validation.allowed) throw new Error(validation.error);
+  const history = [...(existing.history || [])];
+  const actor = { author: patch.actorName || "Você", actorEmployeeId: patch.actorEmployeeId || "" };
+  if (patch.ownerEmployeeId !== undefined && patch.ownerEmployeeId !== existing.ownerEmployeeId) {
+    history.push(createContactEvent("transfer", next, { ...actor, ownerName: next.ownerName, previous: existing.ownerEmployeeId, next: next.ownerEmployeeId, fromEmployeeId: existing.ownerEmployeeId, toEmployeeId: next.ownerEmployeeId, reason: patch.transferReason }));
+  }
+  if (patch.status !== undefined && patch.status !== existing.status) {
+    history.push(createContactEvent("status", next, { ...actor, status: next.status, previous: existing.status, next: next.status }));
+  }
+  if (patch.resolutionOutcome !== undefined && patch.resolutionOutcome !== existing.resolutionOutcome) {
+    history.push(createContactEvent("resolution", next, { ...actor, resolutionOutcome: next.resolutionOutcome }));
+  }
+  if (!history.length) history.push(...(next.history || []));
+  const updated = { ...next, history };
+  const notifications = [...(state.notifications || [])];
+  if (patch.ownerEmployeeId && patch.ownerEmployeeId !== existing.ownerEmployeeId && patch.ownerEmployeeId !== patch.actorEmployeeId) {
+    notifications.unshift({
+      id: uid("notification"),
+      contactId: id,
+      recipientEmployeeId: patch.ownerEmployeeId,
+      type: "contact_transfer",
+      title: "Caso transferido para você",
+      message: updated.subject,
+      occurredAt: new Date().toISOString(),
+      readAt: "",
+    });
+  }
+  return saveState({ ...state, contacts: (state.contacts || []).map((item) => item.id === id ? updated : item), notifications });
+}
+
+export function addContactNote(state, id, input, context = {}) {
+  const contact = (state.contacts || []).find((item) => item.id === id);
+  const value = typeof input === "string" ? input : input?.text;
+  if (!contact) throw new Error("Caso de atendimento não encontrado.");
+  if (!String(value || "").trim()) throw new Error("Informe a nota interna.");
+  const note = { id: uid("contact-note"), text: String(value).trim(), author: context.author || "Você", authorEmployeeId: context.actorEmployeeId || "", createdAt: new Date().toISOString() };
+  const updated = { ...contact, notes: [...(contact.notes || []), note], history: [...(contact.history || []), createContactEvent("note", contact, context)] };
+  return saveState({ ...state, contacts: (state.contacts || []).map((item) => item.id === id ? updated : item) });
+}
+
+export function addContactAttachment(state, id, attachmentInput) {
+  const contact = (state.contacts || []).find((item) => item.id === id);
+  if (!contact) throw new Error("Caso de atendimento não encontrado.");
+  const attachment = { id: uid("contact-file"), name: attachmentInput?.name || "Arquivo", mimeType: attachmentInput?.mimeType || "", size: attachmentInput?.size || 0, previewUrl: attachmentInput?.previewUrl || "", createdAt: new Date().toISOString() };
+  const updated = { ...contact, attachments: [...(contact.attachments || []), attachment], history: [...(contact.history || []), createContactEvent("attachment", contact, { text: `Anexo adicionado: ${attachment.name}.` })] };
+  return saveState({ ...state, contacts: (state.contacts || []).map((item) => item.id === id ? updated : item) });
+}
+
+export function deleteContactAttachment(state, id, attachmentId) {
+  const contact = (state.contacts || []).find((item) => item.id === id);
+  if (!contact) throw new Error("Caso de atendimento não encontrado.");
+  const attachment = (contact.attachments || []).find((item) => item.id === attachmentId);
+  const updated = { ...contact, attachments: (contact.attachments || []).filter((item) => item.id !== attachmentId), history: [...(contact.history || []), createContactEvent("attachment_deleted", contact, { text: `Anexo removido: ${attachment?.name || "arquivo"}.` })] };
+  return saveState({ ...state, contacts: (state.contacts || []).map((item) => item.id === id ? updated : item) });
+}
+
+export function linkTaskToContact(state, contactId, taskId) {
+  if (!contactId || !taskId) return state;
+  return saveState({ ...state, contacts: (state.contacts || []).map((item) => item.id === contactId ? { ...item, linkedTaskIds: [...new Set([...(item.linkedTaskIds || []), taskId])] } : item) });
 }
 
 export function addComment(state, id, text, context = {}) {

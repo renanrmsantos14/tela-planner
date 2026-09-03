@@ -67,6 +67,7 @@ import {
   formatDate,
   formatLongDate,
   getDueBucketForEmployee,
+  hasTaskResponsible,
   isDueToday,
   mentionedEmployees,
   normalizeWaitingContext,
@@ -95,6 +96,8 @@ import SearchableSelect, {
 import CentralView from "./CentralView.jsx";
 import ManagementView from "./ManagementView.jsx";
 import QuotesView from "./QuotesView.jsx";
+import ContactsView from "./ContactsView.jsx";
+import PageHeader from "./PageHeader.jsx";
 import AssigneeDisplay from "./AssigneeDisplay.jsx";
 import { MentionableField, useMentionController } from "./MentionableField.jsx";
 import LoadingFallback from "./LoadingFallback.jsx";
@@ -112,11 +115,17 @@ import {
   validateDeadlineChange,
 } from "./notifications.js";
 import { localDateKey } from "./management.js";
+import {
+  buildLinkedTaskInput,
+  createContactPayload,
+  normalizeContact,
+} from "./contactDomain.js";
 
 const CENTRAL_NAV_ITEMS = [
   ["dashboard", "Início", LayoutDashboard],
   ["board", "Tarefas", ClipboardList],
   ["management", "Gestão", Target],
+  ["contacts", "Contatos", Users],
   ["quotes", "Cotações", FileText],
   ["quality", "Qualidade", ShieldAlert],
   ["settings", "Configurações", Settings],
@@ -704,6 +713,37 @@ function DeleteTaskDialog({
   );
 }
 
+function UnassignedTaskDialog({ taskTitle = "", isCreation = false, onCancel, onConfirm }) {
+  return (
+    <div
+      className="drawer-confirm-layer"
+      onMouseDown={(event) => event.stopPropagation()}
+    >
+      <div
+        className="drawer-confirm"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="unassigned-task-title"
+      >
+        <h2 id="unassigned-task-title">Salvar sem responsável?</h2>
+        <p>
+          {isCreation
+            ? "Esta tarefa será criada sem responsável. Tem certeza?"
+            : `“${taskTitle}” ficará sem responsável. Tem certeza?`}
+        </p>
+        <div className="drawer-confirm-actions">
+          <button className="button button-quiet" type="button" onClick={onCancel}>
+            {isCreation ? "Voltar" : "Continuar editando"}
+          </button>
+          <button className="button button-primary" type="button" onClick={onConfirm}>
+            {isCreation ? "Sim, criar" : "Sim, salvar"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const ACTIONABLE_NOTIFICATION_TYPES = new Set([
   "assignment",
   "deadline",
@@ -711,6 +751,8 @@ const ACTIONABLE_NOTIFICATION_TYPES = new Set([
   "mention",
   "overdue",
   "waiting",
+  "contact_assignment",
+  "contact_transfer",
 ]);
 
 function formatNotificationTime(value) {
@@ -723,12 +765,25 @@ function formatNotificationTime(value) {
   return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(date);
 }
 
-function notificationPresentation(item, task) {
+function notificationPresentation(item, task, contact) {
   const taskTitle = task?.title || item.message || "Atualização da tarefa";
+  const contactTitle = contact?.subject || item.message || "Atualização do caso";
   const taskCode = task?.quoteCode || task?.sourceCode || "OPS";
-  const context = task ? `${taskCode} • ${task.teamName || "Operação"}` : "Central de avisos";
+  const context = task ? `${taskCode} • ${task.teamName || "Operação"}` : contact ? `${contactChannelLabelForNotification(contact.channel)} • ${contact.ownerName || "Sem responsável"}` : "Central de avisos";
   const type = item.type || "update";
   const distinctMessage = item.message && String(item.message).trim() !== String(taskTitle).trim() ? item.message : "";
+
+  if (item.contactId) {
+    return {
+      action: "Abrir caso",
+      context,
+      icon: Users,
+      label: "CONTATO",
+      message: item.message || "Um caso de atendimento foi atribuído a você.",
+      title: item.title || contactTitle,
+      tone: "success",
+    };
+  }
 
   if (["deadline", "due_today", "overdue"].includes(type)) {
     return {
@@ -814,6 +869,10 @@ function notificationPresentation(item, task) {
   };
 }
 
+function contactChannelLabelForNotification(channel) {
+  return channel === "email" ? "E-mail" : channel === "phone" ? "Telefone" : "WhatsApp";
+}
+
 function isActionableNotification(item, tasks) {
   if (ACTIONABLE_NOTIFICATION_TYPES.has(item.type)) return true;
   return item.type === "status" && tasks.some((task) => task.id === item.taskId && task.status === "waiting");
@@ -822,9 +881,11 @@ function isActionableNotification(item, tasks) {
 function NotificationsPanel({
   notifications,
   tasks,
+  contacts = [],
   error = "",
   onClose,
   onOpenTask,
+  onOpenContact,
   onMarkRead,
   onMarkAllRead,
 }) {
@@ -909,7 +970,8 @@ function NotificationsPanel({
           {visibleNotifications.length ? (
             visibleNotifications.map((item) => {
               const task = tasks.find((entry) => entry.id === item.taskId);
-              const presentation = notificationPresentation(item, task);
+              const contact = contacts.find((entry) => entry.id === item.contactId);
+              const presentation = notificationPresentation(item, task, contact);
               const Icon = presentation.icon;
               return (
                 <article
@@ -920,7 +982,7 @@ function NotificationsPanel({
                     <Icon size={20} strokeWidth={2.1} />
                   </span>
                   <div className="notification-item-content">
-                    <button className="notification-item-main" type="button" onClick={() => onOpenTask(item)}>
+                    <button className="notification-item-main" type="button" onClick={() => item.contactId ? onOpenContact?.(item) : onOpenTask(item)}>
                       <span className="notification-kicker">{presentation.label}</span>
                       <strong>{presentation.title}</strong>
                       <p>{presentation.message}</p>
@@ -930,7 +992,7 @@ function NotificationsPanel({
                       </span>
                     </button>
                     <div className="notification-item-footer">
-                      <button className="notification-action" type="button" onClick={() => onOpenTask(item)}>
+                      <button className="notification-action" type="button" onClick={() => item.contactId ? onOpenContact?.(item) : onOpenTask(item)}>
                         <span>{presentation.action}</span>
                         <ChevronRight aria-hidden="true" size={15} strokeWidth={2.4} />
                       </button>
@@ -972,6 +1034,7 @@ function AppShell({
   children,
   onCreate,
   tasks,
+  contacts = [],
   live,
   currentEmployee,
   personalStats,
@@ -980,6 +1043,7 @@ function AppShell({
   notifications = [],
   notificationError = "",
   onOpenNotification,
+  onOpenContact,
   onMarkNotificationRead,
   onMarkAllNotificationsRead,
   onRefresh,
@@ -1005,7 +1069,7 @@ function AppShell({
     ? "more"
     : desktopNavActive;
   const activeLabel =
-    MOBILE_NAV_ITEMS.find(([id]) => id === mobileNavActive)?.[1] || "Central";
+    MOBILE_NAV_ITEMS.find(([id]) => id === mobileNavActive)?.[1] || (active === "contacts" ? "Contatos" : "Central");
   const canCreateTask = ["dashboard", "team", "board", "list", "calendar"].includes(active);
   return (
     <div className={`app-shell ${expanded ? "" : "sidebar-collapsed"}`}>
@@ -1201,32 +1265,21 @@ function AppShell({
         <NotificationsPanel
           notifications={notifications}
           tasks={tasks}
+          contacts={contacts}
           error={notificationError}
           onClose={() => setNotificationsOpen(false)}
           onOpenTask={(item) => {
             onOpenNotification?.(item);
             setNotificationsOpen(false);
           }}
+          onOpenContact={(item) => {
+            onOpenContact?.(item);
+            setNotificationsOpen(false);
+          }}
           onMarkRead={onMarkNotificationRead}
           onMarkAllRead={onMarkAllNotificationsRead}
         />
       )}
-    </div>
-  );
-}
-
-function PageHeader({ eyebrow, title, description, action, children }) {
-  return (
-    <div className="page-header">
-      <div>
-        <span className="eyebrow">{eyebrow}</span>
-        <h1>{title}</h1>
-        {description && <p>{description}</p>}
-      </div>
-      <div className="header-actions">
-        {children}
-        {action}
-      </div>
     </div>
   );
 }
@@ -2993,6 +3046,7 @@ function AttachmentSection({
   onAttachment,
   onDeleteAttachment,
   helperText,
+  itemLabel = "à tarefa",
 }) {
   const inputId = useId();
   const [isDragging, setIsDragging] = useState(false);
@@ -3096,7 +3150,7 @@ function AttachmentSection({
           <strong>
             {isDragging
               ? "Solte os arquivos aqui"
-              : "Adicione evidências à tarefa"}
+              : `Adicione arquivos ${itemLabel}`}
           </strong>
           <small>Cole com Ctrl+V, clique para escolher ou arraste arquivos para cá</small>
         </span>
@@ -3295,6 +3349,20 @@ function MoreView({ onNavigate }) {
         <button
           className="panel more-action"
           type="button"
+          onClick={() => onNavigate("contacts")}
+        >
+          <span className="more-action-icon more-action-icon-contact">
+            <Users size={19} />
+          </span>
+          <span>
+            <strong>Contatos</strong>
+            <small>Casos recebidos e responsáveis</small>
+          </span>
+          <ChevronRight size={17} />
+        </button>
+        <button
+          className="panel more-action"
+          type="button"
           onClick={() => onNavigate("quality")}
         >
           <span className="more-action-icon more-action-icon-warning">
@@ -3371,6 +3439,7 @@ function TaskDrawerContent({
   });
   const [validationError, setValidationError] = useState("");
   const [showDiscardPrompt, setShowDiscardPrompt] = useState(false);
+  const [showUnassignedPrompt, setShowUnassignedPrompt] = useState(false);
   const [draftAttachments, setDraftAttachments] = useState([]);
   const [pendingAttachmentRemovals, setPendingAttachmentRemovals] = useState(
     [],
@@ -3415,6 +3484,7 @@ function TaskDrawerContent({
     });
     setValidationError("");
     setShowDiscardPrompt(false);
+    setShowUnassignedPrompt(false);
     setDraftAttachments([]);
     setPendingAttachmentRemovals([]);
     if (saveCloseTimerRef.current)
@@ -3565,7 +3635,7 @@ function TaskDrawerContent({
       current.includes(attachment.id) ? current : [...current, attachment.id],
     );
   };
-  const handleSave = () => {
+  const handleSave = (allowUnassigned = false) => {
     if (saveState !== "idle") return;
     setValidationError("");
     if (dueDateChanged && !deadlineValidation.allowed) {
@@ -3574,6 +3644,19 @@ function TaskDrawerContent({
     }
     if (!waitingValidation.allowed) {
       setValidationError(waitingValidation.error);
+      return;
+    }
+    const nextAssignment = resolveTaskAssignment(
+      { ...form, assigneeNames: form.assigneeName },
+      teams,
+      state.employees,
+    );
+    if (
+      !allowUnassigned &&
+      hasTaskResponsible(taskItem) &&
+      !hasTaskResponsible(nextAssignment)
+    ) {
+      setShowUnassignedPrompt(true);
       return;
     }
     const removals = pendingAttachmentRemovals
@@ -4144,6 +4227,16 @@ function TaskDrawerContent({
             onDiscard={onClose}
           />
         )}
+        {showUnassignedPrompt && (
+          <UnassignedTaskDialog
+            taskTitle={taskItem.title}
+            onCancel={() => setShowUnassignedPrompt(false)}
+            onConfirm={() => {
+              setShowUnassignedPrompt(false);
+              handleSave(true);
+            }}
+          />
+        )}
         {showDeletePrompt && (
           <DeleteTaskDialog
             taskTitle={taskItem.title}
@@ -4489,7 +4582,7 @@ function WaitingReturnModal({ task, onClose, onSave }) {
   );
 }
 
-function NewTaskDrawer({ employees = [], teams = [], initialStatus = "todo", onClose, onSave }) {
+function NewTaskDrawer({ employees = [], teams = [], initialStatus = "todo", initialInput = {}, onClose, onSave }) {
   const [form, setForm] = useState({
     title: "",
     status: initialStatus,
@@ -4504,12 +4597,14 @@ function NewTaskDrawer({ employees = [], teams = [], initialStatus = "todo", onC
     dueDate: "",
     description: "",
     waitingContext: { ...EMPTY_WAITING_CONTEXT },
+    ...initialInput,
   });
   const [draftAttachments, setDraftAttachments] = useState([]);
   const initialFormRef = useRef(form);
   const draftAttachmentsRef = useRef([]);
   draftAttachmentsRef.current = draftAttachments;
   const [showDiscardPrompt, setShowDiscardPrompt] = useState(false);
+  const [showUnassignedPrompt, setShowUnassignedPrompt] = useState(false);
   const [saveState, setSaveState] = useState("idle");
   const [validationError, setValidationError] = useState("");
   const [saveProgress, setSaveProgress] = useState({
@@ -4559,11 +4654,16 @@ function NewTaskDrawer({ employees = [], teams = [], initialStatus = "todo", onC
       current.filter((item) => item.id !== attachment.id),
     );
   };
-  const handleCreate = () => {
+  const handleCreate = (allowUnassigned = false) => {
     if (saveState !== "idle" || !form.title.trim()) return;
     const waitingValidation = validateWaitingContext(form.status, form.waitingContext);
     if (!waitingValidation.allowed) {
       setValidationError(waitingValidation.error);
+      return;
+    }
+    const assignment = resolveTaskAssignment(form, teams, employees);
+    if (!allowUnassigned && !hasTaskResponsible(assignment)) {
+      setShowUnassignedPrompt(true);
       return;
     }
     setValidationError("");
@@ -4766,6 +4866,16 @@ function NewTaskDrawer({ employees = [], teams = [], initialStatus = "todo", onC
             onDiscard={onClose}
           />
         )}
+        {showUnassignedPrompt && (
+          <UnassignedTaskDialog
+            isCreation
+            onCancel={() => setShowUnassignedPrompt(false)}
+            onConfirm={() => {
+              setShowUnassignedPrompt(false);
+              handleCreate(true);
+            }}
+          />
+        )}
       </aside>
     </div>
   );
@@ -4782,6 +4892,9 @@ export default function App() {
   const [store] = useState(() => createDataStore());
   const [state, setState] = useState(() => ({
     tasks: [],
+    contacts: [],
+    contactLoading: true,
+    contactLoadError: "",
     quotes: [],
     employees: [],
     teams: [],
@@ -4800,6 +4913,7 @@ export default function App() {
     state.currentUserEmail,
   );
   const [selectedId, setSelectedId] = useState(initialUrlStateRef.current.taskId);
+  const [selectedContactId, setSelectedContactId] = useState(initialUrlStateRef.current.contactId);
   const [waitingTaskId, setWaitingTaskId] = useState("");
   const [waitingReturnTaskId, setWaitingReturnTaskId] = useState("");
   const [creating, setCreating] = useState(false);
@@ -4814,6 +4928,7 @@ export default function App() {
   const [error, setError] = useState("");
   const [failedTaskDraft, setFailedTaskDraft] = useState(null);
   const [pendingTaskDraft, setPendingTaskDraft] = useState(null);
+  const [pendingUnassignedCreate, setPendingUnassignedCreate] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const confirmedStateRef = useRef(null);
   const pendingMutationsRef = useRef(new Map());
@@ -4830,15 +4945,17 @@ export default function App() {
       urlStateRef.current = next;
       setActive(next.view);
       setSelectedId(next.taskId);
+      setSelectedContactId(next.contactId);
     };
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
   useEffect(() => {
-    const next = { view: active, taskId: selectedId };
+    const next = { view: active, taskId: selectedId, contactId: selectedContactId };
     if (
       next.view === urlStateRef.current.view &&
-      next.taskId === urlStateRef.current.taskId
+      next.taskId === urlStateRef.current.taskId &&
+      next.contactId === urlStateRef.current.contactId
     ) {
       handlingHistoryRef.current = false;
       return;
@@ -4849,7 +4966,7 @@ export default function App() {
       return;
     }
     window.history.pushState(null, "", plannerUrlForState(window.location, next));
-  }, [active, selectedId]);
+  }, [active, selectedId, selectedContactId]);
   const dismissNotice = useCallback(() => {
     if (noticeTimerRef.current) window.clearTimeout(noticeTimerRef.current);
     noticeTimerRef.current = null;
@@ -4925,12 +5042,14 @@ export default function App() {
     try {
       const core = await store.loadCore();
       mergeConfirmed(core);
-      const [supplemental, photos] = await Promise.allSettled([
+      const [supplemental, photos, contacts] = await Promise.allSettled([
         store.loadSupplemental(core),
         store.loadPhotos(core),
+        store.loadContacts ? store.loadContacts(core) : Promise.resolve(core.contacts || []),
       ]);
       if (supplemental.status === "fulfilled") mergeConfirmed(supplemental.value);
       if (photos.status === "fulfilled") mergeConfirmed(photos.value);
+      if (contacts.status === "fulfilled") mergeConfirmed({ contacts: contacts.value, contactLoading: false, contactLoadError: "" });
       setState((current) => ({
         ...current,
         loadErrors: {
@@ -4941,6 +5060,9 @@ export default function App() {
           ...(photos.status === "rejected"
             ? { photos: photos.reason?.message || "Fotos indisponíveis." }
             : { photos: undefined }),
+          ...(contacts.status === "rejected"
+            ? { contactLoadError: contacts.reason?.message || "Contatos indisponíveis.", contactLoading: false }
+            : { contactLoadError: undefined }),
         },
       }));
       if (!silent) showNotice("Dados atualizados agora.", 2200);
@@ -5021,6 +5143,11 @@ export default function App() {
                 },
                 loading: { ...current.loading, photos: false },
               }));
+          });
+        (store.loadContacts ? store.loadContacts(core) : Promise.resolve(core.contacts || []))
+          .then((contacts) => { if (activeRequest) mergeConfirmed({ contacts, contactLoading: false, contactLoadError: "" }); })
+          .catch((failure) => {
+            if (activeRequest) mergeConfirmed({ contactLoading: false, contactLoadError: failure.message || "Contatos indisponíveis." });
           });
       })
       .catch((failure) => {
@@ -5197,11 +5324,20 @@ export default function App() {
       ? { ...taskItem, ...pendingPatch, ...failedPatch, syncStatus: undefined }
       : taskItem;
   }, [state, selectedId, failedTaskDraft, pendingTaskDraft]);
-  const openTask = useCallback((id) => setSelectedId(id), []);
+  const openTask = useCallback((id) => {
+    setSelectedContactId("");
+    setSelectedId(id);
+  }, []);
+  const openContact = useCallback((id) => {
+    setSelectedId("");
+    setActive("contacts");
+    setSelectedContactId(id);
+  }, []);
   const closeTask = useCallback(() => {
     setSelectedId("");
     setPendingTaskDraft(null);
   }, []);
+  const closeContact = useCallback(() => setSelectedContactId(""), []);
   const openCreate = useCallback((status = "todo") => {
     const nextStatus = STATUSES.some((item) => item.id === status)
       ? status
@@ -5421,6 +5557,82 @@ export default function App() {
     },
     [state, store, runOptimisticMutation, selectedId],
   );
+  const saveContact = useCallback(
+    (input = {}) => {
+      const existing = (state.contacts || []).find((item) => item.id === input.id);
+      const owner = (state.employees || []).find((employee) => employee.id === input.ownerEmployeeId);
+      const actor = {
+        actorEmployeeId: currentEmployee?.id || "",
+        actorUserId: currentEmployee?.userId || "",
+        actorName: currentEmployee?.name || "Você",
+      };
+      if (existing) {
+        const patch = { ...input, ownerName: owner?.name || input.ownerName || "Não atribuído", ...actor };
+        return runOptimisticMutation(
+          (current) => ({
+            ...current,
+            contacts: current.contacts.map((item) => item.id === existing.id
+              ? normalizeContact({ ...item, ...patch }, { now: new Date().toISOString() })
+              : item),
+          }),
+          () => store.updateContact(state, existing.id, patch),
+          store.live ? "Caso em sincronização..." : "Caso atualizado no mock local.",
+          store.live ? "Caso sincronizado." : "Caso atualizado.",
+        );
+      }
+      const created = createContactPayload({ ...input, ownerName: owner?.name || input.ownerName, ...actor }, owner || currentEmployee || {});
+      const optimistic = { ...created, id: `optimistic-contact-${Date.now()}`, history: [] };
+      return runOptimisticMutation(
+        (current) => ({ ...current, contacts: [optimistic, ...(current.contacts || [])] }),
+        () => store.createContact(state, { ...input, ...actor, ownerName: owner?.name || input.ownerName }),
+        store.live ? "Caso em sincronização..." : "Caso adicionado no mock local.",
+        store.live ? "Caso sincronizado." : "Caso criado.",
+      );
+    },
+    [currentEmployee, runOptimisticMutation, state, store],
+  );
+  const addContactNote = useCallback(
+    (id, value) => {
+      const note = { id: `optimistic-note-${Date.now()}`, text: String(value || "").trim(), author: currentEmployee?.name || "Você", createdAt: new Date().toISOString() };
+      if (!note.text) return Promise.resolve(false);
+      return runOptimisticMutation(
+        (current) => ({ ...current, contacts: current.contacts.map((item) => item.id === id ? { ...item, notes: [...(item.notes || []), note], history: [...(item.history || []), { id: note.id, type: "note", text: "Nota interna adicionada.", createdAt: note.createdAt, author: note.author }] } : item) }),
+        () => store.addContactNote(state, id, value, { actorEmployeeId: currentEmployee?.id || "", author: currentEmployee?.name || "Você" }),
+        store.live ? "Nota em sincronização..." : "Nota salva no mock local.",
+        store.live ? "Nota sincronizada." : "Nota adicionada.",
+      );
+    },
+    [currentEmployee, runOptimisticMutation, state, store],
+  );
+  const addContactAttachment = useCallback(
+    (id, filesOrFile) => {
+      const files = toAttachmentFiles(filesOrFile);
+      if (!files.length) return Promise.resolve(false);
+      return files.reduce((queue, file, index) => queue.then(() => {
+        const baseState = confirmedStateRef.current || state;
+        return fileToDataUrl(file).then((previewUrl) => runOptimisticMutation(
+          (current) => ({ ...current, contacts: current.contacts.map((item) => item.id === id ? { ...item, attachments: [...(item.attachments || []), { id: `optimistic-contact-file-${Date.now()}-${index}`, name: file.name || "Arquivo", mimeType: file.type || "", size: file.size || 0, previewUrl, createdAt: new Date().toISOString(), syncStatus: "syncing" }] } : item) }),
+          () => store.addContactAttachment(baseState, id, file, previewUrl),
+          files.length > 1 ? `Anexo ${index + 1} de ${files.length} na fila...` : store.live ? "Anexo em envio..." : "Anexo adicionado no mock local.",
+          files.length > 1 ? `Anexo ${index + 1} de ${files.length} salvo.` : store.live ? "Anexo salvo no SharePoint." : "Anexo salvo localmente.",
+        ));
+      }), Promise.resolve(true));
+    },
+    [runOptimisticMutation, state, store],
+  );
+  const removeContactAttachment = useCallback(
+    (id, attachment) => runOptimisticMutation(
+      (current) => ({ ...current, contacts: current.contacts.map((item) => item.id === id ? { ...item, attachments: (item.attachments || []).filter((entry) => entry.id !== attachment.id) } : item) }),
+      () => store.deleteContactAttachment(confirmedStateRef.current || state, id, attachment),
+      store.live ? "Anexo removido. Sincronizando SharePoint..." : "Anexo removido no mock local.",
+      store.live ? "Anexo removido do SharePoint." : "Anexo removido localmente.",
+    ),
+    [runOptimisticMutation, state, store],
+  );
+  const [taskFromContact, setTaskFromContact] = useState(null);
+  const createTaskFromContact = useCallback((contact) => {
+    setTaskFromContact(buildLinkedTaskInput(contact));
+  }, []);
   const saveTeam = useCallback(
     (input) => {
       const operation = input.id
@@ -5549,7 +5761,7 @@ export default function App() {
     [state, store, runOptimisticCreate, currentEmployee],
   );
   const createSubtask = useCallback(
-    (parentId, title) => {
+    (parentId, title, allowUnassigned = false) => {
       const input = {
         title,
         description: "",
@@ -5558,6 +5770,10 @@ export default function App() {
         teamName: "Operação",
         dueDate: "",
       };
+      if (!allowUnassigned && !hasTaskResponsible(input)) {
+        setPendingUnassignedCreate({ kind: "subtask", parentId, title });
+        return Promise.resolve(false);
+      }
       runOptimisticCreate(
         input,
         () => store.createSubtask(state, parentId, input),
@@ -5568,7 +5784,7 @@ export default function App() {
     [state, store, runOptimisticCreate],
   );
   const createQualityTask = useCallback(
-    (item) => {
+    (item, allowUnassigned = false) => {
       const input = {
         title: item.title,
         description: item.description,
@@ -5579,6 +5795,10 @@ export default function App() {
         sourceLabel:
           item.type === "error" ? "Erro operacional" : "Ação operacional",
       };
+      if (!allowUnassigned && !hasTaskResponsible(input)) {
+        setPendingUnassignedCreate({ kind: "quality", item });
+        return Promise.resolve(false);
+      }
       runOptimisticCreate(
         input,
         () => store.createQualityTask(state, item),
@@ -5784,7 +6004,11 @@ export default function App() {
       showNotice(`Falha ao atualizar notificações: ${failure.message}`, 4200);
     });
   }, [currentEmployee?.id, state, store, showNotice]);
-  const openNotification = useCallback((item) => { if (!item.readAt) markNotificationRead(item.id); if (item.taskId) setSelectedId(item.taskId); }, [markNotificationRead]);
+  const openNotification = useCallback((item) => {
+    if (!item.readAt) markNotificationRead(item.id);
+    if (item.contactId) openContact(item.contactId);
+    else if (item.taskId) openTask(item.taskId);
+  }, [markNotificationRead, openContact, openTask]);
   const onTaskScopeChange = useCallback(
     (scope) => {
       setTaskScope(scope);
@@ -5887,6 +6111,27 @@ export default function App() {
       );
     if (active === "management")
       return <ManagementView state={state} onOpenTask={openTask} onCollect={collectTask} onRegisterWaitingReturn={openWaitingReturn} />;
+    if (active === "contacts")
+      return (
+        <ContactsView
+          contacts={state.contacts}
+          employees={state.employees}
+          quotes={state.quotes}
+          tasks={state.tasks}
+          currentEmployee={currentEmployee}
+          selectedContactId={selectedContactId}
+          contactLoading={state.contactLoading}
+          contactLoadError={state.contactLoadError}
+          onSelect={(id) => id ? openContact(id) : closeContact()}
+          onSave={saveContact}
+          onAddNote={addContactNote}
+          onAttachment={addContactAttachment}
+          onDeleteAttachment={removeContactAttachment}
+          loadAttachmentContent={store.loadAttachmentContent}
+          onCreateTask={createTaskFromContact}
+          AttachmentSectionComponent={AttachmentSection}
+        />
+      );
     if (active === "quotes")
       return <QuotesView state={state} onOpenTask={openTask} />;
     if (active === "board")
@@ -5963,6 +6208,7 @@ export default function App() {
       onNavigate={navigate}
       onCreate={openCreate}
       tasks={state.tasks}
+      contacts={state.contacts}
       live={store.live}
       currentEmployee={currentEmployee}
       personalStats={personalStats}
@@ -5970,6 +6216,7 @@ export default function App() {
       notifications={(state.notifications || []).filter((item) => item.recipientEmployeeId === currentEmployee?.id)}
       notificationError={state.loadErrors?.notifications || ""}
       onOpenNotification={openNotification}
+      onOpenContact={openNotification}
       onMarkNotificationRead={markNotificationRead}
       onMarkAllNotificationsRead={markAllNotificationsRead}
       onRefresh={refreshInBackground}
@@ -6013,6 +6260,19 @@ export default function App() {
           </button>
         </div>
       )}
+      {pendingUnassignedCreate && (
+        <UnassignedTaskDialog
+          isCreation
+          onCancel={() => setPendingUnassignedCreate(null)}
+          onConfirm={() => {
+            const pending = pendingUnassignedCreate;
+            setPendingUnassignedCreate(null);
+            if (pending.kind === "quality")
+              createQualityTask(pending.item, true);
+            else createSubtask(pending.parentId, pending.title, true);
+          }}
+        />
+      )}
       {waitingTask && (
         <WaitingStatusModal
           task={waitingTask}
@@ -6054,6 +6314,15 @@ export default function App() {
             );
           }}
           onAddSubtask={createSubtask}
+        />
+      )}
+      {taskFromContact && (
+        <NewTaskDrawer
+          employees={state.employees}
+          teams={state.teams}
+          initialInput={taskFromContact}
+          onClose={() => setTaskFromContact(null)}
+          onSave={createNewTask}
         />
       )}
       {creating && (

@@ -7,6 +7,7 @@ test("lê view e tarefa do envelope data do WebResource", () => {
   assert.deepEqual(readPlannerUrlState("?data=view%3Dcalendar%26taskId%3DTASK-1"), {
     view: "calendar",
     taskId: "TASK-1",
+    contactId: "",
   });
 });
 
@@ -22,7 +23,7 @@ test("gera URL compartilhável e preserva parâmetros externos", () => {
 
   const parsed = new URL(url, "https://example.test");
   assert.equal(parsed.searchParams.get("org"), "betinhos");
-  assert.deepEqual(readPlannerUrlState(parsed.search), { view: "management", taskId: "TASK-2" });
+  assert.deepEqual(readPlannerUrlState(parsed.search), { view: "management", taskId: "TASK-2", contactId: "" });
   assert.equal(parsed.hash, "#top");
 });
 
@@ -37,4 +38,30 @@ test("remove parâmetros de lançamento conflitantes ao abrir tarefa", () => {
   assert.equal(data.get("taskId"), "TASK-3");
   assert.equal(data.has("source"), false);
   assert.equal(data.has("sourceId"), false);
+});
+
+test("lê e gera deep link de caso sem misturar com tarefa", () => {
+  assert.deepEqual(readPlannerUrlState("?data=view%3Dcontacts%26contactId%3DC-9"), {
+    view: "contacts",
+    taskId: "",
+    contactId: "C-9",
+  });
+  const url = plannerUrlForState(
+    { pathname: "/WebResources/new_TelaPlanner.html", search: "", hash: "" },
+    { view: "contacts", contactId: "C-10" },
+  );
+  assert.deepEqual(readPlannerUrlState(new URL(url, "https://example.test").search), {
+    view: "contacts",
+    taskId: "",
+    contactId: "C-10",
+  });
+});
+
+test("abrir tarefa remove vínculo de caso do envelope", () => {
+  const url = plannerUrlForState(
+    { pathname: "/WebResources/new_TelaPlanner.html", search: "?data=view%3Dcontacts%26contactId%3DC-1", hash: "" },
+    { view: "board", taskId: "TASK-4" },
+  );
+  const state = readPlannerUrlState(new URL(url, "https://example.test").search);
+  assert.deepEqual(state, { view: "board", taskId: "TASK-4", contactId: "" });
 });
