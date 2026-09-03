@@ -118,6 +118,7 @@ import { localDateKey } from "./management.js";
 import {
   buildLinkedTaskInput,
   createContactPayload,
+  createContactEvent,
   normalizeContact,
 } from "./contactDomain.js";
 
@@ -5596,6 +5597,27 @@ export default function App() {
     },
     [currentEmployee, runOptimisticMutation, state, store],
   );
+  const archiveContact = useCallback(
+    (contact) => {
+      const archivedAt = new Date().toISOString();
+      const actor = { actorEmployeeId: currentEmployee?.id || "", author: currentEmployee?.name || "Você" };
+      return runOptimisticMutation(
+        (current) => ({
+          ...current,
+          contacts: current.contacts.map((item) => item.id === contact.id
+            ? { ...item, archivedAt, updatedAt: archivedAt, history: [...(item.history || []), createContactEvent("archived", item, actor, archivedAt)] }
+            : item),
+        }),
+        () => store.archiveContact(state, contact.id, actor),
+        store.live ? "Caso em sincronização..." : "Arquivando caso...",
+        store.live ? "Caso arquivado." : "Caso arquivado no mock local.",
+      ).then((success) => {
+        if (success) closeContact();
+        return success;
+      });
+    },
+    [closeContact, currentEmployee, runOptimisticMutation, state, store],
+  );
   const addContactNote = useCallback(
     (id, value) => {
       const note = { id: `optimistic-note-${Date.now()}`, text: String(value || "").trim(), author: currentEmployee?.name || "Você", createdAt: new Date().toISOString() };
@@ -6130,6 +6152,7 @@ export default function App() {
           contactLoadError={state.contactLoadError}
           onSelect={(id) => id ? openContact(id) : closeContact()}
           onSave={saveContact}
+          onArchive={archiveContact}
           onAddNote={addContactNote}
           onAttachment={addContactAttachment}
           onDeleteAttachment={removeContactAttachment}

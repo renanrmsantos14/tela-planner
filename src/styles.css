@@ -1654,3 +1654,67 @@ button { cursor: pointer; }
 @media (max-width: 1120px) and (min-width: 821px) {
   .app-topbar { right: 26px; }
 }
+
+/* Contatos MVP: card compacto, Inbox por contexto e Kanban responsivo. */
+.contact-row { grid-template-columns: 4px minmax(0, 1fr) auto auto; gap: 12px; min-height: 76px; padding: 10px 16px; transform: none; }
+.contact-row-main { min-width: 0; display: grid; gap: 6px; padding: 2px 0; border: 0; color: inherit; background: transparent; text-align: left; cursor: pointer; }
+.contact-row-main:hover { background: transparent; }
+.contact-row-main:focus-visible { outline: 2px solid #6c91e8; outline-offset: 3px; border-radius: 5px; }
+.contact-row-top { display: block; }
+.contact-row-person { min-width: 0; display: inline-flex; align-items: center; gap: 5px; overflow: hidden; color: var(--muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.contact-row-person svg { flex: 0 0 auto; color: var(--tertiary); }
+.contact-row-meta { align-items: center; gap: 10px; }
+.contact-row-date { min-width: 74px; align-self: center; }
+.contact-row-date time { white-space: nowrap; }
+.contact-complete-action { min-width: 42px; min-height: 42px; display: inline-flex; align-items: center; justify-content: center; gap: 5px; align-self: center; padding: 0 9px; border: 1px solid #cfe0d7; border-radius: 9px; color: var(--green); background: var(--surface); font: inherit; font-size: 10px; font-weight: 800; cursor: pointer; transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, opacity 160ms ease; }
+.contact-complete-action:hover, .contact-complete-action:focus-visible { border-color: #9bc7af; background: var(--green-soft); }
+.contact-complete-action:active { opacity: .72; }
+.contact-complete-action.is-confirming { border-color: #b9e4ca; color: #23694b; background: var(--green-soft); }
+.contact-row.is-archived { opacity: .7; }
+.contact-filter-chip { min-height: 32px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; color: var(--muted); background: var(--surface); font: inherit; font-size: 10px; font-weight: 800; cursor: pointer; transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease; }
+.contact-filter-chip:hover, .contact-filter-chip:focus-visible, .contact-filter-chip.is-active { border-color: #b8cfee; color: var(--blue); background: var(--blue-soft); outline: 0; }
+.contact-filter-chip:disabled { cursor: not-allowed; opacity: .45; }
+.contact-section-empty { padding: 22px 16px; color: var(--tertiary); font-size: 10px; text-align: center; }
+.contact-waiting-section { border-top: 1px solid var(--line); }
+.contact-waiting-section summary { min-height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 16px; color: var(--ink); font-size: 11px; font-weight: 800; cursor: pointer; list-style: none; }
+.contact-waiting-section summary::-webkit-details-marker { display: none; }
+.contact-waiting-section summary > span, .contact-section-count { display: inline-flex; align-items: center; gap: 7px; }
+.contact-section-count { color: var(--amber); }
+.contact-section-count svg { transition: transform 160ms var(--ease-out); }
+.contact-waiting-section[open] .contact-section-count svg { transform: rotate(180deg); }
+.contact-secondary-section { border-top: 1px solid var(--line); background: var(--surface-soft); }
+.contact-secondary-heading { min-height: 48px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; color: var(--muted); font-size: 10px; font-weight: 800; }
+.contact-secondary-heading > span { display: inline-flex; align-items: center; gap: 7px; }
+.contact-kanban { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.contact-kanban-column { min-width: 0; min-height: 320px; padding: 14px 0 0; overflow: hidden; }
+.contact-kanban-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; padding: 0 14px 12px; }
+.contact-kanban-heading h2 { margin: 5px 0 0; color: var(--ink); font-size: 13px; }
+.contact-kanban-heading .panel-count { margin-top: 1px; }
+.contact-kanban-column .contacts-list { min-height: 250px; }
+.contact-kanban-column .contact-row { grid-template-columns: 3px minmax(0, 1fr) auto; gap: 9px; padding: 10px 12px; cursor: grab; }
+.contact-kanban-column .contact-row:active { cursor: grabbing; }
+.contact-kanban-column .contact-row-date { grid-column: 2 / 3; grid-row: 2; justify-items: start; min-width: 0; }
+.contact-kanban-column .contact-complete-action { grid-column: 3; grid-row: 1 / span 2; }
+.contact-kanban-empty { min-height: 220px; display: grid; place-items: center; padding: 18px; border-top: 1px dashed var(--line); color: var(--tertiary); font-size: 10px; }
+.contact-archived-label { margin-right: auto; color: var(--tertiary); font-size: 9px; }
+.contact-archive-button { margin-right: auto; }
+
+@media (max-width: 1020px) {
+  .contact-kanban { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 820px) {
+  .contact-row { grid-template-columns: 3px minmax(0, 1fr) auto auto; gap: 8px; min-height: 82px; padding: 10px 12px; }
+  .contact-row-date { min-width: 62px; }
+  .contact-complete-action { min-width: 44px; padding: 0 7px; }
+  .contact-complete-action.is-confirming { min-width: 88px; }
+  .contact-filter-chip { width: 100%; }
+  .contact-kanban { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .contact-kanban-column { min-height: 0; }
+  .contact-kanban-column .contacts-list { min-height: 90px; }
+  .contact-kanban-empty { min-height: 76px; }
+  .contact-archive-button { margin-right: 0; }
+  .contact-archived-label { margin-right: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .contact-complete-action, .contact-filter-chip, .contact-section-count svg { transition: none; }
+}

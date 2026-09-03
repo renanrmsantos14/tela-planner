@@ -15,6 +15,7 @@ const contact = (overrides = {}) => normalizeContact({
   id: "c-1",
   subject: "Retorno do embarque",
   senderName: "Cliente",
+  senderPhone: "+55 11 98888-0000",
   channel: "whatsapp",
   receivedAt: "2026-09-03T10:00:00Z",
   lastMessageAt: "2026-09-03T10:00:00Z",
@@ -30,14 +31,16 @@ test("normaliza defaults e valida o contrato do caso", () => {
   assert.equal(normalized.subject, "Assunto");
   assert.equal(normalized.priority, "medium");
   assert.equal(normalized.status, "new");
-  assert.equal(validateContact(normalized).allowed, true);
+  assert.equal(validateContact({ ...normalized, senderPhone: "+55 11 98888-0000" }).allowed, true);
+  assert.equal(normalizeContact({ ...normalized, message: "Pedido recebido" }).lastMessage, "Pedido recebido");
   assert.equal(validateContact({ ...normalized, subject: "" }).allowed, false);
 });
 
 test("expõe transições operacionais de status", () => {
   assert.equal(canTransitionContactStatus("new", "in_progress"), true);
-  assert.equal(canTransitionContactStatus("waiting", "resolved"), true);
-  assert.equal(canTransitionContactStatus("archived", "resolved"), false);
+  assert.equal(canTransitionContactStatus("waiting", "done"), true);
+  assert.equal(canTransitionContactStatus("resolved", "done"), true);
+  assert.equal(canTransitionContactStatus("archived", "in_progress"), true);
 });
 
 test("filtra por mensagem, canal, status, prioridade e responsável", () => {
@@ -78,4 +81,21 @@ test("preserva múltiplos responsáveis e permite filtrar qualquer pessoa seleci
   assert.equal(contactPermissions(shared, { employeeId: "e-2" }).canEdit, true);
   assert.deepEqual(buildLinkedTaskInput(shared).assigneeIds, ["e-1", "e-2"]);
   assert.deepEqual(buildLinkedTaskInput(shared).assigneeName, ["Renan", "Marina"]);
+});
+
+test("exige o contato correspondente ao canal e mantém a observação de aguardando", () => {
+  const email = contact({ channel: "email", senderPhone: "", senderEmail: "ana@example.com", status: "waiting" });
+  assert.equal(validateContact(email).allowed, true);
+  assert.equal(validateContact({ ...email, senderEmail: "" }).allowed, false);
+  assert.equal(validateContact({ ...email, senderEmail: "", senderPhone: "+55 11 99999-0000" }).allowed, false);
+  assert.equal(email.waitingNote, "Esperando resposta");
+});
+
+test("oculta concluídos por padrão e prioriza vencidos na ordenação", () => {
+  const overdue = contact({ id: "overdue", priority: "low", dueDate: "2026-09-02" });
+  const urgent = contact({ id: "urgent", priority: "high", dueDate: "2026-09-05" });
+  const done = contact({ id: "done", status: "done", dueDate: "2026-09-01" });
+  assert.deepEqual(sortContacts([urgent, overdue], "2026-09-03").map((item) => item.id), ["overdue", "urgent"]);
+  assert.equal(filterContacts([done]).length, 0);
+  assert.equal(filterContacts([done], { includeCompleted: true }).length, 1);
 });

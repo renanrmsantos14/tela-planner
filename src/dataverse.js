@@ -22,6 +22,7 @@ import {
   updateTeam as updateMockTeam,
   createContact as createMockContact,
   updateContact as updateMockContact,
+  archiveContact as archiveMockContact,
 } from "./mockStore.js";
 import {
   applyOptimisticTaskPatch,
@@ -1208,6 +1209,7 @@ function createMockDataStore() {
     createTask: async (state, input) => withMode(createMockTask(state, input)),
     createContact: async (state, input) => withMode(createMockContact(state, input)),
     updateContact: async (state, id, patch) => withMode(updateMockContact(state, id, patch)),
+    archiveContact: async (state, id, context) => withMode(archiveMockContact(state, id, context)),
     addContactNote: async (state, id, input, context) => withMode(addMockContactNote(state, id, input, context)),
     addContactAttachment: async (state, id, file, previewUrl = "") => withMode(addMockContactAttachment(state, id, { name: file?.name || "Arquivo", mimeType: file?.type || "", size: file?.size || 0, previewUrl })),
     deleteContactAttachment: async (state, id, attachment) => withMode(deleteMockContactAttachment(state, id, attachment?.id)),
@@ -1262,6 +1264,7 @@ export function createDataStore() {
     createTask: (state, input) => createLiveTask(xrm, state, input),
     createContact: async () => { requireContactSchema(); return null; },
     updateContact: async () => { requireContactSchema(); return null; },
+    archiveContact: async () => { requireContactSchema(); return null; },
     addContactNote: async () => { requireContactSchema(); return null; },
     addContactAttachment: async () => { requireContactSchema(); return null; },
     deleteContactAttachment: async () => { requireContactSchema(); return null; },

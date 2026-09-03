@@ -306,7 +306,7 @@ export function createTask(state, input) {
     notifications.unshift({ id: uid("notification"), taskId: nextTask.id, recipientEmployeeId, type: creationNotificationType, title: creationNotificationType === "waiting" ? "Retorno aguardado" : "Nova tarefa atribuída", message, occurredAt: new Date().toISOString(), readAt: "", dedupeKey: notificationDedupeKey({ recipientId: recipientEmployeeId, taskId: nextTask.id, type: creationNotificationType, eventId: nextTask.id }) });
   });
   const contacts = (state.contacts || []).map((contact) => contact.id === input.contactId
-    ? { ...contact, linkedTaskIds: [...new Set([...(contact.linkedTaskIds || []), nextTask.id])], history: [...(contact.history || []), createContactEvent("task", contact, { actorEmployeeId: input.actorEmployeeId })] }
+    ? { ...contact, updatedAt: new Date().toISOString(), linkedTaskIds: [...new Set([...(contact.linkedTaskIds || []), nextTask.id])], history: [...(contact.history || []), createContactEvent("task", contact, { actorEmployeeId: input.actorEmployeeId })] }
     : contact);
   return saveState({ ...state, tasks: [...state.tasks, nextTask], contacts, notifications });
 }
@@ -583,11 +583,31 @@ function contactAssignmentSignature(contact = {}) {
   });
 }
 
+function pushContactNotification(notifications, contactId, recipientEmployeeId, type, title, message, eventId) {
+  if (!recipientEmployeeId) return;
+  const dedupeKey = notificationDedupeKey({ recipientId: recipientEmployeeId, taskId: contactId, type, eventId });
+  if (notifications.some((item) => item.dedupeKey === dedupeKey)) return;
+  notifications.unshift({
+    id: uid("notification"),
+    contactId,
+    recipientEmployeeId,
+    type,
+    title,
+    message,
+    occurredAt: new Date().toISOString(),
+    readAt: "",
+    dedupeKey,
+  });
+}
+
 export function createContact(state, input = {}) {
   const assignment = resolveContactAssignment(state, input);
-  const contact = createContactPayload({ ...input, ...(assignment || {}) }, {
-    id: input.ownerEmployeeId || input.actorEmployeeId || "",
-    name: input.ownerName || "Não atribuído",
+  const actorEmployee = (state.employees || []).find((employee) => String(employee.id) === String(input.actorEmployeeId));
+  const defaultOwnerId = input.ownerEmployeeId || input.actorEmployeeId || "";
+  const defaultOwnerName = input.ownerName || actorEmployee?.name || "Não atribuído";
+  const contact = createContactPayload({ ...input, ownerEmployeeId: defaultOwnerId, ownerName: defaultOwnerName, ...(assignment || {}) }, {
+    id: defaultOwnerId,
+    name: defaultOwnerName,
   });
   const validation = validateContact(contact);
   if (!validation.allowed) throw new Error(validation.error);
@@ -604,18 +624,8 @@ export function createContact(state, input = {}) {
     ],
   };
   const notifications = [...(state.notifications || [])];
-  (created.assigneeIds || [created.ownerEmployeeId]).filter((employeeId) => employeeId && employeeId !== input.actorEmployeeId).forEach((recipientEmployeeId) => {
-    notifications.unshift({
-      id: uid("notification"),
-      contactId: created.id,
-      recipientEmployeeId,
-      type: "contact_assignment",
-      title: "Novo caso atribuído",
-      message: created.subject,
-      occurredAt: new Date().toISOString(),
-      readAt: "",
-    });
-  });
+  const creationEvent = created.history[0];
+  (created.assigneeIds || [created.ownerEmployeeId]).filter((employeeId) => employeeId && employeeId !== input.actorEmployeeId).forEach((recipientEmployeeId) => pushContactNotification(notifications, created.id, recipientEmployeeId, "contact_assignment", "Novo caso atribuído", created.subject, creationEvent.id));
   return saveState({ ...state, contacts: [created, ...(state.contacts || [])], notifications });
 }
 
@@ -623,15 +633,17 @@ export function updateContact(state, id, patch = {}) {
   const existing = (state.contacts || []).find((item) => item.id === id);
   if (!existing) throw new Error("Caso de atendimento não encontrado.");
   const assignment = resolveContactAssignment(state, patch, existing);
-  const next = normalizeContact({ ...existing, ...patch, ...(assignment || {}), id }, { now: new Date().toISOString() });
-  if (patch.status !== undefined && !canTransitionContactStatus(existing.status, next.status)) {
+  const now = new Date().toISOString();
+  const assignmentInput = { ...existing, ...patch, ...(assignment || {}), id };
+  const assignmentChanged = contactAssignmentSignature(existing) !== contactAssignmentSignature(assignmentInput);
+  const next = normalizeContact({ ...assignmentInput, status: assignmentChanged ? "new" : assignmentInput.status }, { now });
+  if (patch.status !== undefined && !assignmentChanged && !canTransitionContactStatus(existing.status, next.status)) {
     throw new Error(`Não é possível mudar o status de ${existing.status} para ${next.status}.`);
   }
   const validation = validateContact(next);
   if (!validation.allowed) throw new Error(validation.error);
   const history = [...(existing.history || [])];
   const actor = { author: patch.actorName || "Você", actorEmployeeId: patch.actorEmployeeId || "" };
-  const assignmentChanged = contactAssignmentSignature(existing) !== contactAssignmentSignature(next);
   if (assignmentChanged) {
     history.push(createContactEvent("transfer", next, { ...actor, ownerName: next.ownerName, teamName: next.teamName, previous: existing.ownerEmployeeId, next: next.ownerEmployeeId, fromEmployeeId: existing.ownerEmployeeId, toEmployeeId: next.ownerEmployeeId, fromAssigneeIds: existing.assigneeIds, toAssigneeIds: next.assigneeIds, fromTeamIds: existing.teamIds, toTeamIds: next.teamIds, reason: patch.transferReason }));
   }
@@ -641,22 +653,32 @@ export function updateContact(state, id, patch = {}) {
   if (patch.resolutionOutcome !== undefined && patch.resolutionOutcome !== existing.resolutionOutcome) {
     history.push(createContactEvent("resolution", next, { ...actor, resolutionOutcome: next.resolutionOutcome }));
   }
-  if (!history.length) history.push(...(next.history || []));
-  const updated = { ...next, history };
+  if (patch.priority !== undefined && patch.priority !== existing.priority) {
+    history.push(createContactEvent("priority", next, { ...actor, priority: next.priority }));
+  }
+  if (patch.dueDate !== undefined && patch.dueDate !== existing.dueDate) {
+    history.push(createContactEvent("deadline", next, { ...actor, next: next.dueDate }));
+  }
+  if (patch.waitingNote !== undefined && patch.waitingNote !== existing.waitingNote) {
+    history.push(createContactEvent("waiting", next, { ...actor, waitingNote: next.waitingNote }));
+  }
+  const updated = { ...next, updatedAt: now, internalNotes: next.notes, history };
   const notifications = [...(state.notifications || [])];
   if (assignmentChanged) {
-    (next.assigneeIds || [next.ownerEmployeeId]).filter((employeeId) => employeeId && employeeId !== patch.actorEmployeeId).forEach((recipientEmployeeId) => notifications.unshift({
-      id: uid("notification"),
-      contactId: id,
-      recipientEmployeeId,
-      type: "contact_transfer",
-      title: "Caso transferido para você",
-      message: updated.subject,
-      occurredAt: new Date().toISOString(),
-      readAt: "",
-    }));
+    const transferEvent = history.findLast((event) => event.type === "transfer") || history.at(-1);
+    (next.assigneeIds || [next.ownerEmployeeId]).filter((employeeId) => employeeId && employeeId !== patch.actorEmployeeId).forEach((recipientEmployeeId) => pushContactNotification(notifications, id, recipientEmployeeId, "contact_transfer", "Caso transferido para você", updated.subject, transferEvent.id));
   }
   return saveState({ ...state, contacts: (state.contacts || []).map((item) => item.id === id ? updated : item), notifications });
+}
+
+export function archiveContact(state, id, context = {}) {
+  const contact = (state.contacts || []).find((item) => item.id === id);
+  if (!contact) throw new Error("Caso de atendimento não encontrado.");
+  if (contact.archivedAt) return state;
+  const now = new Date().toISOString();
+  const event = createContactEvent("archived", contact, { author: context.author || "Você", actorEmployeeId: context.actorEmployeeId || "" }, now);
+  const updated = { ...contact, archivedAt: now, updatedAt: now, history: [...(contact.history || []), event] };
+  return saveState({ ...state, contacts: (state.contacts || []).map((item) => item.id === id ? updated : item) });
 }
 
 export function addContactNote(state, id, input, context = {}) {
@@ -665,15 +687,17 @@ export function addContactNote(state, id, input, context = {}) {
   if (!contact) throw new Error("Caso de atendimento não encontrado.");
   if (!String(value || "").trim()) throw new Error("Informe a nota interna.");
   const note = { id: uid("contact-note"), text: String(value).trim(), author: context.author || "Você", authorEmployeeId: context.actorEmployeeId || "", createdAt: new Date().toISOString() };
-  const updated = { ...contact, notes: [...(contact.notes || []), note], history: [...(contact.history || []), createContactEvent("note", contact, context)] };
+  const notes = [...(contact.notes || []), note];
+  const updated = { ...contact, notes, internalNotes: notes, updatedAt: note.createdAt, history: [...(contact.history || []), createContactEvent("note", contact, context, note.createdAt)] };
   return saveState({ ...state, contacts: (state.contacts || []).map((item) => item.id === id ? updated : item) });
 }
 
 export function addContactAttachment(state, id, attachmentInput) {
   const contact = (state.contacts || []).find((item) => item.id === id);
   if (!contact) throw new Error("Caso de atendimento não encontrado.");
+  if (Number(attachmentInput?.size || 0) > 5 * 1024 * 1024) throw new Error("Cada anexo deve ter no máximo 5 MB.");
   const attachment = { id: uid("contact-file"), name: attachmentInput?.name || "Arquivo", mimeType: attachmentInput?.mimeType || "", size: attachmentInput?.size || 0, previewUrl: attachmentInput?.previewUrl || "", createdAt: new Date().toISOString() };
-  const updated = { ...contact, attachments: [...(contact.attachments || []), attachment], history: [...(contact.history || []), createContactEvent("attachment", contact, { text: `Anexo adicionado: ${attachment.name}.` })] };
+  const updated = { ...contact, updatedAt: attachment.createdAt, attachments: [...(contact.attachments || []), attachment], history: [...(contact.history || []), createContactEvent("attachment", contact, { text: `Anexo adicionado: ${attachment.name}.` }, attachment.createdAt)] };
   return saveState({ ...state, contacts: (state.contacts || []).map((item) => item.id === id ? updated : item) });
 }
 
@@ -681,7 +705,8 @@ export function deleteContactAttachment(state, id, attachmentId) {
   const contact = (state.contacts || []).find((item) => item.id === id);
   if (!contact) throw new Error("Caso de atendimento não encontrado.");
   const attachment = (contact.attachments || []).find((item) => item.id === attachmentId);
-  const updated = { ...contact, attachments: (contact.attachments || []).filter((item) => item.id !== attachmentId), history: [...(contact.history || []), createContactEvent("attachment_deleted", contact, { text: `Anexo removido: ${attachment?.name || "arquivo"}.` })] };
+  const now = new Date().toISOString();
+  const updated = { ...contact, updatedAt: now, attachments: (contact.attachments || []).filter((item) => item.id !== attachmentId), history: [...(contact.history || []), createContactEvent("attachment_deleted", contact, { text: `Anexo removido: ${attachment?.name || "arquivo"}.` }, now)] };
   return saveState({ ...state, contacts: (state.contacts || []).map((item) => item.id === id ? updated : item) });
 }
 
