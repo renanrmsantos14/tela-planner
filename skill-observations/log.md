@@ -254,3 +254,18 @@
 **Suggested improvement:** Separar a confirmação mínima da mutação do refresh completo; atualizar o estado local confirmado e invalidar somente detalhes que precisam ser reconsultados.
 
 **Principle:** Feedback de uma mutação deve depender do trabalho necessário para confirmar aquela mutação, não de uma atualização global não relacionada.
+
+### Observation 21: Visualizações podem ter políticas de visibilidade diferentes
+
+**Status:** OPEN
+**Date:** 2026-09-03
+**Session context:** Implementação do MVP de Gestão de Contatos no Tela Planner.
+**Skill:** task-observer / ui-ux-pro-max
+**Type:** open-source
+**Phase/Area:** Filtros compartilhados e views operacionais
+
+**Issue:** O filtro padrão da Inbox oculta Concluídos, mas o Kanban precisa manter as quatro colunas visíveis para sustentar a leitura do fluxo; aplicar a mesma política às duas views fez casos concluídos desaparecerem do Kanban.
+
+**Suggested improvement:** Modelar a visibilidade por view e cobrir explicitamente os estados padrão de cada superfície em testes e smoke visual.
+
+**Principle:** Um domínio compartilhado não implica uma política de apresentação compartilhada; cada view deve declarar sua visibilidade operacional.
