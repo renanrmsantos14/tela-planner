@@ -828,8 +828,20 @@ async function markLiveNotificationRead(xrm, notificationId, readAt = new Date()
   return readAt;
 }
 
+function withNotificationEnvironment(xrm, field, next) {
+  if (!String(field || "").startsWith("notification:")) return next;
+  try {
+    const context = JSON.parse(next || "{}");
+    const clientUrl = xrm.Utility?.getGlobalContext?.().getClientUrl?.()?.replace(/\/$/, "");
+    if (!clientUrl || !context || Array.isArray(context) || typeof context !== "object") return next;
+    return JSON.stringify({ ...context, plannerBaseUrl: clientUrl });
+  } catch {
+    return next;
+  }
+}
+
 async function createEvent(xrm, taskId, type, description, field = "", previous = "", next = "") {
-  const payload = { cr40f_tipo: type, cr40f_descricao: description, cr40f_campo: field, cr40f_valoranterior: previous, cr40f_valornovo: next, cr40f_ocorridoem: new Date().toISOString() };
+  const payload = { cr40f_tipo: type, cr40f_descricao: description, cr40f_campo: field, cr40f_valoranterior: previous, cr40f_valornovo: withNotificationEnvironment(xrm, field, next), cr40f_ocorridoem: new Date().toISOString() };
   await bindLookup(xrm, payload, EVENT_TABLE, "cr40f_tarefa", TASK_TABLE, taskId);
   await request(xrm, `/${entitySetName(EVENT_TABLE)}`, { method: "POST", body: JSON.stringify(payload) });
 }

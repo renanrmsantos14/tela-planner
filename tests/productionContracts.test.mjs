@@ -15,10 +15,18 @@ test("Flow imediato cobre todos os eventos e usa array vazio válido", async () 
   assert.match(source, /collectionType.*manual_overdue.*overdue/);
   assert.match(source, /Cobrança de tarefa atrasada/);
   assert.match(source, /Revisar tarefa/);
-  assert.match(source, /__PLANNER_BASE_URL__/);
-  assert.match(source, /Replace\('__PLANNER_BASE_URL__', \$EnvironmentUrl\.TrimEnd\('\/'\)\)/);
+  assert.match(source, /plannerBaseUrl/);
+  assert.doesNotMatch(source, /__PLANNER_BASE_URL__/);
   assert.match(source, /\?data=taskId%3D/);
   assert.doesNotMatch(source, /https:\/\/org23b93544\.crm2\.dynamics\.com\/WebResources/);
+});
+
+test("eventos de notificação carregam o ambiente atual do WebResource", async () => {
+  const source = await readSource("../src/dataverse.js");
+
+  assert.match(source, /function withNotificationEnvironment/);
+  assert.match(source, /getClientUrl/);
+  assert.match(source, /plannerBaseUrl/);
 });
 
 test("prévia preserva o MIME persistido quando o Flow retorna rótulo incorreto", async () => {

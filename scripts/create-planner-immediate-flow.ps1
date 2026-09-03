@@ -168,7 +168,7 @@ $definition = @'
                           "poster": "Flow bot",
                           "location": "Chat with Flow bot",
                           "body/recipient": "@outputs('Get_system_user')?['body/internalemailaddress']",
-                          "body/messageBody": "<p><strong>@{if(equals(outputs('Compose_Type'), 'overdue'), 'Cobrança de tarefa atrasada', if(equals(outputs('Compose_Type'), 'assignment'), 'Nova tarefa atribuída', 'Atualização da tarefa'))}</strong></p><p>@{triggerOutputs()?['body/cr40f_descricao']}</p><p><a href=\"@{concat('__PLANNER_BASE_URL__/WebResources/new_TelaPlanner.html?data=taskId%3D', triggerOutputs()?['body/_cr40f_tarefa_value'])}\">Revisar tarefa</a></p>"
+                          "body/messageBody": "<p><strong>@{if(equals(outputs('Compose_Type'), 'overdue'), 'Cobrança de tarefa atrasada', if(equals(outputs('Compose_Type'), 'assignment'), 'Nova tarefa atribuída', 'Atualização da tarefa'))}</strong></p><p>@{triggerOutputs()?['body/cr40f_descricao']}</p><p>@{if(empty(outputs('Compose_Context')?['plannerBaseUrl']), 'Abra a tarefa no Planner', concat('<a href=\"', outputs('Compose_Context')?['plannerBaseUrl'], '/WebResources/new_TelaPlanner.html?data=taskId%3D', triggerOutputs()?['body/_cr40f_tarefa_value'], '\">Revisar tarefa</a>'))}</p>"
                         },
                         "host": {
                           "apiId": "/providers/Microsoft.PowerApps/apis/shared_teams",
@@ -270,7 +270,6 @@ $definition = @'
 '@
 
 $definition = $definition.Replace('new_sharedcommondataserviceforapps_25a23', $ConnectionReferenceLogicalName)
-$definition = $definition.Replace('__PLANNER_BASE_URL__', $EnvironmentUrl.TrimEnd('/'))
 $clientData = @{ properties = @{ connectionReferences = @{
   shared_commondataserviceforapps = @{ runtimeSource = 'embedded'; connection = @{ connectionReferenceLogicalName = $ConnectionReferenceLogicalName }; api = @{ name = 'shared_commondataserviceforapps' } }
   shared_teams = @{ runtimeSource = 'embedded'; connection = @{ connectionReferenceLogicalName = $TeamsConnectionReferenceLogicalName }; api = @{ name = 'shared_teams' } }
