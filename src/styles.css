@@ -520,14 +520,8 @@ button { cursor: pointer; }
 .contact-drawer .drawer-context-item { overflow: hidden; text-overflow: ellipsis; }
 .contact-drawer-body { padding-top: 21px; }
 .contact-drawer .drawer-title { align-items: flex-start; gap: 10px; margin-bottom: 13px; }
-.contact-title-icon, .contact-intake-icon { display: grid; place-items: center; flex: 0 0 auto; border-radius: 10px; color: var(--blue); background: var(--blue-soft); }
+.contact-title-icon { display: grid; place-items: center; flex: 0 0 auto; border-radius: 10px; color: var(--blue); background: var(--blue-soft); }
 .contact-title-icon { width: 34px; height: 34px; margin-top: 27px; }
-.contact-intake-card { min-width: 0; display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 10px; align-items: center; margin-bottom: 15px; padding: 10px 11px; border: 1px solid #dce7f4; border-radius: 11px; background: #f7faff; }
-.contact-intake-icon { width: 34px; height: 34px; background: #e5efff; }
-.contact-intake-card > div { min-width: 0; display: grid; gap: 3px; }
-.contact-intake-card strong { overflow: hidden; color: var(--navy); text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
-.contact-intake-card > div span { overflow: hidden; color: var(--muted); text-overflow: ellipsis; white-space: nowrap; font-size: 10px; }
-.contact-intake-card .badge { margin: 0; }
 .contact-drawer-actions { display: flex; align-items: center; gap: 9px; margin: -2px 0 14px; }
 .contact-drawer-actions .button { min-height: 32px; padding: 0 10px; font-size: 10px; }
 .contact-drawer-actions > span { color: var(--tertiary); font-size: 9px; }
@@ -536,6 +530,10 @@ button { cursor: pointer; }
 .contact-quick-fields { gap: 14px; margin-bottom: 0; }
 .contact-quick-fields > .drawer-status-priority-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
 .contact-quick-fields > .drawer-assignment-deadline-grid { grid-template-columns: minmax(0, 1.25fr) minmax(0, .75fr); gap: 11px; }
+.contact-assignment-grid > .assignment-field { min-width: 0; }
+.contact-assignment-grid .assignment-control, .contact-assignment-grid .custom-select { width: 100%; min-width: 0; }
+.contact-assignment-grid .assignment-members { width: 100%; }
+.contact-drawer .contact-core-grid .custom-select-trigger { min-height: 38px; }
 .contact-status-picker .status-picker-options { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .contact-status-picker .status-option-new.is-selected { border-color: #b8cfee; color: var(--blue); background: var(--blue-soft); }
 .contact-status-picker .status-option-in_progress.is-selected { border-color: #d6c8f2; color: #7b56bb; background: #f2edff; }
@@ -563,7 +561,6 @@ button { cursor: pointer; }
 .contact-drawer-details summary:hover .contact-detail-summary-meta { color: var(--blue); }
 .contact-details-content { padding: 0 2px 12px; }
 .contact-drawer .contact-links-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); margin-bottom: 0; }
-.contact-attachment-content .attachment-section { margin-top: 0; padding-top: 0; border-top: 0; }
 .contact-detail-hint { margin: 9px 0 0; color: var(--tertiary); font-size: 9px; line-height: 1.4; }
 .contact-drawer-details .contact-note-row:first-child, .contact-drawer-details .contact-related-task:first-child { padding-top: 0; }
 
@@ -588,8 +585,6 @@ button { cursor: pointer; }
   .contact-quick-fields > .drawer-assignment-deadline-grid { grid-template-columns: minmax(0, 1fr); }
   .contact-drawer-actions { align-items: flex-start; flex-direction: column; gap: 5px; }
   .contact-drawer-actions .button { width: 100%; justify-content: center; }
-  .contact-intake-card { grid-template-columns: 32px minmax(0, 1fr); }
-  .contact-intake-card .badge { grid-column: 2; justify-self: start; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -17,6 +17,7 @@ import {
   X,
 } from "lucide-react";
 import SearchableSelect from "./SearchableSelect.jsx";
+import AssignmentFields from "./AssignmentFields.jsx";
 import PageHeader from "./PageHeader.jsx";
 import {
   CONTACT_CHANNELS,
@@ -89,6 +90,13 @@ function emptyDraft(currentEmployee) {
     channel: "whatsapp",
     priority: "medium",
     status: "new",
+    assignmentMode: "people",
+    teamIds: [],
+    teamNames: [],
+    teamId: "",
+    teamName: "",
+    assigneeName: currentEmployee?.name ? [currentEmployee.name] : [],
+    assigneeIds: currentEmployee?.id ? [currentEmployee.id] : [],
     ownerEmployeeId: currentEmployee?.id || "",
     ownerName: currentEmployee?.name || "Não atribuído",
     receivedAt: new Date().toISOString(),
@@ -104,13 +112,57 @@ function emptyDraft(currentEmployee) {
 }
 
 function draftFromContact(contact) {
-  return { ...contact };
+  const assigneeIds = Array.isArray(contact.assigneeIds) && contact.assigneeIds.length
+    ? contact.assigneeIds
+    : contact.ownerEmployeeId
+      ? [contact.ownerEmployeeId]
+      : [];
+  const assigneeName = Array.isArray(contact.assigneeName)
+    ? contact.assigneeName
+    : Array.isArray(contact.assigneeNames) && contact.assigneeNames.length
+      ? contact.assigneeNames
+      : contact.ownerName
+        ? [contact.ownerName]
+        : [];
+  const teamIds = Array.isArray(contact.teamIds)
+    ? contact.teamIds
+    : contact.teamId
+      ? [contact.teamId]
+      : [];
+  const teamNames = Array.isArray(contact.teamNames)
+    ? contact.teamNames
+    : contact.teamName
+      ? [contact.teamName]
+      : [];
+  return {
+    ...contact,
+    assignmentMode: contact.assignmentMode === "team" ? "team" : "people",
+    teamIds,
+    teamNames,
+    teamId: contact.teamId || teamIds[0] || "",
+    teamName: contact.teamName || teamNames.join(", "),
+    assigneeIds,
+    assigneeName,
+    ownerEmployeeId: contact.ownerEmployeeId || assigneeIds[0] || "",
+    ownerName: contact.ownerName || assigneeName[0] || teamNames.join(", ") || "Não atribuído",
+  };
+}
+
+function assignmentKey(value = {}) {
+  const asList = (entry) => (Array.isArray(entry) ? entry : entry ? [entry] : []).map(String);
+  return JSON.stringify({
+    assignmentMode: value.assignmentMode === "team" ? "team" : "people",
+    teamIds: asList(value.teamIds || value.teamId),
+    assigneeIds: asList(value.assigneeIds || value.ownerEmployeeId),
+    assigneeNames: asList(value.assigneeNames || value.assigneeName || value.ownerName),
+  });
 }
 
 function ContactDrawer({
   contact,
   currentEmployee,
   employees,
+  teams,
   quotes,
   tasks,
   AttachmentSectionComponent,
@@ -129,7 +181,6 @@ function ContactDrawer({
   const [saveError, setSaveError] = useState("");
   const permissions = contactPermissions(contact || draft, { employeeId: currentEmployee?.id, isManager: currentEmployee?.isManager });
   const canEdit = isNew || permissions.canEdit;
-  const ownerOptions = employees.map((employee) => ({ value: employee.id, label: employee.name, search: `${employee.name} ${employee.emailMicrosoft || ""}` }));
   const quoteOptions = [{ value: "", label: "Sem vínculo" }, ...quotes.map((quote) => ({ value: quote.id, label: `${quote.code || "Cotação"} · ${quote.title || quote.client || ""}`, search: `${quote.code || ""} ${quote.title || ""} ${quote.client || ""}` }))];
   const relatedTasks = (tasks || []).filter((task) => task.contactId === contact?.id || contact?.linkedTaskIds?.includes(task.id));
   const ChannelIcon = CHANNEL_ICON[draft.channel] || MessageCircle;
@@ -138,6 +189,22 @@ function ContactDrawer({
   const channelFieldType = draft.channel === "email" ? "email" : "tel";
   const availableStatuses = isNew ? CONTACT_STATUSES : CONTACT_STATUSES.filter((item) => (CONTACT_STATUS_TRANSITIONS[contact.status] || [contact.status]).includes(item.id));
   const update = (key, value) => setDraft((current) => ({ ...current, [key]: value }));
+  const setAssignmentForm = (updater) => setDraft((current) => {
+    const next = typeof updater === "function" ? updater(current) : updater;
+    const assigneeIds = Array.isArray(next.assigneeIds) ? next.assigneeIds : [];
+    const primary = employees.find((employee) => String(employee.id) === String(assigneeIds[0]));
+    const selectedNames = Array.isArray(next.assigneeName) ? next.assigneeName : [];
+    const teamLabel = Array.isArray(next.teamNames) ? next.teamNames.filter(Boolean).join(", ") : "";
+    const assignmentLabel = next.assignmentMode === "team"
+      ? teamLabel || primary?.name
+      : primary?.name || selectedNames[0];
+    return {
+      ...next,
+      ownerEmployeeId: primary?.id || "",
+      ownerName: assignmentLabel || "Não atribuído",
+    };
+  });
+  const assignmentChanged = !isNew && assignmentKey(draft) !== assignmentKey(contact);
   const submit = async (event) => {
     event.preventDefault();
     setSaveError("");
@@ -181,16 +248,11 @@ function ContactDrawer({
               <input id="contact-subject" autoFocus={isNew} value={draft.subject} onChange={(event) => update("subject", event.target.value)} placeholder="Ex.: Solicitação de traslado" aria-label="Assunto do caso" disabled={!canEdit || saving} required />
             </label>
           </div>
-          <div className="contact-intake-card">
-            <span className="contact-intake-icon"><ChannelIcon size={18} aria-hidden="true" /></span>
-            <div><strong>{draft.senderName || "Novo remetente"}</strong><span>{contactChannelLabel(draft.channel)} · {draft[channelField] || "Contato não informado"}</span></div>
-            <span className={`badge contact-status-badge status-${draft.status}`}>{contactStatusLabel(draft.status)}</span>
-          </div>
           {!canEdit && <div className="contact-readonly-note"><UserRound size={16} /> Este caso está sob responsabilidade de outra pessoa.</div>}
           {!isNew && canEdit && <div className="contact-drawer-actions"><button className="button button-secondary" type="button" onClick={() => onCreateTask(contact)} disabled={saving}><Plus size={14} /> Criar task</button><span>O status do caso não muda.</span></div>}
           <div className="drawer-field-grid contact-core-grid">
             <label>Remetente<input value={draft.senderName} onChange={(event) => update("senderName", event.target.value)} disabled={!canEdit || saving} required /></label>
-            <label>Canal<select value={draft.channel} onChange={(event) => update("channel", event.target.value)} disabled={!canEdit || saving}>{CONTACT_CHANNELS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
+            <label>Canal<SearchableSelect value={draft.channel} onChange={(value) => update("channel", value)} options={CONTACT_CHANNELS.map((item) => ({ value: item.id, label: item.label }))} placeholder="Selecione o canal" clearable={false} disabled={!canEdit || saving} aria-label="Canal do caso" /></label>
             <label className="contact-channel-field">{channelFieldLabel}<input type={channelFieldType} value={draft[channelField] || ""} onChange={(event) => update(channelField, event.target.value)} disabled={!canEdit || saving} placeholder={draft.channel === "email" ? "nome@empresa.com" : "(00) 00000-0000"} /></label>
           </div>
           <div className="drawer-field-grid contact-quick-fields">
@@ -199,12 +261,12 @@ function ContactDrawer({
               <div className="priority-field"><span className="priority-field-label">Prioridade</span><ContactPriorityPicker value={draft.priority} onChange={(value) => update("priority", value)} disabled={!canEdit || saving} /></div>
             </div>
             <div className="drawer-assignment-deadline-grid contact-assignment-grid">
-              <label>Responsável<SearchableSelect value={draft.ownerEmployeeId || ""} onChange={(value) => { const employee = employees.find((item) => item.id === value); setDraft((current) => ({ ...current, ownerEmployeeId: value, ownerName: employee?.name || "Não atribuído" })); }} options={ownerOptions} placeholder="Selecione" clearable={false} disabled={!canEdit || saving} aria-label="Responsável pelo caso" /></label>
+              <AssignmentFields form={draft} setForm={setAssignmentForm} employees={employees} teams={teams} />
               <label className="deadline-field">Prazo<input type="date" value={draft.dueDate || ""} onChange={(event) => update("dueDate", event.target.value)} disabled={!canEdit || saving} /></label>
             </div>
           </div>
           {draft.status === "resolved" && <label className="drawer-description contact-resolution-field">Resultado da resolução (opcional)<textarea value={draft.resolutionOutcome || ""} onChange={(event) => update("resolutionOutcome", event.target.value)} disabled={!canEdit || saving} placeholder="Ex.: retorno confirmado com o cliente" rows={2} /></label>}
-          {!isNew && draft.ownerEmployeeId !== contact.ownerEmployeeId && <label className="drawer-description contact-transfer-field">Motivo da transferência (opcional)<input value={draft.transferReason || ""} onChange={(event) => update("transferReason", event.target.value)} disabled={!canEdit || saving} placeholder="Ex.: cobertura da operação" /></label>}
+          {assignmentChanged && <label className="drawer-description contact-transfer-field">Motivo da transferência (opcional)<input value={draft.transferReason || ""} onChange={(event) => update("transferReason", event.target.value)} disabled={!canEdit || saving} placeholder="Ex.: cobertura da operação" /></label>}
           <section className="drawer-section contact-context-section">
             <div className="drawer-section-heading"><h3>Mensagem recebida</h3><span className="contact-context-date">{formatContactDate(draft.lastMessageAt, true)}</span></div>
             <textarea className="contact-message-editor" value={draft.lastMessage || ""} onChange={(event) => update("lastMessage", event.target.value)} disabled={!canEdit || saving} rows={3} placeholder="Registre a mensagem ou o pedido recebido..." aria-label="Mensagem recebida" />
@@ -229,7 +291,7 @@ function ContactDrawer({
               <div className="contact-details-content">{(contact.notes || []).map((item) => <div className="contact-note-row" key={item.id}><strong>{item.author || "Você"}</strong><p>{item.text}</p><small>{formatContactDate(item.createdAt, true)}</small></div>)}<div className="comment-compose"><textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder="Registrar uma nota interna" disabled={!canEdit || saving} rows={2} /><button className="button button-secondary" type="button" onClick={addNote} disabled={!note.trim() || saving}><Plus size={14} /> Adicionar nota</button></div></div>
             </details>
           )}
-          {!isNew && AttachmentSectionComponent && <details className="contact-drawer-details"><summary><span>Anexos</span><span className="contact-detail-summary-meta">{contact.attachments?.length || 0}<ChevronDown size={15} aria-hidden="true" /></span></summary><div className="contact-details-content contact-attachment-content"><AttachmentSectionComponent taskId={contact.id} attachments={contact.attachments || []} loadAttachmentContent={loadAttachmentContent} onAttachment={onAttachment} onDeleteAttachment={onDeleteAttachment} itemLabel="ao caso" helperText="Arquivos usados na tratativa deste caso." /></div></details>}
+          {!isNew && AttachmentSectionComponent && <AttachmentSectionComponent taskId={contact.id} attachments={contact.attachments || []} loadAttachmentContent={loadAttachmentContent} onAttachment={onAttachment} onDeleteAttachment={onDeleteAttachment} itemLabel="ao caso" helperText="Arquivos usados na tratativa deste caso." />}
           {!isNew && (
             <details className="contact-drawer-details" open={relatedTasks.length > 0}>
               <summary><span>Tasks vinculadas</span><span className="contact-detail-summary-meta">{relatedTasks.length}<ChevronDown size={15} aria-hidden="true" /></span></summary>
@@ -251,6 +313,7 @@ function ContactDrawer({
 export default function ContactsView({
   contacts = [],
   employees = [],
+  teams = [],
   quotes = [],
   tasks = [],
   currentEmployee,
@@ -285,8 +348,8 @@ export default function ContactsView({
       </div>
       <section className="panel contacts-panel"><div className="panel-heading"><div><span className="eyebrow">Inbox operacional</span><h2>Casos recebidos</h2></div><span className="panel-count">{visibleContacts.length}</span></div>{contactLoadError && <div className="contact-load-error" role="alert">{contactLoadError}</div>}{contactLoading ? <div className="contact-empty"><Clock3 size={25} /><strong>Carregando contatos…</strong></div> : visibleContacts.length ? <div className="contacts-list">{visibleContacts.map((contact) => { const ChannelIcon = CHANNEL_ICON[contact.channel] || MessageCircle; const StatusIcon = STATUS_ICON[contact.status] || CheckCircle2; return <button className={`contact-row priority-${contact.priority}`} key={contact.id} type="button" onClick={() => onSelect(contact.id)}><span className="contact-row-priority" /><span className="contact-row-main"><span className="contact-row-top"><strong>{contact.subject}</strong><span className={`badge contact-status-badge status-${contact.status}`}>{contactStatusLabel(contact.status)}</span></span><span className="contact-row-message">{contact.lastMessage || contact.summary || "Sem mensagem registrada."}</span><span className="contact-row-meta"><span><ChannelIcon size={13} /> {contact.senderName}</span><span><UserRound size={13} /> {contact.ownerName}</span><span><StatusIcon size={13} /> {contactChannelLabel(contact.channel)}</span></span></span><span className="contact-row-date"><time>{formatContactDate(contact.lastMessageAt, true)}</time>{contact.dueDate && <small className={contact.dueDate < new Date().toISOString().slice(0, 10) ? "is-overdue" : ""}>Prazo {formatContactDate(contact.dueDate)}</small>}</span></button>; })}</div> : <div className="contact-empty"><MessageCircle size={28} /><strong>Nenhum caso encontrado</strong><span>Novos contatos recebidos aparecerão nesta caixa.</span></div>}</section>
       {!creating && !selected && <button className="mobile-fab contacts-mobile-fab" type="button" onClick={() => setCreating(true)} aria-label="Criar novo caso" title="Novo caso"><Plus size={22} strokeWidth={2.5} aria-hidden="true" /></button>}
-      {selected && <ContactDrawer contact={selected} currentEmployee={currentEmployee} employees={employees} quotes={quotes} tasks={tasks} AttachmentSectionComponent={AttachmentSectionComponent} loadAttachmentContent={loadAttachmentContent} onClose={() => onSelect("")} onSave={onSave} onAddNote={onAddNote} onAttachment={onAttachment} onDeleteAttachment={onDeleteAttachment} onCreateTask={onCreateTask} />}
-      {creating && <ContactDrawer isNew currentEmployee={currentEmployee} employees={employees} quotes={quotes} tasks={tasks} onClose={() => setCreating(false)} onSave={async (draft) => { const success = await onSave(draft); if (success) setCreating(false); return success; }} />}
+      {selected && <ContactDrawer contact={selected} currentEmployee={currentEmployee} employees={employees} teams={teams} quotes={quotes} tasks={tasks} AttachmentSectionComponent={AttachmentSectionComponent} loadAttachmentContent={loadAttachmentContent} onClose={() => onSelect("")} onSave={onSave} onAddNote={onAddNote} onAttachment={onAttachment} onDeleteAttachment={onDeleteAttachment} onCreateTask={onCreateTask} />}
+      {creating && <ContactDrawer isNew currentEmployee={currentEmployee} employees={employees} teams={teams} quotes={quotes} tasks={tasks} onClose={() => setCreating(false)} onSave={async (draft) => { const success = await onSave(draft); if (success) setCreating(false); return success; }} />}
     </div>
   );
 }

@@ -44,3 +44,22 @@ test("salva nota interna e vincula task criada ao caso", () => {
   assert.ok(updatedContact.linkedTaskIds.includes(next.tasks.at(-1).id));
   assert.equal(next.tasks.at(-1).contactId, contact.id);
 });
+
+test("notifica todos os responsáveis quando o caso é compartilhado", () => {
+  withStorage();
+  const initial = seedState();
+  const created = createContact(initial, {
+    subject: "Pedido compartilhado",
+    senderName: "Bruno",
+    channel: "whatsapp",
+    assignmentMode: "people",
+    assigneeIds: ["employee-renan", "employee-marina"],
+    assigneeName: ["Renan Martins", "Marina Alves"],
+    ownerEmployeeId: "employee-renan",
+    ownerName: "Renan Martins",
+    actorEmployeeId: "employee-renan",
+  });
+  const item = created.contacts.find((contact) => contact.subject === "Pedido compartilhado");
+  assert.deepEqual(item.assigneeIds, ["employee-renan", "employee-marina"]);
+  assert.ok(created.notifications.some((notification) => notification.contactId === item.id && notification.recipientEmployeeId === "employee-marina"));
+});

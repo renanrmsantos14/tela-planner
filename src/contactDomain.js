@@ -32,7 +32,8 @@ const CONTACT_PRIORITY_IDS = new Set(CONTACT_PRIORITIES.map((item) => item.id));
 const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 };
 
 const text = (value) => String(value ?? "").trim();
-const unique = (values) => [...new Set((values || []).map(text).filter(Boolean))];
+const asList = (value) => (Array.isArray(value) ? value : value ? [value] : []);
+const unique = (values) => [...new Set(asList(values).map(text).filter(Boolean))];
 
 function validDate(value) {
   if (!value) return false;
@@ -60,6 +61,15 @@ export function normalizeContact(input = {}, context = {}) {
   const channel = CONTACT_CHANNEL_IDS.has(input.channel) ? input.channel : "whatsapp";
   const receivedAt = input.receivedAt || now;
   const lastMessageAt = input.lastMessageAt || receivedAt;
+  const assignmentMode = input.assignmentMode === "team" ? "team" : "people";
+  const teamIds = assignmentMode === "team" ? unique(input.teamIds ?? input.teamId) : [];
+  const teamNames = assignmentMode === "team" ? unique(input.teamNames ?? input.teamName) : [];
+  const assigneeIds = unique(input.assigneeIds ?? (input.ownerEmployeeId || owner.id ? [input.ownerEmployeeId || owner.id] : []));
+  const assigneeNames = unique(input.assigneeNames ?? input.assigneeName ?? (input.ownerName || owner.name ? [input.ownerName || owner.name] : []));
+  const ownerEmployeeId = text(input.ownerEmployeeId || assigneeIds[0]);
+  const ownerName = assignmentMode === "team"
+    ? text(input.ownerName) || teamNames.join(", ") || assigneeNames[0] || "Não atribuído"
+    : text(input.ownerName || assigneeNames[0]) || "Não atribuído";
   return {
     id: text(input.id),
     subject: text(input.subject) || "Novo contato",
@@ -73,8 +83,16 @@ export function normalizeContact(input = {}, context = {}) {
     lastMessage: text(input.lastMessage),
     priority,
     status,
-    ownerEmployeeId: text(input.ownerEmployeeId || owner.id),
-    ownerName: text(input.ownerName || owner.name) || "Não atribuído",
+    assignmentMode,
+    teamIds,
+    teamNames,
+    teamId: teamIds[0] || "",
+    teamName: assignmentMode === "team" ? text(input.teamName) || teamNames.join(", ") : "",
+    assigneeIds,
+    assigneeNames,
+    assigneeName: assigneeNames,
+    ownerEmployeeId,
+    ownerName,
     dueDate: text(input.dueDate),
     clientId: text(input.clientId),
     quoteId: text(input.quoteId),
@@ -113,11 +131,13 @@ export function filterContacts(contacts = [], filters = {}) {
   return contacts.filter((contact) => {
     if (!filters.includeArchived && contact.status === "archived") return false;
     const searchable = [contact.subject, contact.senderName, contact.senderEmail, contact.senderPhone, contact.summary, contact.lastMessage].join(" ").toLocaleLowerCase("pt-BR");
+    const assigneeIds = unique(contact.assigneeIds || contact.ownerEmployeeId);
+    const assigneeNames = unique(contact.assigneeNames || contact.assigneeName || contact.ownerName);
     return (!query || searchable.includes(query))
       && (!channels.size || channels.has(contact.channel))
       && (!statuses.size || statuses.has(contact.status))
       && (!priorities.size || priorities.has(contact.priority))
-      && (!owners.size || owners.has(contact.ownerEmployeeId) || owners.has(contact.ownerName));
+      && (!owners.size || owners.has(contact.ownerEmployeeId) || owners.has(contact.ownerName) || assigneeIds.some((id) => owners.has(id)) || assigneeNames.some((name) => owners.has(name)));
   });
 }
 
@@ -151,7 +171,10 @@ export function contactStats(contacts = [], today = new Date()) {
 }
 
 export function contactPermissions(contact, user = {}) {
-  const isOwner = Boolean(contact?.ownerEmployeeId && user?.employeeId && contact.ownerEmployeeId === user.employeeId);
+  const isOwner = Boolean(user?.employeeId && (
+    contact?.ownerEmployeeId === user.employeeId ||
+    unique(contact?.assigneeIds).includes(String(user.employeeId))
+  ));
   const isManager = Boolean(user?.isManager);
   return {
     canEdit: isOwner || isManager,
@@ -166,8 +189,9 @@ export function createContactPayload(input = {}, currentEmployee = {}, now = new
 }
 
 export function createContactEvent(type, contact, input = {}, now = new Date().toISOString()) {
+  const assignmentLabel = input.teamName || asList(input.assigneeNames || input.assigneeName).join(", ") || input.ownerName;
   const labels = {
-    transfer: `Responsável alterado para ${input.ownerName || "novo responsável"}.`,
+    transfer: `Responsáveis alterados para ${assignmentLabel || "novo responsável"}.`,
     status: `Status alterado para ${contactStatusLabel(input.status)}.`,
     resolution: input.resolutionOutcome ? `Caso resolvido: ${input.resolutionOutcome}.` : "Caso resolvido.",
     note: "Nota interna adicionada.",
@@ -187,6 +211,10 @@ export function createContactEvent(type, contact, input = {}, now = new Date().t
     reason: input.reason || "",
     fromEmployeeId: input.fromEmployeeId || "",
     toEmployeeId: input.toEmployeeId || "",
+    fromAssigneeIds: unique(input.fromAssigneeIds),
+    toAssigneeIds: unique(input.toAssigneeIds),
+    fromTeamIds: unique(input.fromTeamIds),
+    toTeamIds: unique(input.toTeamIds),
   };
 }
 
@@ -196,8 +224,14 @@ export function buildLinkedTaskInput(contact = {}, input = {}) {
     description: input.description || [contact.summary, contact.lastMessage].filter(Boolean).join("\n\n"),
     priority: input.priority || contact.priority || "medium",
     dueDate: input.dueDate ?? contact.dueDate ?? "",
-    assigneeIds: input.assigneeIds || (contact.ownerEmployeeId ? [contact.ownerEmployeeId] : []),
-    assigneeName: input.assigneeName || (contact.ownerName ? [contact.ownerName] : []),
+    assignmentMode: input.assignmentMode || contact.assignmentMode || "people",
+    teamIds: input.teamIds ?? (contact.teamIds || (contact.teamId ? [contact.teamId] : [])),
+    teamNames: input.teamNames ?? (contact.teamNames || (contact.teamName ? [contact.teamName] : [])),
+    teamId: input.teamId ?? contact.teamId ?? "",
+    teamName: input.teamName ?? contact.teamName ?? "",
+    assigneeIds: input.assigneeIds ?? contact.assigneeIds ?? (contact.ownerEmployeeId ? [contact.ownerEmployeeId] : []),
+    assigneeNames: input.assigneeNames ?? input.assigneeName ?? contact.assigneeNames ?? contact.assigneeName ?? (contact.ownerName ? [contact.ownerName] : []),
+    assigneeName: input.assigneeNames ?? input.assigneeName ?? contact.assigneeNames ?? contact.assigneeName ?? (contact.ownerName ? [contact.ownerName] : []),
     contactId: contact.id,
     sourceType: "contact",
     sourceId: contact.id,

@@ -64,5 +64,18 @@ test("calcula indicadores, permissões e task vinculada", () => {
   assert.equal(contactPermissions(contacts[0], { employeeId: "e-1" }).canTransfer, true);
   assert.equal(contactPermissions(contacts[0], { employeeId: "e-2" }).canEdit, false);
   assert.equal(contactPermissions(contacts[0], { employeeId: "e-2", isManager: true }).canArchive, true);
-  assert.deepEqual(buildLinkedTaskInput(contacts[0]), { title: "Retorno do embarque", description: "", priority: "medium", dueDate: "", assigneeIds: ["e-1"], assigneeName: ["Renan"], contactId: "c-1", sourceType: "contact", sourceId: "c-1", sourceLabel: "Caso de atendimento" });
+  assert.deepEqual(buildLinkedTaskInput(contacts[0]), { title: "Retorno do embarque", description: "", priority: "medium", dueDate: "", assignmentMode: "people", teamIds: [], teamNames: [], teamId: "", teamName: "", assigneeIds: ["e-1"], assigneeNames: ["Renan"], assigneeName: ["Renan"], contactId: "c-1", sourceType: "contact", sourceId: "c-1", sourceLabel: "Caso de atendimento" });
+});
+
+test("preserva múltiplos responsáveis e permite filtrar qualquer pessoa selecionada", () => {
+  const shared = contact({
+    assigneeIds: ["e-1", "e-2"],
+    assigneeNames: ["Renan", "Marina"],
+    assigneeName: ["Renan", "Marina"],
+  });
+  assert.deepEqual(shared.assigneeIds, ["e-1", "e-2"]);
+  assert.equal(filterContacts([shared], { owner: ["e-2"] }).length, 1);
+  assert.equal(contactPermissions(shared, { employeeId: "e-2" }).canEdit, true);
+  assert.deepEqual(buildLinkedTaskInput(shared).assigneeIds, ["e-1", "e-2"]);
+  assert.deepEqual(buildLinkedTaskInput(shared).assigneeName, ["Renan", "Marina"]);
 });

@@ -561,8 +561,31 @@ export function deleteTask(state, id) {
   return saveState({ ...state, tasks: state.tasks.filter((taskItem) => taskItem.id !== id) });
 }
 
+const CONTACT_ASSIGNMENT_KEYS = ["assignmentMode", "teamIds", "teamNames", "teamId", "teamName", "assigneeIds", "assigneeNames", "assigneeName"];
+
+function resolveContactAssignment(state, patch = {}, existing = {}) {
+  const hasAssignmentPatch = CONTACT_ASSIGNMENT_KEYS.some((key) => patch[key] !== undefined);
+  const hasLegacyOwnerPatch = patch.ownerEmployeeId !== undefined && !hasAssignmentPatch;
+  if (!hasAssignmentPatch && !hasLegacyOwnerPatch) return null;
+  const source = hasLegacyOwnerPatch
+    ? { ...existing, ...patch, assignmentMode: "people", assigneeIds: patch.ownerEmployeeId ? [patch.ownerEmployeeId] : [], assigneeNames: patch.ownerName ? [patch.ownerName] : [] }
+    : { ...existing, ...patch };
+  return resolveTaskAssignment(source, state.teams || [], state.employees || []);
+}
+
+function contactAssignmentSignature(contact = {}) {
+  const asList = (value) => (Array.isArray(value) ? value : value ? [value] : []).map(String);
+  return JSON.stringify({
+    assignmentMode: contact.assignmentMode === "team" ? "team" : "people",
+    teamIds: asList(contact.teamIds || contact.teamId),
+    assigneeIds: asList(contact.assigneeIds || contact.ownerEmployeeId),
+    assigneeNames: asList(contact.assigneeNames || contact.assigneeName || contact.ownerName),
+  });
+}
+
 export function createContact(state, input = {}) {
-  const contact = createContactPayload(input, {
+  const assignment = resolveContactAssignment(state, input);
+  const contact = createContactPayload({ ...input, ...(assignment || {}) }, {
     id: input.ownerEmployeeId || input.actorEmployeeId || "",
     name: input.ownerName || "Não atribuído",
   });
@@ -581,25 +604,26 @@ export function createContact(state, input = {}) {
     ],
   };
   const notifications = [...(state.notifications || [])];
-  if (created.ownerEmployeeId && created.ownerEmployeeId !== input.actorEmployeeId) {
+  (created.assigneeIds || [created.ownerEmployeeId]).filter((employeeId) => employeeId && employeeId !== input.actorEmployeeId).forEach((recipientEmployeeId) => {
     notifications.unshift({
       id: uid("notification"),
       contactId: created.id,
-      recipientEmployeeId: created.ownerEmployeeId,
+      recipientEmployeeId,
       type: "contact_assignment",
       title: "Novo caso atribuído",
       message: created.subject,
       occurredAt: new Date().toISOString(),
       readAt: "",
     });
-  }
+  });
   return saveState({ ...state, contacts: [created, ...(state.contacts || [])], notifications });
 }
 
 export function updateContact(state, id, patch = {}) {
   const existing = (state.contacts || []).find((item) => item.id === id);
   if (!existing) throw new Error("Caso de atendimento não encontrado.");
-  const next = normalizeContact({ ...existing, ...patch, id }, { now: new Date().toISOString() });
+  const assignment = resolveContactAssignment(state, patch, existing);
+  const next = normalizeContact({ ...existing, ...patch, ...(assignment || {}), id }, { now: new Date().toISOString() });
   if (patch.status !== undefined && !canTransitionContactStatus(existing.status, next.status)) {
     throw new Error(`Não é possível mudar o status de ${existing.status} para ${next.status}.`);
   }
@@ -607,8 +631,9 @@ export function updateContact(state, id, patch = {}) {
   if (!validation.allowed) throw new Error(validation.error);
   const history = [...(existing.history || [])];
   const actor = { author: patch.actorName || "Você", actorEmployeeId: patch.actorEmployeeId || "" };
-  if (patch.ownerEmployeeId !== undefined && patch.ownerEmployeeId !== existing.ownerEmployeeId) {
-    history.push(createContactEvent("transfer", next, { ...actor, ownerName: next.ownerName, previous: existing.ownerEmployeeId, next: next.ownerEmployeeId, fromEmployeeId: existing.ownerEmployeeId, toEmployeeId: next.ownerEmployeeId, reason: patch.transferReason }));
+  const assignmentChanged = contactAssignmentSignature(existing) !== contactAssignmentSignature(next);
+  if (assignmentChanged) {
+    history.push(createContactEvent("transfer", next, { ...actor, ownerName: next.ownerName, teamName: next.teamName, previous: existing.ownerEmployeeId, next: next.ownerEmployeeId, fromEmployeeId: existing.ownerEmployeeId, toEmployeeId: next.ownerEmployeeId, fromAssigneeIds: existing.assigneeIds, toAssigneeIds: next.assigneeIds, fromTeamIds: existing.teamIds, toTeamIds: next.teamIds, reason: patch.transferReason }));
   }
   if (patch.status !== undefined && patch.status !== existing.status) {
     history.push(createContactEvent("status", next, { ...actor, status: next.status, previous: existing.status, next: next.status }));
@@ -619,17 +644,17 @@ export function updateContact(state, id, patch = {}) {
   if (!history.length) history.push(...(next.history || []));
   const updated = { ...next, history };
   const notifications = [...(state.notifications || [])];
-  if (patch.ownerEmployeeId && patch.ownerEmployeeId !== existing.ownerEmployeeId && patch.ownerEmployeeId !== patch.actorEmployeeId) {
-    notifications.unshift({
+  if (assignmentChanged) {
+    (next.assigneeIds || [next.ownerEmployeeId]).filter((employeeId) => employeeId && employeeId !== patch.actorEmployeeId).forEach((recipientEmployeeId) => notifications.unshift({
       id: uid("notification"),
       contactId: id,
-      recipientEmployeeId: patch.ownerEmployeeId,
+      recipientEmployeeId,
       type: "contact_transfer",
       title: "Caso transferido para você",
       message: updated.subject,
       occurredAt: new Date().toISOString(),
       readAt: "",
-    });
+    }));
   }
   return saveState({ ...state, contacts: (state.contacts || []).map((item) => item.id === id ? updated : item), notifications });
 }
