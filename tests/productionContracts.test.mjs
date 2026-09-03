@@ -45,3 +45,22 @@ test("download de anexo preserva o nome exibido do arquivo", async () => {
   assert.match(source, /downloadLink\.click\(\);/);
   assert.doesNotMatch(source, /popup\.location\.href = blobUrl;/);
 });
+
+test("subtarefas simples aparecem na criação, no drawer e opcionalmente no card", async () => {
+  const source = await readSource("../src/App.jsx");
+
+  assert.match(source, /function InlineSubtasksEditor\(\{ items, setItems \}\)/);
+  assert.match(source, /className="creation-subtasks"/);
+  assert.match(source, /aria-label="Título da subtarefa"/);
+  assert.match(source, /<InlineSubtasksEditor items=\{subtasks\} setItems=\{setSubtasks\} \/>/);
+  assert.match(source, /subtasks = \[\]/);
+  assert.match(source, /attachments: draftAttachments,\s+subtasks,/);
+  assert.match(source, /store\.createSubtask\(currentState, parent\.id/);
+  assert.match(source, /onAddSubtask\(taskItem\.id, title, true\)/);
+  assert.match(source, /Mostrar no quadro/);
+  assert.match(source, /className="subtask-remove-confirm"/);
+  assert.match(source, /setPendingDeleteIndex\(index\)/);
+  assert.match(source, /onDelete\(subtask\.id\)/);
+  assert.match(source, /showChecklistOnCard && subtasks\.length > 0/);
+  assert.match(source, /checklistVisibility\[selected\.id\]/);
+});

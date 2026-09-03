@@ -3473,7 +3473,7 @@ function TaskDrawerContent({
   const submitSubtask = () => {
     const title = newSubtaskTitle.trim();
     if (!title) return;
-    onAddSubtask(taskItem.id, title);
+    onAddSubtask(taskItem.id, title, true);
     setNewSubtaskTitle("");
     setIsAddingSubtask(false);
   };
@@ -3831,11 +3831,12 @@ function TaskDrawerContent({
                   <input
                     type="checkbox"
                     checked={showChecklistOnCard}
+                    aria-label="Mostrar subtarefas no quadro"
                     onChange={(event) =>
                       onToggleChecklistOnCard(event.target.checked)
                     }
                   />
-                  <span>No quadro</span>
+                  <span>Mostrar no quadro</span>
                 </label>
                 <button
                   className="text-button"
@@ -3900,19 +3901,45 @@ function TaskDrawerContent({
                           : formatDate(subtask.dueDate)}
                       </small>
                     </button>
-                    <button
-                      className="subtask-delete"
-                      type="button"
-                      disabled={subtask.syncStatus === "syncing"}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        setSubtaskToDelete(subtask);
-                      }}
-                      aria-label="Excluir subtarefa"
-                      title="Excluir subtarefa"
-                    >
-                      <Trash2 size={13} />
-                    </button>
+                    {subtaskToDelete?.id === subtask.id ? (
+                      <div
+                        className="subtask-remove-confirm"
+                        role="group"
+                        aria-label={`Confirmar remoção de ${subtask.title}`}
+                      >
+                        <button
+                          className="button button-danger"
+                          type="button"
+                          onClick={() => {
+                            setSubtaskToDelete(null);
+                            onDelete(subtask.id);
+                          }}
+                        >
+                          Remover
+                        </button>
+                        <button
+                          className="button button-quiet"
+                          type="button"
+                          onClick={() => setSubtaskToDelete(null)}
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        className="subtask-delete"
+                        type="button"
+                        disabled={subtask.syncStatus === "syncing"}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setSubtaskToDelete(subtask);
+                        }}
+                        aria-label="Excluir subtarefa"
+                        title="Excluir subtarefa"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    )}
                   </div>
                 ))
               : !isAddingSubtask && (
@@ -4115,17 +4142,6 @@ function TaskDrawerContent({
             taskTitle={taskItem.title}
             onCancel={onCancelDelete}
             onConfirm={onConfirmDelete}
-          />
-        )}
-        {subtaskToDelete && (
-          <DeleteTaskDialog
-            taskTitle={subtaskToDelete.title}
-            subject="subtarefa"
-            onCancel={() => setSubtaskToDelete(null)}
-            onConfirm={() => {
-              setSubtaskToDelete(null);
-              onDelete(subtaskToDelete.id);
-            }}
           />
         )}
       </aside>
@@ -4455,6 +4471,92 @@ function WaitingReturnModal({ task, onClose, onSave }) {
   );
 }
 
+function InlineSubtasksEditor({ items, setItems }) {
+  const [draft, setDraft] = useState("");
+  const [pendingDeleteIndex, setPendingDeleteIndex] = useState(null);
+  const add = () => {
+    const title = draft.trim();
+    if (!title) return;
+    setItems((current) => [...current, title]);
+    setDraft("");
+  };
+  return (
+    <section className="creation-subtasks">
+      <div className="drawer-section-heading">
+        <h3>Subtarefas</h3>
+        <span className="section-hint">opcional</span>
+      </div>
+      {items.map((title, index) => (
+        <div className="creation-subtask-row" key={`${title}-${index}`}>
+          <span className="subtask-check" aria-hidden="true" />
+          <span>{title}</span>
+          {pendingDeleteIndex === index ? (
+            <div
+              className="subtask-remove-confirm"
+              role="group"
+              aria-label={`Confirmar remoção de ${title}`}
+            >
+              <button
+                className="button button-danger"
+                type="button"
+                onClick={() => {
+                  setItems((current) =>
+                    current.filter((_, itemIndex) => itemIndex !== index),
+                  );
+                  setPendingDeleteIndex(null);
+                }}
+              >
+                Remover
+              </button>
+              <button
+                className="button button-quiet"
+                type="button"
+                onClick={() => setPendingDeleteIndex(null)}
+              >
+                Cancelar
+              </button>
+            </div>
+          ) : (
+            <button
+              className="subtask-delete creation-subtask-delete"
+              type="button"
+              onClick={() => setPendingDeleteIndex(index)}
+              aria-label={`Remover subtarefa ${title}`}
+              title="Remover subtarefa"
+            >
+              <Trash2 size={13} />
+            </button>
+          )}
+        </div>
+      ))}
+      <div className="creation-subtask-input">
+        <span className="subtask-check" aria-hidden="true" />
+        <input
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              add();
+            }
+          }}
+          placeholder="Adicionar subtarefa"
+          aria-label="Título da subtarefa"
+        />
+        <button
+          className="subtask-inline-action"
+          type="button"
+          onClick={add}
+          disabled={!draft.trim()}
+          aria-label="Adicionar subtarefa"
+        >
+          <Plus size={14} />
+        </button>
+      </div>
+    </section>
+  );
+}
+
 function NewTaskDrawer({ employees = [], teams = [], initialStatus = "todo", initialInput = {}, onClose, onSave }) {
   const [form, setForm] = useState({
     title: "",
@@ -4473,6 +4575,7 @@ function NewTaskDrawer({ employees = [], teams = [], initialStatus = "todo", ini
     ...initialInput,
   });
   const [draftAttachments, setDraftAttachments] = useState([]);
+  const [subtasks, setSubtasks] = useState([]);
   const initialFormRef = useRef(form);
   const draftAttachmentsRef = useRef([]);
   draftAttachmentsRef.current = draftAttachments;
@@ -4500,7 +4603,7 @@ function NewTaskDrawer({ employees = [], teams = [], initialStatus = "todo", ini
       (key) =>
         JSON.stringify(form[key]) !==
         JSON.stringify(initialFormRef.current[key]),
-    ) || draftAttachments.length > 0;
+    ) || draftAttachments.length > 0 || subtasks.length > 0;
   const requestClose = () => {
     if (saveState !== "idle") return;
     if (isDirty) setShowDiscardPrompt(true);
@@ -4554,6 +4657,7 @@ function NewTaskDrawer({ employees = [], teams = [], initialStatus = "todo", ini
         onSave({
           ...form,
           attachments: draftAttachments,
+          subtasks,
           onProgress: setSaveProgress,
         }),
       )
@@ -4684,6 +4788,7 @@ function NewTaskDrawer({ employees = [], teams = [], initialStatus = "todo", ini
             onDeleteAttachment={handleDraftAttachmentDelete}
             helperText="Os arquivos só serão enviados quando você clicar em Criar tarefa."
           />
+          <InlineSubtasksEditor items={subtasks} setItems={setSubtasks} />
           <div className="creation-note">
             <Sparkles size={16} />
             <span>

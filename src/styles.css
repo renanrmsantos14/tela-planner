@@ -114,7 +114,7 @@ button { cursor: pointer; }
 .toast-error { border-color: #f0bdc5; color: var(--red); background: var(--red-soft); }
 .toast-refreshing { border-color: #c8d8fb; color: var(--blue); background: var(--blue-soft); }
 .subtask-row:disabled { cursor: progress; opacity: .72; }
-.subtask-row { grid-template-columns: minmax(0,1fr) 24px; gap: 4px; }
+.subtask-row { grid-template-columns: minmax(0,1fr) auto; gap: 4px; }
 .subtask-toggle { min-width: 0; width: 100%; display: grid; grid-template-columns: 20px minmax(0,1fr) auto; gap: 8px; align-items: center; padding: 0; border: 0; background: transparent; color: inherit; text-align: left; font: inherit; }
 .subtask-delete { width: 24px; height: 24px; display: grid; place-items: center; border: 0; border-radius: 6px; color: var(--tertiary); background: transparent; opacity: 0; transition: opacity 150ms ease, color 150ms ease, background 150ms ease; }
 .subtask-row:hover .subtask-delete, .subtask-row:focus-within .subtask-delete { opacity: 1; }
@@ -124,6 +124,7 @@ button { cursor: pointer; }
 .creation-subtasks .drawer-section-heading { margin-bottom: 8px; }
 .section-hint { color: var(--tertiary); font-size: 10px; font-weight: 600; }
 .creation-subtask-row, .creation-subtask-input { display: grid; grid-template-columns: 20px minmax(0,1fr) 24px; gap: 8px; align-items: center; min-height: 32px; border-bottom: 1px solid #f0f2f5; color: var(--control); font-size: 11px; }
+.creation-subtask-row { grid-template-columns: 20px minmax(0,1fr) auto; }
 .creation-subtask-row .subtask-delete { opacity: 1; }
 .creation-subtask-input input { min-width: 0; width: 100%; padding: 7px 8px; border: 1px solid #d8e2ee; border-radius: 7px; outline: 0; color: var(--control); background: var(--surface); font: inherit; font-size: 11px; }
 .creation-subtask-input input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(35,108,202,.12); }
@@ -134,6 +135,9 @@ button { cursor: pointer; }
 .subtask-inline-action:hover { background: var(--navy); }
 .subtask-inline-action:active { transform: scale(.96); }
 .subtask-inline-action:disabled { cursor: not-allowed; opacity: .4; }
+.subtask-remove-confirm { display: flex; align-items: center; gap: 3px; padding: 3px; border: 1px solid #f2d0d5; border-radius: 8px; background: #fff8f9; transform-origin: right center; animation: attachment-remove-confirm-in 160ms var(--ease-out); }
+.subtask-remove-confirm .button { min-height: 26px; padding: 0 8px; border-radius: 6px; font-size: 9px; white-space: nowrap; }
+.subtask-remove-confirm button:focus-visible { outline: 3px solid var(--blue-soft); outline-offset: 2px; }
 @keyframes subtask-inline-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes task-sync { to { transform: translateX(100%); } }
 
