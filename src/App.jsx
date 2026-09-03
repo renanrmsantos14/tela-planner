@@ -63,6 +63,7 @@ import {
   canRegisterWaitingReturn,
   EMPTY_WAITING_CONTEXT,
   filterTasks,
+  findCreatedMainTask,
   formatDate,
   formatLongDate,
   getDueBucketForEmployee,
@@ -5477,11 +5478,12 @@ export default function App() {
           total: 1 + attachments.length,
         });
         return store.createTask(state, commonTask).then((nextState) => {
-          const parent = nextState.tasks.find(
-            (taskItem) =>
-              taskItem.title === commonTask.title && !taskItem.parentTaskId,
+          const parent = findCreatedMainTask(
+            state.tasks,
+            nextState.tasks,
+            commonTask.title,
           );
-          if (!parent) return nextState;
+          if (!parent) throw new Error("Tarefa criada, mas não foi possível localizar o registro para enviar os anexos.");
           onProgress?.({
             label: attachments.length
               ? "Tarefa criada. Preparando anexos…"

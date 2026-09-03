@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { addOptimisticAttachment, addOptimisticComment, applyOptimisticTaskPatch, buildAssigneeOptions, buildOptimisticTask, buildTaskCreationInput, canRegisterWaitingReturn, filterTasks, getDueBucket, getDueBucketForEmployee, isOverdue, mentionedEmployees, migrateLegacyTeams, normalizeAssigneeNames, normalizeTeam, normalizeWaitingContext, quoteTaskTitle, resolveTaskAssignment, sortTasks, STATUSES, taskDisplayDueDate, taskStats, teamResponsibilitySummary, validateWaitingContext, waitingContextSummary } from "../src/domain.js";
+import { addOptimisticAttachment, addOptimisticComment, applyOptimisticTaskPatch, buildAssigneeOptions, buildOptimisticTask, buildTaskCreationInput, canRegisterWaitingReturn, filterTasks, findCreatedMainTask, getDueBucket, getDueBucketForEmployee, isOverdue, mentionedEmployees, migrateLegacyTeams, normalizeAssigneeNames, normalizeTeam, normalizeWaitingContext, quoteTaskTitle, resolveTaskAssignment, sortTasks, STATUSES, taskDisplayDueDate, taskStats, teamResponsibilitySummary, validateWaitingContext, waitingContextSummary } from "../src/domain.js";
 
 const tasks = [
   { id: "1", title: "Atrasada", quoteTitle: "Cotação A", assigneeName: "Marina", status: "todo", priority: "high", dueDate: "2026-08-01" },
@@ -226,6 +226,16 @@ test("preserva vínculo manual de cotação sem deep-link", () => {
   assert.equal(created.quoteId, "quote-1008");
   assert.equal(created.sourceType, "quote");
   assert.equal(created.quoteCode, "COT-1008");
+});
+
+test("localiza tarefa criada por ID novo antes de usar título como fallback", () => {
+  const previousTasks = [{ id: "task-existing", title: "Nova tarefa", parentTaskId: null }];
+  const nextTasks = [
+    ...previousTasks,
+    { id: "task-created", title: "Título normalizado pelo Dataverse", parentTaskId: null },
+  ];
+
+  assert.equal(findCreatedMainTask(previousTasks, nextTasks, "Nova tarefa")?.id, "task-created");
 });
 
 test("cria tarefa otimista pronta para aparecer antes do Dataverse responder", () => {

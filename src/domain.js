@@ -294,6 +294,15 @@ export function buildTaskCreationInput(input = {}) {
   return { ...input, quoteId: undefined, sourceType: "manual", sourceId: undefined, sourceCode: undefined, quoteCode: undefined, quoteTitle: undefined };
 }
 
+export function findCreatedMainTask(previousTasks = [], nextTasks = [], expectedTitle = "") {
+  const previousIds = new Set(previousTasks.map((task) => String(task?.id || "")).filter(Boolean));
+  const createdMainTasks = nextTasks.filter((task) => !task.parentTaskId && !previousIds.has(String(task.id || "")));
+  const title = String(expectedTitle || "").trim();
+  return createdMainTasks.find((task) => String(task.title || "").trim() === title)
+    || createdMainTasks[0]
+    || nextTasks.find((task) => !task.parentTaskId && String(task.title || "").trim() === title);
+}
+
 export function mentionedEmployees(text, employees = []) {
   const normalizedText = normalizeText(text);
   if (/(^|[^a-z0-9_])@(all|todos)(?=$|[^a-z0-9_])/i.test(normalizedText)) return employees;
