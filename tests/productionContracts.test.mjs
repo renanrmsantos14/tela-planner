@@ -12,6 +12,9 @@ test("Flow imediato cobre todos os eventos e usa array vazio válido", async () 
   assert.match(source, /json\('\[\]'\)/);
   assert.doesNotMatch(source, /createArray\(\)/);
   assert.match(source, /item\/cr40f_Destinatario@odata\.bind/);
+  assert.match(source, /collectionType.*manual_overdue.*overdue/);
+  assert.match(source, /Cobrança de tarefa atrasada/);
+  assert.match(source, /Revisar tarefa/);
   assert.match(source, /__PLANNER_BASE_URL__/);
   assert.match(source, /Replace\('__PLANNER_BASE_URL__', \$EnvironmentUrl\.TrimEnd\('\/'\)\)/);
   assert.match(source, /\?data=taskId%3D/);

@@ -52,7 +52,7 @@ $definition = @'
     },
     "Compose_Type": {
       "type": "Compose",
-      "inputs": "@coalesce(outputs('Compose_Context')?['collectionType'], replace(triggerOutputs()?['body/cr40f_campo'], 'notification:', ''), 'update')",
+      "inputs": "@if(equals(outputs('Compose_Context')?['collectionType'], 'manual_overdue'), 'overdue', coalesce(outputs('Compose_Context')?['collectionType'], replace(triggerOutputs()?['body/cr40f_campo'], 'notification:', ''), 'update'))",
       "runAfter": { "Compose_Context": [ "Succeeded" ] }
     },
     "Compose_Recipients": {
@@ -101,7 +101,7 @@ $definition = @'
                   "inputs": {
                     "parameters": {
                       "entityName": "cr40f_plannernotificacaos",
-                      "item/cr40f_titulo": "@if(equals(outputs('Compose_Type'), 'overdue'), 'Cobrança de prazo', if(equals(outputs('Compose_Type'), 'assignment'), 'Nova tarefa atribuída', 'Atualização da tarefa'))",
+                      "item/cr40f_titulo": "@if(equals(outputs('Compose_Type'), 'overdue'), 'Cobrança de tarefa atrasada', if(equals(outputs('Compose_Type'), 'assignment'), 'Nova tarefa atribuída', 'Atualização da tarefa'))",
                       "item/cr40f_mensagem": "@triggerOutputs()?['body/cr40f_descricao']",
                       "item/cr40f_tipo": "@outputs('Compose_Type')",
                       "item/cr40f_ocorridoem": "@coalesce(triggerOutputs()?['body/cr40f_ocorridoem'], utcNow())",
@@ -168,7 +168,7 @@ $definition = @'
                           "poster": "Flow bot",
                           "location": "Chat with Flow bot",
                           "body/recipient": "@outputs('Get_system_user')?['body/internalemailaddress']",
-                          "body/messageBody": "<p><strong>@{if(equals(outputs('Compose_Type'), 'assignment'), 'Nova tarefa atribuída', 'Atualização da tarefa')}</strong></p><p>@{triggerOutputs()?['body/cr40f_descricao']}</p><p><a href=\"@{concat('__PLANNER_BASE_URL__/WebResources/new_TelaPlanner.html?data=taskId%3D', triggerOutputs()?['body/_cr40f_tarefa_value'])}\">Abrir tarefa</a></p>"
+                          "body/messageBody": "<p><strong>@{if(equals(outputs('Compose_Type'), 'overdue'), 'Cobrança de tarefa atrasada', if(equals(outputs('Compose_Type'), 'assignment'), 'Nova tarefa atribuída', 'Atualização da tarefa'))}</strong></p><p>@{triggerOutputs()?['body/cr40f_descricao']}</p><p><a href=\"@{concat('__PLANNER_BASE_URL__/WebResources/new_TelaPlanner.html?data=taskId%3D', triggerOutputs()?['body/_cr40f_tarefa_value'])}\">Revisar tarefa</a></p>"
                         },
                         "host": {
                           "apiId": "/providers/Microsoft.PowerApps/apis/shared_teams",
