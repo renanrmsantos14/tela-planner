@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  addContactAttachment,
   addContactNote,
   createContact,
   createTask,
@@ -43,6 +44,16 @@ test("salva nota interna e vincula task criada ao caso", () => {
   assert.equal(next.tasks.length, linkedTask + 1);
   assert.ok(updatedContact.linkedTaskIds.includes(next.tasks.at(-1).id));
   assert.equal(next.tasks.at(-1).contactId, contact.id);
+});
+
+test("salva e remove anexo do caso no mock", () => {
+  withStorage();
+  const initial = seedState();
+  const contact = initial.contacts[0];
+  const added = addContactAttachment(initial, contact.id, { name: "comprovante.pdf", mimeType: "application/pdf", size: 2048, previewUrl: "data:application/pdf;base64,teste" });
+  const updated = added.contacts.find((item) => item.id === contact.id);
+  assert.equal(updated.attachments.at(-1).name, "comprovante.pdf");
+  assert.ok(updated.history.some((event) => event.type === "attachment"));
 });
 
 test("notifica todos os responsáveis quando o caso é compartilhado", () => {

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Archive,
   Check,
@@ -40,6 +40,36 @@ function formatContactDate(value, withTime = false) {
   const date = new Date(withTime ? value : `${value}T00:00:00`);
   if (Number.isNaN(date.getTime())) return "Sem data";
   return new Intl.DateTimeFormat("pt-BR", withTime ? { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" } : { day: "2-digit", month: "short" }).format(date).replace(" de ", " ");
+}
+
+function contactAttachmentFiles(value) {
+  if (!value) return [];
+  if (Array.isArray(value)) return value.filter(Boolean);
+  if (typeof value.length === "number" && !value.name) return Array.from(value).filter(Boolean);
+  return [value];
+}
+
+function createContactDraftAttachment(file) {
+  return {
+    id: `contact-draft-${globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`}`,
+    name: file.name || "Arquivo",
+    mimeType: file.type || "",
+    size: file.size || 0,
+    previewUrl: globalThis.URL?.createObjectURL ? globalThis.URL.createObjectURL(file) : "",
+    file,
+    syncStatus: "pending",
+  };
+}
+
+function releaseContactDraftAttachment(attachment) {
+  if (attachment?.previewUrl?.startsWith("blob:") && globalThis.URL?.revokeObjectURL) globalThis.URL.revokeObjectURL(attachment.previewUrl);
+}
+
+function contactFilesFromClipboard(event) {
+  const clipboard = event.clipboardData;
+  const files = Array.from(clipboard?.files || []).filter(Boolean);
+  if (files.length) return files;
+  return Array.from(clipboard?.items || []).filter((item) => item.kind === "file").map((item) => item.getAsFile?.()).filter(Boolean);
 }
 
 function ContactStatusPicker({ value, onChange, disabled = false, options = CONTACT_STATUSES }) {
@@ -176,9 +206,13 @@ function ContactDrawer({
   isNew = false,
 }) {
   const [draft, setDraft] = useState(() => (isNew ? emptyDraft(currentEmployee) : draftFromContact(contact)));
+  const [draftAttachments, setDraftAttachments] = useState([]);
+  const draftAttachmentsRef = useRef([]);
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
+  draftAttachmentsRef.current = draftAttachments;
+  useEffect(() => () => draftAttachmentsRef.current.forEach(releaseContactDraftAttachment), []);
   const permissions = contactPermissions(contact || draft, { employeeId: currentEmployee?.id, isManager: currentEmployee?.isManager });
   const canEdit = isNew || permissions.canEdit;
   const quoteOptions = [{ value: "", label: "Sem vínculo" }, ...quotes.map((quote) => ({ value: quote.id, label: `${quote.code || "Cotação"} · ${quote.title || quote.client || ""}`, search: `${quote.code || ""} ${quote.title || ""} ${quote.client || ""}` }))];
@@ -210,7 +244,7 @@ function ContactDrawer({
     setSaveError("");
     setSaving(true);
     try {
-      const success = await onSave(draft);
+      const success = await onSave(isNew ? { ...draft, attachments: draftAttachments } : draft);
       if (!success) setSaveError("Não foi possível salvar o caso.");
       else onClose();
     } catch (error) {
@@ -219,6 +253,30 @@ function ContactDrawer({
       setSaving(false);
     }
   };
+  const handleDraftAttachment = (id, filesOrFile) => {
+    const files = contactAttachmentFiles(filesOrFile);
+    if (!files.length) return;
+    if (!isNew) {
+      onAttachment?.(id, files);
+      return;
+    }
+    setDraftAttachments((current) => [...current, ...files.map(createContactDraftAttachment)]);
+  };
+  const handleDraftAttachmentDelete = (id, attachment) => {
+    if (!isNew) {
+      onDeleteAttachment?.(id, attachment);
+      return;
+    }
+    releaseContactDraftAttachment(attachment);
+    setDraftAttachments((current) => current.filter((item) => item.id !== attachment.id));
+  };
+  const handlePaste = (event) => {
+    const files = contactFilesFromClipboard(event);
+    if (!files.length) return;
+    event.preventDefault();
+    handleDraftAttachment("paste", files);
+  };
+  const visibleAttachments = isNew ? draftAttachments : contact.attachments || [];
   const addNote = async () => {
     if (!note.trim() || !contact?.id) return;
     setSaving(true);
@@ -240,7 +298,7 @@ function ContactDrawer({
           </div>
           <button className="icon-button" type="button" onClick={onClose} aria-label="Fechar caso"><X size={18} /></button>
         </header>
-        <form id="contact-form" className="drawer-body contact-drawer-body" onSubmit={submit}>
+        <form id="contact-form" className="drawer-body contact-drawer-body" onSubmit={submit} onPaste={handlePaste}>
           <div className="drawer-title">
             <span className="contact-title-icon"><ChannelIcon size={18} aria-hidden="true" /></span>
             <label className="drawer-title-field" htmlFor="contact-subject">
@@ -291,7 +349,7 @@ function ContactDrawer({
               <div className="contact-details-content">{(contact.notes || []).map((item) => <div className="contact-note-row" key={item.id}><strong>{item.author || "Você"}</strong><p>{item.text}</p><small>{formatContactDate(item.createdAt, true)}</small></div>)}<div className="comment-compose"><textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder="Registrar uma nota interna" disabled={!canEdit || saving} rows={2} /><button className="button button-secondary" type="button" onClick={addNote} disabled={!note.trim() || saving}><Plus size={14} /> Adicionar nota</button></div></div>
             </details>
           )}
-          {!isNew && AttachmentSectionComponent && <AttachmentSectionComponent taskId={contact.id} attachments={contact.attachments || []} loadAttachmentContent={loadAttachmentContent} onAttachment={onAttachment} onDeleteAttachment={onDeleteAttachment} itemLabel="ao caso" helperText="Arquivos usados na tratativa deste caso." />}
+          {AttachmentSectionComponent && <AttachmentSectionComponent taskId={isNew ? "new-contact" : contact.id} attachments={visibleAttachments} loadAttachmentContent={loadAttachmentContent} onAttachment={handleDraftAttachment} onDeleteAttachment={handleDraftAttachmentDelete} itemLabel="ao caso" helperText={isNew ? "Os arquivos só serão enviados quando você clicar em Criar caso." : "Arquivos usados na tratativa deste caso."} />}
           {!isNew && (
             <details className="contact-drawer-details" open={relatedTasks.length > 0}>
               <summary><span>Tasks vinculadas</span><span className="contact-detail-summary-meta">{relatedTasks.length}<ChevronDown size={15} aria-hidden="true" /></span></summary>
@@ -349,7 +407,7 @@ export default function ContactsView({
       <section className="panel contacts-panel"><div className="panel-heading"><div><span className="eyebrow">Inbox operacional</span><h2>Casos recebidos</h2></div><span className="panel-count">{visibleContacts.length}</span></div>{contactLoadError && <div className="contact-load-error" role="alert">{contactLoadError}</div>}{contactLoading ? <div className="contact-empty"><Clock3 size={25} /><strong>Carregando contatos…</strong></div> : visibleContacts.length ? <div className="contacts-list">{visibleContacts.map((contact) => { const ChannelIcon = CHANNEL_ICON[contact.channel] || MessageCircle; const StatusIcon = STATUS_ICON[contact.status] || CheckCircle2; return <button className={`contact-row priority-${contact.priority}`} key={contact.id} type="button" onClick={() => onSelect(contact.id)}><span className="contact-row-priority" /><span className="contact-row-main"><span className="contact-row-top"><strong>{contact.subject}</strong><span className={`badge contact-status-badge status-${contact.status}`}>{contactStatusLabel(contact.status)}</span></span><span className="contact-row-message">{contact.lastMessage || contact.summary || "Sem mensagem registrada."}</span><span className="contact-row-meta"><span><ChannelIcon size={13} /> {contact.senderName}</span><span><UserRound size={13} /> {contact.ownerName}</span><span><StatusIcon size={13} /> {contactChannelLabel(contact.channel)}</span></span></span><span className="contact-row-date"><time>{formatContactDate(contact.lastMessageAt, true)}</time>{contact.dueDate && <small className={contact.dueDate < new Date().toISOString().slice(0, 10) ? "is-overdue" : ""}>Prazo {formatContactDate(contact.dueDate)}</small>}</span></button>; })}</div> : <div className="contact-empty"><MessageCircle size={28} /><strong>Nenhum caso encontrado</strong><span>Novos contatos recebidos aparecerão nesta caixa.</span></div>}</section>
       {!creating && !selected && <button className="mobile-fab contacts-mobile-fab" type="button" onClick={() => setCreating(true)} aria-label="Criar novo caso" title="Novo caso"><Plus size={22} strokeWidth={2.5} aria-hidden="true" /></button>}
       {selected && <ContactDrawer contact={selected} currentEmployee={currentEmployee} employees={employees} teams={teams} quotes={quotes} tasks={tasks} AttachmentSectionComponent={AttachmentSectionComponent} loadAttachmentContent={loadAttachmentContent} onClose={() => onSelect("")} onSave={onSave} onAddNote={onAddNote} onAttachment={onAttachment} onDeleteAttachment={onDeleteAttachment} onCreateTask={onCreateTask} />}
-      {creating && <ContactDrawer isNew currentEmployee={currentEmployee} employees={employees} teams={teams} quotes={quotes} tasks={tasks} onClose={() => setCreating(false)} onSave={async (draft) => { const success = await onSave(draft); if (success) setCreating(false); return success; }} />}
+      {creating && <ContactDrawer isNew currentEmployee={currentEmployee} employees={employees} teams={teams} quotes={quotes} tasks={tasks} AttachmentSectionComponent={AttachmentSectionComponent} loadAttachmentContent={loadAttachmentContent} onAttachment={onAttachment} onDeleteAttachment={onDeleteAttachment} onClose={() => setCreating(false)} onSave={async (draft) => { const success = await onSave(draft); if (success) setCreating(false); return success; }} />}
     </div>
   );
 }

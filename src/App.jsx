@@ -5432,30 +5432,31 @@ export default function App() {
   );
   const saveContact = useCallback(
     (input = {}) => {
-      const existing = (state.contacts || []).find((item) => item.id === input.id);
+      const { attachments: draftAttachments = [], ...inputWithoutAttachments } = input;
+      const existing = (state.contacts || []).find((item) => item.id === inputWithoutAttachments.id);
       const actor = {
         actorEmployeeId: currentEmployee?.id || "",
         actorUserId: currentEmployee?.userId || "",
         actorName: currentEmployee?.name || "Você",
       };
       const hasAssignment = ["assignmentMode", "teamIds", "teamId", "assigneeIds", "assigneeName", "assigneeNames"]
-        .some((key) => input[key] !== undefined);
+        .some((key) => inputWithoutAttachments[key] !== undefined);
       const assignmentInput = hasAssignment
-        ? input
+        ? inputWithoutAttachments
         : {
-          ...input,
-          assigneeIds: input.ownerEmployeeId ? [input.ownerEmployeeId] : [],
-          assigneeName: input.ownerName ? [input.ownerName] : [],
+          ...inputWithoutAttachments,
+          assigneeIds: inputWithoutAttachments.ownerEmployeeId ? [inputWithoutAttachments.ownerEmployeeId] : [],
+          assigneeName: inputWithoutAttachments.ownerName ? [inputWithoutAttachments.ownerName] : [],
         };
       const assignment = resolveTaskAssignment(assignmentInput, state.teams || [], state.employees || []);
-      const ownerId = input.ownerEmployeeId || assignment.assigneeIds[0] || currentEmployee?.id || "";
+      const ownerId = inputWithoutAttachments.ownerEmployeeId || assignment.assigneeIds[0] || currentEmployee?.id || "";
       const owner = (state.employees || []).find((employee) => employee.id === ownerId);
       const contactInput = {
-        ...input,
+        ...inputWithoutAttachments,
         ...assignment,
         assigneeName: assignment.assigneeNames,
         ownerEmployeeId: ownerId,
-        ownerName: input.ownerName || owner?.name || assignment.teamName || "Não atribuído",
+        ownerName: inputWithoutAttachments.ownerName || owner?.name || assignment.teamName || "Não atribuído",
       };
       if (existing) {
         const patch = { ...contactInput, ...actor };
@@ -5475,7 +5476,15 @@ export default function App() {
       const optimistic = { ...created, id: `optimistic-contact-${Date.now()}`, history: [] };
       return runOptimisticMutation(
         (current) => ({ ...current, contacts: [optimistic, ...(current.contacts || [])] }),
-        () => store.createContact(state, { ...contactInput, ...actor }),
+        () => Promise.resolve(store.createContact(state, { ...contactInput, ...actor })).then((createdState) => {
+          if (!draftAttachments.length) return createdState;
+          const createdContact = (createdState?.contacts || []).find((item) => item.subject === contactInput.subject && item.senderName === contactInput.senderName);
+          if (!createdContact?.id) throw new Error("O caso foi criado, mas não foi possível localizar seu registro para enviar os anexos.");
+          return draftAttachments.reduce(
+            (queue, attachment) => queue.then((currentState) => store.addContactAttachment(currentState, createdContact.id, attachment.file || attachment, attachment.previewUrl || "")),
+            Promise.resolve(createdState),
+          );
+        }),
         store.live ? "Caso em sincronização..." : "Caso adicionado no mock local.",
         store.live ? "Caso sincronizado." : "Caso criado.",
       );
