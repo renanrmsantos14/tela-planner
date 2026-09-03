@@ -189,6 +189,14 @@ export function normalizeAssigneeNames(value) {
   return unique.length ? unique : ["Não atribuído"];
 }
 
+export function hasTaskResponsible(task = {}) {
+  const teamIds = uniqueStrings(task.teamIds ?? task.teamId);
+  if (task.assignmentMode === "team" && teamIds.length) return true;
+  if (uniqueStrings(task.assigneeIds).length) return true;
+  return normalizeAssigneeNames(task.assigneeNames ?? task.assigneeName)
+    .some((name) => name !== "Não atribuído");
+}
+
 export function buildAssigneeOptions(employees = []) {
   const names = [...new Set(employees.map((employee) => String(employee?.name || "").trim()).filter(Boolean))]
     .sort((left, right) => left.localeCompare(right, "pt-BR", { sensitivity: "base" }));

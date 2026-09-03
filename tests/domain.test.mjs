@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { addOptimisticAttachment, addOptimisticComment, applyOptimisticTaskPatch, buildAssigneeOptions, buildOptimisticTask, buildTaskCreationInput, canRegisterWaitingReturn, filterTasks, findCreatedMainTask, getDueBucket, getDueBucketForEmployee, isOverdue, mentionedEmployees, migrateLegacyTeams, normalizeAssigneeNames, normalizeTeam, normalizeWaitingContext, quoteTaskTitle, resolveTaskAssignment, sortTasks, STATUSES, taskDisplayDueDate, taskStats, teamResponsibilitySummary, validateWaitingContext, waitingContextSummary } from "../src/domain.js";
+import { addOptimisticAttachment, addOptimisticComment, applyOptimisticTaskPatch, buildAssigneeOptions, buildOptimisticTask, buildTaskCreationInput, canRegisterWaitingReturn, filterTasks, findCreatedMainTask, getDueBucket, getDueBucketForEmployee, hasTaskResponsible, isOverdue, mentionedEmployees, migrateLegacyTeams, normalizeAssigneeNames, normalizeTeam, normalizeWaitingContext, quoteTaskTitle, resolveTaskAssignment, sortTasks, STATUSES, taskDisplayDueDate, taskStats, teamResponsibilitySummary, validateWaitingContext, waitingContextSummary } from "../src/domain.js";
 
 const tasks = [
   { id: "1", title: "Atrasada", quoteTitle: "Cotação A", assigneeName: "Marina", status: "todo", priority: "high", dueDate: "2026-08-01" },
@@ -86,6 +86,13 @@ test("resolve menção pelo apelido carregado do funcionário", () => {
 test("normaliza múltiplos responsáveis", () => {
   assert.deepEqual(normalizeAssigneeNames(["Não atribuído", "Marina", "Marina", "Rafael"]), ["Marina", "Rafael"]);
   assert.deepEqual(normalizeAssigneeNames([]), ["Não atribuído"]);
+});
+
+test("identifica quando a tarefa tem ou não tem responsável", () => {
+  assert.equal(hasTaskResponsible({ assigneeIds: ["e1"], assigneeNames: ["Marina"] }), true);
+  assert.equal(hasTaskResponsible({ assignmentMode: "team", teamIds: ["team-op"] }), true);
+  assert.equal(hasTaskResponsible({ assigneeIds: [], assigneeNames: ["Não atribuído"] }), false);
+  assert.equal(hasTaskResponsible({ assigneeIds: [], assigneeNames: [] }), false);
 });
 
 test("normaliza equipe e expande seus membros no snapshot da tarefa", () => {
