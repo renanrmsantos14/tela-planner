@@ -28,11 +28,11 @@ test("gera o redirect bridge no mesmo ambiente do WebResource aberto pelo main.a
   );
 });
 
-test("preserva o caminho do WebResource quando o Dataverse o expõe diretamente", () => {
+test("remove o prefixo de versão quando o Dataverse expõe o WebResource diretamente", () => {
   assert.equal(
     resolvePlannerRedirectUri({
       origin: "https://orgf261ae8e.crm2.dynamics.com",
-      pathname: "/WebResources/new_TelaPlanner.html",
+      pathname: "/%7b639245003080000142%7d/webresources/new_TelaPlanner.html",
       search: "",
       redirectResourceName: "new_TelaPlanner_redirect.html",
     }),

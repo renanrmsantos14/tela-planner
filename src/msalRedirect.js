@@ -11,10 +11,9 @@ export function resolvePlannerRedirectUri({
   redirectResourceName = "new_TelaPlanner_redirect.html",
 } = {}) {
   if (isDataverseWebResourceLocation({ pathname, search })) {
-    const dataversePath = /\/webresources\//i.test(pathname)
-      ? pathname.replace(/\/[^/]*$/, `/${redirectResourceName}`)
-      : `/WebResources/${redirectResourceName}`;
-    return `${origin}${dataversePath}`;
+    // O Dataverse pode inserir /%7bversão%7d/ na URL interna do WebResource.
+    // O endpoint sem versão é estável e deve ser o redirect cadastrado no Entra.
+    return `${origin}/WebResources/${redirectResourceName}`;
   }
   return String(configuredRedirectUri || fallbackRedirect).trim();
 }
