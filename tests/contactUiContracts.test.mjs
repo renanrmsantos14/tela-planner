@@ -23,7 +23,25 @@ test("card mantém somente conclusão rápida com confirmação em dois passos",
   assert.match(source, /setConfirming\(true\)/);
   assert.match(source, /window\.setTimeout\(\(\) => \{.*setConfirming\(false\)/s);
   assert.match(source, /onComplete\(contact\)/);
+  assert.match(source, /className="contact-row-message"/);
+  assert.match(source, /aria-label=\{`Abrir caso/);
+  assert.match(source, /className="contact-row-date" aria-label=/);
   assert.doesNotMatch(source, /onDoubleClick/);
+});
+
+test("triagem comunica busca, filtros ativos e estados da lista", async () => {
+  const source = await readSource("../src/ContactsView.jsx");
+  const styles = await readSource("../src/styles.css");
+
+  assert.match(source, /const activeFilterCount =/);
+  assert.match(source, /aria-expanded=\{filterOpen\}/);
+  assert.match(source, /aria-controls="contacts-filter-options"/);
+  assert.match(source, /aria-label=\{`\$\{activeFilterCount\} filtros ativos`\}/);
+  assert.match(source, /id="contacts-filter-options"/);
+  assert.match(source, /disabled=\{!activeFilterCount\}/);
+  assert.match(styles, /\.contacts-filter-bar \.filter-search \{ min-width:/);
+  assert.match(styles, /\.contact-row-message \{ min-width:/);
+  assert.match(styles, /@media \(max-width: 720px\) \{[\s\S]*\.contacts-filter-bar \.filter-search \{ grid-column: 1; grid-row: 1;/);
 });
 
 test("drawer reutiliza responsáveis, seletor pesquisável e anexos", async () => {

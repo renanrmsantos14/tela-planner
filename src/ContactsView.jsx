@@ -15,6 +15,7 @@ import {
   Plus,
   Search,
   Send,
+  SlidersHorizontal,
   UserRound,
   X,
 } from "lucide-react";
@@ -422,9 +423,10 @@ function ContactCard({ contact, onSelect, onComplete, draggable = false, onDragS
       <button className="contact-row-main" type="button" onClick={() => onSelect(contact.id)} aria-label={`Abrir caso ${contact.subject || "sem assunto"}`}>
         <span className="contact-row-top"><strong>{contact.subject || "Sem assunto"}</strong></span>
         <span className="contact-row-person"><UserRound size={13} aria-hidden="true" /> {contact.senderName || "Pessoa não informada"}</span>
+        <span className="contact-row-message">{contact.lastMessage || contact.message || contact.summary || "Sem mensagem registrada"}</span>
         <span className="contact-row-meta"><span><ChannelIcon size={13} aria-hidden="true" /> {contactChannelLabel(contact.channel)}</span><span className={`badge contact-status-badge status-${contact.status}`}>{isArchived ? "Arquivado" : contactStatusLabel(contact.status)}</span></span>
       </button>
-      <span className="contact-row-date"><time>{contact.dueDate ? `Prazo ${formatContactDate(contact.dueDate)}` : "Sem prazo"}</time>{contact.dueDate && contactIsOverdue(contact) && <small className="is-overdue">Atrasado</small>}</span>
+      <span className="contact-row-date" aria-label={contact.dueDate ? `Prazo ${formatContactDate(contact.dueDate)}${contactIsOverdue(contact) ? ", atrasado" : ""}` : "Sem prazo definido"}><time>{contact.dueDate ? `Prazo ${formatContactDate(contact.dueDate)}` : "Sem prazo"}</time>{contact.dueDate && contactIsOverdue(contact) && <small className="is-overdue">Atrasado</small>}</span>
       {onComplete && !isDone && !isArchived && <button className={`contact-complete-action ${confirming ? "is-confirming" : ""}`} type="button" onClick={complete} disabled={busy} aria-label={confirming ? `Confirmar conclusão de ${contact.subject}` : `Concluir ${contact.subject}`} title={confirming ? "Confirmar conclusão" : "Concluir caso"}>{confirming ? <><Check size={14} aria-hidden="true" /> Confirmar</> : <CheckCircle2 size={16} aria-hidden="true" />}</button>}
     </article>
   );
@@ -474,6 +476,12 @@ export default function ContactsView({
   const doneContacts = visibleContacts.filter((contact) => !contact.archivedAt && contact.status === "done");
   const archivedContacts = visibleContacts.filter((contact) => contact.archivedAt);
   const overdueCount = contacts.filter((contact) => contactIsOverdue(contact)).length;
+  const activeFilterCount = [filters.channel, filters.status, filters.priority, filters.owner, filters.team].filter(Boolean).length
+    + Number(Boolean(filters.query.trim()))
+    + Number(filters.mine)
+    + Number(filters.overdue)
+    + Number(filters.includeCompleted)
+    + Number(filters.includeArchived);
   const updateFilter = (key, value) => setFilters((current) => ({ ...current, [key]: value }));
   const clearFilters = () => setFilters(EMPTY_FILTERS);
   const handleComplete = (contact) => onSave({ ...contact, status: "done", waitingNote: "" });
@@ -497,9 +505,9 @@ export default function ContactsView({
         {[{ id: "new", label: "Novos", value: contacts.filter((item) => item.status === "new" && !item.archivedAt).length, icon: MessageCircle }, { id: "in_progress", label: "Em atendimento", value: contacts.filter((item) => item.status === "in_progress" && !item.archivedAt).length, icon: Send }, { id: "waiting", label: "Aguardando", value: contacts.filter((item) => item.status === "waiting" && !item.archivedAt).length, icon: Clock3 }, { id: "overdue", label: "Vencidos", value: overdueCount, icon: FileText }].map((metric) => { const Icon = metric.icon; return <article className="metric-card" key={metric.id}><span className="metric-icon"><Icon size={17} /></span><div><strong>{metric.value}</strong><span>{metric.label}</span></div></article>; })}
       </div>
       <div className={`filter-bar contacts-filter-bar ${filterOpen ? "is-expanded" : ""}`}>
-        <button className="filter-toggle button button-quiet" type="button" onClick={() => setFilterOpen((value) => !value)}><span>Filtros</span><span>{filterOpen ? "−" : "+"}</span></button>
+        <button className="filter-toggle button button-quiet" type="button" onClick={() => setFilterOpen((value) => !value)} aria-expanded={filterOpen} aria-controls="contacts-filter-options"><SlidersHorizontal size={15} aria-hidden="true" /><span>Filtros</span>{activeFilterCount > 0 && <b aria-label={`${activeFilterCount} filtros ativos`}>{activeFilterCount}</b>}<span className="filter-toggle-symbol" aria-hidden="true">{filterOpen ? "−" : "+"}</span></button>
         <div className="search-field filter-search"><Search size={16} aria-hidden="true" /><input value={filters.query} onChange={(event) => updateFilter("query", event.target.value)} placeholder="Buscar assunto, pessoa, telefone ou e-mail" aria-label="Buscar contatos" /></div>
-        <div className="filter-bar-content">
+        <div className="filter-bar-content" id="contacts-filter-options">
           <select value={filters.channel} onChange={(event) => updateFilter("channel", event.target.value)} aria-label="Filtrar por canal"><option value="">Todos os canais</option>{CONTACT_CHANNELS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select>
           <select value={filters.status} onChange={(event) => updateFilter("status", event.target.value)} aria-label="Filtrar por status"><option value="">Pendentes e aguardando</option>{CONTACT_STATUSES.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select>
           <select value={filters.priority} onChange={(event) => updateFilter("priority", event.target.value)} aria-label="Filtrar por prioridade"><option value="">Todas as prioridades</option>{CONTACT_PRIORITIES.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select>
@@ -509,7 +517,7 @@ export default function ContactsView({
           <button className={`contact-filter-chip ${filters.overdue ? "is-active" : ""}`} type="button" onClick={() => updateFilter("overdue", !filters.overdue)}>Vencidos</button>
           <button className={`contact-filter-chip ${filters.includeCompleted ? "is-active" : ""}`} type="button" onClick={() => updateFilter("includeCompleted", !filters.includeCompleted)}>Concluídos</button>
           <button className={`contact-filter-chip ${filters.includeArchived ? "is-active" : ""}`} type="button" onClick={() => updateFilter("includeArchived", !filters.includeArchived)}>Arquivados</button>
-          <button className="button button-quiet" type="button" onClick={clearFilters}>Limpar filtros</button>
+          <button className="button button-quiet" type="button" onClick={clearFilters} disabled={!activeFilterCount}>Limpar filtros</button>
         </div>
       </div>
       {view === "inbox" ? (

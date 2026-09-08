@@ -1714,6 +1714,40 @@ button { cursor: pointer; }
 .contact-archived-label { margin-right: auto; color: var(--tertiary); font-size: 9px; }
 .contact-archive-button { margin-right: auto; }
 
+/* Contatos: triagem com contexto legível e filtros autoexplicativos. */
+.contacts-page .contact-metrics { gap: 8px; margin-bottom: 10px; }
+.contacts-page .contact-metrics .metric-card { min-height: 58px; padding: 8px 10px; }
+.contacts-page .contact-metrics .metric-card strong { font-size: 19px; }
+.contacts-filter-bar { align-items: center; gap: 8px; }
+.contacts-filter-bar .filter-search { min-width: min(360px, 100%); flex: 1 1 280px; }
+.contacts-filter-bar .filter-toggle { display: inline-flex; align-items: center; gap: 6px; }
+.contacts-filter-bar .filter-toggle-symbol { color: var(--muted); font-size: 14px; line-height: 1; }
+.contacts-filter-bar .filter-toggle b { margin-left: 2px; }
+.contact-row-main { gap: 4px; }
+.contact-row-message { min-width: 0; max-width: 70ch; overflow: hidden; color: var(--muted); text-overflow: ellipsis; white-space: nowrap; font-size: 10px; line-height: 1.35; }
+.contact-row-meta { margin-top: 1px; }
+.contact-row-date { align-self: center; }
+.contact-row-date time { color: var(--control); font-weight: 700; }
+.contact-row-date small.is-overdue { display: inline-flex; align-items: center; gap: 3px; }
+.contact-row-date small.is-overdue::before { width: 5px; height: 5px; border-radius: 50%; background: currentColor; content: ""; }
+.contact-row-main:focus-visible { outline-offset: 4px; }
+
+@media (max-width: 720px) {
+  .contacts-page .contact-metrics { margin-bottom: 8px; }
+  .contacts-page .contact-metrics .metric-card { min-height: 56px; padding: 8px 9px; }
+  .contacts-page .contact-metrics .metric-card strong { font-size: 18px; }
+  .contacts-filter-bar { display: grid; grid-template-columns: minmax(0, 1fr); }
+  .contacts-filter-bar .filter-search { grid-column: 1; grid-row: 1; order: 0; flex-basis: 100%; }
+  .contacts-filter-bar .filter-toggle { grid-column: 1; grid-row: 2; width: 100%; justify-content: flex-start; min-height: 38px; }
+  .contacts-filter-bar .filter-toggle .filter-toggle-symbol { margin-left: auto; }
+  .contact-row { grid-template-columns: 3px minmax(0, 1fr) auto auto; min-height: 94px; padding: 11px 12px; }
+  .contact-row-main { gap: 4px; }
+  .contact-row-message { max-width: 100%; }
+  .contact-row-meta { gap: 7px; }
+  .contact-row-date { min-width: 64px; }
+  .contact-row-date time { font-size: 9px; }
+}
+
 @media (max-width: 1020px) {
   .contact-kanban { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
