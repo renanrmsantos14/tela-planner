@@ -185,8 +185,10 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
       const token = await acquirePlannerToken();
       const nextPlans = await fetchPlannerPlans({ token, onProgress: setAutoProgress });
       setPlans(nextPlans);
-      setPlanId((current) => nextPlans.some((plan) => plan.id === current) ? current : nextPlans.length === 1 ? nextPlans[0].id : "");
+      const nextPlanId = nextPlans.length === 1 ? nextPlans[0].id : "";
+      setPlanId((current) => nextPlans.some((plan) => plan.id === current) ? current : nextPlanId);
       if (!nextPlans.length) setAutoWarning("Nenhum plano foi encontrado para esta conta Microsoft.");
+      if (nextPlans.length === 1) window.queueMicrotask(() => collectAutomatically(nextPlanId));
     } catch (error) {
       setAutoError(plannerErrorMessage(error));
     } finally {
@@ -265,14 +267,16 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
     if (microsoftAccount) await loadPlans();
   };
 
-  const collectAutomatically = async () => {
+  const collectAutomatically = async (selectedPlanId = planId) => {
+    const targetPlanId = String(selectedPlanId || "").trim();
+    if (!targetPlanId || autoBusy) return;
     setAutoBusy(true);
     setAutoError("");
     setAutoWarning("");
     try {
       const token = await acquirePlannerToken();
       const exported = await fetchPlannerExport({
-        planId,
+        planId: targetPlanId,
         token,
         employees,
         onProgress: setAutoProgress,
@@ -284,7 +288,7 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
       setPlannerUsers(exported.plannerUsers || []);
       setAutoWarning(exported.userWarning || "");
       setAutoProgress({ stage: "ready", label: "Dados prontos para revisão." });
-      const nextAnalysis = analyzePlannerImport({ planId, tasksText: exported.tasksText, bucketsText: exported.bucketsText, detailsText: exported.detailsText, employeeMapText: exported.employeeMapText });
+      const nextAnalysis = analyzePlannerImport({ planId: targetPlanId, tasksText: exported.tasksText, bucketsText: exported.bucketsText, detailsText: exported.detailsText, employeeMapText: exported.employeeMapText });
       setAnalysis(nextAnalysis);
       setStep(nextAnalysis.unresolvedAssignees.length ? 5 : 6);
     } catch (error) {
@@ -316,6 +320,14 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
   const updateEmployeeMapping = (graphUserId, employeeId) => {
     setEmployeeMapText(JSON.stringify({ ...employeeMap, [graphUserId]: employeeId }, null, 2));
     setAnalysis(null);
+  };
+
+  const handlePlanChange = (event) => {
+    const nextPlanId = event.target.value;
+    setPlanId(nextPlanId);
+    setAnalysis(null);
+    setConfirmed(false);
+    if (nextPlanId) collectAutomatically(nextPlanId);
   };
 
   const submit = async () => {
@@ -417,11 +429,11 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
 
                       <label className="import-input-label">
                         <span><strong>Plano</strong><em>Obrigatório</em></span>
-                        <select value={planId} onChange={(event) => setPlanId(event.target.value)} disabled={plansBusy || !plans.length}>
+                        <select value={planId} onChange={handlePlanChange} disabled={plansBusy || autoBusy || !plans.length}>
                           <option value="">{plansBusy ? "Carregando seus planos…" : plans.length ? "Selecione um plano" : "Nenhum plano disponível"}</option>
                           {plans.map((plan) => <option key={plan.id} value={plan.id}>{plan.displayName}</option>)}
                         </select>
-                        <small>{plans.length ? "Selecione pelo nome. O identificador fica oculto e é usado automaticamente." : "Conecte a conta para carregar os planos disponíveis."}</small>
+                        <small>{plans.length ? "Selecione pelo nome. A busca começa automaticamente; o identificador fica oculto." : "Conecte a conta para carregar os planos disponíveis."}</small>
                       </label>
 
                       {microsoftAccount && <button className="import-manual-switch" type="button" onClick={loadPlans} disabled={plansBusy || autoBusy}><RefreshCw size={13} className={plansBusy ? "spin" : ""} /> Atualizar planos</button>}
