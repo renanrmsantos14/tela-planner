@@ -52,14 +52,23 @@ function activeAccount(instance) {
   return instance.getActiveAccount() || instance.getAllAccounts()[0] || null;
 }
 
-function assertRedirectBridgeOrigin() {
-  if (typeof window === "undefined") return;
+export function getRedirectBridgeStatus() {
+  if (typeof window === "undefined") return { valid: true, expectedOrigin: "" };
 
-  const redirectOrigin = new URL(msalConfig.auth.redirectUri, window.location.origin).origin;
-  if (redirectOrigin === window.location.origin) return;
+  try {
+    const expectedOrigin = new URL(msalConfig.auth.redirectUri, window.location.origin).origin;
+    return { valid: expectedOrigin === window.location.origin, expectedOrigin };
+  } catch {
+    return { valid: false, expectedOrigin: "" };
+  }
+}
+
+function assertRedirectBridgeOrigin() {
+  const redirectStatus = getRedirectBridgeStatus();
+  if (redirectStatus.valid) return;
 
   const error = new Error(
-    `O app está aberto em ${window.location.origin}, mas o retorno Microsoft está configurado para ${redirectOrigin}. Abra o app no endereço cadastrado no Microsoft Entra ID.`
+    `O app está aberto em ${window.location.origin}, mas o retorno Microsoft está configurado para ${redirectStatus.expectedOrigin}. Abra o app no endereço cadastrado no Microsoft Entra ID.`
   );
   error.errorCode = "redirect_bridge_origin_mismatch";
   throw error;

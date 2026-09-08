@@ -23,7 +23,7 @@ import {
   importStatusLabel,
   plannerDetailBatches,
 } from "./plannerImport.js";
-import { acquirePlannerToken, getMicrosoftAccount, loginMicrosoft, logoutMicrosoft, msalConfigured } from "./msalConfig.js";
+import { acquirePlannerToken, getMicrosoftAccount, getRedirectBridgeStatus, loginMicrosoft, logoutMicrosoft, msalConfigured } from "./msalConfig.js";
 import { fetchPlannerExport, fetchPlannerPlans } from "./plannerGraph.js";
 import "./plannerImportAuto.css";
 
@@ -155,6 +155,7 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
   const [autoProgress, setAutoProgress] = useState(null);
   const [autoError, setAutoError] = useState("");
   const [autoWarning, setAutoWarning] = useState("");
+  const redirectStatus = getRedirectBridgeStatus();
   const [mode, setMode] = useState(msalConfigured ? "automatic" : "manual");
   const urls = useMemo(() => graphQueryUrls(planId), [planId]);
   const detailBatches = useMemo(() => plannerDetailBatches(tasksText), [tasksText]);
@@ -384,11 +385,13 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
                           </button>
                         </div>
                       ) : (
-                        <button className="button button-primary" type="button" onClick={connectMicrosoft} disabled={authBusy || autoBusy}>
+                        <button className="button button-primary" type="button" onClick={connectMicrosoft} disabled={!redirectStatus.valid || authBusy || autoBusy}>
                           {authBusy ? <LoaderCircle size={15} className="spin" /> : <ShieldCheck size={15} />}
                           {authBusy ? "Abrindo login…" : "Conectar Microsoft"}
                         </button>
                       )}
+
+                      {!redirectStatus.valid && <IssueList title="Abra o app no endereço correto" items={[`Esta página está em ${window.location.origin}. Para o login voltar ao app, abra ${redirectStatus.expectedOrigin || "o endereço cadastrado no Microsoft Entra ID"}.`]} warning />}
 
                       <label className="import-input-label">
                         <span><strong>Plano</strong><em>Obrigatório</em></span>
