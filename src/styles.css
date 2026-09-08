@@ -595,6 +595,9 @@ button { cursor: pointer; }
 
 .board-sort-trigger { min-height: 40px; }
 
+.board-sort-menu-heading strong,
+.board-sort-option { font-size: 13px; }
+
 @media (max-width: 820px) {
   .board-sort-trigger { min-height: 46px; }
 }
