@@ -1697,10 +1697,6 @@ button { cursor: pointer; }
 .team-form input:focus { border-color: #6c91e8; background: #fff; box-shadow: 0 0 0 3px rgba(33,89,210,.11); }
 .team-form .searchable-multi-select { min-height: 44px; border-radius: 9px; background: var(--surface); }
 .team-form-hint { color: var(--tertiary); font-size: 10px; font-weight: 600; line-height: 1.35; }
-.team-icon-options { display: flex; flex-wrap: wrap; gap: 7px; }
-.team-icon-option { width: 38px; height: 38px; display: grid; place-items: center; border: 1px solid #cbd8ea; border-radius: 9px; color: var(--muted); background: var(--surface); cursor: pointer; }
-.team-icon-option:hover, .team-icon-option:focus-visible { border-color: #7fa2e8; color: var(--blue); outline: 0; }
-.team-icon-option.is-selected { border-color: var(--blue); color: var(--blue); background: var(--blue-soft); box-shadow: 0 0 0 3px rgba(33,89,210,.1); }
 .team-form-footer { display: grid; gap: 11px; padding: 15px 19px 19px; border-top: 1px solid #e5edf8; background: #fbfdff; }
 .team-form-secondary-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .team-form-secondary-actions .text-button:disabled { cursor: not-allowed; opacity: .45; }
