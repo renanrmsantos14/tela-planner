@@ -593,6 +593,12 @@ button { cursor: pointer; }
   .contact-drawer-actions .button { width: 100%; justify-content: center; }
 }
 
+.board-sort-trigger { min-height: 40px; }
+
+@media (max-width: 820px) {
+  .board-sort-trigger { min-height: 46px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .contact-row, .contact-priority-button { transition-duration: .01ms !important; }
 }
