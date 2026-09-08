@@ -2,7 +2,8 @@ import { InteractionRequiredAuthError, PublicClientApplication } from "@azure/ms
 
 const clientId = String(import.meta.env?.VITE_MSAL_CLIENT_ID || "").trim();
 const tenantId = String(import.meta.env?.VITE_MSAL_TENANT_ID || "organizations").trim();
-const fallbackRedirect = typeof window !== "undefined" ? `${window.location.origin}${window.location.pathname}` : "http://localhost:5192/";
+const appRedirect = typeof window !== "undefined" ? `${window.location.origin}${window.location.pathname}` : "http://localhost:5192/";
+const fallbackRedirect = typeof window !== "undefined" ? `${window.location.origin}/redirect.html` : "http://localhost:5192/redirect.html";
 
 export const msalConfigured = Boolean(clientId);
 export const plannerScopes = ["User.Read", "Tasks.Read", "User.ReadBasic.All"];
@@ -12,7 +13,7 @@ export const msalConfig = {
     clientId,
     authority: `https://login.microsoftonline.com/${tenantId}`,
     redirectUri: String(import.meta.env?.VITE_MSAL_REDIRECT_URI || fallbackRedirect).trim(),
-    postLogoutRedirectUri: String(import.meta.env?.VITE_MSAL_REDIRECT_URI || fallbackRedirect).trim(),
+    postLogoutRedirectUri: appRedirect,
   },
   cache: {
     cacheLocation: "sessionStorage",
