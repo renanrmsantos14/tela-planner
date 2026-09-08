@@ -2826,7 +2826,9 @@ function TeamManager({ teams = [], tasks = [], employees = [], onSave, onDelete 
             </label>
             <div className="team-form-field">
               <span className="team-form-label"><span>Ícone da equipe</span><span className="team-form-selection">Exibido nos cards</span></span>
-              <InputSelect value={draft.iconName} onChange={(iconName) => setDraft((current) => ({ ...current, iconName }))} options={TEAM_ICON_OPTIONS.map(({ id, label }) => ({ value: id, label }))} placeholder="Selecione um ícone" />
+              <div className="team-icon-options" role="radiogroup" aria-label="Ícone da equipe">
+                {TEAM_ICON_OPTIONS.map(({ id, label }) => <button key={id} className={`team-icon-option${draft.iconName === id ? " is-selected" : ""}`} type="button" role="radio" aria-checked={draft.iconName === id} aria-label={label} title={label} onClick={() => setDraft((current) => ({ ...current, iconName: id }))}><TeamIcon name={id} size={17} /><span>{label}</span></button>)}
+              </div>
             </div>
           </div>
           {validationError && <div className="form-error" role="alert">{validationError}</div>}
