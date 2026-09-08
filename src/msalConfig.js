@@ -49,7 +49,12 @@ function activeAccount(instance) {
 export async function loginMicrosoft() {
   const instance = await ensureMsalInitialized();
   return runInteraction(async () => {
-    const response = await instance.loginPopup({ scopes: plannerScopes, prompt: "select_account" });
+    const response = await instance.loginPopup({
+      scopes: plannerScopes,
+      prompt: "select_account",
+      // O app controla uma única interação; isso limpa um flag órfão deixado por popup fechado.
+      overrideInteractionInProgress: true,
+    });
     if (response.account) instance.setActiveAccount(response.account);
     return response.account || activeAccount(instance);
   });
@@ -65,7 +70,11 @@ export async function acquirePlannerToken() {
   } catch (error) {
     if (!(error instanceof InteractionRequiredAuthError)) throw error;
     return runInteraction(async () => {
-      const response = await instance.acquireTokenPopup({ account, scopes: plannerScopes });
+      const response = await instance.acquireTokenPopup({
+        account,
+        scopes: plannerScopes,
+        overrideInteractionInProgress: true,
+      });
       return response.accessToken;
     });
   }
