@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
-import { AlertTriangle, ArrowUpRight, BellRing, CalendarDays, CheckCircle2, ChevronRight, Clock3, ListTodo, RotateCcw, Users, UserRound } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ArrowUpRight, CalendarDays, CheckCircle2, ChevronRight, Clock3, RotateCcw, Users, UserRound } from "lucide-react";
 import { formatDate, getDueBucket, priorityById } from "./domain.js";
-import { collectionRows, localDateKey, managementSummary, waitingRows, workloadGroups, workloadTotals } from "./management.js";
+import { collectionRows, localDateKey, overviewCollections, overviewWorkload, waitingRows, workloadGroups, workloadTotals } from "./management.js";
 
 function daysLabel(days) {
   return days === 1 ? "1 dia" : `${days} dias`;
@@ -17,49 +17,33 @@ function duePresentation(task) {
 }
 
 export default function ManagementView({ state, onOpenTask, onCollect, onRegisterWaitingReturn }) {
-  const [tab, setTab] = useState("collection");
+  const [view, setView] = useState("overview");
   const collections = useMemo(() => collectionRows(state.tasks, state.employees, state.teams, state.collectionEvents, new Date()), [state.tasks, state.employees, state.teams, state.collectionEvents]);
   const workload = useMemo(() => workloadGroups(state.tasks, state.teams, new Date()), [state.tasks, state.teams]);
   const workloadTotal = useMemo(() => workloadTotals(state.tasks, new Date()), [state.tasks]);
   const waiting = useMemo(() => waitingRows(state.tasks, state.teams, new Date()), [state.tasks, state.teams]);
   const collectionToday = localDateKey();
-  const summary = managementSummary(collections, workload);
+  const detail = view !== "overview";
+  const detailTitle = view === "collection" ? "Cobranças prioritárias" : view === "workload" ? "Peso por pessoa/equipe" : "Retornos pendentes";
   return <div className="page-content management-page">
     <div className="page-header">
-      <div><span className="eyebrow">GESTÃO OPERACIONAL</span><h1>Acompanhamento</h1><p>Veja onde o trabalho está parado e cobre o próximo movimento.</p></div>
+      <div>{detail && <button className="management-back-link" type="button" onClick={() => setView("overview")}><ArrowLeft size={15} />Voltar ao resumo</button>}<span className="eyebrow">GESTÃO OPERACIONAL</span><h1>{detail ? detailTitle : "Acompanhamento"}</h1><p>{detail ? "Consulte os detalhes sem perder o contexto da operação." : "Identifique o que exige atenção e onde a carga está concentrada."}</p></div>
     </div>
-    <ManagementSummary summary={summary} workloadTotal={workloadTotal} />
-    <div className="management-overview">
-      <CollectionFocus rows={collections.slice(0, 5)} employees={state.employees} today={collectionToday} onOpenTask={onOpenTask} onCollect={onCollect} onViewAll={() => setTab("collection")} />
-      <WorkloadFocus groups={workload.slice(0, 5)} onOpenTask={onOpenTask} onViewAll={() => setTab("workload")} />
-    </div>
-    <div className="management-tabs" role="tablist" aria-label="Visões detalhadas de gestão">
-      <button id="management-tab-collection" type="button" role="tab" aria-selected={tab === "collection"} aria-controls="management-panel-collection" tabIndex={tab === "collection" ? 0 : -1} className={tab === "collection" ? "is-active" : ""} onClick={() => setTab("collection")}><BellRing size={16} />Cobrança <b>{collections.length}</b></button>
-      <button id="management-tab-workload" type="button" role="tab" aria-selected={tab === "workload"} aria-controls="management-panel-workload" tabIndex={tab === "workload" ? 0 : -1} className={tab === "workload" ? "is-active" : ""} onClick={() => setTab("workload")}><Users size={16} />Carga <b>{workload.length}</b></button>
-      <button id="management-tab-waiting" type="button" role="tab" aria-selected={tab === "waiting"} aria-controls="management-panel-waiting" tabIndex={tab === "waiting" ? 0 : -1} className={tab === "waiting" ? "is-active" : ""} onClick={() => setTab("waiting")}><RotateCcw size={16} />Retornos <b>{waiting.length}</b></button>
-    </div>
-    {tab === "collection" && <div id="management-panel-collection" role="tabpanel" aria-labelledby="management-tab-collection"><CollectionTable rows={collections} employees={state.employees} today={collectionToday} onOpenTask={onOpenTask} onCollect={onCollect} /></div>}
-    {tab === "workload" && <div id="management-panel-workload" role="tabpanel" aria-labelledby="management-tab-workload"><WorkloadTable groups={workload} totals={workloadTotal} onOpenTask={onOpenTask} /></div>}
-    {tab === "waiting" && <div id="management-panel-waiting" role="tabpanel" aria-labelledby="management-tab-waiting"><WaitingTable rows={waiting} onOpenTask={onOpenTask} onRegisterWaitingReturn={onRegisterWaitingReturn} /></div>}
+    {!detail && <>
+      <div className="management-overview">
+        <CollectionFocus rows={overviewCollections(collections)} employees={state.employees} today={collectionToday} onOpenTask={onOpenTask} onCollect={onCollect} onViewAll={() => setView("collection")} />
+        <WorkloadFocus groups={overviewWorkload(workload)} onOpenTask={onOpenTask} onViewAll={() => setView("workload")} />
+      </div>
+      <button className="management-return-link" type="button" onClick={() => setView("waiting")}><RotateCcw size={15} />Ver retornos pendentes <b>{waiting.length}</b><ChevronRight size={15} /></button>
+    </>}
+    {view === "collection" && <CollectionTable rows={collections} employees={state.employees} today={collectionToday} onOpenTask={onOpenTask} onCollect={onCollect} />}
+    {view === "workload" && <WorkloadTable groups={workload} totals={workloadTotal} onOpenTask={onOpenTask} />}
+    {view === "waiting" && <WaitingTable rows={waiting} onOpenTask={onOpenTask} onRegisterWaitingReturn={onRegisterWaitingReturn} />}
   </div>;
 }
 
-function ManagementSummary({ summary, workloadTotal }) {
-  const topGroupLabel = summary.topGroup?.label || "Nenhuma ainda";
-  return <section className="management-summary" aria-label="Resumo operacional">
-    <SummaryCard icon={AlertTriangle} tone="danger" label="Tarefas atrasadas" value={summary.overdue} detail={summary.overdue ? "Exigem acompanhamento" : "Nenhuma pendência"} />
-    <SummaryCard icon={BellRing} tone="action" label="Cobranças pendentes" value={summary.pendingCollections} detail="Ainda não cobradas hoje" />
-    <SummaryCard icon={Users} tone="neutral" label="Pessoas e equipes" value={summary.activeGroups} detail={`${workloadTotal.unique} tarefas abertas`} />
-    <SummaryCard icon={ListTodo} tone="warning" label="Maior carga" value={topGroupLabel} detail={summary.topGroup ? `${summary.topGroup.total} abertas · ${summary.topGroup.overdue} atrasadas` : "Sem carga ativa"} compact />
-  </section>;
-}
-
-function SummaryCard({ icon: Icon, tone, label, value, detail, compact = false }) {
-  return <article className={`management-summary-card is-${tone}${compact ? " is-compact" : ""}`}><span className="management-summary-icon" aria-hidden="true"><Icon size={17} /></span><div><span>{label}</span><strong>{value}</strong><small>{detail}</small></div></article>;
-}
-
 function CollectionFocus({ rows, employees, today, onOpenTask, onCollect, onViewAll }) {
-  return <section className="panel management-focus-panel" aria-labelledby="management-focus-collection-title"><div className="panel-heading"><div><span className="eyebrow">AÇÃO IMEDIATA</span><h2 id="management-focus-collection-title">Cobrar agora</h2><p className="panel-subtitle">Demandas ordenadas pelo maior atraso.</p></div><button className="management-focus-link" type="button" onClick={onViewAll}>Ver todas <ChevronRight size={15} /></button></div>{rows.length ? <div className="management-focus-list">{rows.map((row) => <CollectionFocusRow key={row.id} row={row} employees={employees} today={today} onOpenTask={onOpenTask} onCollect={onCollect} />)}</div> : <EmptyState icon={CheckCircle2} title="Nada para cobrar" detail="A operação está em dia." />}</section>;
+  return <section className="panel management-focus-panel" aria-labelledby="management-focus-collection-title"><div className="panel-heading"><div><span className="eyebrow">AÇÃO IMEDIATA</span><h2 id="management-focus-collection-title">Cobranças prioritárias</h2><p className="panel-subtitle">As três demandas que mais precisam de atenção.</p></div><button className="management-focus-link" type="button" onClick={onViewAll}>Ver cobrança completa <ChevronRight size={15} /></button></div>{rows.length ? <div className="management-focus-list">{rows.map((row) => <CollectionFocusRow key={row.id} row={row} employees={employees} today={today} onOpenTask={onOpenTask} onCollect={onCollect} />)}</div> : <EmptyState icon={CheckCircle2} title="Nada para cobrar" detail="A operação está em dia." />}</section>;
 }
 
 function CollectionFocusRow({ row, employees, today, onOpenTask, onCollect }) {
@@ -68,7 +52,7 @@ function CollectionFocusRow({ row, employees, today, onOpenTask, onCollect }) {
 }
 
 function WorkloadFocus({ groups, onOpenTask, onViewAll }) {
-  return <section className="panel management-focus-panel" aria-labelledby="management-focus-workload-title"><div className="panel-heading"><div><span className="eyebrow">DISTRIBUIÇÃO</span><h2 id="management-focus-workload-title">Peso por responsável</h2><p className="panel-subtitle">Volume aberto com urgência visível.</p></div><button className="management-focus-link" type="button" onClick={onViewAll}>Ver carga <ChevronRight size={15} /></button></div>{groups.length ? <div className="management-workload-list">{groups.map((group) => <WorkloadFocusRow key={group.key} group={group} onOpenTask={onOpenTask} />)}</div> : <EmptyState icon={Users} title="Sem carga ativa" detail="As tarefas abertas aparecerão aqui." />}</section>;
+  return <section className="panel management-focus-panel" aria-labelledby="management-focus-workload-title"><div className="panel-heading"><div><span className="eyebrow">DISTRIBUIÇÃO</span><h2 id="management-focus-workload-title">Peso por pessoa/equipe</h2><p className="panel-subtitle">Maior volume aberto primeiro.</p></div><button className="management-focus-link" type="button" onClick={onViewAll}>Ver carga completa <ChevronRight size={15} /></button></div>{groups.length ? <div className="management-workload-list">{groups.map((group) => <WorkloadFocusRow key={group.key} group={group} onOpenTask={onOpenTask} />)}</div> : <EmptyState icon={Users} title="Sem carga ativa" detail="As tarefas abertas aparecerão aqui." />}</section>;
 }
 
 function WorkloadFocusRow({ group, onOpenTask }) {

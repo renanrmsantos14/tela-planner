@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { collectionRows, daysOverdue, localDateKey, managementSummary, waitingRows, workloadGroups, workloadTotals } from "../src/management.js";
+import { collectionRows, daysOverdue, localDateKey, overviewCollections, overviewWorkload, waitingRows, workloadGroups, workloadTotals } from "../src/management.js";
 import { normalizeWaitingContext, validateWaitingContext } from "../src/domain.js";
 import { collectTask, createTask, seedState } from "../src/mockStore.js";
 
@@ -63,24 +63,27 @@ test("cobrança manual é idempotente por tarefa e dia", () => {
   assert.throws(() => collectTask(first, task.id, { referenceDate: "2026-09-01", actorEmployeeId: "employee-renan" }), /cobrada hoje/);
 });
 
-test("resume cobrança pendente e maior carga sem criar pontuação opaca", () => {
+test("limita a abertura às três cobranças mais urgentes", () => {
   const collections = [
-    { id: "late", collectionDate: "" },
-    { id: "collected", collectionDate: "2026-09-01" },
+    { id: "late-3" },
+    { id: "late-2" },
+    { id: "late-1" },
+    { id: "late-0" },
   ];
+
+  assert.deepEqual(overviewCollections(collections).map((row) => row.id), ["late-3", "late-2", "late-1"]);
+});
+
+test("ordena o resumo de carga por volume e usa atraso como desempate", () => {
   const workload = [
     { key: "employee:e1", label: "Marina", total: 4, overdue: 2 },
     { key: "team:t1", label: "Operação", total: 3, overdue: 1 },
     { key: "team:t2", label: "Comercial", total: 8, overdue: 0 },
+    { key: "employee:e2", label: "Rafael", total: 8, overdue: 2 },
   ];
-  const summary = managementSummary(collections, workload, new Date("2026-09-01T12:00:00-03:00"));
 
-  assert.deepEqual(summary, {
-    overdue: 2,
-    pendingCollections: 1,
-    activeGroups: 3,
-    topGroup: workload[2],
-  });
+  assert.deepEqual(overviewWorkload(workload).map((group) => group.key), ["employee:e2", "team:t2", "employee:e1", "team:t1"]);
+  assert.deepEqual(overviewWorkload(workload, 2).map((group) => group.key), ["employee:e2", "team:t2"]);
 });
 
 test("Aguardando aceita dependência externa sem exigir id Dataverse", () => {

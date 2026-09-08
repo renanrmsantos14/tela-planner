@@ -119,18 +119,14 @@ export function workloadTotals(tasks = [], today = new Date()) {
   };
 }
 
-export function managementSummary(collections = [], workload = [], today = new Date()) {
-  const pendingCollections = collections.filter((row) => row.collectionDate !== localDateKey(today)).length;
-  const topGroup = workload.reduce((current, group) => {
-    if (!current || group.total > current.total || (group.total === current.total && group.overdue > current.overdue)) return group;
-    return current;
-  }, null);
-  return {
-    overdue: collections.length,
-    pendingCollections,
-    activeGroups: workload.length,
-    topGroup,
-  };
+export function overviewCollections(rows = [], limit = 3) {
+  return rows.slice(0, limit);
+}
+
+export function overviewWorkload(groups = [], limit = 4) {
+  return [...groups]
+    .sort((left, right) => right.total - left.total || right.overdue - left.overdue || left.label.localeCompare(right.label, "pt-BR"))
+    .slice(0, limit);
 }
 
 export function waitingRows(tasks = [], teams = [], today = new Date()) {
