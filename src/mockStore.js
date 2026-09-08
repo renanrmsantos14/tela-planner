@@ -20,12 +20,12 @@ import {
   validateContact,
 } from "./contactDomain.js";
 
-export const STORAGE_KEY = "betinhos-tela-planner-mock-v2";
+export const STORAGE_KEY = "betinhos-tela-planner-mock-v3-calendar";
 
 const dateFromToday = (offset) => {
   const date = new Date();
   date.setDate(date.getDate() + offset);
-  return date.toISOString().slice(0, 10);
+  return localDateKey(date);
 };
 
 const uid = (prefix) => `${prefix}-${Math.random().toString(36).slice(2, 9)}`;

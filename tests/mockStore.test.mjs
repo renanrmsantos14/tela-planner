@@ -1,11 +1,24 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { addAttachment, addComment, createTask, createTeam, deleteAttachment, deleteTask, deleteTeam, ensureQuoteTask, resolveWaitingReturn, seedState, updateTask, updateTeam } from "../src/mockStore.js";
+import { localDateKey } from "../src/management.js";
 
 function withStorage() {
   const values = new Map();
   globalThis.localStorage = { getItem: (key) => values.get(key) || null, setItem: (key, value) => values.set(key, value) };
 }
+
+test("semeia datas da agenda relativas ao dia local", () => {
+  const initial = seedState();
+  const today = localDateKey();
+  const taskToday = initial.tasks.find((task) => task.id === "task-1");
+  const taskOverdue = initial.tasks.find((task) => task.id === "task-35");
+  const taskUpcoming = initial.tasks.find((task) => task.id === "task-22");
+
+  assert.equal(taskToday.dueDate, today);
+  assert.notEqual(taskOverdue.dueDate, today);
+  assert.notEqual(taskUpcoming.dueDate, today);
+});
 
 test("cria e atualiza tarefa sem alterar a referência original", () => {
   withStorage();
