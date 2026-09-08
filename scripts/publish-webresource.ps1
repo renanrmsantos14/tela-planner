@@ -238,6 +238,8 @@ function Ensure-PlannerAlternateKey([hashtable] $Headers, [string] $ApiBaseUrl, 
 }
 
 function Ensure-PlannerSchemaAttributes([hashtable] $Headers, [string] $ApiBaseUrl) {
+  $task = "cr40f_plannertarefa"
+  Ensure-PlannerStringAttribute $Headers $ApiBaseUrl $task "cr40f_ChecklistJson" "Checklist importado" 4000
   $notification = "cr40f_plannernotificacao"
   Ensure-PlannerStringAttribute $Headers $ApiBaseUrl $notification "cr40f_Titulo" "Título" 200
   Ensure-PlannerStringAttribute $Headers $ApiBaseUrl $notification "cr40f_Mensagem" "Mensagem" 2000

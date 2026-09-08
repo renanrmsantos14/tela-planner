@@ -104,6 +104,7 @@ import PageHeader from "./PageHeader.jsx";
 import AssigneeDisplay from "./AssigneeDisplay.jsx";
 import { MentionableField, useMentionController } from "./MentionableField.jsx";
 import LoadingFallback from "./LoadingFallback.jsx";
+import PlannerImportView from "./PlannerImportView.jsx";
 import {
   filterWorkItems,
   isAssignedToEmployee,
@@ -2813,7 +2814,7 @@ function TeamManager({ teams = [], tasks = [], employees = [], onSave, onDelete 
   );
 }
 
-function SettingsView({ onReset, live, teams = [], tasks = [], employees = [], onSaveTeam, onDeleteTeam }) {
+function SettingsView({ onReset, live, teams = [], tasks = [], employees = [], onSaveTeam, onDeleteTeam, onImportPlannerTasks }) {
   return (
     <div className="page-content">
       <PageHeader
@@ -2870,6 +2871,7 @@ function SettingsView({ onReset, live, teams = [], tasks = [], employees = [], o
             <span className="version-value">{APP_VERSION}</span>
           </div>
         </div>
+        <PlannerImportView live={live} onImport={onImportPlannerTasks} />
       </section>
       <TeamManager teams={teams} tasks={tasks} employees={employees} onSave={onSaveTeam} onDelete={onDeleteTeam} />
     </div>
@@ -5949,6 +5951,20 @@ export default function App() {
       }),
     [applyPendingMutations, showNotice, state, store],
   );
+  const importPlannerTasks = useCallback(
+    (rows) => Promise.resolve(store.importPlannerTasks(confirmedStateRef.current || state, rows))
+      .then((result) => {
+        confirmedStateRef.current = result.nextState;
+        setState(applyPendingMutations(result.nextState));
+        showNotice(`${result.createdCount} tarefa(s) importada(s).`);
+        return result;
+      })
+      .catch((failure) => {
+        showNotice(failure.message || "Não foi possível importar as tarefas.", 5200);
+        throw failure;
+      }),
+    [applyPendingMutations, showNotice, state, store],
+  );
   const createNewTask = useCallback(
     (input) => {
       const {
@@ -6483,7 +6499,7 @@ export default function App() {
       );
     return (
       <Suspense fallback={<LoadingFallback />}>
-          <LazySettingsView onReset={reloadData} live={store.live} teams={state.teams} tasks={state.tasks} employees={state.employees} onSaveTeam={saveTeam} onDeleteTeam={deleteTeam} />
+          <LazySettingsView onReset={reloadData} live={store.live} teams={state.teams} tasks={state.tasks} employees={state.employees} onSaveTeam={saveTeam} onDeleteTeam={deleteTeam} onImportPlannerTasks={importPlannerTasks} />
       </Suspense>
     );
   };
