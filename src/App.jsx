@@ -2320,6 +2320,10 @@ function ListView({
   );
 }
 
+function calendarDateKey(date) {
+  return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-");
+}
+
 function CalendarView({
   state,
   onOpen,
@@ -2331,15 +2335,36 @@ function CalendarView({
   taskScope,
   onScopeChange,
 }) {
+  const today = new Date();
+  const todayKey = calendarDateKey(today);
+  const [selectedDate, setSelectedDate] = useState(todayKey);
   const days = Array.from({ length: 7 }, (_, index) => {
-    const date = new Date();
-    date.setDate(date.getDate() + index - 1);
+    const date = new Date(today);
+    date.setDate(date.getDate() + index);
     return date;
   });
   const openTasks = useMemo(
     () => sortTasks(filterTasks(tasksForView(state.tasks, filters), filters, currentEmployee, state.teams), currentEmployee, state.teams),
     [state.tasks, state.teams, filters, currentEmployee],
   );
+  const taskCountByDate = useMemo(
+    () => days.reduce((counts, date) => {
+      const dateKey = calendarDateKey(date);
+      counts[dateKey] = openTasks.filter(
+        (taskItem) => taskDisplayDueDate(taskItem, currentEmployee, state.teams) === dateKey,
+      ).length;
+      return counts;
+    }, {}),
+    [days, openTasks, currentEmployee, state.teams],
+  );
+  const visibleTasks = openTasks.filter(
+    (taskItem) => taskDisplayDueDate(taskItem, currentEmployee, state.teams) === selectedDate,
+  );
+  const selectedDateLabel = new Intl.DateTimeFormat("pt-BR", {
+    weekday: "long",
+    day: "2-digit",
+    month: "long",
+  }).format(new Date(`${selectedDate}T12:00:00`));
   return (
     <div className="page-content">
       <PageHeader
@@ -2363,25 +2388,31 @@ function CalendarView({
       />
       <div className="calendar-strip">
         {days.map((date) => (
-          <div
-            className={`calendar-day ${date.toDateString() === new Date().toDateString() ? "today" : ""}`}
+          <button
+            className={`calendar-day ${calendarDateKey(date) === todayKey ? "today" : ""} ${calendarDateKey(date) === selectedDate ? "selected" : ""}`}
             key={date.toISOString()}
+            type="button"
+            aria-label={`${CALENDAR_WEEKDAY_FORMATTER.format(date).replace(".", "")}, ${date.getDate()} de ${date.toLocaleDateString("pt-BR", { month: "long" })}. ${taskCountByDate[calendarDateKey(date)] || 0} tarefas`}
+            aria-pressed={calendarDateKey(date) === selectedDate}
+            onClick={() => setSelectedDate(calendarDateKey(date))}
           >
             <span>
               {CALENDAR_WEEKDAY_FORMATTER.format(date).replace(".", "")}
             </span>
             <strong>{date.getDate()}</strong>
-          </div>
+            <small>{taskCountByDate[calendarDateKey(date)] || 0} {taskCountByDate[calendarDateKey(date)] === 1 ? "tarefa" : "tarefas"}</small>
+          </button>
         ))}
       </div>
       <section className="panel agenda-panel">
         <div className="panel-heading">
           <div>
-            <span className="eyebrow">Esta semana</span>
-            <h2>O que acontece em seguida</h2>
+            <span className="eyebrow">Próximos 7 dias</span>
+            <h2>{selectedDateLabel}</h2>
           </div>
+          <span className="panel-count" aria-label={`${visibleTasks.length} tarefas no dia selecionado`}>{visibleTasks.length}</span>
         </div>
-        {openTasks.map((taskItem) => (
+        {visibleTasks.length ? visibleTasks.map((taskItem) => (
           <button
             className="agenda-row"
             key={taskItem.id}
@@ -2398,7 +2429,16 @@ function CalendarView({
             <StatusBadge status={taskItem.status} />
             <ChevronRight size={16} />
           </button>
-        ))}
+        )) : (
+          <div className="calendar-empty" role="status">
+            <CalendarDays size={20} aria-hidden="true" />
+            <strong>Nenhuma tarefa para este dia</strong>
+            <span>Escolha outra data ou crie uma nova tarefa.</span>
+            <button className="button button-secondary button-small" type="button" onClick={onCreate}>
+              <Plus size={14} aria-hidden="true" />Criar tarefa
+            </button>
+          </div>
+        )}
       </section>
     </div>
   );
