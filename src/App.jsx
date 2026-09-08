@@ -2382,7 +2382,7 @@ function CalendarView({
       <FilterBar
         filters={filters}
         setFilters={setFilters}
-        onCreate={onCreate}
+        onCreate={() => onCreate("todo", { dueDate: selectedDate })}
         employees={state.employees}
         teams={state.teams}
       />
@@ -2434,7 +2434,7 @@ function CalendarView({
             <CalendarDays size={20} aria-hidden="true" />
             <strong>Nenhuma tarefa para este dia</strong>
             <span>Escolha outra data ou crie uma nova tarefa.</span>
-            <button className="button button-secondary button-small" type="button" onClick={onCreate}>
+            <button className="button button-secondary button-small" type="button" onClick={() => onCreate("todo", { dueDate: selectedDate })}>
               <Plus size={14} aria-hidden="true" />Criar tarefa
             </button>
           </div>
@@ -5035,6 +5035,7 @@ export default function App() {
   const [waitingReturnTaskId, setWaitingReturnTaskId] = useState("");
   const [creating, setCreating] = useState(false);
   const [creatingStatus, setCreatingStatus] = useState("todo");
+  const [creatingInput, setCreatingInput] = useState({});
   const [filters, setFilters] = useState(createDefaultFilters);
   const [taskScope, setTaskScope] = useState("mine");
   const [checklistVisibility, setChecklistVisibility] = useState(
@@ -5455,11 +5456,12 @@ export default function App() {
     setPendingTaskDraft(null);
   }, []);
   const closeContact = useCallback(() => setSelectedContactId(""), []);
-  const openCreate = useCallback((status = "todo") => {
+  const openCreate = useCallback((status = "todo", initialInput = {}) => {
     const nextStatus = STATUSES.some((item) => item.id === status)
       ? status
       : "todo";
     setCreatingStatus(nextStatus);
+    setCreatingInput(initialInput);
     setCreating(true);
   }, []);
   const setChecklistVisibilityForTask = useCallback((id, visible) => {
@@ -6497,6 +6499,7 @@ export default function App() {
           employees={state.employees}
           teams={state.teams}
           initialStatus={creatingStatus}
+          initialInput={creatingInput}
           onClose={() => setCreating(false)}
           onSave={createNewTask}
         />
