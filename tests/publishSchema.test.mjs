@@ -31,3 +31,10 @@ test("npm run push usa Windows PowerShell para carregar MSAL.PS", () => {
   assert.match(script, /Guid\]::TryParse\(\$ClientId/);
   assert.match(script, /DV_CLIENT_ID/);
 });
+
+test("npm run push publica o redirect bridge do MSAL no Dataverse", () => {
+  assert.match(script, /new_TelaPlanner_redirect\.html/);
+  assert.match(script, /dist\\redirect\.html/);
+  assert.match(script, /Tela Planner - MSAL redirect/);
+  assert.match(script, /redirectPublishXml/);
+});

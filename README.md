@@ -47,6 +47,19 @@ O caminho recomendado é o card “Importar tarefas” dentro do WebResource. No
 
 O servidor não troca automaticamente para outra porta: a porta `5192` precisa estar livre porque ela é a mesma cadastrada no Microsoft Entra ID.
 
+### Login Microsoft dentro do Dataverse
+
+O WebResource é aberto pelo `main.aspx?pagetype=webresource`, então o app detecta automaticamente o ambiente Dataverse e usa o redirect bridge publicado nele. Publique com `npm run push`; o comando publica `new_TelaPlanner.html` e também `new_TelaPlanner_redirect.html`.
+
+No Microsoft Entra ID, registre como **SPA** o redirect exato de cada ambiente que abrirá o app. Para os ambientes atuais:
+
+```text
+https://org23b93544.crm2.dynamics.com/WebResources/new_TelaPlanner_redirect.html
+https://orgf261ae8e.crm2.dynamics.com/WebResources/new_TelaPlanner_redirect.html
+```
+
+A URL principal continua sendo a do app Model-driven, por exemplo `main.aspx?...&pagetype=webresource&webresourceName=new_TelaPlanner.html`. O login abre somente a janela Microsoft, devolve a resposta para o app e fecha o popup automaticamente. Se aparecer o aviso de redirect, publique o bridge e confirme que a URL do ambiente está cadastrada exatamente, incluindo protocolo, domínio, caminho e nome do WebResource.
+
 Se a conta não puder consultar o diretório, o app avisa e permite o mapeamento manual dos responsáveis. O script abaixo permanece como alternativa automatizada fora do WebResource.
 
 Pré-requisitos no Windows PowerShell 5.1:

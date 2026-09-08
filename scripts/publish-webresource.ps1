@@ -286,6 +286,8 @@ $apiBaseUrl = "$environmentBaseUrl/api/data/v9.2"
 $solutionUniqueName = "AppBetinhos"
 $resourceName = "new_TelaPlanner.html"
 $resourcePath = Join-Path $root "dist\webresource.html"
+$redirectResourceName = "new_TelaPlanner_redirect.html"
+$redirectResourcePath = Join-Path $root "dist\redirect.html"
 $sitemapId = "787c8fda-53d0-f011-8543-6045bd3a51ea"
 $operationalGroupId = "group_16b0a016"
 $plannerSubAreaId = "subarea_tela_planner"
@@ -304,6 +306,7 @@ if (-not [Guid]::TryParse($ClientId, [ref] $clientIdGuid)) {
 $ClientId = $clientIdGuid.ToString()
 
 if (-not (Test-Path -LiteralPath $resourcePath)) { throw "Webresource não encontrado: $resourcePath. Execute npm run build primeiro." }
+if (-not (Test-Path -LiteralPath $redirectResourcePath)) { throw "Redirect bridge não encontrado: $redirectResourcePath. Execute npm run build primeiro." }
 if (-not (Get-Module -ListAvailable MSAL.PS)) { throw "Módulo MSAL.PS não encontrado. Instale com: Install-Module MSAL.PS -Scope CurrentUser" }
 Import-Module Microsoft.PowerShell.Utility -ErrorAction Stop
 if (-not (Get-Command Import-PowerShellDataFile -ErrorAction SilentlyContinue)) {
@@ -369,10 +372,36 @@ else {
   Update-RecordWithRetry -Headers $headers -Uri "$apiBaseUrl/webresourceset($webResourceId)" -Body (@{ displayname = "Tela Planner"; content = $content } | ConvertTo-Json) -Label $resourceName
 }
 
+$escapedRedirectName = Escape-OData $redirectResourceName
+$redirectLookupUri = "$apiBaseUrl/webresourceset?`$select=webresourceid,name,displayname,webresourcetype&`$filter=name eq '$escapedRedirectName'"
+$redirectLookup = Invoke-RestMethod -Method Get -Uri $redirectLookupUri -Headers $headers
+if ($redirectLookup.value -and $redirectLookup.value.Count -gt 1) { throw "Mais de um WebResource encontrado para $redirectResourceName. Deploy abortado." }
+
+$redirectContent = [Convert]::ToBase64String([IO.File]::ReadAllBytes($redirectResourcePath))
+$redirectBody = @{ name = $redirectResourceName; displayname = "Tela Planner - MSAL redirect"; webresourcetype = 1; content = $redirectContent } | ConvertTo-Json -Depth 4
+$redirectResourceId = $null
+
+if (-not $redirectLookup.value -or $redirectLookup.value.Count -eq 0) {
+  Write-Step "criando $redirectResourceName na solution $solutionUniqueName"
+  Invoke-RestMethod -Method Post -Uri "$apiBaseUrl/webresourceset" -Headers $headers -ContentType "application/json; charset=utf-8" -Body $redirectBody | Out-Null
+  $redirectLookup = Invoke-RestMethod -Method Get -Uri $redirectLookupUri -Headers $headers
+  $redirectResourceId = $redirectLookup.value[0].webresourceid
+}
+else {
+  $redirectResourceId = $redirectLookup.value[0].webresourceid
+  if ($redirectLookup.value[0].webresourcetype -ne 1) { throw "$redirectResourceName já existe, mas não é HTML. Deploy abortado." }
+  Write-Step "atualizando $redirectResourceName"
+  Update-RecordWithRetry -Headers $headers -Uri "$apiBaseUrl/webresourceset($redirectResourceId)" -Body (@{ displayname = "Tela Planner - MSAL redirect"; content = $redirectContent } | ConvertTo-Json) -Label $redirectResourceName
+}
+
 if (-not $NoPublish) {
   Write-Step "publicando $resourceName"
   $publishXml = "<importexportxml><webresources><webresource>$webResourceId</webresource></webresources></importexportxml>"
   Publish-XmlWithRetry -Headers $headers -ApiBaseUrl $apiBaseUrl -ParameterXml $publishXml -Label $resourceName
+
+  Write-Step "publicando $redirectResourceName"
+  $redirectPublishXml = "<importexportxml><webresources><webresource>$redirectResourceId</webresource></webresources></importexportxml>"
+  Publish-XmlWithRetry -Headers $headers -ApiBaseUrl $apiBaseUrl -ParameterXml $redirectPublishXml -Label $redirectResourceName
 
   Write-Step "validando navegação do app Model Driven Betinhos"
   $sitemap = Invoke-RestMethod -Method Get -Uri "$apiBaseUrl/sitemaps($sitemapId)?`$select=sitemapxml" -Headers $headers
@@ -399,4 +428,4 @@ if (-not $NoPublish) {
   Publish-XmlWithRetry -Headers $headers -ApiBaseUrl $apiBaseUrl -ParameterXml $sitemapPublishXml -Label "Sitemap"
 }
 
-Write-Step "concluído: $resourceName ($webResourceId)"
+Write-Step "concluído: $resourceName ($webResourceId) e $redirectResourceName ($redirectResourceId)"

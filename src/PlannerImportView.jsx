@@ -125,10 +125,10 @@ function authErrorMessage(error) {
     return "Já existe uma janela de login Microsoft aberta. Feche-a, atualize esta página e clique em Conectar Microsoft uma única vez.";
   }
   if (error?.errorCode === "redirect_bridge_origin_mismatch") {
-    return `${error.message} Use http://localhost:5192/ exatamente, sem trocar por 127.0.0.1 ou outra porta.`;
+    return `${error.message} Abra o app na mesma origem cadastrada no Microsoft Entra ID.`;
   }
   if (error?.errorCode === "timed_out" || error?.subError === "redirect_bridge_timeout") {
-    return "A Microsoft não devolveu o login para esta página. Confirme se está em http://localhost:5192/, feche o popup e tente novamente.";
+    return "A Microsoft não devolveu o login para esta página. Confirme se o redirect bridge está publicado e cadastrado no Microsoft Entra ID, feche o popup e tente novamente.";
   }
   return error?.message || "Não foi possível conectar a conta Microsoft.";
 }

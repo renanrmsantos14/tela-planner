@@ -1,10 +1,19 @@
 import { InteractionRequiredAuthError, PublicClientApplication } from "@azure/msal-browser";
+import { resolvePlannerRedirectUri } from "./msalRedirect.js";
 
 const clientId = String(import.meta.env?.VITE_MSAL_CLIENT_ID || "").trim();
 const tenantId = String(import.meta.env?.VITE_MSAL_TENANT_ID || "organizations").trim();
 const appRedirect = typeof window !== "undefined" ? `${window.location.origin}${window.location.pathname}` : "http://localhost:5192/";
 const fallbackRedirect = typeof window !== "undefined" ? `${window.location.origin}/redirect.html` : "http://localhost:5192/redirect.html";
-const configuredRedirectUri = String(import.meta.env?.VITE_MSAL_REDIRECT_URI || fallbackRedirect).trim();
+const redirectResourceName = String(import.meta.env?.VITE_MSAL_WEBRESOURCE_REDIRECT_NAME || "new_TelaPlanner_redirect.html").trim();
+const configuredRedirectUri = resolvePlannerRedirectUri({
+  origin: typeof window !== "undefined" ? window.location.origin : "",
+  pathname: typeof window !== "undefined" ? window.location.pathname : "",
+  search: typeof window !== "undefined" ? window.location.search : "",
+  configuredRedirectUri: import.meta.env?.VITE_MSAL_REDIRECT_URI,
+  fallbackRedirect,
+  redirectResourceName,
+});
 
 export const msalConfigured = Boolean(clientId);
 export const plannerScopes = ["User.Read", "Tasks.Read", "User.ReadBasic.All"];
