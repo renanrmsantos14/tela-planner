@@ -244,6 +244,14 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
     }
   };
 
+  const switchToAutomatic = async () => {
+    setMode("automatic");
+    setStep(1);
+    setAutoError("");
+    setAutoWarning("");
+    if (microsoftAccount) await loadPlans();
+  };
+
   const collectAutomatically = async () => {
     setAutoBusy(true);
     setAutoError("");
@@ -442,6 +450,7 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
                         <strong>Importação manual</strong>
                         <span>A outra pessoa deve abrir o Graph Explorer com a conta que tem acesso ao plano. Você só precisa trazer os JSONs para cá.</span>
                       </div>
+                      {msalConfigured && <button className="import-manual-switch" type="button" onClick={switchToAutomatic}><ShieldCheck size={13} /> Voltar para importação automática</button>}
                     </>
                   )}
                 </div>
