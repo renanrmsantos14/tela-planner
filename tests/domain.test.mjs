@@ -111,11 +111,12 @@ test("identifica quando a tarefa tem ou não tem responsável", () => {
   assert.equal(hasTaskResponsible({ assigneeIds: [], assigneeNames: [] }), false);
 });
 
-test("normaliza equipe e expande seus membros no snapshot da tarefa", () => {
-  const team = normalizeTeam({ id: "team-op", name: "Operação", memberIds: ["e1", "e1", "e2"] });
+test("normaliza equipe, preserva seu ícone e expande seus membros no snapshot da tarefa", () => {
+  const team = normalizeTeam({ id: "team-op", name: "Operação", iconName: "car", memberIds: ["e1", "e1", "e2"] });
   const assignment = resolveTaskAssignment({ assignmentMode: "team", teamId: team.id }, [team], [{ id: "e1", name: "Marina" }, { id: "e2", name: "Rafael" }]);
 
   assert.deepEqual(team.memberIds, ["e1", "e2"]);
+  assert.equal(team.iconName, "car");
   assert.deepEqual(assignment, { assignmentMode: "team", teamIds: ["team-op"], teamNames: ["Operação"], teamId: "team-op", teamName: "Operação", assigneeIds: ["e1", "e2"], assigneeNames: ["Marina", "Rafael"] });
 });
 

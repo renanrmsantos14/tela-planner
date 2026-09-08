@@ -1,4 +1,5 @@
 import React from "react";
+import { TeamIcon } from "./teamIcons.jsx";
 
 function normalizeProfiles(value) {
   const values = Array.isArray(value) ? value : String(value || "Não atribuído").split(/\s*,\s*/);
@@ -26,7 +27,14 @@ function AvatarStack({ profiles, small }) {
   </span>;
 }
 
-export default function AssigneeDisplay({ value, small = false }) {
+export default function AssigneeDisplay({ value, small = false, team = null, teamName = "" }) {
+  if (team || teamName) {
+    const label = team?.name || teamName || "Equipe responsável";
+    return <span className="assignee-display assignee-display-team" title={`Equipe responsável: ${label}`} aria-label={`Equipe responsável: ${label}`}>
+      <span className={`team-assignee-icon ${small ? "team-assignee-icon-small" : ""}`} aria-hidden="true"><TeamIcon name={team?.iconName} size={small ? 14 : 16} /></span>
+      <span className="assignee-name">{label}</span>
+    </span>;
+  }
   const profiles = normalizeProfiles(value);
   const names = profiles.map((profile) => profile.name);
   const label = names.join(", ") || "Não atribuído";

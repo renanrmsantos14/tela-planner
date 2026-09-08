@@ -518,7 +518,7 @@ export function createTeam(state, input) {
   if ((state.teams || []).some((team) => team.name.localeCompare(name, "pt-BR", { sensitivity: "base" }) === 0)) {
     throw new Error("Já existe uma equipe com esse nome.");
   }
-  const team = { id: uid("team"), name, memberIds: [...new Set((input.memberIds || []).filter(Boolean).map(String))] };
+  const team = { id: uid("team"), name, iconName: input.iconName || "users", memberIds: [...new Set((input.memberIds || []).filter(Boolean).map(String))] };
   return saveState({ ...state, teams: [...(state.teams || []), team] });
 }
 
@@ -530,7 +530,7 @@ export function updateTeam(state, id, patch) {
   }
   const next = saveState({
     ...state,
-    teams: (state.teams || []).map((team) => team.id === id ? { ...team, name, memberIds: [...new Set((patch.memberIds || []).filter(Boolean).map(String))] } : team),
+    teams: (state.teams || []).map((team) => team.id === id ? { ...team, name, iconName: patch.iconName || "users", memberIds: [...new Set((patch.memberIds || []).filter(Boolean).map(String))] } : team),
   });
   return refreshTeamTaskAssignments(next, id);
 }

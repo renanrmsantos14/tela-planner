@@ -215,6 +215,7 @@ export function normalizeTeam(team = {}) {
   return {
     id: String(team.id || ""),
     name: String(team.name || "").trim(),
+    iconName: String(team.iconName || team.icon || "users").trim() || "users",
     memberIds: [...new Set((team.memberIds || team.members || []).map((id) => String(id || "").trim()).filter(Boolean))],
   };
 }

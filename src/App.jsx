@@ -57,6 +57,7 @@ import {
 import {
   addOptimisticAttachment,
   addOptimisticComment,
+  addOptimisticReturn,
   applyOptimisticTaskPatch,
   buildAssigneeOptions,
   buildOptimisticTask,
@@ -102,6 +103,7 @@ import QuotesView from "./QuotesView.jsx";
 import ContactsView from "./ContactsView.jsx";
 import PageHeader from "./PageHeader.jsx";
 import AssigneeDisplay from "./AssigneeDisplay.jsx";
+import { TEAM_ICON_OPTIONS, TeamIcon } from "./teamIcons.jsx";
 import { MentionableField, useMentionController } from "./MentionableField.jsx";
 import LoadingFallback from "./LoadingFallback.jsx";
 import PlannerImportView from "./PlannerImportView.jsx";
@@ -132,7 +134,6 @@ const CENTRAL_NAV_ITEMS = [
   ["management", "Gestão", Target],
   ["contacts", "Contatos", Users],
   ["quotes", "Cotações", FileText],
-  ["quality", "Qualidade", ShieldAlert],
   ["settings", "Configurações", Settings],
 ];
 
@@ -591,7 +592,21 @@ function DeleteTaskDialog({
   );
 }
 
-function UnassignedTaskDialog({ taskTitle = "", isCreation = false, onCancel, onConfirm }) {
+function UnassignedTaskDialog({
+  taskTitle = "",
+  isCreation = false,
+  missingResponsible = true,
+  missingDueDate = false,
+  onCancel,
+  onConfirm,
+}) {
+  const missingFields = [
+    missingResponsible ? "responsável" : "",
+    missingDueDate ? "prazo" : "",
+  ].filter(Boolean);
+  const missingLabel = missingFields.length === 2
+    ? "responsável e prazo"
+    : missingFields[0] || "campos obrigatórios";
   return (
     <div
       className="drawer-confirm-layer"
@@ -603,18 +618,32 @@ function UnassignedTaskDialog({ taskTitle = "", isCreation = false, onCancel, on
         aria-modal="true"
         aria-labelledby="unassigned-task-title"
       >
-        <h2 id="unassigned-task-title">Salvar sem responsável?</h2>
+        <h2 id="unassigned-task-title">Faltam dados para salvar</h2>
         <p>
           {isCreation
-            ? "Esta tarefa será criada sem responsável. Tem certeza?"
-            : `“${taskTitle}” ficará sem responsável. Tem certeza?`}
+            ? "Preencha os campos abaixo ou confirme para criar assim mesmo."
+            : `“${taskTitle}” pode ser salva sem os campos abaixo.`}
         </p>
+        <ul className="drawer-confirm-missing" aria-label={`Campos pendentes: ${missingLabel}`}>
+          {missingResponsible && (
+            <li>
+              <UserRound size={16} aria-hidden="true" />
+              <span><strong>Responsável</strong><small>Escolha uma pessoa ou equipe</small></span>
+            </li>
+          )}
+          {missingDueDate && (
+            <li>
+              <CalendarDays size={16} aria-hidden="true" />
+              <span><strong>Prazo</strong><small>Defina uma data de entrega</small></span>
+            </li>
+          )}
+        </ul>
         <div className="drawer-confirm-actions">
-          <button className="button button-quiet" type="button" onClick={onCancel}>
-            {isCreation ? "Voltar" : "Continuar editando"}
+          <button className="button button-primary" type="button" onClick={onCancel}>
+            {isCreation ? "Voltar e preencher" : "Preencher agora"}
           </button>
-          <button className="button button-primary" type="button" onClick={onConfirm}>
-            {isCreation ? "Sim, criar" : "Sim, salvar"}
+          <button className="button button-quiet" type="button" onClick={onConfirm}>
+            {isCreation ? "Criar mesmo assim" : "Salvar mesmo assim"}
           </button>
         </div>
       </div>
@@ -809,7 +838,7 @@ function NotificationsPanel({
         </header>
         {unread > 0 && (
           <div className="notification-panel-actions">
-            <span className="notification-action-summary" aria-live="polite">
+            <span className="notification-action-summary" aria-live="polite" aria-atomic="true">
               {`${unread} não lida${unread === 1 ? "" : "s"}`}
             </span>
             <button
@@ -1392,6 +1421,9 @@ const TaskCard = memo(function TaskCard({
     (subtask) => subtask.status === "done",
   ).length;
   const visibleSubtasks = subtasks.slice(0, 3);
+  const assignedTeam = taskItem.assignmentMode === "team"
+    ? teams.find((team) => (taskItem.teamIds || [taskItem.teamId]).some((id) => String(id) === String(team.id)))
+    : null;
   return (
     <article
       className={`task-card ${compact ? "task-card-compact" : ""} ${overdue ? "task-overdue" : ""} ${taskItem.syncStatus === "syncing" ? "task-syncing" : ""} ${isDragging ? "task-card-dragging" : ""}`}
@@ -1514,6 +1546,8 @@ const TaskCard = memo(function TaskCard({
               : taskItem.assigneeNames || taskItem.assigneeName
           }
           small
+          team={assignedTeam}
+          teamName={taskItem.assignmentMode === "team" ? taskItem.teamName : ""}
         />
         {taskItem.syncStatus === "syncing" ? (
           <span className="sync-chip" role="status">
@@ -2653,7 +2687,7 @@ function QualityView({ state, onCreate, onCreateTask, filters, setFilters }) {
 }
 
 function TeamManager({ teams = [], tasks = [], employees = [], onSave, onDelete }) {
-  const emptyDraft = { id: "", name: "", memberIds: [] };
+  const emptyDraft = { id: "", name: "", iconName: "users", memberIds: [] };
   const [draft, setDraft] = useState(emptyDraft);
   const [teamDrawerOpen, setTeamDrawerOpen] = useState(false);
   const [expandedTeamId, setExpandedTeamId] = useState("");
@@ -2673,7 +2707,7 @@ function TeamManager({ teams = [], tasks = [], employees = [], onSave, onDelete 
     return `${names.slice(0, 2).join(", ")} +${names.length - 2}`;
   };
   const startEdit = (team) => {
-    setDraft({ id: team.id, name: team.name, memberIds: [...(team.memberIds || [])] });
+    setDraft({ id: team.id, name: team.name, iconName: team.iconName || "users", memberIds: [...(team.memberIds || [])] });
     setExpandedTeamId(team.id);
     setTeamDrawerOpen(true);
     setValidationError("");
@@ -2739,7 +2773,7 @@ function TeamManager({ teams = [], tasks = [], employees = [], onSave, onDelete 
             return (
               <article className={`team-list-item${isExpanded ? " is-expanded" : ""}`} key={team.id}>
                 <button className="team-list-row" type="button" onClick={() => setExpandedTeamId((current) => current === team.id ? "" : team.id)} aria-expanded={isExpanded} aria-controls={detailsId}>
-                  <span className="team-list-icon" aria-hidden="true"><Users size={17} /></span>
+                  <span className="team-list-icon" aria-hidden="true"><TeamIcon name={team.iconName} size={17} /></span>
                   <span className="team-list-copy">
                     <strong>{team.name}</strong>
                     <span className="team-list-meta">
@@ -2790,6 +2824,12 @@ function TeamManager({ teams = [], tasks = [], employees = [], onSave, onDelete 
               <SearchableMultiSelect value={draft.memberIds} onChange={(memberIds) => setDraft((current) => ({ ...current, memberIds }))} options={employeeOptions} placeholder="Buscar e adicionar membros" />
               <span className="team-form-hint">A mesma pessoa pode estar em mais de uma equipe.</span>
             </label>
+            <div className="team-form-field">
+              <span className="team-form-label"><span>Ícone da equipe</span><span className="team-form-selection">Exibido nos cards</span></span>
+              <div className="team-icon-options" role="radiogroup" aria-label="Ícone da equipe">
+                {TEAM_ICON_OPTIONS.map(({ id, label }) => <button key={id} className={`team-icon-option${draft.iconName === id ? " is-selected" : ""}`} type="button" role="radio" aria-checked={draft.iconName === id} aria-label={label} title={label} onClick={() => setDraft((current) => ({ ...current, iconName: id }))}><TeamIcon name={id} size={17} /></button>)}
+              </div>
+            </div>
           </div>
           {validationError && <div className="form-error" role="alert">{validationError}</div>}
           <div className="team-form-footer">
@@ -3453,6 +3493,78 @@ function AttachmentSection({
   );
 }
 
+function ReturnEvidenceList({ taskId, attachments = [], loadAttachmentContent, onDeleteAttachment }) {
+  const [previewAttachment, setPreviewAttachment] = useState(null);
+  const [previewError, setPreviewError] = useState("");
+  const [pendingDeleteId, setPendingDeleteId] = useState("");
+  const [deletingId, setDeletingId] = useState("");
+  if (!attachments.length) return null;
+  const openEvidence = async (attachment) => {
+    setPreviewError("");
+    if (!isImageAttachment(attachment) && !isPdfAttachment(attachment)) {
+      setPreviewError("A prévia está disponível apenas para imagens e PDFs.");
+      return;
+    }
+    try {
+      const cacheKey = attachmentCacheKey(attachment);
+      let previewUrl = attachment.previewUrl || attachmentPreviewCache.get(cacheKey);
+      if (!previewUrl && loadAttachmentContent) {
+        const result = await loadAttachmentContent(attachment);
+        previewUrl = result?.dataUrl || result?.previewUrl || "";
+        if (previewUrl) attachmentPreviewCache.set(cacheKey, previewUrl);
+      }
+      if (!previewUrl) throw new Error("Não foi possível carregar a evidência.");
+      setPreviewAttachment({ ...attachment, previewUrl });
+    } catch (error) {
+      setPreviewError(error.message || "Não foi possível abrir a evidência.");
+    }
+  };
+  const confirmDelete = (attachment) => {
+    setPendingDeleteId("");
+    setDeletingId(attachment.id);
+    Promise.resolve(onDeleteAttachment?.(taskId, attachment)).finally(() => setDeletingId(""));
+  };
+  return (
+    <div className="return-evidence" aria-label="Evidências do retorno">
+      <span className="return-evidence-label"><Paperclip size={13} aria-hidden="true" /> Evidências</span>
+      <div className="return-evidence-list">
+        {attachments.map((attachment) => (
+          <div className="return-evidence-item" key={attachment.id}>
+            <button className="attachment-open-button" type="button" onClick={() => openEvidence(attachment)} aria-label={`Abrir prévia de ${attachment.name || "evidência"}`}>
+              <AttachmentTypeIcon attachment={attachment} />
+              <span className="attachment-file-main">
+                <strong title={attachment.name}>{attachment.name || "Arquivo"}</strong>
+                <span>{attachmentTypeLabel(attachment)} · {formatAttachmentSize(attachment.size)} · Abrir prévia</span>
+              </span>
+            </button>
+            <div className="attachment-card-actions">
+              <span className="attachment-status"><CheckCircle2 size={13} /> Salvo</span>
+              {onDeleteAttachment && (pendingDeleteId === attachment.id ? (
+                <div className="attachment-remove-confirm" role="group" aria-label={`Confirmar remoção de ${attachment.name || "evidência"}`}>
+                  <button className="button button-danger" type="button" onClick={() => confirmDelete(attachment)} disabled={deletingId === attachment.id}>{deletingId === attachment.id ? "Removendo…" : "Remover"}</button>
+                  <button className="button button-quiet" type="button" onClick={() => setPendingDeleteId("")} disabled={deletingId === attachment.id}>Cancelar</button>
+                </div>
+              ) : (
+                <button className="attachment-delete-button" type="button" onClick={() => setPendingDeleteId(attachment.id)} disabled={deletingId === attachment.id} aria-label={`Remover ${attachment.name || "evidência"}`} title={`Remover ${attachment.name || "evidência"}`}><Trash2 size={14} /></button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      {previewError && <div className="attachment-feedback attachment-feedback-error" role="alert">{previewError}</div>}
+      {previewAttachment && typeof document !== "undefined" && document.body
+        ? createPortal(
+            <div className="attachment-lightbox" role="dialog" aria-modal="true" aria-label={`Prévia de ${previewAttachment.name || "evidência"}`} onMouseDown={(event) => { if (event.target === event.currentTarget) setPreviewAttachment(null); }}>
+              <button className="icon-button attachment-lightbox-close" type="button" onClick={() => setPreviewAttachment(null)} aria-label="Fechar prévia"><X size={19} /></button>
+              {isPdfAttachment(previewAttachment) ? <iframe src={previewAttachment.previewUrl} title={previewAttachment.name || "Prévia do PDF"} /> : <img src={previewAttachment.previewUrl} alt={previewAttachment.name || "Imagem anexada"} />}
+            </div>,
+            document.body,
+          )
+        : null}
+    </div>
+  );
+}
+
 function MoreView({ onNavigate }) {
   return (
     <div className="page-content more-page-content">
@@ -3487,20 +3599,6 @@ function MoreView({ onNavigate }) {
           <span>
             <strong>Contatos</strong>
             <small>Casos recebidos e responsáveis</small>
-          </span>
-          <ChevronRight size={17} />
-        </button>
-        <button
-          className="panel more-action"
-          type="button"
-          onClick={() => onNavigate("quality")}
-        >
-          <span className="more-action-icon more-action-icon-warning">
-            <ShieldAlert size={19} />
-          </span>
-          <span>
-            <strong>Qualidade</strong>
-            <small>Transforme erros e ações em tarefas</small>
           </span>
           <ChevronRight size={17} />
         </button>
@@ -3556,6 +3654,8 @@ function TaskDrawerContent({
   const [form, setForm] = useState(taskItem ? { ...taskItem } : null);
   const [comment, setComment] = useState("");
   const [showAllComments, setShowAllComments] = useState(false);
+  const [showAllReturns, setShowAllReturns] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
   const [isAddingSubtask, setIsAddingSubtask] = useState(false);
   const [subtaskToDelete, setSubtaskToDelete] = useState(null);
@@ -3599,6 +3699,8 @@ function TaskDrawerContent({
     );
     setComment("");
     setShowAllComments(false);
+    setShowAllReturns(false);
+    setShowHistory(false);
     commentExpansionAnchorRef.current = null;
     setMentionActiveIndex(0);
     setNewSubtaskTitle("");
@@ -3647,6 +3749,16 @@ function TaskDrawerContent({
   );
   const history = [...(taskItem.history || [])].reverse();
   const comments = taskItem.comments || [];
+  const returns = [...(taskItem.returns || [])].sort((left, right) => String(left.createdAt || "").localeCompare(String(right.createdAt || "")));
+  const latestReturn = returns.at(-1);
+  const returnSeenKey = `planner:return-seen:${currentEmployee?.id || "anonymous"}:${taskItem.id}`;
+  const seenReturnAt = globalThis.localStorage?.getItem(returnSeenKey) || "";
+  const hasUnreadReturn = Boolean(latestReturn?.createdAt && seenReturnAt < latestReturn.createdAt);
+  useEffect(() => {
+    if (latestReturn?.createdAt) globalThis.localStorage?.setItem(returnSeenKey, latestReturn.createdAt);
+  }, [latestReturn?.createdAt, returnSeenKey]);
+  const visibleReturns = showAllReturns ? [...returns].reverse() : latestReturn ? [latestReturn] : [];
+  const olderReturnsCount = Math.max(0, returns.length - visibleReturns.length);
   const visibleComments = showAllComments ? comments : comments.slice(-10);
   const olderCommentsCount = comments.length - visibleComments.length;
   const olderCommentsLabel = olderCommentsCount === 1
@@ -3683,7 +3795,7 @@ function TaskDrawerContent({
     setForm((current) => ({ ...current, [key]: value }));
   const visibleAttachments = [
     ...(taskItem.attachments || []).filter(
-      (item) => !pendingAttachmentRemovals.includes(item.id),
+      (item) => !item.returnId && !pendingAttachmentRemovals.includes(item.id),
     ),
     ...draftAttachments,
   ];
@@ -3781,11 +3893,9 @@ function TaskDrawerContent({
       teams,
       state.employees,
     );
-    if (
-      !allowUnassigned &&
-      hasTaskResponsible(taskItem) &&
-      !hasTaskResponsible(nextAssignment)
-    ) {
+    const missingResponsible = !hasTaskResponsible(nextAssignment);
+    const missingDueDate = !String(form.dueDate || "").trim();
+    if (!allowUnassigned && (missingResponsible || missingDueDate)) {
       setShowUnassignedPrompt(true);
       return;
     }
@@ -4080,6 +4190,39 @@ function TaskDrawerContent({
               rows="4"
             />
           </label>
+          {returns.length > 0 && (
+            <section className="drawer-section returns-section">
+              <div className="drawer-section-heading">
+                <div className="comment-section-title">
+                  <h3>Retornos</h3>
+                  <span className="section-count">{returns.length}</span>
+                </div>
+                <span className="comment-section-helper">Respostas recebidas</span>
+              </div>
+              {visibleReturns.map((item, index) => (
+                <article className={`return-card ${item.id === latestReturn?.id ? "is-latest" : ""}`} key={item.id}>
+                  <header className="return-card-header">
+                    <div className="return-card-author">
+                      <Avatar name={item.author} small />
+                      <span><strong>{item.author}</strong><small>{formatCommentTimestamp(item.createdAt)}</small></span>
+                    </div>
+                    {item.id === latestReturn?.id && (
+                      <span className={`return-card-badge ${hasUnreadReturn ? "is-new" : ""}`}>
+                        {hasUnreadReturn ? "Novo retorno" : "Mais recente"}
+                      </span>
+                    )}
+                  </header>
+                  <p className="return-card-text">{item.text}</p>
+                  <ReturnEvidenceList taskId={taskItem.id} attachments={item.attachments} loadAttachmentContent={loadAttachmentContent} onDeleteAttachment={onDeleteAttachment} />
+                </article>
+              ))}
+              {!showAllReturns && olderReturnsCount > 0 && (
+                <button className="comment-history-toggle" type="button" onClick={() => setShowAllReturns(true)}>
+                  <ChevronDown size={14} aria-hidden="true" /> Mostrar {olderReturnsCount} {olderReturnsCount === 1 ? "retorno anterior" : "retornos anteriores"}
+                </button>
+              )}
+            </section>
+          )}
           <section className="drawer-section">
             <div className="drawer-section-heading">
               <h3>Subtarefas</h3>
@@ -4208,10 +4351,10 @@ function TaskDrawerContent({
           <section className="drawer-section">
             <div className="drawer-section-heading">
               <div className="comment-section-title">
-                <h3>Conversa da tarefa</h3>
+                <h3>Comentários</h3>
                 <span className="section-count">{comments.length}</span>
               </div>
-              <span className="comment-section-helper">Atualizações e contexto</span>
+              <span className="comment-section-helper">Mensagens da equipe</span>
             </div>
             {olderCommentsCount > 0 && (
               <button
@@ -4304,17 +4447,23 @@ function TaskDrawerContent({
           />
           <section className="drawer-section history-section">
             <div className="drawer-section-heading">
-              <h3>Histórico</h3>
+              <button className="history-toggle" type="button" onClick={() => setShowHistory((current) => !current)} aria-expanded={showHistory}>
+                <h3>Histórico da tarefa</h3>
+                <span className="section-count">{history.length}</span>
+                {showHistory ? <ChevronUp size={14} aria-hidden="true" /> : <ChevronDown size={14} aria-hidden="true" />}
+              </button>
             </div>
-            {history.slice(0, 5).map((item) => (
-              <div className="history-row" key={item.id}>
-                <span className="history-dot" />
-                <div>
-                  <strong>{item.text}</strong>
-                  <small>{item.author} · {formatCommentTimestamp(item.createdAt)}</small>
+            {showHistory && (
+              history.length ? history.slice(0, 5).map((item) => (
+                <div className="history-row" key={item.id}>
+                  <span className="history-dot" />
+                  <div>
+                    <strong>{item.text}</strong>
+                    <small>{item.author} · {formatCommentTimestamp(item.createdAt)}</small>
+                  </div>
                 </div>
-              </div>
-            ))}
+              )) : <div className="empty-inline">Nenhuma alteração registrada.</div>
+            )}
           </section>
         </div>
         <footer className="drawer-footer">
@@ -4337,7 +4486,7 @@ function TaskDrawerContent({
           <button
             className="button button-primary"
             disabled={saveState !== "idle"}
-            onClick={handleSave}
+            onClick={() => handleSave()}
           >
             {saveState === "saving" ? (
               <>
@@ -4387,6 +4536,12 @@ function TaskDrawerContent({
         {showUnassignedPrompt && (
           <UnassignedTaskDialog
             taskTitle={taskItem.title}
+            missingResponsible={!hasTaskResponsible(resolveTaskAssignment(
+              { ...form, assigneeNames: form.assigneeName },
+              teams,
+              state.employees,
+            ))}
+            missingDueDate={!String(form.dueDate || "").trim()}
             onCancel={() => setShowUnassignedPrompt(false)}
             onConfirm={() => {
               setShowUnassignedPrompt(false);
@@ -4895,7 +5050,9 @@ function NewTaskDrawer({ employees = [], teams = [], initialStatus = "todo", ini
       return;
     }
     const assignment = resolveTaskAssignment(form, teams, employees);
-    if (!allowUnassigned && !hasTaskResponsible(assignment)) {
+    const missingResponsible = !hasTaskResponsible(assignment);
+    const missingDueDate = !String(form.dueDate || "").trim();
+    if (!allowUnassigned && (missingResponsible || missingDueDate)) {
       setShowUnassignedPrompt(true);
       return;
     }
@@ -5067,7 +5224,7 @@ function NewTaskDrawer({ employees = [], teams = [], initialStatus = "todo", ini
             className="button button-primary"
             type="button"
             disabled={!form.title.trim() || saveState !== "idle"}
-            onClick={handleCreate}
+            onClick={() => handleCreate()}
           >
             {saveState === "saving" ? (
               <>
@@ -5104,6 +5261,8 @@ function NewTaskDrawer({ employees = [], teams = [], initialStatus = "todo", ini
         {showUnassignedPrompt && (
           <UnassignedTaskDialog
             isCreation
+            missingResponsible={!hasTaskResponsible(resolveTaskAssignment(form, teams, employees))}
+            missingDueDate={!String(form.dueDate || "").trim()}
             onCancel={() => setShowUnassignedPrompt(false)}
             onConfirm={() => {
               setShowUnassignedPrompt(false);
@@ -5396,52 +5555,20 @@ export default function App() {
   }, [store, mergeConfirmed]);
   useEffect(() => {
     const task = state.tasks.find((item) => item.id === selectedId);
-    if (
-      !selectedId ||
-      !task ||
-      task.detailsLoaded ||
-      task.detailsLoading ||
-      !store.loadTaskDetails
-    )
-      return;
+    if (!selectedId || !task || task.detailsLoaded || task.detailsLoading || !store.loadTaskDetails) return;
     setState((current) => ({
       ...current,
-      tasks: current.tasks.map((item) =>
-        item.id === selectedId ? { ...item, detailsLoading: true } : item,
-      ),
+      tasks: current.tasks.map((item) => item.id === selectedId ? { ...item, detailsLoading: true } : item),
     }));
-    store
-      .loadTaskDetails(selectedId)
-      .then((details) =>
-        setState((current) => ({
-          ...current,
-          tasks: current.tasks.map((item) =>
-            item.id === selectedId
-              ? {
-                  ...item,
-                  ...details,
-                  detailsLoaded: true,
-                  detailsLoading: false,
-                }
-              : item,
-          ),
-        })),
-      )
-      .catch((failure) => {
-        setState((current) => ({
-          ...current,
-          tasks: current.tasks.map((item) =>
-            item.id === selectedId
-              ? {
-                  ...item,
-                  detailsLoading: false,
-                  detailsError:
-                    failure.message || "Não foi possível carregar o histórico.",
-                }
-              : item,
-          ),
-        }));
-      });
+    store.loadTaskDetails(selectedId)
+      .then((details) => setState((current) => ({
+        ...current,
+        tasks: current.tasks.map((item) => item.id === selectedId ? { ...item, ...details, detailsLoaded: true, detailsLoading: false } : item),
+      })))
+      .catch((failure) => setState((current) => ({
+        ...current,
+        tasks: current.tasks.map((item) => item.id === selectedId ? { ...item, detailsLoading: false, detailsError: failure.message || "Não foi possível carregar o histórico." } : item),
+      })));
   }, [selectedId, state.tasks, store]);
   const runMutation = useCallback(
     (operation, message) =>
@@ -5707,15 +5834,16 @@ export default function App() {
       const mentionedEmployeeIds = mentionedEmployees(input.text, state.employees).map((employee) => employee.id);
       const operationInput = {
         ...input,
+        returnId: globalThis.crypto?.randomUUID?.() || `return-${Date.now()}-${Math.random().toString(16).slice(2)}`,
         actorEmployeeId: currentEmployee?.id || "",
         actorUserId: currentEmployee?.userId || "",
         mentionedEmployeeIds,
       };
       return runOptimisticMutation(
-        (current) => addOptimisticComment(
+        (current) => addOptimisticReturn(
           applyOptimisticTaskPatch(current, id, { status: "doing" }),
           id,
-          input.text,
+          { id: input.returnId, text: input.text, createdAt: new Date().toISOString(), author: currentEmployee?.name || "Você" },
         ),
         () => store.resolveWaitingReturn(state, id, operationInput),
         store.live ? "Registrando retorno..." : "Registrando retorno no mock local...",
@@ -6069,8 +6197,10 @@ export default function App() {
         teamName: "Operação",
         dueDate: "",
       };
-      if (!allowUnassigned && !hasTaskResponsible(input)) {
-        setPendingUnassignedCreate({ kind: "subtask", parentId, title });
+      const missingResponsible = !hasTaskResponsible(input);
+      const missingDueDate = !String(input.dueDate || "").trim();
+      if (!allowUnassigned && (missingResponsible || missingDueDate)) {
+        setPendingUnassignedCreate({ kind: "subtask", parentId, title, missingResponsible, missingDueDate });
         return Promise.resolve(false);
       }
       runOptimisticCreate(
@@ -6094,8 +6224,10 @@ export default function App() {
         sourceLabel:
           item.type === "error" ? "Erro operacional" : "Ação operacional",
       };
-      if (!allowUnassigned && !hasTaskResponsible(input)) {
-        setPendingUnassignedCreate({ kind: "quality", item });
+      const missingResponsible = !hasTaskResponsible(input);
+      const missingDueDate = !String(input.dueDate || "").trim();
+      if (!allowUnassigned && (missingResponsible || missingDueDate)) {
+        setPendingUnassignedCreate({ kind: "quality", item, missingResponsible, missingDueDate });
         return Promise.resolve(false);
       }
       runOptimisticCreate(
@@ -6218,6 +6350,12 @@ export default function App() {
                   attachments: (taskItem.attachments || []).filter(
                     (item) => item.id !== attachment.id,
                   ),
+                  returns: (taskItem.returns || []).map((returnItem) => ({
+                    ...returnItem,
+                    attachments: (returnItem.attachments || []).filter(
+                      (item) => item.id !== attachment.id,
+                    ),
+                  })),
                 }
               : taskItem,
           ),
@@ -6564,6 +6702,8 @@ export default function App() {
       {pendingUnassignedCreate && (
         <UnassignedTaskDialog
           isCreation
+          missingResponsible={pendingUnassignedCreate.missingResponsible}
+          missingDueDate={pendingUnassignedCreate.missingDueDate}
           onCancel={() => setPendingUnassignedCreate(null)}
           onConfirm={() => {
             const pending = pendingUnassignedCreate;

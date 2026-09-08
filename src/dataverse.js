@@ -72,6 +72,7 @@ const RELATION_TABLE = "cr40f_plannertarearelacao";
 const ASSIGNEE_RELATION_TABLE = "cr40f_plannertarearesponsavel";
 const TASK_TEAM_RELATION_TABLE = "cr40f_plannertarefaequipe";
 const TEAM_TABLE = "cr40f_plannerequipe";
+const TEAM_ICON_FIELD = "cr40f_icone";
 const TEAM_MEMBER_TABLE = "cr40f_plannerequipemembro";
 const TASK_TEAM_FIELD = "cr40f_equipeplanner";
 const NOTIFICATION_TABLE = "cr40f_plannernotificacao";
@@ -458,6 +459,7 @@ function normalizePlannerTeam(row, primaryName = "cr40f_nome") {
   return {
     id: row[`${TEAM_TABLE}id`] || row.cr40f_plannerequipeid || "",
     name: row[primaryName] || row[`${primaryName}@OData.Community.Display.V1.FormattedValue`] || "",
+    iconName: row[TEAM_ICON_FIELD] || "users",
     memberIds: [],
   };
 }
@@ -466,7 +468,7 @@ async function loadPlannerTeams(xrm) {
   try {
     const primaryName = await primaryNameAttribute(xrm, TEAM_TABLE);
     const [teamRows, memberRows] = await Promise.all([
-      retrieveMany(xrm, TEAM_TABLE, `?$select=${TEAM_TABLE}id,${primaryName}&$filter=statecode eq 0&$orderby=${primaryName} asc`),
+      retrieveMany(xrm, TEAM_TABLE, `?$select=${TEAM_TABLE}id,${primaryName},${TEAM_ICON_FIELD}&$filter=statecode eq 0&$orderby=${primaryName} asc`),
       retrieveMany(xrm, TEAM_MEMBER_TABLE, `?$select=${TEAM_MEMBER_TABLE}id,_cr40f_equipe_value,_cr40f_funcionario_value&$filter=statecode eq 0`),
     ]);
     const teams = teamRows.map((row) => normalizePlannerTeam(row, primaryName));
@@ -501,7 +503,7 @@ async function createLiveTeam(xrm, state, input) {
   if (!name) throw new Error("Informe um nome para a equipe.");
   if ((state.teams || []).some((team) => team.name.localeCompare(name, "pt-BR", { sensitivity: "base" }) === 0)) throw new Error("Já existe uma equipe com esse nome.");
   const primaryName = await primaryNameAttribute(xrm, TEAM_TABLE);
-  const payload = { [primaryName]: name };
+  const payload = { [primaryName]: name, [TEAM_ICON_FIELD]: input.iconName || "users" };
   const created = await request(xrm, `/${entitySetName(TEAM_TABLE)}`, { method: "POST", body: JSON.stringify(payload) });
   const id = created?.[`${TEAM_TABLE}id`] || created?.cr40f_plannerequipeid;
   if (!id) throw new Error("Dataverse criou equipe sem retornar o ID.");
@@ -514,7 +516,7 @@ async function updateLiveTeam(xrm, state, id, patch) {
   if (!name) throw new Error("Informe um nome para a equipe.");
   if ((state.teams || []).some((team) => team.id !== id && team.name.localeCompare(name, "pt-BR", { sensitivity: "base" }) === 0)) throw new Error("Já existe uma equipe com esse nome.");
   const primaryName = await primaryNameAttribute(xrm, TEAM_TABLE);
-  await request(xrm, `/${entitySetName(TEAM_TABLE)}(${cleanId(id)})`, { method: "PATCH", body: JSON.stringify({ [primaryName]: name }) });
+  await request(xrm, `/${entitySetName(TEAM_TABLE)}(${cleanId(id)})`, { method: "PATCH", body: JSON.stringify({ [primaryName]: name, [TEAM_ICON_FIELD]: patch.iconName || "users" }) });
   await replacePlannerTeamMembers(xrm, id, patch.memberIds || []);
   return loadLiveState(xrm);
 }
