@@ -17,7 +17,8 @@ test("contatos expõe Inbox, Kanban, seção Aguardando e filtros do MVP", async
   assert.match(source, /onDragOver=\{\(event\) => handleDragOver\(event, column\.id\)\}/);
   assert.match(source, /onDrop=\{\(event\) => handleDrop\(event, column\.id\)\}/);
   assert.match(source, /contact-kanban-drop-placeholder/);
-  assert.match(source, /Mover para/);
+  assert.match(source, /contact-kanban-no-results/);
+  assert.match(source, /items\.length === 1 \? "caso" : "casos"/);
   assert.match(source, /Minhas pendências/);
   assert.match(source, /Arquivados/);
 });
@@ -34,20 +35,22 @@ test("card mantém somente conclusão rápida com confirmação em dois passos",
   assert.doesNotMatch(source, /onDoubleClick/);
 });
 
-test("Kanban mantém abertura primária e movimento acessível sem arraste", async () => {
+test("Kanban mantém abertura primária e drag-and-drop sem ruído secundário", async () => {
   const source = await readSource("../src/ContactsView.jsx");
   const styles = await readSource("../src/styles.css");
 
-  assert.match(source, /onMove, draggable = false, showMoveControl = false/);
-  assert.match(source, /aria-label=\{`Mover \$\{contact\.subject \|\| "caso"\} para outra coluna`\}/);
+  assert.match(source, /draggable = false, showStatusBadge = true/);
+  assert.match(source, /showStatusBadge=\{variant !== "kanban"\}/);
+  assert.doesNotMatch(source, /showMoveControl|contact-row-move|contact-row-open-hint/);
   assert.match(source, /contact-priority-label priority-\$\{contact\.priority\}/);
-  assert.match(source, /contact-row-open-hint/);
+  assert.match(source, /className="contact-row-main"/);
   assert.match(source, /setData\("text\/contact-id", contact\.id\)/);
   assert.match(source, /effectAllowed = "move"/);
   assert.match(styles, /\.contact-kanban-column\.is-drop-target \.contact-kanban-body/);
   assert.match(styles, /\.contact-kanban-column \.contact-row \{ position: relative;[\s\S]*box-shadow: var\(--shadow-surface\)/);
   assert.match(styles, /\.contact-kanban-column \.contact-row-top strong \{ display: -webkit-box;/);
-  assert.match(styles, /\.contact-row-move select:focus-visible/);
+  assert.match(styles, /\.status-column-waiting \.contact-kanban-heading-title > svg \{ color: var\(--amber\); \}/);
+  assert.doesNotMatch(styles, /contact-row-move|contact-row-open-hint/);
 });
 
 test("triagem comunica busca, filtros ativos e estados da lista", async () => {
@@ -60,6 +63,8 @@ test("triagem comunica busca, filtros ativos e estados da lista", async () => {
   assert.match(source, /aria-label=\{`\$\{activeFilterCount\} filtros ativos`\}/);
   assert.match(source, /id="contacts-filter-options"/);
   assert.match(source, /disabled=\{!activeFilterCount\}/);
+  assert.match(styles, /\.contacts-filter-bar \.filter-bar-content \{ display: none;/);
+  assert.match(styles, /\.contacts-filter-bar\.is-expanded \.filter-bar-content \{ display: flex;/);
   assert.match(styles, /\.contacts-filter-bar \.filter-search \{ min-width:/);
   assert.match(styles, /\.contact-row-message \{ min-width:/);
   assert.match(styles, /@media \(max-width: 720px\) \{[\s\S]*\.contacts-filter-bar \.filter-search \{ grid-column: 1; grid-row: 1;/);
