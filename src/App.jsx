@@ -18,6 +18,7 @@ import {
   CalendarDays,
   Check,
   CheckCircle2,
+  ChevronLeft,
   ChevronDown,
   ChevronUp,
   ChevronRight,
@@ -2324,6 +2325,22 @@ function calendarDateKey(date) {
   return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-");
 }
 
+function calendarDateFromKey(value) {
+  return new Date(`${value}T12:00:00`);
+}
+
+function shiftCalendarDate(value, amount) {
+  const date = calendarDateFromKey(value);
+  date.setDate(date.getDate() + amount);
+  return calendarDateKey(date);
+}
+
+function calendarDaysBetween(startKey, endKey) {
+  const start = calendarDateFromKey(startKey);
+  const end = calendarDateFromKey(endKey);
+  return Math.max(0, Math.round((end - start) / 86400000));
+}
+
 function CalendarView({
   state,
   onOpen,
@@ -2337,15 +2354,39 @@ function CalendarView({
 }) {
   const today = new Date();
   const todayKey = calendarDateKey(today);
+  const [windowStartDate, setWindowStartDate] = useState(todayKey);
   const [selectedDate, setSelectedDate] = useState(todayKey);
-  const days = Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(today);
-    date.setDate(date.getDate() + index);
-    return date;
-  });
-  const openTasks = useMemo(
-    () => sortTasks(filterTasks(tasksForView(state.tasks, filters), filters, currentEmployee, state.teams), currentEmployee, state.teams),
-    [state.tasks, state.teams, filters, currentEmployee],
+  const days = useMemo(
+    () => Array.from({ length: 7 }, (_, index) => calendarDateFromKey(shiftCalendarDate(windowStartDate, index))),
+    [windowStartDate],
+  );
+  const statusFilters = Array.isArray(filters.status)
+    ? filters.status
+    : filters.status
+      ? [filters.status]
+      : [];
+  const openTasks = useMemo(() => {
+    const filteredTasks = filterTasks(
+      tasksForView(state.tasks, filters),
+      filters,
+      currentEmployee,
+      state.teams,
+    );
+    const visibleTasks = statusFilters.includes("done")
+      ? filteredTasks
+      : filteredTasks.filter((taskItem) => taskItem.status !== "done");
+    return sortTasks(visibleTasks, currentEmployee, state.teams);
+  }, [state.tasks, state.teams, filters, currentEmployee, statusFilters]);
+  const isCurrentWindow = windowStartDate === todayKey;
+  const overdueTasks = useMemo(
+    () => isCurrentWindow
+      ? openTasks.filter((taskItem) => getDueBucketForEmployee(taskItem, currentEmployee, state.teams) === "overdue")
+      : [],
+    [isCurrentWindow, openTasks, currentEmployee, state.teams],
+  );
+  const overdueTaskIds = useMemo(
+    () => new Set(overdueTasks.map((taskItem) => taskItem.id)),
+    [overdueTasks],
   );
   const taskCountByDate = useMemo(
     () => days.reduce((counts, date) => {
@@ -2358,13 +2399,23 @@ function CalendarView({
     [days, openTasks, currentEmployee, state.teams],
   );
   const visibleTasks = openTasks.filter(
-    (taskItem) => taskDisplayDueDate(taskItem, currentEmployee, state.teams) === selectedDate,
+    (taskItem) => taskDisplayDueDate(taskItem, currentEmployee, state.teams) === selectedDate
+      && !overdueTaskIds.has(taskItem.id),
   );
   const selectedDateLabel = new Intl.DateTimeFormat("pt-BR", {
     weekday: "long",
     day: "2-digit",
     month: "long",
-  }).format(new Date(`${selectedDate}T12:00:00`));
+  }).format(calendarDateFromKey(selectedDate));
+  const windowLabel = `${CALENDAR_WEEKDAY_FORMATTER.format(days[0]).replace(".", "")} ${days[0].getDate()} – ${CALENDAR_WEEKDAY_FORMATTER.format(days[6]).replace(".", "")} ${days[6].getDate()}`;
+  const shiftWindow = (amount) => {
+    setWindowStartDate((currentStart) => shiftCalendarDate(currentStart, amount));
+    setSelectedDate((currentSelected) => shiftCalendarDate(currentSelected, amount));
+  };
+  const goToToday = () => {
+    setWindowStartDate(todayKey);
+    setSelectedDate(todayKey);
+  };
   return (
     <div className="page-content">
       <PageHeader
@@ -2386,6 +2437,35 @@ function CalendarView({
         employees={state.employees}
         teams={state.teams}
       />
+      <div className="calendar-navigation" aria-label="Navegação da agenda">
+        <button
+          className="icon-button"
+          type="button"
+          aria-label="Sete dias anteriores"
+          title="Sete dias anteriores"
+          onClick={() => shiftWindow(-7)}
+        >
+          <ChevronLeft size={17} aria-hidden="true" />
+        </button>
+        <strong>{windowLabel}</strong>
+        <button
+          className="button button-quiet button-small"
+          type="button"
+          onClick={goToToday}
+          disabled={isCurrentWindow && selectedDate === todayKey}
+        >
+          Hoje
+        </button>
+        <button
+          className="icon-button"
+          type="button"
+          aria-label="Sete dias seguintes"
+          title="Sete dias seguintes"
+          onClick={() => shiftWindow(7)}
+        >
+          <ChevronRight size={17} aria-hidden="true" />
+        </button>
+      </div>
       <div className="calendar-strip">
         {days.map((date) => (
           <button
@@ -2404,6 +2484,42 @@ function CalendarView({
           </button>
         ))}
       </div>
+      {isCurrentWindow && (
+        <section className="panel overdue-panel" aria-labelledby="calendar-overdue-title">
+          <div className="panel-heading">
+            <div>
+              <span className="eyebrow danger-text">Atenção operacional</span>
+              <h2 id="calendar-overdue-title">Tarefas atrasadas</h2>
+            </div>
+            <span className="panel-count panel-count-danger" aria-label={`${overdueTasks.length} tarefas atrasadas`}>{overdueTasks.length}</span>
+          </div>
+          {overdueTasks.length ? (
+            <div className="overdue-list">
+              {overdueTasks.map((taskItem) => {
+                const dueDate = taskDisplayDueDate(taskItem, currentEmployee, state.teams);
+                const overdueDays = calendarDaysBetween(dueDate, todayKey);
+                return (
+                  <button className="overdue-row" key={taskItem.id} type="button" onClick={() => onOpen(taskItem.id)}>
+                    <span className="overdue-row-marker" aria-hidden="true" />
+                    <span className="overdue-row-copy">
+                      <strong>{taskItem.title}</strong>
+                      <small>{overdueDays} {overdueDays === 1 ? "dia" : "dias"} em atraso · {taskItem.assigneeName || "Sem responsável"}</small>
+                    </span>
+                    <span className="overdue-row-date">{formatDate(dueDate)}</span>
+                    <ChevronRight size={15} aria-hidden="true" />
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="calendar-empty calendar-empty-compact" role="status">
+              <CheckCircle2 size={18} aria-hidden="true" />
+              <strong>Nenhuma tarefa atrasada</strong>
+              <span>A operação está em dia.</span>
+            </div>
+          )}
+        </section>
+      )}
       <section className="panel agenda-panel">
         <div className="panel-heading">
           <div>
