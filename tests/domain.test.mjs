@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { addOptimisticAttachment, addOptimisticComment, applyOptimisticTaskPatch, buildAssigneeOptions, buildOptimisticTask, buildTaskCreationInput, canRegisterWaitingReturn, filterTasks, findCreatedMainTask, getDueBucket, getDueBucketForEmployee, hasTaskResponsible, isOverdue, mentionedEmployees, migrateLegacyTeams, normalizeAssigneeNames, normalizeTeam, normalizeWaitingContext, quoteTaskTitle, resolveTaskAssignment, sortBoardTasks, sortTasks, STATUSES, taskDisplayDueDate, taskStats, teamResponsibilitySummary, validateWaitingContext, waitingContextSummary } from "../src/domain.js";
+import { addOptimisticAttachment, addOptimisticComment, addOptimisticReturn, applyOptimisticTaskPatch, buildAssigneeOptions, buildOptimisticTask, buildTaskCreationInput, canRegisterWaitingReturn, filterTasks, findCreatedMainTask, getDueBucket, getDueBucketForEmployee, hasTaskResponsible, isOverdue, mentionedEmployees, migrateLegacyTeams, normalizeAssigneeNames, normalizeTeam, normalizeWaitingContext, quoteTaskTitle, resolveTaskAssignment, sortBoardTasks, sortTasks, STATUSES, taskDisplayDueDate, taskStats, teamResponsibilitySummary, validateWaitingContext, waitingContextSummary } from "../src/domain.js";
 
 const tasks = [
   { id: "1", title: "Atrasada", quoteTitle: "Cotação A", assigneeName: "Marina", status: "todo", priority: "high", dueDate: "2026-08-01" },
@@ -305,4 +305,13 @@ test("inclui comentário e anexo provisórios imediatamente", () => {
   assert.equal(withAttachment.tasks[0].comments[0].syncStatus, "syncing");
   assert.equal(withAttachment.tasks[0].attachments[0].name, "briefing.pdf");
   assert.equal(withAttachment.tasks[0].attachments[0].syncStatus, "syncing");
+});
+
+test("mantém retorno otimista separado de comentário", () => {
+  const state = { tasks: [{ ...tasks[0], comments: [], returns: [], attachments: [] }] };
+  const next = addOptimisticReturn(state, "1", { id: "return-1", text: "Confirmado", author: "Rafael" });
+
+  assert.deepEqual(next.tasks[0].comments, []);
+  assert.equal(next.tasks[0].returns[0].text, "Confirmado");
+  assert.equal(next.tasks[0].returns[0].syncStatus, "syncing");
 });

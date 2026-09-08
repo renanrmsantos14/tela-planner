@@ -194,8 +194,10 @@ test("registra retorno, evidência, histórico e notificação em uma operação
   const resolved = next.tasks.find((item) => item.id === task.id);
 
   assert.equal(resolved.status, "doing");
-  assert.equal(resolved.comments.at(-1).text, "Rafael confirmou a disponibilidade do veículo.");
-  assert.equal(resolved.attachments.at(-1).name, "confirmacao.pdf");
+  assert.equal(resolved.returns.at(-1).text, "Rafael confirmou a disponibilidade do veículo.");
+  assert.equal(resolved.returns.at(-1).attachments.at(-1).name, "confirmacao.pdf");
+  assert.equal(resolved.comments.length, 0);
+  assert.equal(resolved.returns.at(-1).attachments.at(-1).name, "confirmacao.pdf");
   assert.equal(resolved.history.at(-1).text, "Retorno registrado. Tarefa retomada para Em andamento.");
   assert.equal(resolved.waitingContext.subject, task.waitingContext.subject);
   assert.ok(next.notifications.some((item) => item.taskId === task.id && item.type === "status" && item.message.includes("Rafael confirmou")));

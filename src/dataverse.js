@@ -67,6 +67,7 @@ const WAITING_CONTEXT_FIELDS = Object.freeze({
 const EMPLOYEE_TABLE = "cr40f_funcionarios";
 const EMPLOYEE_ASSIGNEE_FIELD = "cr40f_cr40f_funcionarioresponsavel";
 const EVENT_TABLE = "cr40f_plannertarefaevento";
+const PLANNER_EVENTS_QUERY = "?$select=cr40f_plannertarefaeventoid,_cr40f_tarefa_value,cr40f_tipo,cr40f_campo,cr40f_descricao,cr40f_valornovo,cr40f_ocorridoem,_cr40f_autor_value,_createdby_value&$orderby=cr40f_ocorridoem desc";
 const RELATION_TABLE = "cr40f_plannertarearelacao";
 const ASSIGNEE_RELATION_TABLE = "cr40f_plannertarearesponsavel";
 const TASK_TEAM_RELATION_TABLE = "cr40f_plannertarefaequipe";
@@ -171,6 +172,16 @@ function parseStoredList(value) {
     return Array.isArray(parsed) ? parsed : value;
   } catch {
     return value;
+  }
+}
+
+function parseChecklist(value) {
+  if (Array.isArray(value)) return value;
+  try {
+    const parsed = JSON.parse(value || "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
   }
 }
 
@@ -293,6 +304,7 @@ function plannerTaskQuery(includeTeamLookup = true, includeWaitingContext = true
     "cr40f_name",
     "cr40f_titulo",
     "cr40f_descricao",
+    "cr40f_checklistjson",
     "cr40f_status",
     "cr40f_prioridade",
     "cr40f_prazo",
@@ -568,12 +580,25 @@ function normalizeQuality(row, type) {
 
 function normalizeEventDetails(events = []) {
   const comments = events.filter((item) => item.cr40f_campo === "comentario").map((item) => ({ id: item.cr40f_plannertarefaeventoid, authorId: cleanId(item._cr40f_autor_value || item._createdby_value), text: item.cr40f_valornovo || item.cr40f_descricao || "", createdAt: item.cr40f_ocorridoem, author: item.authorName || item["_cr40f_autor_value@OData.Community.Display.V1.FormattedValue"] || item["_createdby_value@OData.Community.Display.V1.FormattedValue"] || "Sistema" })).sort((left, right) => String(left.createdAt || "").localeCompare(String(right.createdAt || "")));
+  const returns = events.filter((item) => item.cr40f_campo === "retorno").map((item) => {
+    let raw = {};
+    try { raw = JSON.parse(item.cr40f_valornovo || "{}"); } catch { raw = {}; }
+    return {
+      id: raw.returnId || item.cr40f_plannertarefaeventoid,
+      eventId: item.cr40f_plannertarefaeventoid,
+      authorId: cleanId(raw.authorId || item._cr40f_autor_value || item._createdby_value),
+      text: raw.text || item.cr40f_valornovo || item.cr40f_descricao || "",
+      createdAt: raw.createdAt || item.cr40f_ocorridoem,
+      author: raw.author || item.authorName || item["_cr40f_autor_value@OData.Community.Display.V1.FormattedValue"] || item["_createdby_value@OData.Community.Display.V1.FormattedValue"] || "Sistema",
+    };
+  }).sort((left, right) => String(left.createdAt || "").localeCompare(String(right.createdAt || "")));
   const attachments = events.filter((item) => item.cr40f_campo === "anexo").map((item) => {
     try {
       const raw = JSON.parse(item.cr40f_valornovo || "{}");
       const sharePointId = raw.id || raw.identificador || raw.Identifier || raw.itemId || raw.ItemId || "";
       return {
         ...raw,
+        returnId: raw.returnId || "",
         id: sharePointId || item.cr40f_plannertarefaeventoid,
         sharePointId,
         eventId: item.cr40f_plannertarefaeventoid,
@@ -588,8 +613,12 @@ function normalizeEventDetails(events = []) {
       return { id: item.cr40f_plannertarefaeventoid, sharePointId: "", eventId: item.cr40f_plannertarefaeventoid, name: item.cr40f_valornovo || "Anexo", createdAt: item.cr40f_ocorridoem };
     }
   });
-  const history = events.map((item) => ({ id: item.cr40f_plannertarefaeventoid, text: item.cr40f_descricao, createdAt: item.cr40f_ocorridoem, author: item.authorName || item["_cr40f_autor_value@OData.Community.Display.V1.FormattedValue"] || item["_createdby_value@OData.Community.Display.V1.FormattedValue"] || "Sistema" }));
-  return { comments, attachments, history };
+  const returnsWithAttachments = returns.map((returnItem) => ({
+    ...returnItem,
+    attachments: attachments.filter((attachment) => attachment.returnId === returnItem.id),
+  }));
+  const history = events.filter((item) => !["comentario", "retorno", "anexo", "notification:mention"].includes(item.cr40f_campo)).map((item) => ({ id: item.cr40f_plannertarefaeventoid, text: item.cr40f_descricao, createdAt: item.cr40f_ocorridoem, author: item.authorName || item["_cr40f_autor_value@OData.Community.Display.V1.FormattedValue"] || item["_createdby_value@OData.Community.Display.V1.FormattedValue"] || "Sistema" }));
+  return { comments, returns: returnsWithAttachments, attachments, history };
 }
 
 function normalizeCollectionEvents(events = []) {
@@ -605,7 +634,7 @@ function normalizeTask(row, events = [], assignees = [], teamRelations = []) {
   const status = STATUS_BY_VALUE[row.cr40f_status] || "todo";
   const priority = PRIORITY_BY_VALUE[row.cr40f_prioridade] || "medium";
   const origin = Object.entries(ORIGIN_VALUES).find(([, value]) => value === row.cr40f_origem)?.[0] || "manual";
-  const { comments, attachments, history } = normalizeEventDetails(events);
+  const { comments, returns, attachments, history } = normalizeEventDetails(events);
   const relationTeams = teamRelations.filter((item) => item.taskId === row.cr40f_plannertarefaid);
   const plannerTeamIds = relationTeams.length ? relationTeams.map((item) => item.teamId) : (row[`_${TASK_TEAM_FIELD}_value`] ? [row[`_${TASK_TEAM_FIELD}_value`] ] : []);
   const plannerTeamNames = relationTeams.length ? relationTeams.map((item) => item.teamName).filter(Boolean) : (row[`_${TASK_TEAM_FIELD}_value@OData.Community.Display.V1.FormattedValue`] ? [row[`_${TASK_TEAM_FIELD}_value@OData.Community.Display.V1.FormattedValue`] ] : []);
@@ -615,6 +644,7 @@ function normalizeTask(row, events = [], assignees = [], teamRelations = []) {
     id: row.cr40f_plannertarefaid,
     title: row.cr40f_titulo || row.cr40f_name || "Sem título",
     description: row.cr40f_descricao || "",
+    checklist: parseChecklist(row.cr40f_checklistjson),
     status,
     priority,
     dueDate: dateOnly(row.cr40f_prazo),
@@ -638,6 +668,7 @@ function normalizeTask(row, events = [], assignees = [], teamRelations = []) {
     sourceCode: row.cr40f_codigoorigem || "",
     sourceLabel: origin === "quote" ? "Pedido de cotação" : origin === "quality" ? "Qualidade" : "Tarefa manual",
     comments,
+    returns,
     attachments,
     history,
   };
@@ -742,7 +773,7 @@ export async function loadSupplementalState(xrm, state) {
 }
 
 export async function loadTaskDetails(xrm, taskId) {
-  const events = await measureStage(`detalhes ${cleanId(taskId).slice(0, 8)}`, () => retrieveMany(xrm, EVENT_TABLE, `?$select=cr40f_plannertarefaeventoid,_cr40f_tarefa_value,cr40f_tipo,cr40f_campo,cr40f_descricao,cr40f_valornovo,cr40f_ocorridoem,_cr40f_autor_value,_createdby_value&$filter=_cr40f_tarefa_value eq ${cleanId(taskId)}&$orderby=cr40f_ocorridoem desc`));
+  const events = await measureStage(`detalhes ${cleanId(taskId).slice(0, 8)}`, () => retrieveMany(xrm, EVENT_TABLE, `${PLANNER_EVENTS_QUERY}&$filter=_cr40f_tarefa_value eq ${cleanId(taskId)}`));
   const details = normalizeEventDetails(events);
   return { taskId, ...details };
 }
@@ -865,7 +896,7 @@ function withNotificationEnvironment(xrm, field, next) {
 async function createEvent(xrm, taskId, type, description, field = "", previous = "", next = "") {
   const payload = { cr40f_tipo: type, cr40f_descricao: description, cr40f_campo: field, cr40f_valoranterior: previous, cr40f_valornovo: withNotificationEnvironment(xrm, field, next), cr40f_ocorridoem: new Date().toISOString() };
   await bindLookup(xrm, payload, EVENT_TABLE, "cr40f_tarefa", TASK_TABLE, taskId);
-  await request(xrm, `/${entitySetName(EVENT_TABLE)}`, { method: "POST", body: JSON.stringify(payload) });
+  return request(xrm, `/${entitySetName(EVENT_TABLE)}`, { method: "POST", body: JSON.stringify(payload) });
 }
 
 async function createLiveTask(xrm, state, input) {
@@ -985,7 +1016,7 @@ async function addLiveComment(xrm, taskId, text, context = {}) {
   return loadLiveState(xrm);
 }
 
-async function addLiveAttachment(xrm, state, taskId, file) {
+async function addLiveAttachment(xrm, state, taskId, file, metadata = {}) {
   if (!file) return state;
   const uploadFile = await optimizeAttachmentFile(file);
   if (uploadFile.size > MAX_ATTACHMENT_SIZE) throw new Error("O anexo deve ter no máximo 5 MB após a compressão.");
@@ -997,12 +1028,12 @@ async function addLiveAttachment(xrm, state, taskId, file) {
   const flowUrl = await resolveSharePointFlowUrl(xrm);
   if (!flowUrl) throw new Error(`URL do Flow não configurada: ${FLOW_URL_SCHEMA}.`);
   const base64 = uploadFile.base64 || await fileToBase64(uploadFile);
-  const response = await fetch(flowUrl, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ caminhoCompleto: path, nomeArquivo: fileName, conteudoBase64: base64, mimeType: uploadFile.type || "application/octet-stream", metadados: { tarefaId: taskId, tarefa: task.cr40f_titulo || "", origem: "PLANNER_INTERNO" } }) });
+  const response = await fetch(flowUrl, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ caminhoCompleto: path, nomeArquivo: fileName, conteudoBase64: base64, mimeType: uploadFile.type || "application/octet-stream", metadados: { tarefaId: taskId, tarefa: task.cr40f_titulo || "", origem: "PLANNER_INTERNO", ...metadata } }) });
   const responseText = await response.text();
   const result = extractFlowRecord(responseText) || {};
   if (!response.ok || result.sucesso !== true) throw new Error(result.erro || `Flow SharePoint falhou: HTTP ${response.status}.`);
   const sharePointId = result.identificador || result.Identifier || result.id || result.itemId || result.ItemId || "";
-  const attachment = { name: result.nomeArquivo || result.Name || fileName, id: sharePointId, sharePointId, fileLocator: result.fileLocator || result.identificador || result.Identifier || "", path: result.caminhoSharePoint || result.caminhoCompleto || result.Path || "", mimeType: result.mimeType || result.MediaType || uploadFile.type || "application/octet-stream", size: result.tamanho ?? result.Size ?? uploadFile.size };
+  const attachment = { name: result.nomeArquivo || result.Name || fileName, id: sharePointId, sharePointId, returnId: metadata.returnId || "", fileLocator: result.fileLocator || result.identificador || result.Identifier || "", path: result.caminhoSharePoint || result.caminhoCompleto || result.Path || "", mimeType: result.mimeType || result.MediaType || uploadFile.type || "application/octet-stream", size: result.tamanho ?? result.Size ?? uploadFile.size };
   if (!attachment.id && !attachment.fileLocator && !attachment.path) throw new Error("Flow SharePoint não retornou identificador ou caminho do arquivo.");
   await createEvent(xrm, taskId, 100000001, "Anexo adicionado.", "anexo", "", JSON.stringify(attachment));
   return {
@@ -1030,12 +1061,10 @@ async function resolveLiveWaitingReturn(xrm, state, id, input = {}) {
     throw new Error("Você não pode registrar este retorno.");
   }
   const files = Array.isArray(input.files) ? input.files.filter(Boolean) : [];
-  for (const file of files) await addLiveAttachment(xrm, state, id, file);
-  await addLiveComment(xrm, id, text, {
-    actorEmployeeId: input.actorEmployeeId || "",
-    actorUserId: input.actorUserId || "",
-    mentionedEmployeeIds: input.mentionedEmployeeIds || [],
-  });
+  const returnId = input.returnId || `return-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  const occurredAt = new Date().toISOString();
+  for (const file of files) await addLiveAttachment(xrm, state, id, file, { returnId });
+  await createEvent(xrm, id, 100000001, "Retorno registrado.", "retorno", "", JSON.stringify({ returnId, text, createdAt: occurredAt, authorId: input.actorUserId || input.actorEmployeeId || "", author: actor?.name || "Sistema" }));
   const next = await updateLiveTask(xrm, state, id, {
     status: "doing",
     actorEmployeeId: input.actorEmployeeId || "",
@@ -1057,6 +1086,7 @@ async function resolveLiveWaitingReturn(xrm, state, id, input = {}) {
       assigneeIds,
       previousStatus: "waiting",
       nextStatus: "doing",
+      returnId,
       returnText: text,
     }),
   );
@@ -1185,6 +1215,71 @@ async function deleteLiveTask(xrm, state, id) {
   return loadLiveState(xrm);
 }
 
+async function importLivePlannerTasks(xrm, rows = []) {
+  const apiRows = Array.isArray(rows) ? rows : [];
+  const taskAssigneeNavigation = await resolveLookupNavigation(xrm, TASK_TABLE, EMPLOYEE_ASSIGNEE_FIELD, EMPLOYEE_TABLE);
+  const relationTaskNavigation = await resolveLookupNavigation(xrm, ASSIGNEE_RELATION_TABLE, "cr40f_tarefa", TASK_TABLE);
+  const relationEmployeeNavigation = await resolveLookupNavigation(xrm, ASSIGNEE_RELATION_TABLE, "cr40f_funcionario", EMPLOYEE_TABLE);
+  const eventTaskNavigation = await resolveLookupNavigation(xrm, EVENT_TABLE, "cr40f_tarefa", TASK_TABLE);
+  const results = [];
+
+  for (const row of apiRows) {
+    const sourceCode = row.sourceCode || `MSPLANNER:${row.plannerTaskId}`;
+    try {
+      const escapedSourceCode = String(sourceCode).replace(/'/g, "''");
+      const existing = await retrieveMany(xrm, TASK_TABLE, `?$select=cr40f_plannertarefaid&$filter=cr40f_codigoorigem eq '${escapedSourceCode}'&$top=1`);
+      if (existing[0]?.cr40f_plannertarefaid) {
+        results.push({ plannerTaskId: row.plannerTaskId, result: "already_exists", dataverseTaskId: existing[0].cr40f_plannertarefaid });
+        continue;
+      }
+      const payload = {
+        cr40f_titulo: String(row.title || "Sem título").trim(),
+        cr40f_descricao: row.description || "",
+        cr40f_checklistjson: JSON.stringify(row.checklist || []),
+        cr40f_status: row.statusChoice,
+        cr40f_prioridade: row.priorityChoice,
+        cr40f_prazo: row.dueDate || null,
+        cr40f_origem: 100000000,
+        cr40f_codigoorigem: sourceCode,
+      };
+      const firstEmployeeId = row.assignments?.find((assignment) => assignment.employeeId)?.employeeId || "";
+      if (firstEmployeeId) payload[`${taskAssigneeNavigation}@odata.bind`] = `/cr40f_funcionarioses(${cleanId(firstEmployeeId)})`;
+      const created = await request(xrm, `/${entitySetName(TASK_TABLE)}`, { method: "POST", body: JSON.stringify(payload) });
+      const taskId = created?.cr40f_plannertarefaid;
+      if (!taskId) throw new Error("Dataverse criou a tarefa sem retornar o ID.");
+
+      for (const assignment of (row.assignments || []).filter((item) => item.employeeId)) {
+        const relationPayload = {
+          cr40f_name: `${taskId}-${assignment.employeeId}`,
+          [`${relationTaskNavigation}@odata.bind`]: `/${entitySetName(TASK_TABLE)}(${cleanId(taskId)})`,
+          [`${relationEmployeeNavigation}@odata.bind`]: `/${entitySetName(EMPLOYEE_TABLE)}(${cleanId(assignment.employeeId)})`,
+        };
+        await request(xrm, `/${entitySetName(ASSIGNEE_RELATION_TABLE)}`, { method: "POST", body: JSON.stringify(relationPayload) });
+      }
+      const eventPayload = {
+        cr40f_tipo: 100000000,
+        cr40f_descricao: "Tarefa importada do Microsoft Planner.",
+        cr40f_ocorridoem: new Date().toISOString(),
+        [`${eventTaskNavigation}@odata.bind`]: `/${entitySetName(TASK_TABLE)}(${cleanId(taskId)})`,
+      };
+      await request(xrm, `/${entitySetName(EVENT_TABLE)}`, { method: "POST", body: JSON.stringify(eventPayload) });
+      results.push({ plannerTaskId: row.plannerTaskId, result: "created", dataverseTaskId: taskId });
+    } catch (error) {
+      results.push({ plannerTaskId: row.plannerTaskId, result: "error", error: error.message || "Falha desconhecida." });
+    }
+  }
+
+  const nextState = await loadLiveState(xrm);
+  return {
+    nextState,
+    results,
+    createdCount: results.filter((item) => item.result === "created").length,
+    existingCount: results.filter((item) => item.result === "already_exists").length,
+    errorCount: results.filter((item) => item.result === "error").length,
+    errors: results.filter((item) => item.result === "error"),
+  };
+}
+
 function createMockDataStore() {
   const withMode = (state) => ({ ...state, live: false });
   const withoutMode = ({ live: _live, ...state }) => state;
@@ -1207,6 +1302,16 @@ function createMockDataStore() {
     updateTeam: async (state, id, patch) => withMode(updateMockTeam(state, id, patch)),
     deleteTeam: async (state, id) => withMode(deleteMockTeam(state, id)),
     createTask: async (state, input) => withMode(createMockTask(state, input)),
+    importPlannerTasks: async (state, rows = []) => {
+      let nextState = state;
+      const results = rows.map((row) => {
+        const assigneeIds = (row.assignments || []).map((assignment) => assignment.employeeId).filter(Boolean);
+        const assigneeNames = assigneeIds.map((employeeId) => nextState.employees.find((employee) => employee.id === employeeId)?.name).filter(Boolean);
+        nextState = createMockTask(nextState, { title: row.title, description: row.description, checklist: row.checklist, status: row.status, priority: row.priority, dueDate: row.dueDate, assigneeIds, assigneeNames, sourceType: "manual", sourceCode: row.sourceCode });
+        return { plannerTaskId: row.plannerTaskId, result: "created" };
+      });
+      return { nextState: withMode(nextState), results, createdCount: results.length, existingCount: 0, errorCount: 0, errors: [] };
+    },
     createContact: async (state, input) => withMode(createMockContact(state, input)),
     updateContact: async (state, id, patch) => withMode(updateMockContact(state, id, patch)),
     archiveContact: async (state, id, context) => withMode(archiveMockContact(state, id, context)),
@@ -1262,6 +1367,7 @@ export function createDataStore() {
     updateTeam: (state, id, patch) => updateLiveTeam(xrm, state, id, patch),
     deleteTeam: (state, id) => deleteLiveTeam(xrm, state, id),
     createTask: (state, input) => createLiveTask(xrm, state, input),
+    importPlannerTasks: (state, rows) => importLivePlannerTasks(xrm, rows),
     createContact: async () => { requireContactSchema(); return null; },
     updateContact: async () => { requireContactSchema(); return null; },
     archiveContact: async () => { requireContactSchema(); return null; },

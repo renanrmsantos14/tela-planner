@@ -176,6 +176,7 @@ export function buildOptimisticTask(input, parentTaskId = null) {
     parentTaskId,
     waitingContext: normalizeWaitingContext(input.waitingContext),
     comments: [],
+    returns: [],
     attachments: [],
     history: [],
     syncStatus: "syncing",
@@ -366,6 +367,13 @@ export function addOptimisticComment(state, taskId, text) {
     syncStatus: "syncing",
   };
   return updateTaskInState(state, taskId, (task) => ({ ...task, comments: [...(task.comments || []), comment] }));
+}
+
+export function addOptimisticReturn(state, taskId, returnRecord) {
+  return updateTaskInState(state, taskId, (task) => ({
+    ...task,
+    returns: [...(task.returns || []), { ...returnRecord, syncStatus: "syncing", attachments: returnRecord.attachments || [] }],
+  }));
 }
 
 export function addOptimisticAttachment(state, taskId, file, previewUrl = "") {

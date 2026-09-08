@@ -241,7 +241,7 @@ function task(id, title, quoteId, quoteCode, quoteTitle, status, priority, assig
   const assigneeNames = normalizeAssigneeNames(assigneeName);
   return {
     id, title, parentTaskId, quoteId, quoteCode, quoteTitle, status, priority, assigneeNames, assigneeName: assigneeNames.join(", "), teamName, dueDate,
-    description, checklist: context.checklist || [], labels: [quoteCode], sourceType: quoteId ? "quote" : "manual", sourceId: quoteId, sourceLabel: quoteId ? "Pedido de cotação" : "Tarefa manual", sourceCode: quoteCode, ...context, waitingContext: normalizeWaitingContext(context.waitingContext), comments: context.comments || [], attachments: context.attachments || [],
+    description, checklist: context.checklist || [], labels: [quoteCode], sourceType: quoteId ? "quote" : "manual", sourceId: quoteId, sourceLabel: quoteId ? "Pedido de cotação" : "Tarefa manual", sourceCode: quoteCode, ...context, waitingContext: normalizeWaitingContext(context.waitingContext), comments: context.comments || [], returns: context.returns || [], attachments: context.attachments || [],
     history: context.history || [{ id: uid("history"), text: "Tarefa criada no cenário de demonstração.", createdAt: new Date().toISOString(), author: "Sistema" }],
   };
 }
@@ -443,8 +443,9 @@ export function resolveWaitingReturn(state, id, input = {}) {
     throw new Error("Você não pode registrar este retorno.");
   }
   const occurredAt = new Date().toISOString();
-  const comment = {
-    id: uid("comment"),
+  const returnId = uid("return");
+  const returnRecord = {
+    id: returnId,
     text,
     createdAt: occurredAt,
     author: actor?.name || "Você",
@@ -452,6 +453,7 @@ export function resolveWaitingReturn(state, id, input = {}) {
   };
   const attachments = (input.files || []).map((file) => ({
     id: uid("file"),
+    returnId,
     name: file?.name || "Arquivo",
     mimeType: file?.type || "",
     size: file?.size || 0,
@@ -467,8 +469,8 @@ export function resolveWaitingReturn(state, id, input = {}) {
   const tasks = state.tasks.map((taskItem) => taskItem.id === id ? {
     ...taskItem,
     status: "doing",
-    comments: [...(taskItem.comments || []), comment],
-    attachments: [...(taskItem.attachments || []), ...attachments],
+    returns: [...(taskItem.returns || []), { ...returnRecord, attachments }],
+    attachments: [...(taskItem.attachments || [])],
     history: [...(taskItem.history || []), historyEntry],
     waitingContext: normalizeWaitingContext(taskItem.waitingContext),
   } : taskItem);
