@@ -231,6 +231,7 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
     try {
       const account = await loginMicrosoft();
       setMicrosoftAccount(account);
+      setAuthBusy(false);
       await loadPlans();
     } catch (error) {
       setAutoError(authErrorMessage(error));
@@ -400,7 +401,7 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
                             <small>{microsoftAccount.username}</small>
                           </span>
                           <button className="button button-quiet" type="button" onClick={disconnectMicrosoft} disabled={authBusy || plansBusy || autoBusy}>
-                            {authBusy ? "Saindo…" : "Trocar conta"}
+                            {authBusy ? "Abrindo login…" : plansBusy ? "Carregando planos…" : "Trocar conta"}
                           </button>
                         </div>
                       ) : (
