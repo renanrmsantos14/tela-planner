@@ -174,6 +174,7 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
     ? [{ id: 1, label: "Conta" }, { id: 5, label: "Ajustes" }, { id: 6, label: "Confirmar" }]
     : STEPS;
   const workflowStepNumber = (id) => workflowSteps.findIndex((item) => item.id === id) + 1;
+  const modalBusy = importing || autoBusy || plansBusy || authBusy;
 
   const loadPlans = async () => {
     setPlansBusy(true);
@@ -207,7 +208,7 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
     if (!open) return undefined;
     const previousOverflow = document.body.style.overflow;
     const onKeyDown = (event) => {
-      if (event.key === "Escape" && !importing) setOpen(false);
+      if (event.key === "Escape" && !modalBusy) setOpen(false);
     };
     document.body.style.overflow = "hidden";
     document.addEventListener("keydown", onKeyDown);
@@ -215,7 +216,7 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
       document.body.style.overflow = previousOverflow;
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [open, importing]);
+  }, [open, modalBusy]);
 
   const runValidation = () => {
     const next = analyzePlannerImport({ planId, tasksText, bucketsText, detailsText, employeeMapText });
@@ -341,7 +342,7 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
   };
 
   const handleBackdropClick = (event) => {
-    if (event.target === event.currentTarget && !importing) setOpen(false);
+    if (event.target === event.currentTarget && !modalBusy) setOpen(false);
   };
 
   return (
@@ -364,7 +365,7 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
                 <h2 id="planner-import-title">Importar tarefas do Microsoft Planner</h2>
                 <p id="planner-import-description">Uma etapa por vez. Nada é gravado antes da sua confirmação final.</p>
               </div>
-              <button className="icon-button import-modal-close" type="button" aria-label="Fechar importação" onClick={() => setOpen(false)} disabled={importing}><X size={19} /></button>
+              <button className="icon-button import-modal-close" type="button" aria-label="Fechar importação" onClick={() => setOpen(false)} disabled={modalBusy}><X size={19} /></button>
             </header>
 
             <div className="import-modal-body">
