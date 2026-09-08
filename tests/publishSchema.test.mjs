@@ -38,3 +38,10 @@ test("npm run push publica o redirect bridge do MSAL no Dataverse", () => {
   assert.match(script, /Tela Planner - MSAL redirect/);
   assert.match(script, /redirectPublishXml/);
 });
+
+test("build do redirect bridge embute o bundle no HTML publicado", () => {
+  const bridgeBuild = readFileSync(new URL("../scripts/build-redirect-bridge.mjs", import.meta.url), "utf8");
+  assert.match(bridgeBuild, /readFile\(redirectPath/);
+  assert.match(bridgeBuild, /replace\(externalScript\[0\]/);
+  assert.match(bridgeBuild, /writeFile\(redirectPath/);
+});
