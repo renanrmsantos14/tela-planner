@@ -35,20 +35,23 @@ test("card mantém somente conclusão rápida com confirmação em dois passos",
   assert.doesNotMatch(source, /onDoubleClick/);
 });
 
-test("Kanban mantém abertura primária e drag-and-drop sem ruído secundário", async () => {
+test("Kanban mantém abertura primária e arraste sem ruído secundário", async () => {
   const source = await readSource("../src/ContactsView.jsx");
   const styles = await readSource("../src/styles.css");
 
-  assert.match(source, /draggable = false, showStatusBadge = true/);
-  assert.match(source, /showStatusBadge=\{variant !== "kanban"\}/);
-  assert.doesNotMatch(source, /showMoveControl|contact-row-move|contact-row-open-hint/);
+  assert.match(source, /draggable = false, variant = ""/);
+  assert.match(source, /contact-row-main-kanban/);
+  assert.match(source, /contact-row-kanban-title/);
+  assert.doesNotMatch(source, /showMoveControl|showStatusBadge|contact-row-move|contact-row-open-hint/);
   assert.match(source, /contact-priority-label priority-\$\{contact\.priority\}/);
   assert.match(source, /className="contact-row-main"/);
   assert.match(source, /setData\("text\/contact-id", contact\.id\)/);
   assert.match(source, /effectAllowed = "move"/);
   assert.match(styles, /\.contact-kanban-column\.is-drop-target \.contact-kanban-body/);
   assert.match(styles, /\.contact-kanban-column \.contact-row \{ position: relative;[\s\S]*box-shadow: var\(--shadow-surface\)/);
-  assert.match(styles, /\.contact-kanban-column \.contact-row-top strong \{ display: -webkit-box;/);
+  assert.match(styles, /\.contact-kanban-column \.contacts-list \{ min-height: 0; align-content: start; \}/);
+  assert.match(styles, /\.contact-row-kanban-date \{ position: absolute; top: 1px; right: 1px;[\s\S]*border: 0;/);
+  assert.match(styles, /\.contact-row-kanban-title \{ display: -webkit-box;/);
   assert.match(styles, /\.status-column-waiting \.contact-kanban-heading-title > svg \{ color: var\(--amber\); \}/);
   assert.doesNotMatch(styles, /contact-row-move|contact-row-open-hint/);
 });

@@ -1713,19 +1713,24 @@ button { cursor: pointer; }
 .contact-kanban-heading .panel-count { margin-top: 1px; }
 .contact-kanban-body { min-height: 320px; padding: 8px 4px 16px; border: 1px solid var(--line); border-radius: var(--radius-lg); background: rgba(255,255,255,.42); }
 .contact-kanban-column.is-drop-target .contact-kanban-body { border-color: #9bbcf0; background: rgba(235,244,255,.72); box-shadow: inset 0 0 0 1px rgba(35,108,202,.08); }
-.contact-kanban-column .contacts-list { min-height: 250px; }
+.contact-kanban-column .contacts-list { min-height: 0; align-content: start; }
 .contact-kanban-column .contacts-list-kanban { gap: 8px; }
-.contact-kanban-column .contact-row { position: relative; grid-template-columns: 4px minmax(0, 1fr) auto; gap: 10px; min-height: 0; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); box-shadow: var(--shadow-surface); cursor: grab; transition: transform 180ms var(--ease-out), box-shadow 180ms var(--ease-out), border-color 180ms ease; }
+.contact-kanban-column .contact-row { position: relative; grid-template-columns: minmax(0, 1fr); gap: 0; min-height: 0; padding: 14px 15px 13px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); box-shadow: var(--shadow-surface); cursor: grab; transition: transform 180ms var(--ease-out), box-shadow 180ms var(--ease-out), border-color 180ms ease; }
 .contact-kanban-column .contact-row:hover { transform: translateY(-2px); border-color: #c8d5e6; box-shadow: 0 12px 24px rgba(0,26,61,.08); }
 .contact-kanban-column .contact-row:active { cursor: grabbing; }
-.contact-kanban-column .contact-row-top { align-items: flex-start; gap: 6px; }
-.contact-kanban-column .contact-row-top strong { display: -webkit-box; overflow: hidden; font-size: 13px; line-height: 1.32; -webkit-box-orient: vertical; -webkit-line-clamp: 2; white-space: normal; }
+.contact-kanban-column .contact-row-main-kanban { gap: 0; padding: 0; }
+.contact-row-kanban-top { min-width: 0; display: flex; align-items: center; gap: 8px; }
+.contact-row-kanban-date { position: absolute; top: 1px; right: 1px; min-width: 0; display: inline-flex; align-items: center; gap: 5px; max-width: calc(100% - 82px); padding: 5px 9px 6px; border: 0; border-radius: 0 calc(var(--radius-md) - 1px) 0 10px; color: var(--control); background: var(--blue-soft); font-size: 9px; }
+.contact-row-kanban-date time { overflow: hidden; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+.contact-row-kanban-date small.is-overdue { color: var(--red); font-weight: 800; }
+.contact-row-kanban-title { display: -webkit-box; min-width: 0; margin-top: 14px; overflow: hidden; color: var(--ink); font-size: 15px; line-height: 1.2; letter-spacing: -.2px; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.contact-row-kanban-meta { min-width: 0; display: flex; align-items: center; gap: 12px; margin-top: 14px; color: var(--muted); font-size: 10px; }
+.contact-row-kanban-meta .contact-row-person { min-width: 0; font-size: 10px; }
+.contact-row-kanban-channel { min-width: 0; display: inline-flex; align-items: center; gap: 5px; overflow: hidden; padding-left: 12px; border-left: 1px solid var(--line); color: var(--muted); text-overflow: ellipsis; white-space: nowrap; }
 .contact-priority-label { flex: 0 0 auto; padding: 3px 6px; border-radius: 999px; color: var(--muted); background: var(--surface-soft); font-size: 8px; font-weight: 800; line-height: 1.1; }
 .contact-priority-label.priority-high { color: var(--red); background: var(--red-soft); }
 .contact-priority-label.priority-medium { color: #a36b00; background: var(--amber-soft); }
 .contact-priority-label.priority-low { color: var(--green); background: var(--green-soft); }
-.contact-kanban-column .contact-row-date { grid-column: 2 / 3; grid-row: 2; justify-items: start; min-width: 0; }
-.contact-kanban-column .contact-complete-action { grid-column: 3; grid-row: 1 / span 3; }
 .contact-kanban-empty { min-height: 220px; display: grid; place-items: center; align-content: center; gap: 6px; padding: 18px; border: 1px dashed var(--line); border-radius: var(--radius-md); color: var(--tertiary); font-size: 10px; text-align: center; }
 .contact-kanban-empty svg { color: var(--blue); }
 .contact-kanban-empty strong { color: var(--muted); font-size: 11px; }
@@ -1795,7 +1800,10 @@ button { cursor: pointer; }
   .contact-kanban-column { min-height: 0; }
   .contact-kanban-body { min-height: 0; padding: 6px 4px 10px; }
   .contact-kanban-column .contacts-list { min-height: 0; }
-  .contact-kanban-column .contact-row { padding: 13px; }
+  .contact-kanban-column .contact-row { padding: 13px 14px; }
+  .contact-row-kanban-title { margin-top: 12px; font-size: 14px; }
+  .contact-row-kanban-meta { gap: 8px; margin-top: 12px; }
+  .contact-row-kanban-channel { padding-left: 8px; }
   .contact-kanban-empty { min-height: 76px; }
   .contact-kanban-no-results { min-height: 170px; padding: 24px 16px; }
   .contact-kanban-no-results .button { min-height: 44px; }

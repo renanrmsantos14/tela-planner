@@ -395,7 +395,7 @@ function ContactViewSelector({ view, onChange }) {
   );
 }
 
-function ContactCard({ contact, onSelect, onComplete, draggable = false, showStatusBadge = true, dragged = false, onDragStart, onDragEnd }) {
+function ContactCard({ contact, onSelect, onComplete, draggable = false, variant = "", dragged = false, onDragStart, onDragEnd }) {
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const timerRef = useRef(null);
@@ -419,15 +419,21 @@ function ContactCard({ contact, onSelect, onComplete, draggable = false, showSta
   };
   return (
     <article className={`contact-row priority-${contact.priority} ${isArchived ? "is-archived" : ""} ${dragged ? "is-dragging" : ""}`} draggable={draggable && !isArchived} onDragStart={(event) => onDragStart?.(event, contact)} onDragEnd={onDragEnd}>
-      <span className="contact-row-priority" aria-hidden="true" />
-      <button className="contact-row-main" type="button" onClick={() => onSelect(contact.id)} aria-label={`Abrir caso ${contact.subject || "sem assunto"}`}>
-        <span className="contact-row-top"><span className={`contact-priority-label priority-${contact.priority}`}>{contactPriorityLabel(contact.priority)}</span><strong>{contact.subject || "Sem assunto"}</strong></span>
-        <span className="contact-row-person"><UserRound size={13} aria-hidden="true" /> {contact.senderName || "Pessoa não informada"}</span>
-        <span className="contact-row-message">{contact.lastMessage || contact.message || contact.summary || "Sem mensagem registrada"}</span>
-        <span className="contact-row-meta"><span><ChannelIcon size={13} aria-hidden="true" /> {contactChannelLabel(contact.channel)}</span>{showStatusBadge && <span className={`badge contact-status-badge status-${contact.status}`}>{isArchived ? "Arquivado" : contactStatusLabel(contact.status)}</span>}</span>
-      </button>
-      <span className="contact-row-date" aria-label={contact.dueDate ? `Prazo ${formatContactDate(contact.dueDate)}${contactIsOverdue(contact) ? ", atrasado" : ""}` : "Sem prazo definido"}><time>{contact.dueDate ? `Prazo ${formatContactDate(contact.dueDate)}` : "Sem prazo"}</time>{contact.dueDate && contactIsOverdue(contact) && <small className="is-overdue">Atrasado</small>}</span>
-      {onComplete && !isDone && !isArchived && <button className={`contact-complete-action ${confirming ? "is-confirming" : ""}`} type="button" onClick={complete} disabled={busy} aria-label={confirming ? `Confirmar conclusão de ${contact.subject}` : `Concluir ${contact.subject}`} title={confirming ? "Confirmar conclusão" : "Concluir caso"}>{confirming ? <><Check size={14} aria-hidden="true" /> Confirmar</> : <CheckCircle2 size={16} aria-hidden="true" />}</button>}
+      {variant === "kanban" ? <button className="contact-row-main contact-row-main-kanban" type="button" onClick={() => onSelect(contact.id)} aria-label={`Abrir caso ${contact.subject || "sem assunto"}`}>
+        <span className="contact-row-kanban-top"><span className={`contact-priority-label priority-${contact.priority}`}>{contactPriorityLabel(contact.priority)}</span><span className="contact-row-kanban-date" aria-label={contact.dueDate ? `Prazo ${formatContactDate(contact.dueDate)}${contactIsOverdue(contact) ? ", atrasado" : ""}` : "Sem prazo definido"}><time>{contact.dueDate ? `Prazo ${formatContactDate(contact.dueDate)}` : "Sem prazo"}</time>{contact.dueDate && contactIsOverdue(contact) && <small className="is-overdue">Atrasado</small>}</span></span>
+        <strong className="contact-row-kanban-title">{contact.subject || "Sem assunto"}</strong>
+        <span className="contact-row-kanban-meta"><span className="contact-row-person"><UserRound size={13} aria-hidden="true" /> {contact.senderName || "Pessoa não informada"}</span><span className="contact-row-kanban-channel"><ChannelIcon size={13} aria-hidden="true" /> {contactChannelLabel(contact.channel)}</span></span>
+      </button> : <>
+        <span className="contact-row-priority" aria-hidden="true" />
+        <button className="contact-row-main" type="button" onClick={() => onSelect(contact.id)} aria-label={`Abrir caso ${contact.subject || "sem assunto"}`}>
+          <span className="contact-row-top"><span className={`contact-priority-label priority-${contact.priority}`}>{contactPriorityLabel(contact.priority)}</span><strong>{contact.subject || "Sem assunto"}</strong></span>
+          <span className="contact-row-person"><UserRound size={13} aria-hidden="true" /> {contact.senderName || "Pessoa não informada"}</span>
+          <span className="contact-row-message">{contact.lastMessage || contact.message || contact.summary || "Sem mensagem registrada"}</span>
+          <span className="contact-row-meta"><span><ChannelIcon size={13} aria-hidden="true" /> {contactChannelLabel(contact.channel)}</span><span className={`badge contact-status-badge status-${contact.status}`}>{isArchived ? "Arquivado" : contactStatusLabel(contact.status)}</span></span>
+        </button>
+        <span className="contact-row-date" aria-label={contact.dueDate ? `Prazo ${formatContactDate(contact.dueDate)}${contactIsOverdue(contact) ? ", atrasado" : ""}` : "Sem prazo definido"}><time>{contact.dueDate ? `Prazo ${formatContactDate(contact.dueDate)}` : "Sem prazo"}</time>{contact.dueDate && contactIsOverdue(contact) && <small className="is-overdue">Atrasado</small>}</span>
+        {onComplete && !isDone && !isArchived && <button className={`contact-complete-action ${confirming ? "is-confirming" : ""}`} type="button" onClick={complete} disabled={busy} aria-label={confirming ? `Confirmar conclusão de ${contact.subject}` : `Concluir ${contact.subject}`} title={confirming ? "Confirmar conclusão" : "Concluir caso"}>{confirming ? <><Check size={14} aria-hidden="true" /> Confirmar</> : <CheckCircle2 size={16} aria-hidden="true" />}</button>}
+      </>}
     </article>
   );
 }
@@ -517,7 +523,7 @@ export default function ContactsView({
   };
   const renderCards = (items, variant = "") => (
     <div className={`contacts-list ${variant ? `contacts-list-${variant}` : ""}`}>
-      {items.map((contact) => <ContactCard key={contact.id} contact={contact} onSelect={onSelect} onComplete={handleComplete} showStatusBadge={variant !== "kanban"} dragged={draggedContactId === contact.id} draggable={variant === "kanban"} onDragStart={handleDragStart} onDragEnd={clearDrag} />)}
+      {items.map((contact) => <ContactCard key={contact.id} contact={contact} onSelect={onSelect} onComplete={handleComplete} variant={variant} dragged={draggedContactId === contact.id} draggable={variant === "kanban"} onDragStart={handleDragStart} onDragEnd={clearDrag} />)}
     </div>
   );
   useEffect(() => { if (selectedContactId && !selected) onSelect(""); }, [selectedContactId, selected, onSelect]);
