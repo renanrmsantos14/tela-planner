@@ -2871,7 +2871,7 @@ function SettingsView({ onReset, live, teams = [], tasks = [], employees = [], o
             <span className="version-value">{APP_VERSION}</span>
           </div>
         </div>
-        <PlannerImportView live={live} onImport={onImportPlannerTasks} />
+        <PlannerImportView live={live} employees={employees} onImport={onImportPlannerTasks} />
       </section>
       <TeamManager teams={teams} tasks={tasks} employees={employees} onSave={onSaveTeam} onDelete={onDeleteTeam} />
     </div>

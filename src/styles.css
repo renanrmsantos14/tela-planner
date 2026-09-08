@@ -333,6 +333,20 @@ button { cursor: pointer; }
 .setting-card-title { display: block; margin: 2px 0 7px; color: var(--ink); font-size: 15px; font-weight: 800; }
 .setting-card-description { display: block; max-width: 430px; margin-bottom: 18px; color: var(--muted); line-height: 1.6; }
 .planner-import-card-action { display: inline-flex; }
+.import-auth-card { display: grid; gap: 14px; padding: 16px; border: 1px solid #c8daf8; border-radius: 14px; background: linear-gradient(135deg, #f7faff, #eef5ff); }
+.import-auth-heading { display: flex; gap: 10px; align-items: flex-start; color: var(--blue); }
+.import-auth-heading > svg { flex: 0 0 auto; margin-top: 1px; }
+.import-auth-heading div, .import-account-row > span { display: grid; gap: 3px; }
+.import-auth-heading strong, .import-account-row strong { color: var(--ink); font-size: 13px; }
+.import-auth-heading span, .import-account-row small { color: var(--muted); font-size: 10px; line-height: 1.45; }
+.import-account-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 11px; border: 1px solid #d7e4f8; border-radius: 10px; background: #fff; }
+.import-auto-button { justify-content: center; min-height: 40px; }
+.import-manual-switch { justify-self: start; border: 0; padding: 0; color: var(--blue); background: transparent; font: inherit; font-size: 11px; font-weight: 800; text-decoration: underline; cursor: pointer; }
+.import-progress { display: grid; gap: 7px; padding-top: 2px; }
+.import-progress > div { display: flex; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 10px; }
+.import-progress strong { color: var(--control); }
+.import-progress progress { width: 100%; height: 7px; accent-color: var(--blue); }
+
 .import-modal-layer { position: fixed; inset: 0; z-index: 140; display: grid; place-items: center; padding: 24px; overflow: auto; background: rgba(4, 24, 48, .62); animation: import-modal-backdrop-in 180ms ease-out; }
 .import-modal { width: min(1100px, 100%); max-height: min(900px, calc(100dvh - 48px)); display: flex; flex-direction: column; overflow: hidden; border: 1px solid rgba(255, 255, 255, .68); border-radius: 22px; background: var(--surface); box-shadow: 0 26px 80px rgba(0, 18, 45, .28); animation: import-modal-in 220ms var(--ease-out); }
 .import-modal-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; padding: 25px 30px 21px; border-bottom: 1px solid var(--line); background: linear-gradient(135deg, #fff 0%, #f8fbff 100%); }

@@ -22,6 +22,8 @@ import {
   importStatusLabel,
   plannerDetailBatches,
 } from "./plannerImport.js";
+import { acquirePlannerToken, getMicrosoftAccount, loginMicrosoft, logoutMicrosoft, msalConfigured } from "./msalConfig.js";
+import { fetchPlannerExport } from "./plannerGraph.js";
 
 const STEPS = [
   { id: 1, label: "Começar" },
@@ -107,7 +109,14 @@ function IssueList({ title, items, warning = false }) {
   return <div className={`import-issues ${warning ? "is-warning" : "is-error"}`}><strong>{title}</strong><ul>{items.map((item) => <li key={item}>{item}</li>)}</ul></div>;
 }
 
-export default function PlannerImportView({ live, onImport }) {
+function authErrorMessage(error) {
+  if (error?.errorCode === "interaction_in_progress") {
+    return "Já existe uma janela de login Microsoft aberta. Feche-a, atualize esta página e clique em Conectar Microsoft uma única vez.";
+  }
+  return error?.message || "Não foi possível conectar a conta Microsoft.";
+}
+
+export default function PlannerImportView({ live, onImport, employees = [] }) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(1);
   const [planId, setPlanId] = useState("");
@@ -120,8 +129,20 @@ export default function PlannerImportView({ live, onImport }) {
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState(null);
   const [submitError, setSubmitError] = useState("");
+  const [microsoftAccount, setMicrosoftAccount] = useState(null);
+  const [authBusy, setAuthBusy] = useState(false);
+  const [autoBusy, setAutoBusy] = useState(false);
+  const [autoProgress, setAutoProgress] = useState(null);
+  const [autoError, setAutoError] = useState("");
+  const [autoWarning, setAutoWarning] = useState("");
+  const [mode, setMode] = useState(msalConfigured ? "automatic" : "manual");
   const urls = useMemo(() => graphQueryUrls(planId), [planId]);
   const detailBatches = useMemo(() => plannerDetailBatches(tasksText), [tasksText]);
+
+  useEffect(() => {
+    if (!open || !msalConfigured) return;
+    getMicrosoftAccount().then(setMicrosoftAccount).catch(() => setMicrosoftAccount(null));
+  }, [open]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -143,6 +164,56 @@ export default function PlannerImportView({ live, onImport }) {
     setConfirmed(false);
     setSubmitError("");
     return next;
+  };
+
+  const connectMicrosoft = async () => {
+    setAuthBusy(true);
+    setAutoError("");
+    try {
+      setMicrosoftAccount(await loginMicrosoft());
+    } catch (error) {
+      setAutoError(authErrorMessage(error));
+    } finally {
+      setAuthBusy(false);
+    }
+  };
+
+  const disconnectMicrosoft = async () => {
+    setAuthBusy(true);
+    try {
+      await logoutMicrosoft();
+      setMicrosoftAccount(null);
+    } catch (error) {
+      setAutoError(authErrorMessage(error));
+    } finally {
+      setAuthBusy(false);
+    }
+  };
+
+  const collectAutomatically = async () => {
+    setAutoBusy(true);
+    setAutoError("");
+    setAutoWarning("");
+    try {
+      const token = await acquirePlannerToken();
+      const exported = await fetchPlannerExport({
+        planId,
+        token,
+        employees,
+        onProgress: setAutoProgress,
+      });
+      setTasksText(exported.tasksText);
+      setBucketsText(exported.bucketsText);
+      setDetailsText(exported.detailsText);
+      setEmployeeMapText(exported.employeeMapText);
+      setAutoWarning(exported.userWarning || "");
+      setAutoProgress({ stage: "ready", label: "Dados prontos para revisão." });
+      setStep(5);
+    } catch (error) {
+      setAutoError(error?.message || "Não foi possível buscar as tarefas do Planner.");
+    } finally {
+      setAutoBusy(false);
+    }
   };
 
   const goNext = () => {
@@ -214,11 +285,89 @@ export default function PlannerImportView({ live, onImport }) {
 
               {!live && <div className="import-blocked"><AlertTriangle size={18} /><div><strong>Modo de teste local</strong><span>A importação fica salva neste navegador. “Restaurar mock” remove essas tarefas e volta ao cenário inicial.</span></div></div>}
 
-              {step === 1 && <div className="import-step-content">
-                <div className="import-step-kicker"><span className="import-step-number">1</span><div><strong>Comece pelo plano</strong><span>Informe o ID. A próxima tela mostra somente a consulta que você precisa copiar.</span></div></div>
-                <label className="import-input-label"><span><strong>ID do plano</strong><em>Obrigatório</em></span><input value={planId} onChange={(event) => setPlanId(event.target.value.trim())} placeholder="Ex.: urbQSMNVBk27gbeEEF7WpWUAFuVG" /></label>
-                <div className="import-howto"><strong>Quem precisa acessar o Microsoft Planner?</strong><span>A outra pessoa deve abrir o Graph Explorer com a conta que tem acesso ao plano. Você só precisa trazer o JSON para cá.</span></div>
-              </div>}
+              {step === 1 && (
+                <div className="import-step-content">
+                  <div className="import-step-kicker">
+                    <span className="import-step-number">1</span>
+                    <div>
+                      <strong>Comece pelo plano</strong>
+                      <span>{mode === "automatic" ? "Conecte a conta Microsoft e o app buscará tudo sozinho." : "Informe o ID e cole as respostas do Microsoft Graph nas próximas etapas."}</span>
+                    </div>
+                  </div>
+
+                  {msalConfigured && (
+                    <div className="import-auth-card">
+                      <div className="import-auth-heading">
+                        <ShieldCheck size={19} />
+                        <div>
+                          <strong>Importação automática</strong>
+                          <span>Sem copiar URLs, sem montar lotes e sem repetir requisições.</span>
+                        </div>
+                      </div>
+
+                      {microsoftAccount ? (
+                        <div className="import-account-row">
+                          <span>
+                            <strong>{microsoftAccount.name || microsoftAccount.username}</strong>
+                            <small>{microsoftAccount.username}</small>
+                          </span>
+                          <button className="button button-quiet" type="button" onClick={disconnectMicrosoft} disabled={authBusy || autoBusy}>
+                            {authBusy ? "Saindo…" : "Trocar conta"}
+                          </button>
+                        </div>
+                      ) : (
+                        <button className="button button-primary" type="button" onClick={connectMicrosoft} disabled={authBusy || autoBusy}>
+                          {authBusy ? <LoaderCircle size={15} className="spin" /> : <ShieldCheck size={15} />}
+                          {authBusy ? "Abrindo login…" : "Conectar Microsoft"}
+                        </button>
+                      )}
+
+                      <label className="import-input-label">
+                        <span><strong>ID do plano</strong><em>Obrigatório</em></span>
+                        <input value={planId} onChange={(event) => setPlanId(event.target.value.trim())} placeholder="Ex.: urbQSMNVBk27gbeEEF7WpWUAFuVG" />
+                      </label>
+
+                      {microsoftAccount && (
+                        <button className="button button-secondary import-auto-button" type="button" onClick={collectAutomatically} disabled={!planId.trim() || autoBusy || authBusy}>
+                          {autoBusy ? <LoaderCircle size={15} className="spin" /> : <UploadCloud size={15} />}
+                          {autoBusy ? autoProgress?.label || "Buscando dados…" : "Buscar e preparar tudo"}
+                        </button>
+                      )}
+
+                      {autoProgress && (
+                        <div className="import-progress" aria-live="polite">
+                          <div>
+                            <strong>{autoProgress.label}</strong>
+                            {autoProgress.total > 0 && <span>{autoProgress.completed || 0} de {autoProgress.total}</span>}
+                          </div>
+                          {autoProgress.total > 0 && <progress value={autoProgress.completed || 0} max={autoProgress.total} />}
+                        </div>
+                      )}
+                      {autoError && <IssueList title="Não foi possível conectar" items={[autoError]} />}
+                      {autoWarning && <IssueList title="Atenção" items={[autoWarning]} warning />}
+                    </div>
+                  )}
+
+                  {msalConfigured && (
+                    <button className="import-manual-switch" type="button" onClick={() => setMode("manual")}>
+                      Usar importação manual com JSON
+                    </button>
+                  )}
+
+                  {mode === "manual" && (
+                    <>
+                      <label className="import-input-label">
+                        <span><strong>ID do plano</strong><em>Obrigatório</em></span>
+                        <input value={planId} onChange={(event) => setPlanId(event.target.value.trim())} placeholder="Ex.: urbQSMNVBk27gbeEEF7WpWUAFuVG" />
+                      </label>
+                      <div className="import-howto">
+                        <strong>Importação manual</strong>
+                        <span>A outra pessoa deve abrir o Graph Explorer com a conta que tem acesso ao plano. Você só precisa trazer os JSONs para cá.</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
 
               {step === 2 && <div className="import-step-content">
                 <div className="import-step-kicker"><span className="import-step-number">2</span><div><strong>Traga as tarefas</strong><span>Copie a resposta completa da consulta de tarefas e cole abaixo.</span></div></div>

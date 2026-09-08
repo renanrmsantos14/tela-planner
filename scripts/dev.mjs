@@ -4,7 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const defaultPort = 5190;
+const defaultPort = 5192;
 const viteBin = path.join(projectRoot, "node_modules", "vite", "bin", "vite.js");
 
 function runPowerShell(command) {
