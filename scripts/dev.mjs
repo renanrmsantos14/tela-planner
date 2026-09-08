@@ -69,12 +69,6 @@ function waitForPortRelease(port) {
   throw new Error(`Porta ${port} continua ocupada após reiniciar o projeto.`);
 }
 
-function choosePort() {
-  let port = defaultPort;
-  while (isPortBusy(port)) port += 1;
-  return port;
-}
-
 if (!existsSync(viteBin)) {
   throw new Error(`Vite não encontrado em ${viteBin}. Rode npm install antes de iniciar o dev.`);
 }
@@ -89,8 +83,8 @@ if (listener) {
     killProcessTree(listener.pid);
     waitForPortRelease(defaultPort);
   } else {
-    port = choosePort();
-    console.log(`Porta ${defaultPort} está em uso por outro projeto. Usando ${port}.`);
+    console.error(`[Tela Planner] Porta ${defaultPort} está em uso por outro projeto. Feche esse processo e inicie novamente para manter o login Microsoft funcionando em http://localhost:${defaultPort}/.`);
+    process.exit(1);
   }
 }
 

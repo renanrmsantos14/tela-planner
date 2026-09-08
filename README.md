@@ -45,6 +45,8 @@ O caminho recomendado é o card “Importar tarefas” dentro do WebResource. No
 4. Inicie com `npm run dev` e abra exatamente `http://localhost:5192/`.
 5. Abra **Importar tarefas**, conecte a conta que tem acesso ao plano, selecione o plano pelo nome e clique em **Buscar e preparar tudo**.
 
+O servidor não troca automaticamente para outra porta: a porta `5192` precisa estar livre porque ela é a mesma cadastrada no Microsoft Entra ID.
+
 Se a conta não puder consultar o diretório, o app avisa e permite o mapeamento manual dos responsáveis. O script abaixo permanece como alternativa automatizada fora do WebResource.
 
 Pré-requisitos no Windows PowerShell 5.1:
