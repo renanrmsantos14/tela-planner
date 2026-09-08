@@ -35,7 +35,7 @@ Se o login MSAL exigir outro aplicativo público, defina também `DV_CLIENT_ID` 
 
 ## Importação do Microsoft Planner
 
-O caminho recomendado é o card “Importar tarefas” dentro do WebResource. No localhost, a opção automática autentica a conta Microsoft, busca todas as páginas de tarefas e buckets e consulta descrições/checklists em lotes internos de até 20 tarefas. O usuário não precisa montar lotes nem copiar URLs: apenas informa o ID do plano, revisa e confirma antes de gravar. A mesma jornada grava somente no mock e “Restaurar mock” volta ao cenário inicial.
+O caminho recomendado é o card “Importar tarefas” dentro do WebResource. No localhost, a opção automática autentica a conta Microsoft, carrega os planos disponíveis pelo nome, busca todas as páginas de tarefas e buckets e consulta descrições/checklists em lotes internos de até 20 tarefas. O usuário não precisa montar lotes nem copiar URLs: apenas seleciona o plano, revisa e confirma antes de gravar. A mesma jornada grava somente no mock e “Restaurar mock” volta ao cenário inicial.
 
 ### Login Microsoft no localhost
 

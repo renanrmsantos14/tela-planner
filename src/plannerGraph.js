@@ -106,6 +106,20 @@ async function getPlannerUsers(tasks, token, onProgress) {
   }
 }
 
+export async function fetchPlannerPlans({ token, onProgress } = {}) {
+  if (!token) throw new Error("Token Microsoft ausente. Conecte a conta novamente.");
+
+  onProgress?.({ stage: "plans", completed: 0, total: 0, label: "Buscando seus planos…" });
+  const pages = await getAllPages(`${GRAPH_BASE_URL}/me/planner/plans`, token);
+  const plans = pages
+    .flatMap((page) => page?.value || [])
+    .filter((plan) => plan?.id)
+    .map((plan) => ({ id: String(plan.id), displayName: String(plan.title || plan.displayName || "Plano sem nome").trim() || "Plano sem nome" }))
+    .sort((left, right) => left.displayName.localeCompare(right.displayName, "pt-BR"));
+  onProgress?.({ stage: "plans", completed: plans.length, total: plans.length, label: `${plans.length} plano(s) encontrado(s).` });
+  return plans;
+}
+
 export async function fetchPlannerExport({ planId, token, employees = [], onProgress } = {}) {
   const cleanPlanId = String(planId || "").trim();
   if (!cleanPlanId) throw new Error("Informe o ID do plano antes de conectar ao Microsoft Planner.");

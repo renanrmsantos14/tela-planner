@@ -11,6 +11,7 @@ import {
   ExternalLink,
   FileJson,
   LoaderCircle,
+  RefreshCw,
   ShieldCheck,
   UploadCloud,
   X,
@@ -23,7 +24,7 @@ import {
   plannerDetailBatches,
 } from "./plannerImport.js";
 import { acquirePlannerToken, getMicrosoftAccount, loginMicrosoft, logoutMicrosoft, msalConfigured } from "./msalConfig.js";
-import { fetchPlannerExport } from "./plannerGraph.js";
+import { fetchPlannerExport, fetchPlannerPlans } from "./plannerGraph.js";
 
 const STEPS = [
   { id: 1, label: "Começar" },
@@ -136,6 +137,8 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
   const [result, setResult] = useState(null);
   const [submitError, setSubmitError] = useState("");
   const [microsoftAccount, setMicrosoftAccount] = useState(null);
+  const [plans, setPlans] = useState([]);
+  const [plansBusy, setPlansBusy] = useState(false);
   const [authBusy, setAuthBusy] = useState(false);
   const [autoBusy, setAutoBusy] = useState(false);
   const [autoProgress, setAutoProgress] = useState(null);
@@ -145,9 +148,32 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
   const urls = useMemo(() => graphQueryUrls(planId), [planId]);
   const detailBatches = useMemo(() => plannerDetailBatches(tasksText), [tasksText]);
 
+  const loadPlans = async () => {
+    setPlansBusy(true);
+    setAutoError("");
+    setAutoWarning("");
+    try {
+      const token = await acquirePlannerToken();
+      const nextPlans = await fetchPlannerPlans({ token, onProgress: setAutoProgress });
+      setPlans(nextPlans);
+      setPlanId((current) => nextPlans.some((plan) => plan.id === current) ? current : nextPlans.length === 1 ? nextPlans[0].id : "");
+      if (!nextPlans.length) setAutoWarning("Nenhum plano foi encontrado para esta conta Microsoft.");
+    } catch (error) {
+      setAutoError(error?.message || "Não foi possível carregar os planos do Microsoft Planner.");
+    } finally {
+      setPlansBusy(false);
+    }
+  };
+
   useEffect(() => {
     if (!open || !msalConfigured) return;
-    getMicrosoftAccount().then(setMicrosoftAccount).catch(() => setMicrosoftAccount(null));
+    getMicrosoftAccount().then((account) => {
+      setMicrosoftAccount(account);
+      if (account) loadPlans();
+    }).catch(() => {
+      setMicrosoftAccount(null);
+      setPlans([]);
+    });
   }, [open]);
 
   useEffect(() => {
@@ -176,7 +202,9 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
     setAuthBusy(true);
     setAutoError("");
     try {
-      setMicrosoftAccount(await loginMicrosoft());
+      const account = await loginMicrosoft();
+      setMicrosoftAccount(account);
+      await loadPlans();
     } catch (error) {
       setAutoError(authErrorMessage(error));
     } finally {
@@ -189,6 +217,8 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
     try {
       await logoutMicrosoft();
       setMicrosoftAccount(null);
+      setPlans([]);
+      setPlanId("");
     } catch (error) {
       setAutoError(authErrorMessage(error));
     } finally {
@@ -317,7 +347,7 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
                             <strong>{microsoftAccount.name || microsoftAccount.username}</strong>
                             <small>{microsoftAccount.username}</small>
                           </span>
-                          <button className="button button-quiet" type="button" onClick={disconnectMicrosoft} disabled={authBusy || autoBusy}>
+                          <button className="button button-quiet" type="button" onClick={disconnectMicrosoft} disabled={authBusy || plansBusy || autoBusy}>
                             {authBusy ? "Saindo…" : "Trocar conta"}
                           </button>
                         </div>
@@ -329,9 +359,15 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
                       )}
 
                       <label className="import-input-label">
-                        <span><strong>ID do plano</strong><em>Obrigatório</em></span>
-                        <input value={planId} onChange={(event) => setPlanId(event.target.value.trim())} placeholder="Ex.: urbQSMNVBk27gbeEEF7WpWUAFuVG" />
+                        <span><strong>Plano</strong><em>Obrigatório</em></span>
+                        <select value={planId} onChange={(event) => setPlanId(event.target.value)} disabled={plansBusy || !plans.length}>
+                          <option value="">{plansBusy ? "Carregando seus planos…" : plans.length ? "Selecione um plano" : "Nenhum plano disponível"}</option>
+                          {plans.map((plan) => <option key={plan.id} value={plan.id}>{plan.displayName}</option>)}
+                        </select>
+                        <small>{plans.length ? "Selecione pelo nome. O identificador fica oculto e é usado automaticamente." : "Conecte a conta para carregar os planos disponíveis."}</small>
                       </label>
+
+                      {microsoftAccount && <button className="import-manual-switch" type="button" onClick={loadPlans} disabled={plansBusy || autoBusy}><RefreshCw size={13} className={plansBusy ? "spin" : ""} /> Atualizar planos</button>}
 
                       {microsoftAccount && (
                         <button className="button button-secondary import-auto-button" type="button" onClick={collectAutomatically} disabled={!planId.trim() || autoBusy || authBusy}>
