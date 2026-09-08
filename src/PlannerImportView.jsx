@@ -25,6 +25,7 @@ import {
 } from "./plannerImport.js";
 import { acquirePlannerToken, getMicrosoftAccount, loginMicrosoft, logoutMicrosoft, msalConfigured } from "./msalConfig.js";
 import { fetchPlannerExport, fetchPlannerPlans } from "./plannerGraph.js";
+import "./plannerImportAuto.css";
 
 const STEPS = [
   { id: 1, label: "Começar" },
@@ -480,7 +481,7 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
               </div>}
             </div>
 
-            {!result && <footer className="import-footer"><button className="button button-secondary" type="button" onClick={goBack} disabled={step === 1 || importing}><ArrowLeft size={15} />Voltar</button><span>Etapa {Math.max(1, workflowSteps.findIndex((item) => item.id === step) + 1)} de {workflowSteps.length}</span>{step < 6 ? <button className="button button-primary" type="button" onClick={goNext} disabled={(step === 1 && (!planId.trim() || plansBusy || autoBusy)) || (step === 2 && !tasksText.trim())}><ArrowRight size={15} />{mode === "automatic" && step === 1 ? "Buscar e preparar tudo" : step === 5 ? "Validar e revisar" : "Continuar"}</button> : <button className="button button-primary" type="button" onClick={submit} disabled={!analysis?.canImport || !confirmed || importing}>{importing ? <LoaderCircle size={15} className="spin" /> : <UploadCloud size={15} />}{importing ? "Importando…" : "Importar tarefas"}</button>}</footer>}
+            {!result && <footer className="import-footer"><button className="button button-secondary" type="button" onClick={goBack} disabled={step === 1 || importing}><ArrowLeft size={15} />Voltar</button><span>Etapa {Math.max(1, workflowSteps.findIndex((item) => item.id === step) + 1)} de {workflowSteps.length}</span>{!(mode === "automatic" && step === 1) && (step < 6 ? <button className="button button-primary" type="button" onClick={goNext} disabled={(step === 1 && (!planId.trim() || plansBusy || autoBusy)) || (step === 2 && !tasksText.trim())}><ArrowRight size={15} />{step === 5 ? "Validar e revisar" : "Continuar"}</button> : <button className="button button-primary" type="button" onClick={submit} disabled={!analysis?.canImport || !confirmed || importing}>{importing ? <LoaderCircle size={15} className="spin" /> : <UploadCloud size={15} />}{importing ? "Importando…" : "Importar tarefas"}</button>)}</footer>}
           </section>
         </div>,
         document.body,
