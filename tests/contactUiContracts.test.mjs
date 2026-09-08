@@ -10,9 +10,14 @@ test("contatos expõe Inbox, Kanban, seção Aguardando e filtros do MVP", async
   assert.match(source, /function ContactViewSelector\(\{ view, onChange \}\)/);
   assert.match(source, /aria-label="Visualização Inbox"/);
   assert.match(source, /aria-label="Visualização Kanban"/);
+  assert.match(source, /const \[view, setView\] = useState\("kanban"\)/);
   assert.match(source, /className="contact-waiting-section"/);
   assert.match(source, /CONTACT_STATUSES\.map\(\(column\)/);
+  assert.match(source, /data-status-id=\{column\.id\}/);
+  assert.match(source, /onDragOver=\{\(event\) => handleDragOver\(event, column\.id\)\}/);
   assert.match(source, /onDrop=\{\(event\) => handleDrop\(event, column\.id\)\}/);
+  assert.match(source, /contact-kanban-drop-placeholder/);
+  assert.match(source, /Mover para/);
   assert.match(source, /Minhas pendências/);
   assert.match(source, /Arquivados/);
 });
@@ -27,6 +32,22 @@ test("card mantém somente conclusão rápida com confirmação em dois passos",
   assert.match(source, /aria-label=\{`Abrir caso/);
   assert.match(source, /className="contact-row-date" aria-label=/);
   assert.doesNotMatch(source, /onDoubleClick/);
+});
+
+test("Kanban mantém abertura primária e movimento acessível sem arraste", async () => {
+  const source = await readSource("../src/ContactsView.jsx");
+  const styles = await readSource("../src/styles.css");
+
+  assert.match(source, /onMove, draggable = false, showMoveControl = false/);
+  assert.match(source, /aria-label=\{`Mover \$\{contact\.subject \|\| "caso"\} para outra coluna`\}/);
+  assert.match(source, /contact-priority-label priority-\$\{contact\.priority\}/);
+  assert.match(source, /contact-row-open-hint/);
+  assert.match(source, /setData\("text\/contact-id", contact\.id\)/);
+  assert.match(source, /effectAllowed = "move"/);
+  assert.match(styles, /\.contact-kanban-column\.is-drop-target \.contact-kanban-body/);
+  assert.match(styles, /\.contact-kanban-column \.contact-row \{ position: relative;[\s\S]*box-shadow: var\(--shadow-surface\)/);
+  assert.match(styles, /\.contact-kanban-column \.contact-row-top strong \{ display: -webkit-box;/);
+  assert.match(styles, /\.contact-row-move select:focus-visible/);
 });
 
 test("triagem comunica busca, filtros ativos e estados da lista", async () => {

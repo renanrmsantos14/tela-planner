@@ -395,7 +395,7 @@ function ContactViewSelector({ view, onChange }) {
   );
 }
 
-function ContactCard({ contact, onSelect, onComplete, draggable = false, onDragStart }) {
+function ContactCard({ contact, onSelect, onComplete, onMove, draggable = false, showMoveControl = false, dragged = false, onDragStart, onDragEnd }) {
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const timerRef = useRef(null);
@@ -418,15 +418,16 @@ function ContactCard({ contact, onSelect, onComplete, draggable = false, onDragS
     try { await onComplete(contact); } finally { setBusy(false); }
   };
   return (
-    <article className={`contact-row priority-${contact.priority} ${isArchived ? "is-archived" : ""}`} draggable={draggable && !isArchived} onDragStart={(event) => onDragStart?.(event, contact)}>
+    <article className={`contact-row priority-${contact.priority} ${isArchived ? "is-archived" : ""} ${dragged ? "is-dragging" : ""}`} draggable={draggable && !isArchived} onDragStart={(event) => onDragStart?.(event, contact)} onDragEnd={onDragEnd}>
       <span className="contact-row-priority" aria-hidden="true" />
       <button className="contact-row-main" type="button" onClick={() => onSelect(contact.id)} aria-label={`Abrir caso ${contact.subject || "sem assunto"}`}>
-        <span className="contact-row-top"><strong>{contact.subject || "Sem assunto"}</strong></span>
+        <span className="contact-row-top"><span className={`contact-priority-label priority-${contact.priority}`}>{contactPriorityLabel(contact.priority)}</span><strong>{contact.subject || "Sem assunto"}</strong><span className="contact-row-open-hint">Abrir</span></span>
         <span className="contact-row-person"><UserRound size={13} aria-hidden="true" /> {contact.senderName || "Pessoa não informada"}</span>
         <span className="contact-row-message">{contact.lastMessage || contact.message || contact.summary || "Sem mensagem registrada"}</span>
         <span className="contact-row-meta"><span><ChannelIcon size={13} aria-hidden="true" /> {contactChannelLabel(contact.channel)}</span><span className={`badge contact-status-badge status-${contact.status}`}>{isArchived ? "Arquivado" : contactStatusLabel(contact.status)}</span></span>
       </button>
       <span className="contact-row-date" aria-label={contact.dueDate ? `Prazo ${formatContactDate(contact.dueDate)}${contactIsOverdue(contact) ? ", atrasado" : ""}` : "Sem prazo definido"}><time>{contact.dueDate ? `Prazo ${formatContactDate(contact.dueDate)}` : "Sem prazo"}</time>{contact.dueDate && contactIsOverdue(contact) && <small className="is-overdue">Atrasado</small>}</span>
+      {showMoveControl && !isArchived && <label className="contact-row-move"><span>Mover para</span><select value={contact.status} onChange={(event) => onMove?.(contact, event.target.value)} aria-label={`Mover ${contact.subject || "caso"} para outra coluna`}><option value={contact.status}>{contactStatusLabel(contact.status)}</option>{CONTACT_STATUSES.filter((item) => item.id !== contact.status).map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>}
       {onComplete && !isDone && !isArchived && <button className={`contact-complete-action ${confirming ? "is-confirming" : ""}`} type="button" onClick={complete} disabled={busy} aria-label={confirming ? `Confirmar conclusão de ${contact.subject}` : `Concluir ${contact.subject}`} title={confirming ? "Confirmar conclusão" : "Concluir caso"}>{confirming ? <><Check size={14} aria-hidden="true" /> Confirmar</> : <CheckCircle2 size={16} aria-hidden="true" />}</button>}
     </article>
   );
@@ -455,8 +456,10 @@ export default function ContactsView({
   const [filters, setFilters] = useState(EMPTY_FILTERS);
   const [creating, setCreating] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
-  const [view, setView] = useState("inbox");
+  const [view, setView] = useState("kanban");
   const [waitingOpen, setWaitingOpen] = useState(true);
+  const [draggedContactId, setDraggedContactId] = useState("");
+  const [dropStatus, setDropStatus] = useState("");
   const selected = contacts.find((item) => item.id === selectedContactId);
   const visibleContacts = useMemo(() => sortContacts(filterContacts(contacts, {
     query: filters.query,
@@ -485,16 +488,37 @@ export default function ContactsView({
   const updateFilter = (key, value) => setFilters((current) => ({ ...current, [key]: value }));
   const clearFilters = () => setFilters(EMPTY_FILTERS);
   const handleComplete = (contact) => onSave({ ...contact, status: "done", waitingNote: "" });
-  const handleDrop = (event, status) => {
+  const clearDrag = () => {
+    setDraggedContactId("");
+    setDropStatus("");
+  };
+  const handleDragStart = (event, contact) => {
+    event.dataTransfer?.setData("text/contact-id", contact.id);
+    event.dataTransfer?.setData("text/plain", contact.id);
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = "move";
+    }
+    setDraggedContactId(contact.id);
+  };
+  const handleDragOver = (event, status) => {
     event.preventDefault();
-    const id = event.dataTransfer?.getData("text/plain");
-    const contact = contacts.find((item) => item.id === id);
+    if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+    setDropStatus(status);
+  };
+  const handleMove = (contact, status) => {
     if (!contact || contact.archivedAt || contact.status === status) return;
     onSave({ ...contact, status });
   };
+  const handleDrop = (event, status) => {
+    event.preventDefault();
+    const id = event.dataTransfer?.getData("text/contact-id") || event.dataTransfer?.getData("text/plain");
+    const contact = contacts.find((item) => item.id === id);
+    clearDrag();
+    handleMove(contact, status);
+  };
   const renderCards = (items, variant = "") => (
     <div className={`contacts-list ${variant ? `contacts-list-${variant}` : ""}`}>
-      {items.map((contact) => <ContactCard key={contact.id} contact={contact} onSelect={onSelect} onComplete={handleComplete} draggable={variant === "kanban"} onDragStart={(event, item) => event.dataTransfer?.setData("text/plain", item.id)} />)}
+      {items.map((contact) => <ContactCard key={contact.id} contact={contact} onSelect={onSelect} onComplete={handleComplete} onMove={handleMove} showMoveControl={variant === "kanban"} dragged={draggedContactId === contact.id} draggable={variant === "kanban"} onDragStart={handleDragStart} onDragEnd={clearDrag} />)}
     </div>
   );
   useEffect(() => { if (selectedContactId && !selected) onSelect(""); }, [selectedContactId, selected, onSelect]);
@@ -539,7 +563,15 @@ export default function ContactsView({
         <section className="contact-kanban" aria-label="Kanban de contatos">
           {CONTACT_STATUSES.map((column) => {
             const items = visibleContacts.filter((contact) => !contact.archivedAt && contact.status === column.id);
-            return <section className={`panel contact-kanban-column status-column-${column.id}`} key={column.id} onDragOver={(event) => event.preventDefault()} onDrop={(event) => handleDrop(event, column.id)}><div className="contact-kanban-heading"><div><span className="eyebrow">Status</span><h2>{column.label}</h2></div><span className="panel-count">{items.length}</span></div>{items.length ? renderCards(items, "kanban") : <div className="contact-kanban-empty">Solte casos aqui</div>}</section>;
+            const StatusIcon = STATUS_ICON[column.id] || CheckCircle2;
+            const isDropTarget = Boolean(draggedContactId && dropStatus === column.id);
+            return <section className={`contact-kanban-column status-column-${column.id}${isDropTarget ? " is-drop-target" : ""}`} data-status-id={column.id} key={column.id} aria-label={`Coluna ${column.label}, ${items.length} casos`} onDragOver={(event) => handleDragOver(event, column.id)} onDrop={(event) => handleDrop(event, column.id)} onDragEnd={clearDrag}>
+              <div className="contact-kanban-heading"><div className="contact-kanban-heading-title"><StatusIcon size={15} aria-hidden="true" /><div><span className="eyebrow">Status</span><h2>{column.label}</h2></div></div><span className="panel-count">{items.length}</span></div>
+              <div className="contact-kanban-body">
+                {isDropTarget && <div className="contact-kanban-drop-placeholder" role="status">Solte aqui para mover</div>}
+                {items.length ? renderCards(items, "kanban") : <div className="contact-kanban-empty"><Plus size={18} aria-hidden="true" /><strong>Sem casos nesta coluna</strong><span>Arraste um caso ou use “Mover para”.</span></div>}
+              </div>
+            </section>;
           })}
         </section>
       )}
