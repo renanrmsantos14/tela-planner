@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { collectionRows, daysOverdue, localDateKey, waitingRows, workloadGroups, workloadTotals } from "../src/management.js";
+import { collectionRows, daysOverdue, localDateKey, managementSummary, waitingRows, workloadGroups, workloadTotals } from "../src/management.js";
 import { normalizeWaitingContext, validateWaitingContext } from "../src/domain.js";
 import { collectTask, createTask, seedState } from "../src/mockStore.js";
 
@@ -61,6 +61,26 @@ test("cobrança manual é idempotente por tarefa e dia", () => {
   const first = collectTask(initial, task.id, { referenceDate: "2026-09-01", actorEmployeeId: "employee-renan" });
   assert.equal(first.collectionEvents.length, 1);
   assert.throws(() => collectTask(first, task.id, { referenceDate: "2026-09-01", actorEmployeeId: "employee-renan" }), /cobrada hoje/);
+});
+
+test("resume cobrança pendente e maior carga sem criar pontuação opaca", () => {
+  const collections = [
+    { id: "late", collectionDate: "" },
+    { id: "collected", collectionDate: "2026-09-01" },
+  ];
+  const workload = [
+    { key: "employee:e1", label: "Marina", total: 4, overdue: 2 },
+    { key: "team:t1", label: "Operação", total: 3, overdue: 1 },
+    { key: "team:t2", label: "Comercial", total: 8, overdue: 0 },
+  ];
+  const summary = managementSummary(collections, workload, new Date("2026-09-01T12:00:00-03:00"));
+
+  assert.deepEqual(summary, {
+    overdue: 2,
+    pendingCollections: 1,
+    activeGroups: 3,
+    topGroup: workload[2],
+  });
 });
 
 test("Aguardando aceita dependência externa sem exigir id Dataverse", () => {
