@@ -110,6 +110,15 @@ function IssueList({ title, items, warning = false }) {
   return <div className={`import-issues ${warning ? "is-warning" : "is-error"}`}><strong>{title}</strong><ul>{items.map((item) => <li key={item}>{item}</li>)}</ul></div>;
 }
 
+function parseEmployeeMap(text) {
+  try {
+    const value = JSON.parse(text || "{}");
+    return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  } catch {
+    return {};
+  }
+}
+
 function authErrorMessage(error) {
   if (error?.errorCode === "interaction_in_progress") {
     return "Já existe uma janela de login Microsoft aberta. Feche-a, atualize esta página e clique em Conectar Microsoft uma única vez.";
@@ -137,6 +146,7 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
   const [result, setResult] = useState(null);
   const [submitError, setSubmitError] = useState("");
   const [microsoftAccount, setMicrosoftAccount] = useState(null);
+  const [plannerUsers, setPlannerUsers] = useState([]);
   const [plans, setPlans] = useState([]);
   const [plansBusy, setPlansBusy] = useState(false);
   const [authBusy, setAuthBusy] = useState(false);
@@ -147,6 +157,10 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
   const [mode, setMode] = useState(msalConfigured ? "automatic" : "manual");
   const urls = useMemo(() => graphQueryUrls(planId), [planId]);
   const detailBatches = useMemo(() => plannerDetailBatches(tasksText), [tasksText]);
+  const employeeMap = useMemo(() => parseEmployeeMap(employeeMapText), [employeeMapText]);
+  const workflowSteps = mode === "automatic"
+    ? [{ id: 1, label: "Conta" }, { id: 5, label: "Ajustes" }, { id: 6, label: "Confirmar" }]
+    : STEPS;
 
   const loadPlans = async () => {
     setPlansBusy(true);
@@ -218,6 +232,7 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
       await logoutMicrosoft();
       setMicrosoftAccount(null);
       setPlans([]);
+      setPlannerUsers([]);
       setPlanId("");
     } catch (error) {
       setAutoError(authErrorMessage(error));
@@ -242,9 +257,12 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
       setBucketsText(exported.bucketsText);
       setDetailsText(exported.detailsText);
       setEmployeeMapText(exported.employeeMapText);
+      setPlannerUsers(exported.plannerUsers || []);
       setAutoWarning(exported.userWarning || "");
       setAutoProgress({ stage: "ready", label: "Dados prontos para revisão." });
-      setStep(5);
+      const nextAnalysis = analyzePlannerImport({ planId, tasksText: exported.tasksText, bucketsText: exported.bucketsText, detailsText: exported.detailsText, employeeMapText: exported.employeeMapText });
+      setAnalysis(nextAnalysis);
+      setStep(nextAnalysis.unresolvedAssignees.length ? 5 : 6);
     } catch (error) {
       setAutoError(error?.message || "Não foi possível buscar as tarefas do Planner.");
     } finally {
@@ -254,6 +272,10 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
 
   const goNext = () => {
     if (step === 1 && !planId.trim()) return;
+    if (mode === "automatic" && step === 1) {
+      collectAutomatically();
+      return;
+    }
     if (step === 5) {
       const next = runValidation();
       if (next.canImport) setStep(6);
@@ -262,7 +284,15 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
     setStep((current) => Math.min(6, current + 1));
   };
 
-  const goBack = () => setStep((current) => Math.max(1, current - 1));
+  const goBack = () => {
+    const currentIndex = workflowSteps.findIndex((item) => item.id === step);
+    setStep(workflowSteps[Math.max(0, currentIndex - 1)]?.id || 1);
+  };
+
+  const updateEmployeeMapping = (graphUserId, employeeId) => {
+    setEmployeeMapText(JSON.stringify({ ...employeeMap, [graphUserId]: employeeId }, null, 2));
+    setAnalysis(null);
+  };
 
   const submit = async () => {
     if (!analysis?.canImport || !confirmed || importing) return;
@@ -282,6 +312,7 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
   const resetWizard = () => {
     setResult(null);
     setAnalysis(null);
+    setPlannerUsers([]);
     setConfirmed(false);
     setSubmitError("");
     setStep(1);
@@ -316,7 +347,7 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
 
             <div className="import-modal-body">
               <div className="import-steps" aria-label="Etapas da importação">
-                {STEPS.map((item) => <button key={item.id} type="button" className={`import-step ${step === item.id ? "is-active" : ""} ${step > item.id ? "is-done" : ""}`} onClick={() => item.id < step && setStep(item.id)} disabled={item.id > step}><span>{step > item.id ? <Check size={14} /> : item.id}</span>{item.label}</button>)}
+                {workflowSteps.map((item, index) => <button key={item.id} type="button" className={`import-step ${step === item.id ? "is-active" : ""} ${step > item.id ? "is-done" : ""}`} onClick={() => item.id < step && setStep(item.id)} disabled={item.id > step}><span>{step > item.id ? <Check size={14} /> : index + 1}</span>{item.label}</button>)}
               </div>
 
               {!live && <div className="import-blocked"><AlertTriangle size={18} /><div><strong>Modo de teste local</strong><span>A importação fica salva neste navegador. “Restaurar mock” remove essas tarefas e volta ao cenário inicial.</span></div></div>}
@@ -370,7 +401,7 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
                       {microsoftAccount && <button className="import-manual-switch" type="button" onClick={loadPlans} disabled={plansBusy || autoBusy}><RefreshCw size={13} className={plansBusy ? "spin" : ""} /> Atualizar planos</button>}
 
                       {microsoftAccount && (
-                        <button className="button button-secondary import-auto-button" type="button" onClick={collectAutomatically} disabled={!planId.trim() || autoBusy || authBusy}>
+                        <button className="button button-secondary import-auto-button" type="button" onClick={collectAutomatically} disabled={!planId.trim() || autoBusy || authBusy || plansBusy}>
                           {autoBusy ? <LoaderCircle size={15} className="spin" /> : <UploadCloud size={15} />}
                           {autoBusy ? autoProgress?.label || "Buscando dados…" : "Buscar e preparar tudo"}
                         </button>
@@ -435,18 +466,21 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
               </div>}
 
               {step === 5 && <div className="import-step-content">
-                <div className="import-step-kicker"><span className="import-step-number">5</span><div><strong>Relacione os responsáveis</strong><span>Converta o ID Microsoft de cada pessoa para o funcionário do seu app.</span></div></div>
-                <div className="import-two-columns"><JsonField label="Mapa de responsáveis" value={employeeMapText} onChange={setEmployeeMapText} rows={10} hint={'Ex.: { "ID_MICROSOFT": "GUID_FUNCIONARIO" }'} /><div className="import-map-help"><strong>Copie este modelo</strong><p>Use o ID Microsoft que aparece em <code>assignments</code> e o GUID do funcionário correspondente no Dataverse.</p><div className="import-map-example"><code>{'{\n  "3389545f-…": "GUID_DO_FUNCIONARIO"\n}'}</code><CopyButton value={'{\n  "ID_MICROSOFT": "GUID_DO_FUNCIONARIO"\n}'} label="Copiar modelo" /></div></div></div>
+                <div className="import-step-kicker"><span className="import-step-number">5</span><div><strong>{mode === "automatic" ? "Confira os responsáveis" : "Relacione os responsáveis"}</strong><span>{mode === "automatic" ? "O app tentou relacionar cada pessoa Microsoft ao funcionário correspondente." : "Converta o ID Microsoft de cada pessoa para o funcionário do seu app."}</span></div></div>
+                {mode === "automatic" && <>
+                  {analysis?.unresolvedAssignees?.length ? <div className="import-assignee-map">{analysis.unresolvedAssignees.map(({ graphUserId, taskCount }) => { const user = plannerUsers.find((item) => item.id === graphUserId); return <label className="import-assignee-map-row" key={graphUserId}><span><strong>{user?.displayName || "Responsável Microsoft"}</strong><small>{user?.email || `${taskCount} tarefa(s) atribuída(s)`}</small></span><select value={employeeMap[graphUserId] || ""} onChange={(event) => updateEmployeeMapping(graphUserId, event.target.value)}><option value="">Selecione o funcionário</option>{employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.name}</option>)}</select></label>; })}</div> : <div className="import-paste-note"><CheckCircle2 size={16} /><span>Todos os responsáveis foram relacionados automaticamente pelo e-mail Microsoft.</span></div>}
+                </>}
+                {mode === "manual" && <div className="import-two-columns"><JsonField label="Mapa de responsáveis" value={employeeMapText} onChange={setEmployeeMapText} rows={10} hint={'Ex.: { "ID_MICROSOFT": "GUID_FUNCIONARIO" }'} /><div className="import-map-help"><strong>Copie este modelo</strong><p>Use o ID Microsoft que aparece em <code>assignments</code> e o GUID do funcionário correspondente no Dataverse.</p><div className="import-map-example"><code>{'{\n  "3389545f-…": "GUID_DO_FUNCIONARIO"\n}'}</code><CopyButton value={'{\n  "ID_MICROSOFT": "GUID_DO_FUNCIONARIO"\n}'} label="Copiar modelo" /></div></div></div>}
                 {analysis && <><div className="import-metrics"><Metric value={analysis.stats.tasks} label="tarefas" /><Metric value={analysis.stats.detailsLoaded} label="detalhes carregados" tone={analysis.stats.detailsLoaded === analysis.stats.detailsRequired ? "is-good" : "is-warning"} /><Metric value={analysis.stats.checklistTaskCount} label="com checklist" /><Metric value={analysis.stats.unresolvedAssignees} label="responsáveis pendentes" tone={analysis.stats.unresolvedAssignees ? "is-warning" : "is-good"} /></div><IssueList title="Corrija antes de continuar" items={analysis.errors} /><IssueList title="Observações" items={analysis.warnings} warning /></>}
               </div>}
 
               {step === 6 && <div className="import-step-content">
-                {result ? <div className="import-success"><CheckCircle2 size={29} /><h3>Importação concluída</h3><p>{result.createdCount || 0} tarefa(s) criada(s). {result.existingCount || 0} já existia(m) e não foi(ram) duplicada(s).</p><button className="button button-secondary" type="button" onClick={resetWizard}>Nova importação</button></div> : <><div className="import-step-kicker"><span className="import-step-number">6</span><div><strong>Revise e confirme</strong><span>Confira o resumo. O botão final só libera depois da sua confirmação.</span></div></div>{analysis && <><div className="import-review-banner"><strong>{analysis.stats.tasks} tarefas serão avaliadas</strong><span>Origem: manual · sem vínculo automático com cotação ou qualidade.</span></div><div className="import-review-grid"><div><small>Status</small><p>{Object.entries(analysis.stats.statusCounts).map(([key, count]) => `${count} ${importStatusLabel(key)}`).join(" · ")}</p></div><div><small>Prioridade</small><p>{Object.entries(analysis.stats.priorityCounts).map(([key, count]) => `${count} ${importPriorityLabel(key)}`).join(" · ")}</p></div><div><small>Checklist</small><p>{analysis.stats.checklistTaskCount} tarefa(s) com itens preservados.</p></div></div><label className="import-confirm"><input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} /><span><strong>Eu conferi os dados e autorizo a gravação {live ? "no Dataverse" : "no mock local"}.</strong><small>{live ? "Esta etapa cria registros e relações de responsáveis. Tarefas já importadas serão ignoradas." : "Os registros ficam neste navegador até você clicar em “Restaurar mock”."}</small></span></label></>}</>}
+                 {result ? <div className="import-success"><CheckCircle2 size={29} /><h3>Importação concluída</h3><p>{result.createdCount || 0} tarefa(s) criada(s). {result.existingCount || 0} já existia(m) e não foi(ram) duplicada(s).</p><button className="button button-secondary" type="button" onClick={resetWizard}>Nova importação</button></div> : <><div className="import-step-kicker"><span className="import-step-number">6</span><div><strong>Revise e confirme</strong><span>Confira o resumo. O botão final só libera depois da sua confirmação.</span></div></div>{analysis && <><div className="import-review-banner"><strong>{analysis.stats.tasks} tarefas serão avaliadas</strong><span>Origem: {mode === "automatic" ? "Microsoft Planner autenticado" : "manual"} · sem vínculo automático com cotação ou qualidade.</span></div><div className="import-review-grid"><div><small>Status</small><p>{Object.entries(analysis.stats.statusCounts).map(([key, count]) => `${count} ${importStatusLabel(key)}`).join(" · ")}</p></div><div><small>Prioridade</small><p>{Object.entries(analysis.stats.priorityCounts).map(([key, count]) => `${count} ${importPriorityLabel(key)}`).join(" · ")}</p></div><div><small>Checklist</small><p>{analysis.stats.checklistTaskCount} tarefa(s) com itens preservados.</p></div></div><label className="import-confirm"><input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} /><span><strong>Eu conferi os dados e autorizo a gravação {live ? "no Dataverse" : "no mock local"}.</strong><small>{live ? "Esta etapa cria registros e relações de responsáveis. Tarefas já importadas serão ignoradas." : "Os registros ficam neste navegador até você clicar em “Restaurar mock”."}</small></span></label></>}</>}
                 {submitError && <div className="import-issues is-error"><strong>Não foi possível concluir</strong><ul><li>{submitError}</li></ul></div>}
               </div>}
             </div>
 
-            {!result && <footer className="import-footer"><button className="button button-secondary" type="button" onClick={goBack} disabled={step === 1 || importing}><ArrowLeft size={15} />Voltar</button><span>Etapa {step} de {STEPS.length}</span>{step < 6 ? <button className="button button-primary" type="button" onClick={goNext} disabled={(step === 1 && !planId.trim()) || (step === 2 && !tasksText.trim())}><ArrowRight size={15} />{step === 5 ? "Validar e revisar" : "Continuar"}</button> : <button className="button button-primary" type="button" onClick={submit} disabled={!analysis?.canImport || !confirmed || importing}>{importing ? <LoaderCircle size={15} className="spin" /> : <UploadCloud size={15} />}{importing ? "Importando…" : "Importar tarefas"}</button>}</footer>}
+            {!result && <footer className="import-footer"><button className="button button-secondary" type="button" onClick={goBack} disabled={step === 1 || importing}><ArrowLeft size={15} />Voltar</button><span>Etapa {Math.max(1, workflowSteps.findIndex((item) => item.id === step) + 1)} de {workflowSteps.length}</span>{step < 6 ? <button className="button button-primary" type="button" onClick={goNext} disabled={(step === 1 && (!planId.trim() || plansBusy || autoBusy)) || (step === 2 && !tasksText.trim())}><ArrowRight size={15} />{mode === "automatic" && step === 1 ? "Buscar e preparar tudo" : step === 5 ? "Validar e revisar" : "Continuar"}</button> : <button className="button button-primary" type="button" onClick={submit} disabled={!analysis?.canImport || !confirmed || importing}>{importing ? <LoaderCircle size={15} className="spin" /> : <UploadCloud size={15} />}{importing ? "Importando…" : "Importar tarefas"}</button>}</footer>}
           </section>
         </div>,
         document.body,

@@ -150,6 +150,11 @@ export async function fetchPlannerExport({ planId, token, employees = [], onProg
     bucketsText: JSON.stringify({ value: buckets }),
     detailsText: JSON.stringify(details),
     employeeMapText: JSON.stringify(employeeMap),
+    plannerUsers: userData.users.map((user) => ({
+      id: String(user.id || ""),
+      displayName: String(user.displayName || "Usuário Microsoft").trim() || "Usuário Microsoft",
+      email: String(user.mail || user.userPrincipalName || "").trim().toLowerCase(),
+    })).filter((user) => user.id),
     userWarning: userData.warning,
   };
 }

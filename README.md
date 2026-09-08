@@ -43,7 +43,7 @@ O caminho recomendado é o card “Importar tarefas” dentro do WebResource. No
 2. No Microsoft Entra ID, registre `http://localhost:5192/redirect.html` em **Authentication > Single-page application > Redirect URIs**. Não use `127.0.0.1`.
 3. Em **API permissions**, adicione permissões delegadas do Microsoft Graph: `User.Read`, `Tasks.Read` e `User.ReadBasic.All`. Conceda consentimento administrativo quando o tenant exigir.
 4. Inicie com `npm run dev` e abra exatamente `http://localhost:5192/`.
-5. Abra **Importar tarefas**, conecte a conta que tem acesso ao plano, informe o ID e clique em **Buscar e preparar tudo**.
+5. Abra **Importar tarefas**, conecte a conta que tem acesso ao plano, selecione o plano pelo nome e clique em **Buscar e preparar tudo**.
 
 Se a conta não puder consultar o diretório, o app avisa e permite o mapeamento manual dos responsáveis. O script abaixo permanece como alternativa automatizada fora do WebResource.
 
