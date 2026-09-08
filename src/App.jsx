@@ -13,6 +13,7 @@ import React, {
 import { createPortal } from "react-dom";
 import {
   ArrowUpRight,
+  ArrowDownUp,
   BellRing,
   CalendarDays,
   Check,
@@ -76,6 +77,7 @@ import {
   quoteTaskTitle,
   resolveTaskAssignment,
   sortTasks,
+  sortBoardTasks,
   sourceById,
   STATUSES,
   statusById,
@@ -1183,6 +1185,83 @@ function TaskViewSelector({ active, onSelect }) {
   );
 }
 
+const BOARD_SORT_OPTIONS = [
+  ["dueDate", "Prazo", "Mais próximo primeiro", "Mais distante primeiro"],
+  ["priority", "Prioridade", "Mais alta primeiro", "Mais baixa primeiro"],
+  ["updatedAt", "Atualização", "Mais recente primeiro", "Mais antiga primeiro"],
+  ["title", "Título", "A–Z", "Z–A"],
+];
+const BOARD_SORT_DEFAULT = { key: "dueDate", direction: "asc" };
+const BOARD_SORT_STORAGE_KEY = "betinhos-tela-planner-board-sort-v1";
+
+function readBoardSortPreference() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(BOARD_SORT_STORAGE_KEY) || "null");
+    if (BOARD_SORT_OPTIONS.some(([key]) => key === saved?.key) && ["asc", "desc"].includes(saved?.direction)) return saved;
+  } catch {}
+  return BOARD_SORT_DEFAULT;
+}
+
+function BoardSortSelector({ sort, onChange }) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef(null);
+  const activeOption = BOARD_SORT_OPTIONS.find(([key]) => key === sort.key) || BOARD_SORT_OPTIONS[0];
+  const activeDirection = sort.direction === "desc" ? activeOption[3] : activeOption[2];
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const closeOnOutsideClick = (event) => {
+      if (!rootRef.current?.contains(event.target)) setOpen(false);
+    };
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("mousedown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [open]);
+
+  const select = (key) => {
+    onChange({ key, direction: key === sort.key ? sort.direction : "asc" });
+    setOpen(false);
+  };
+
+  const invert = () => onChange({ ...sort, direction: sort.direction === "asc" ? "desc" : "asc" });
+
+  return (
+    <div className="board-sort-selector" ref={rootRef}>
+      <button className="board-sort-trigger" type="button" aria-haspopup="menu" aria-expanded={open} aria-controls="board-sort-menu" onClick={() => setOpen((current) => !current)} title={`Ordenar por ${activeOption[1]}: ${activeDirection}`}>
+        <ArrowDownUp size={15} aria-hidden="true" />
+        <span>Ordenar: {activeOption[1]}</span>
+        <ChevronDown size={14} aria-hidden="true" />
+      </button>
+      {open && <div className="board-sort-menu" id="board-sort-menu" role="menu" aria-label="Ordenar cards">
+        <div className="board-sort-menu-heading">
+          <div><strong>Ordenar cards</strong><span>Escolha o critério da fila</span></div>
+          <span className="board-sort-current">{activeOption[1]}</span>
+        </div>
+        {BOARD_SORT_OPTIONS.map(([key, label, ascLabel, descLabel]) => {
+          const selected = key === sort.key;
+          const directionLabel = selected && sort.direction === "desc" ? descLabel : ascLabel;
+          return <button key={key} className={`board-sort-option${selected ? " active" : ""}`} type="button" role="menuitemradio" aria-checked={selected} onClick={() => select(key)}>
+            <span>{label}</span><small>{directionLabel}</small>{selected && <Check size={14} aria-hidden="true" />}
+          </button>;
+        })}
+        <div className="board-sort-menu-footer">
+          <button className="board-sort-invert" type="button" onClick={invert} aria-label={`Inverter ordem: ${activeDirection}`}>
+            <ArrowDownUp size={14} aria-hidden="true" />
+            <span>Inverter ordem</span>
+            <small>{activeDirection}</small>
+          </button>
+        </div>
+      </div>}
+    </div>
+  );
+}
+
 function TaskScopeSelector({ active, onSelect, disabled = false }) {
   return (
     <div className="task-scope-selector" aria-label="Escopo das tarefas">
@@ -1873,6 +1952,17 @@ const FilterBar = memo(function FilterBar({
           }
           placeholder="Buscar tarefas, cotações, qualidade ou pessoas"
         />
+        {filters.query && (
+          <button
+            className="search-field-clear"
+            type="button"
+            aria-label="Limpar busca"
+            title="Limpar busca"
+            onClick={() => setFilters((current) => ({ ...current, query: "" }))}
+          >
+            <X size={14} />
+          </button>
+        )}
       </div>
       <div className="filter-bar-content">
         <SearchableMultiSelect
@@ -2008,18 +2098,25 @@ function BoardView({
   taskScope,
   onScopeChange,
 }) {
+  const [sort, setSort] = useState(readBoardSortPreference);
+  useEffect(() => {
+    try {
+      localStorage.setItem(BOARD_SORT_STORAGE_KEY, JSON.stringify(sort));
+    } catch {}
+  }, [sort]);
   const unreadMentionTaskIds = useMemo(
     () => new Set((state.notifications || []).filter((item) => item.type === "mention" && !item.readAt && item.taskId).map((item) => item.taskId)),
     [state.notifications],
   );
   const filtered = useMemo(
     () =>
-      sortTasks(
+      sortBoardTasks(
         filterTasks(state.tasks.filter((taskItem) => !taskItem.parentTaskId), filters, currentEmployee, state.teams),
+        sort,
         currentEmployee,
         state.teams,
       ),
-    [state.tasks, state.teams, filters, currentEmployee?.id],
+    [state.tasks, state.teams, filters, currentEmployee?.id, sort],
   );
   const tasksByStatus = useMemo(
     () => {
@@ -2062,6 +2159,7 @@ function BoardView({
           disabled={!currentEmployee?.name}
         />
         <TaskViewSelector active="board" onSelect={onNavigate} />
+        <BoardSortSelector sort={sort} onChange={setSort} />
       </PageHeader>
       <FilterBar
         filters={filters}

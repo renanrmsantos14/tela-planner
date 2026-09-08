@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { addOptimisticAttachment, addOptimisticComment, applyOptimisticTaskPatch, buildAssigneeOptions, buildOptimisticTask, buildTaskCreationInput, canRegisterWaitingReturn, filterTasks, findCreatedMainTask, getDueBucket, getDueBucketForEmployee, hasTaskResponsible, isOverdue, mentionedEmployees, migrateLegacyTeams, normalizeAssigneeNames, normalizeTeam, normalizeWaitingContext, quoteTaskTitle, resolveTaskAssignment, sortTasks, STATUSES, taskDisplayDueDate, taskStats, teamResponsibilitySummary, validateWaitingContext, waitingContextSummary } from "../src/domain.js";
+import { addOptimisticAttachment, addOptimisticComment, applyOptimisticTaskPatch, buildAssigneeOptions, buildOptimisticTask, buildTaskCreationInput, canRegisterWaitingReturn, filterTasks, findCreatedMainTask, getDueBucket, getDueBucketForEmployee, hasTaskResponsible, isOverdue, mentionedEmployees, migrateLegacyTeams, normalizeAssigneeNames, normalizeTeam, normalizeWaitingContext, quoteTaskTitle, resolveTaskAssignment, sortBoardTasks, sortTasks, STATUSES, taskDisplayDueDate, taskStats, teamResponsibilitySummary, validateWaitingContext, waitingContextSummary } from "../src/domain.js";
 
 const tasks = [
   { id: "1", title: "Atrasada", quoteTitle: "Cotação A", assigneeName: "Marina", status: "todo", priority: "high", dueDate: "2026-08-01" },
@@ -54,6 +54,22 @@ test("usa prazo do retorno apenas para responsável de Aguardando", () => {
 test("filtra por texto, status e prioridade", () => {
   assert.equal(filterTasks(tasks, { query: "Rafael", status: "", priority: "" }).length, 1);
   assert.equal(filterTasks(tasks, { query: "", status: ["doing", "waiting"], priority: ["medium", "high"] }).length, 1);
+});
+
+test("ordena cards do quadro por prazo, prioridade, atualização e título", () => {
+  const boardTasks = [
+    { id: "done", title: "Zeta", status: "done", priority: "high", dueDate: "2026-08-01", createdAt: "2026-08-01T10:00:00Z" },
+    { id: "low", title: "Beta", status: "todo", priority: "low", dueDate: "", createdAt: "2026-08-03T10:00:00Z" },
+    { id: "high", title: "Alfa", status: "todo", priority: "high", dueDate: "2026-08-04", createdAt: "2026-08-02T10:00:00Z" },
+    { id: "medium", title: "Gama", status: "todo", priority: "medium", dueDate: "2026-08-02", history: [{ createdAt: "2026-08-05T10:00:00Z" }] },
+    { id: "updated", title: "Delta", status: "todo", priority: "low", dueDate: "2026-08-06", updatedAt: "2026-08-06T10:00:00Z", history: [{ createdAt: "2026-08-07T10:00:00Z" }] },
+  ];
+
+  assert.deepEqual(sortBoardTasks(boardTasks).map((task) => task.id), ["medium", "high", "updated", "low", "done"]);
+  assert.deepEqual(sortBoardTasks(boardTasks, { key: "priority", direction: "asc" }).map((task) => task.id), ["high", "medium", "updated", "low", "done"]);
+  assert.deepEqual(sortBoardTasks(boardTasks, { key: "updatedAt", direction: "desc" }).map((task) => task.id), ["updated", "medium", "low", "high", "done"]);
+  assert.deepEqual(sortBoardTasks(boardTasks, { key: "title", direction: "asc" }).map((task) => task.id), ["high", "low", "updated", "medium", "done"]);
+  assert.deepEqual(sortBoardTasks(boardTasks, { key: "title", direction: "desc" }).map((task) => task.id), ["medium", "updated", "low", "high", "done"]);
 });
 
 test("filtra por uma ou mais equipes", () => {

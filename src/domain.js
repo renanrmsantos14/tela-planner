@@ -440,6 +440,46 @@ export function sortTasks(tasks, employee, teams = []) {
   });
 }
 
+const BOARD_PRIORITY_RANK = { urgent: 0, high: 1, medium: 2, low: 3 };
+
+function taskActivityTimestamp(task) {
+  const updatedTimestamp = Date.parse(task?.updatedAt || "");
+  if (Number.isFinite(updatedTimestamp)) return updatedTimestamp;
+  const historyTimestamp = (task?.history || [])
+    .map((item) => Date.parse(item?.createdAt || ""))
+    .filter(Number.isFinite)
+    .reduce((latest, value) => Math.max(latest, value), 0);
+  if (historyTimestamp) return historyTimestamp;
+  const createdTimestamp = Date.parse(task?.createdAt || "");
+  return Number.isFinite(createdTimestamp) ? createdTimestamp : 0;
+}
+
+function compareBoardTasks(left, right, key, employee, teams) {
+  const leftDue = taskDisplayDueDate(left, employee, teams) || "9999-12-31";
+  const rightDue = taskDisplayDueDate(right, employee, teams) || "9999-12-31";
+  const leftPriority = BOARD_PRIORITY_RANK[left.priority] ?? 2;
+  const rightPriority = BOARD_PRIORITY_RANK[right.priority] ?? 2;
+  const leftTitle = normalizeText(left.title);
+  const rightTitle = normalizeText(right.title);
+  const compare = (a, b) => a === b ? 0 : a < b ? -1 : 1;
+  const values = {
+    dueDate: compare(leftDue, rightDue),
+    priority: compare(leftPriority, rightPriority),
+    updatedAt: compare(taskActivityTimestamp(left), taskActivityTimestamp(right)),
+    title: leftTitle.localeCompare(rightTitle, "pt-BR"),
+  };
+  return values[key] || values.dueDate || values.priority || values.title || String(left.id || "").localeCompare(String(right.id || ""));
+}
+
+export function sortBoardTasks(tasks, sort = { key: "dueDate", direction: "asc" }, employee, teams = []) {
+  const direction = sort?.direction === "desc" ? -1 : 1;
+  return [...tasks].sort((left, right) => {
+    if (left.status === "done" && right.status !== "done") return 1;
+    if (left.status !== "done" && right.status === "done") return -1;
+    return compareBoardTasks(left, right, sort?.key || "dueDate", employee, teams) * direction;
+  });
+}
+
 export function taskStats(tasks, today = new Date()) {
   return tasks.reduce((stats, task) => {
     if (task.status !== "done") stats.open += 1;
