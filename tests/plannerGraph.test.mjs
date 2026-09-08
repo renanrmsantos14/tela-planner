@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { fetchPlannerPlans } from "../src/plannerGraph.js";
+import { fetchPlannerExport, fetchPlannerPlans } from "../src/plannerGraph.js";
 
 test("carrega planos do usuário, pagina e ordena pelo nome exibido", async () => {
   const originalFetch = global.fetch;
@@ -24,6 +24,26 @@ test("carrega planos do usuário, pagina e ordena pelo nome exibido", async () =
       "https://graph.microsoft.com/v1.0/me/planner/plans",
       "https://graph.microsoft.com/v1.0/me/planner/plans?$skiptoken=next",
     ]);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+test("informa progresso de tarefas com contagem real após paginação", async () => {
+  const originalFetch = global.fetch;
+  const progress = [];
+  global.fetch = async (url) => {
+    const target = String(url);
+    if (target.endsWith("/tasks")) return new Response(JSON.stringify({ value: [{ id: "task-1", planId: "plan-1", title: "Tarefa", assignments: {} }] }), { status: 200 });
+    if (target.endsWith("/buckets")) return new Response(JSON.stringify({ value: [] }), { status: 200 });
+    if (target.endsWith("/$batch")) return new Response(JSON.stringify({ responses: [] }), { status: 200 });
+    throw new Error(`URL inesperada: ${target}`);
+  };
+
+  try {
+    await fetchPlannerExport({ token: "token", planId: "plan-1", onProgress: (value) => progress.push(value) });
+    assert.ok(progress.some((value) => value.label === "Buscando página 1 de tarefas…" && value.total === 0));
+    assert.ok(progress.some((value) => value.label === "1 tarefa(s) encontrada(s)." && value.completed === 1 && value.total === 1));
   } finally {
     global.fetch = originalFetch;
   }

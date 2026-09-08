@@ -133,6 +133,16 @@ function authErrorMessage(error) {
   return error?.message || "Não foi possível conectar a conta Microsoft.";
 }
 
+function plannerErrorMessage(error) {
+  const message = String(error?.message || "");
+  if (/\b401\b/.test(message)) return "A sessão Microsoft expirou. Clique em Trocar conta e conecte novamente.";
+  if (/\b403\b/.test(message)) return "A conta entrou, mas não tem permissão para ler este plano. Confirme que ela é membro do plano e que Tasks.Read foi concedida no Microsoft Entra ID.";
+  if (/\b404\b/.test(message)) return "Este plano não foi encontrado ou a conta não tem acesso a ele. Atualize os planos e tente novamente.";
+  if (/\b429\b/.test(message)) return "A Microsoft limitou temporariamente as consultas. Aguarde alguns segundos e tente novamente.";
+  if (/Failed to fetch|NetworkError|fetch failed/i.test(message)) return "Não foi possível acessar a Microsoft Graph. Verifique a conexão e tente novamente.";
+  return message || "Não foi possível carregar os dados do Microsoft Planner.";
+}
+
 export default function PlannerImportView({ live, onImport, employees = [] }) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(1);
@@ -176,7 +186,7 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
       setPlanId((current) => nextPlans.some((plan) => plan.id === current) ? current : nextPlans.length === 1 ? nextPlans[0].id : "");
       if (!nextPlans.length) setAutoWarning("Nenhum plano foi encontrado para esta conta Microsoft.");
     } catch (error) {
-      setAutoError(error?.message || "Não foi possível carregar os planos do Microsoft Planner.");
+      setAutoError(plannerErrorMessage(error));
     } finally {
       setPlansBusy(false);
     }
@@ -275,7 +285,7 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
       setAnalysis(nextAnalysis);
       setStep(nextAnalysis.unresolvedAssignees.length ? 5 : 6);
     } catch (error) {
-      setAutoError(error?.message || "Não foi possível buscar as tarefas do Planner.");
+      setAutoError(plannerErrorMessage(error));
     } finally {
       setAutoBusy(false);
     }

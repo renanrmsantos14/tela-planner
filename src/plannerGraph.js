@@ -84,7 +84,7 @@ async function getTaskDetails(tasks, token, onProgress) {
 
 async function getPlannerUsers(tasks, token, onProgress) {
   const userIds = [...new Set(uniqueTasks(tasks).flatMap((task) => Object.keys(task.assignments || {})))];
-  if (!userIds.length) return { map: {}, warning: "" };
+  if (!userIds.length) return { users: [], map: {}, warning: "" };
   const batches = chunks(userIds, BATCH_SIZE);
   const users = [];
   try {
@@ -128,11 +128,12 @@ export async function fetchPlannerExport({ planId, token, employees = [], onProg
   const encodedPlanId = encodeURIComponent(cleanPlanId);
   onProgress?.({ stage: "tasks", completed: 0, total: 0, label: "Buscando tarefas e buckets…" });
   const [taskPages, bucketPages] = await Promise.all([
-    getAllPages(`${GRAPH_BASE_URL}/planner/plans/${encodedPlanId}/tasks`, token, (page, payload) => onProgress?.({ stage: "tasks", completed: page, total: payload?.value?.length || 0, label: "Buscando todas as páginas de tarefas…" })),
+    getAllPages(`${GRAPH_BASE_URL}/planner/plans/${encodedPlanId}/tasks`, token, (page) => onProgress?.({ stage: "tasks", completed: page, total: 0, label: `Buscando página ${page} de tarefas…` })),
     getAllPages(`${GRAPH_BASE_URL}/planner/plans/${encodedPlanId}/buckets`, token),
   ]);
   const tasks = taskPages.flatMap((page) => page?.value || []);
   const buckets = bucketPages.flatMap((page) => page?.value || []);
+  onProgress?.({ stage: "tasks", completed: tasks.length, total: tasks.length, label: `${tasks.length} tarefa(s) encontrada(s).` });
   onProgress?.({ stage: "details", completed: 0, total: tasks.length, label: `Buscando detalhes de ${tasks.length} tarefa(s)…` });
   const details = await getTaskDetails(tasks, token, (completed, total, batchCount) => onProgress?.({ stage: "details", completed, total, batchCount, label: `Detalhes: ${completed} de ${total}` }));
   onProgress?.({ stage: "users", completed: 0, total: 0, label: "Relacionando responsáveis…" });
