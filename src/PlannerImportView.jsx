@@ -23,7 +23,7 @@ import {
   importStatusLabel,
   plannerDetailBatches,
 } from "./plannerImport.js";
-import { acquirePlannerToken, getMicrosoftAccount, getRedirectBridgeStatus, loginMicrosoft, logoutMicrosoft, msalConfigured } from "./msalConfig.js";
+import { acquirePlannerToken, getMicrosoftAccount, getRedirectBridgeStatus, loginMicrosoft, msalConfigured } from "./msalConfig.js";
 import { fetchPlannerExport, fetchPlannerPlans } from "./plannerGraph.js";
 import "./plannerImportAuto.css";
 
@@ -181,6 +181,7 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
     setPlansBusy(true);
     setAutoError("");
     setAutoWarning("");
+    setAutoProgress(null);
     try {
       const token = await acquirePlannerToken();
       const nextPlans = await fetchPlannerPlans({ token, onProgress: setAutoProgress });
@@ -235,6 +236,10 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
     try {
       const account = await loginMicrosoft();
       setMicrosoftAccount(account);
+      setPlans([]);
+      setPlanId("");
+      setAnalysis(null);
+      setPlannerUsers([]);
       setAuthBusy(false);
       await loadPlans();
     } catch (error) {
@@ -244,14 +249,19 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
     }
   };
 
-  const disconnectMicrosoft = async () => {
+  const changeMicrosoftAccount = async () => {
     setAuthBusy(true);
+    setAutoError("");
     try {
-      await logoutMicrosoft();
-      setMicrosoftAccount(null);
+      const account = await loginMicrosoft();
+      setMicrosoftAccount(account);
       setPlans([]);
       setPlannerUsers([]);
       setPlanId("");
+      setAnalysis(null);
+      setConfirmed(false);
+      setAuthBusy(false);
+      await loadPlans();
     } catch (error) {
       setAutoError(authErrorMessage(error));
     } finally {
@@ -414,7 +424,7 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
                             <strong>{microsoftAccount.name || microsoftAccount.username}</strong>
                             <small>{microsoftAccount.username}</small>
                           </span>
-                          <button className="button button-quiet" type="button" onClick={disconnectMicrosoft} disabled={authBusy || plansBusy || autoBusy}>
+                          <button className="button button-quiet" type="button" onClick={changeMicrosoftAccount} disabled={authBusy || plansBusy || autoBusy}>
                             {authBusy ? "Abrindo login…" : plansBusy ? "Carregando planos…" : "Trocar conta"}
                           </button>
                         </div>
