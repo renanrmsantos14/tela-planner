@@ -2116,6 +2116,7 @@ function PersonalTagManager({ tags = [], onCreate, onUpdate, onArchive, onReorde
         <div className="personal-tag-manager-list">
           {activeTags.map((tag, index) => (
             <div className="personal-tag-manager-row" key={tag.id}>
+              <span className="personal-tag-dot personal-tag-manager-dot" style={{ "--personal-tag-color": tag.color }} aria-hidden="true" />
               <input className="personal-tag-badge" style={{ "--personal-tag-color": tag.color }} defaultValue={tag.name} maxLength={32} aria-label={`Nome da tag ${tag.name}`} onBlur={(event) => {
                 if (event.target.value.trim() && event.target.value.trim() !== tag.name) onUpdate(tag.id, { name: event.target.value });
               }} />

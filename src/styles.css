@@ -691,8 +691,9 @@ button { cursor: pointer; }
 .personal-tag-create .button { min-height: 38px; }
 .personal-tag-manager-list { gap: 0; border-top: 1px solid var(--line); }
 .personal-tag-manager-row { min-height: 40px; gap: 8px; padding: 4px 0; border-bottom: 1px solid #eef1f5; }
-.personal-tag-manager-row input.personal-tag-badge { width: min(100%, 220px); flex: 0 1 220px; min-height: 30px; padding: 0 12px; border-color: color-mix(in srgb, var(--personal-tag-color) 38%, white); border-radius: 999px; color: color-mix(in srgb, var(--personal-tag-color) 76%, #172b4d); background: color-mix(in srgb, var(--personal-tag-color) 12%, white); font-size: 11px; font-weight: 800; }
-.personal-tag-manager-row input.personal-tag-badge:hover, .personal-tag-manager-row input.personal-tag-badge:focus { border-color: var(--personal-tag-color); background: color-mix(in srgb, var(--personal-tag-color) 17%, white); }
+.personal-tag-manager-row input.personal-tag-badge { width: fit-content; max-width: 100%; flex: 0 1 auto; field-sizing: content; min-height: 26px; padding: 0 8px; border-color: var(--personal-tag-color); border-radius: 7px; color: #fff; background: var(--personal-tag-color); font-size: 10px; font-weight: 800; }
+.personal-tag-manager-row input.personal-tag-badge:hover, .personal-tag-manager-row input.personal-tag-badge:focus { border-color: var(--personal-tag-color); background: var(--personal-tag-color); box-shadow: 0 0 0 3px color-mix(in srgb, var(--personal-tag-color) 18%, transparent); }
+.personal-tag-manager-dot { background: rgba(255,255,255,.94); }
 .personal-tag-manager-actions { margin-left: auto; }
 .personal-tag-manager-actions .subtask-delete { opacity: 1; }
 
