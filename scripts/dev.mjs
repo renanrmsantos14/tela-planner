@@ -1,11 +1,13 @@
 import { execFileSync, spawn } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const defaultPort = 5192;
 const viteBin = path.join(projectRoot, "node_modules", "vite", "bin", "vite.js");
+const pidFile = path.join(os.tmpdir(), "tela-planner-vite-5192.pid");
 
 function getListeners() {
   const output = execFileSync("netstat.exe", ["-ano", "-p", "tcp"], {
@@ -27,11 +29,24 @@ function getListeners() {
     .filter((listener) => Number.isInteger(listener.port) && Number.isInteger(listener.pid));
 }
 
-function killProcessTree(pid) {
-  execFileSync("taskkill.exe", ["/PID", String(pid), "/T", "/F"], {
-    cwd: projectRoot,
-    stdio: "ignore",
-  });
+function killProcess(pid) {
+  process.kill(pid, "SIGTERM");
+}
+
+function stopPreviousDevServer() {
+  if (!existsSync(pidFile)) return;
+
+  const previousPid = Number(readFileSync(pidFile, "utf8").trim());
+  if (Number.isInteger(previousPid) && previousPid > 0) {
+    try {
+      console.log(`Encerrando servidor anterior (PID ${previousPid})...`);
+      killProcess(previousPid);
+    } catch (error) {
+      if (error.code !== "ESRCH") throw error;
+    }
+  }
+
+  unlinkSync(pidFile);
 }
 
 function isPortBusy(port) {
@@ -50,12 +65,14 @@ if (!existsSync(viteBin)) {
   throw new Error(`Vite não encontrado em ${viteBin}. Rode npm install antes de iniciar o dev.`);
 }
 
+stopPreviousDevServer();
+
 let port = defaultPort;
 const listener = getListeners().find((item) => item.port === defaultPort);
 
 if (listener) {
   console.log(`Porta ${defaultPort} já estava em uso (PID ${listener.pid}). Reiniciando...`);
-  killProcessTree(listener.pid);
+  killProcess(listener.pid);
   waitForPortRelease(defaultPort);
 }
 
@@ -64,7 +81,12 @@ const child = spawn(process.execPath, [viteBin, "--host", "localhost", "--port",
   stdio: "inherit",
 });
 
+writeFileSync(pidFile, String(child.pid), "utf8");
+
 child.on("exit", (code, signal) => {
+  if (existsSync(pidFile) && readFileSync(pidFile, "utf8").trim() === String(child.pid)) {
+    unlinkSync(pidFile);
+  }
   if (signal) process.kill(process.pid, signal);
   else process.exitCode = code ?? 1;
 });
