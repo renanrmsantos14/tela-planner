@@ -675,6 +675,8 @@ button { cursor: pointer; }
 .personal-tag-empty { color: var(--tertiary); font-size: 10px; }
 .drawer-personal-tags { min-height: 26px; display: block; margin: -5px 0 18px; }
 .drawer-personal-tags .personal-tag-picker { width: 100%; }
+.task-drawer .drawer-body > .drawer-personal-tags { flex: 0 0 auto; height: auto; }
+.task-drawer .drawer-body > .drawer-title { flex: 0 0 auto; }
 .personal-tags-modal-layer { position: fixed; inset: 0; z-index: 120; display: grid; place-items: center; padding: 16px; background: rgba(15, 29, 49, .34); animation: personal-tags-backdrop-in 180ms linear both; }
 .personal-tags-modal { width: min(430px, 100%); max-height: min(620px, calc(100dvh - 32px)); display: grid; grid-template-rows: auto minmax(0, 1fr) auto; overflow: hidden; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); box-shadow: 0 24px 70px rgba(15, 29, 49, .24); animation: personal-tags-modal-in 220ms var(--ease-out) both; transform-origin: center; }
 .personal-tags-modal-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 16px 18px 12px; border-bottom: 1px solid var(--line); }
