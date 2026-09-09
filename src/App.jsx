@@ -2096,7 +2096,7 @@ function PersonalTagPicker({ tags = [], tasks = [], value = [], onChange, onCrea
                 {tag.name}
               </button>
             );
-          }) : <span className="personal-tag-empty">Crie sua primeira tag no gerenciador.</span>}
+          }) : <span className="personal-tag-empty">{showAllTags ? "Crie sua primeira tag no gerenciador." : "Sem Tag selecionada"}</span>}
           {showAddButton && (
             <button className="personal-tag-add" ref={addRef} type="button" onClick={openCreateModal} aria-label="Adicionar tag" title="Adicionar tag">
               <Plus size={14} />
