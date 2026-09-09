@@ -7,7 +7,7 @@ test("módulo de teste de notificações usa o evento controlado", async () => {
   const dataverse = await readFile(new URL("../src/dataverse.js", import.meta.url), "utf8");
   const app = await readFile(new URL("../src/App.jsx", import.meta.url), "utf8");
   assert.match(component, /Módulo de teste de notificações/);
-  assert.match(component, /noreply@betinhos\.onmicrosoft\.com/);
+  assert.match(component, /e-mail operacional do usuário/);
   assert.match(component, /Enviar notificação de teste/);
   assert.match(component, /ainda não confirmou o disparo/);
   assert.match(component, /disabled=\{!live/);

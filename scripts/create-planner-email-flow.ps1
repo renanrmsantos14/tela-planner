@@ -3,7 +3,7 @@ param(
   [string]$DataverseConnectionReferenceLogicalName = 'new_sharedcommondataserviceforapps_25a23',
   [string]$OutlookConnectionReferenceLogicalName = 'new_sharedoffice365_f87d5',
   [string]$FlowName = 'Planner | Notificação por e-mail - Teste',
-  [string]$TestRecipientEmail = 'noreply@betinhos.onmicrosoft.com',
+  [string]$TestUserEmail = '',
   [string]$WorkflowId = ''
 )
 
@@ -16,8 +16,8 @@ function Repair-Utf8Text([string]$Value) {
 
 $FlowName = Repair-Utf8Text $FlowName
 
-if ($TestRecipientEmail -notmatch '^[^@;\s]+@[^@;\s]+$') {
-  throw "TestRecipientEmail inválido: use um único endereço de e-mail."
+if ($TestUserEmail -and $TestUserEmail -notmatch '^[^@;\s]+@[^@;\s]+$') {
+  throw "TestUserEmail inválido: use um único endereço de e-mail Microsoft."
 }
 
 $token = az account get-access-token --resource $EnvironmentUrl --query accessToken -o tsv
@@ -76,23 +76,18 @@ $definition = @'
       "inputs": "@replace(replace(replace(coalesce(triggerOutputs()?['body/cr40f_descricao'], concat('Sem descri', decodeUriComponent('%C3%A7'), decodeUriComponent('%C3%A3'), 'o.')), '&', '&amp;'), '<', '&lt;'), '>', '&gt;')",
       "runAfter": { "Compose_Type_Label": [ "Succeeded" ] }
     },
-    "Compose_Test_Recipient": {
+    "Compose_Test_User_Email": {
       "type": "Compose",
-      "inputs": "__TEST_RECIPIENT__",
+      "inputs": "@toLower(trim(coalesce(outputs('Compose_Context')?['actorEmail'], '__TEST_USER_EMAIL__')))",
       "runAfter": { "Compose_Message": [ "Succeeded" ] }
-    },
-    "Compose_Idempotency_Key": {
-      "type": "Compose",
-      "inputs": "@concat(triggerOutputs()?['body/cr40f_plannertarefaeventoid'], '|', outputs('Compose_Test_Recipient'), '|', outputs('Compose_Type'), '|Email')",
-      "runAfter": { "Compose_Test_Recipient": [ "Succeeded" ] }
     },
     "List_Test_Recipient": {
       "type": "OpenApiConnection",
       "inputs": {
         "parameters": {
           "entityName": "cr40f_funcionarioses",
-          "$select": "cr40f_funcionariosid,cr40f_nomecompleto,cr40f_emailbetinhos",
-          "$filter": "cr40f_emailbetinhos eq '@{outputs('Compose_Test_Recipient')}' and statecode eq 0",
+          "$select": "cr40f_funcionariosid,cr40f_nomecompleto,cr40f_emailmicrosoft,cr40f_emailbetinhos",
+          "$filter": "cr40f_emailmicrosoft eq '@{outputs('Compose_Test_User_Email')}' and statecode eq 0",
           "$top": 1,
           "accept": "application/json;odata.metadata=minimal"
         },
@@ -103,7 +98,17 @@ $definition = @'
         },
         "authentication": "@parameters('$authentication')"
       },
-      "runAfter": { "Compose_Idempotency_Key": [ "Succeeded" ] }
+      "runAfter": { "Compose_Test_User_Email": [ "Succeeded" ] }
+    },
+    "Compose_Test_Recipient": {
+      "type": "Compose",
+      "inputs": "@toLower(trim(coalesce(first(outputs('List_Test_Recipient')?['body/value'])?['cr40f_emailbetinhos'], '')))",
+      "runAfter": { "List_Test_Recipient": [ "Succeeded" ] }
+    },
+    "Compose_Idempotency_Key": {
+      "type": "Compose",
+      "inputs": "@concat(triggerOutputs()?['body/cr40f_plannertarefaeventoid'], '|', outputs('Compose_Test_Recipient'), '|', outputs('Compose_Type'), '|Email')",
+      "runAfter": { "Compose_Test_Recipient": [ "Succeeded" ] }
     },
     "List_existing_email_dispatch": {
       "type": "OpenApiConnection",
@@ -121,14 +126,15 @@ $definition = @'
         },
         "authentication": "@parameters('$authentication')"
       },
-      "runAfter": { "List_Test_Recipient": [ "Succeeded" ] }
+      "runAfter": { "Compose_Idempotency_Key": [ "Succeeded" ] }
     },
     "Condition_Should_Send": {
       "type": "If",
       "expression": {
         "and": [
           { "equals": [ "@length(outputs('List_existing_email_dispatch')?['body/value'])", 0 ] },
-          { "greater": [ "@length(outputs('List_Test_Recipient')?['body/value'])", 0 ] }
+          { "greater": [ "@length(outputs('List_Test_Recipient')?['body/value'])", 0 ] },
+          { "not": { "equals": [ "@empty(outputs('Compose_Test_Recipient'))", true ] } }
         ]
       },
       "actions": {
@@ -204,9 +210,48 @@ $definition = @'
       },
       "else": {
         "actions": {
-          "Terminate_without_send": {
-            "type": "Terminate",
-            "inputs": { "runStatus": "Cancelled" }
+          "Condition_No_Operational_Email": {
+            "type": "If",
+            "expression": {
+              "and": [
+                { "equals": [ "@length(outputs('List_existing_email_dispatch')?['body/value'])", 0 ] },
+                { "greater": [ "@length(outputs('List_Test_Recipient')?['body/value'])", 0 ] },
+                { "equals": [ "@empty(outputs('Compose_Test_Recipient'))", true ] }
+              ]
+            },
+            "actions": {
+              "Create_dispatch_without_email": {
+                "type": "OpenApiConnection",
+                "inputs": {
+                  "parameters": {
+                    "entityName": "cr40f_plannerdisparos",
+                    "item/cr40f_name": "@concat('Email teste sem endereço | ', outputs('Compose_Type'))",
+                    "item/cr40f_Destinatario@odata.bind": "@concat('/cr40f_funcionarioses(', first(outputs('List_Test_Recipient')?['body/value'])?['cr40f_funcionariosid'], ')')",
+                    "item/cr40f_destinatariotexto": "@outputs('Compose_Test_User_Email')",
+                    "item/cr40f_canal": 100000001,
+                    "item/cr40f_categoria": 100000000,
+                    "item/cr40f_chaveidempotente": "@outputs('Compose_Idempotency_Key')",
+                    "item/cr40f_status": 100000003,
+                    "item/cr40f_statustexto": "Sem endereço de e-mail",
+                    "item/cr40f_tentativa": 0
+                  },
+                  "host": {
+                    "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                    "operationId": "CreateRecord",
+                    "connectionName": "shared_commondataserviceforapps"
+                  },
+                  "authentication": "@parameters('$authentication')"
+                }
+              }
+            },
+            "else": {
+              "actions": {
+                "Terminate_without_send": {
+                  "type": "Terminate",
+                  "inputs": { "runStatus": "Cancelled" }
+                }
+              }
+            }
           }
         }
       },
@@ -217,7 +262,7 @@ $definition = @'
 }
 '@
 
-$definition = $definition.Replace('__TEST_RECIPIENT__', $TestRecipientEmail)
+$definition = $definition.Replace('__TEST_USER_EMAIL__', $TestUserEmail)
 $definition = $definition.Replace('cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; border=&quot;0&quot; style=&quot;', 'cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; border=&quot;0&quot; style=&quot;border:0;border-collapse:collapse;border-spacing:0;mso-table-lspace:0pt;mso-table-rspace:0pt;')
 $definition = $definition.Replace('width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; border=&quot;0&quot; style=&quot;max-width:600px;', 'width=&quot;600&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; border=&quot;0&quot; style=&quot;width:100%;max-width:600px;')
 $definition = $definition.Replace('mso-table-rspace:0pt;max-width:600px;background-color:', 'mso-table-rspace:0pt;width:600px;max-width:600px;background-color:')
@@ -305,4 +350,4 @@ foreach ($flow in $activeFlows | Where-Object { $_.name -eq $FlowName -and $_.wo
 }
 
 Write-Output "Flow ativo: $WorkflowId"
-Write-Output "Destinatário de teste: $TestRecipientEmail"
+Write-Output "Usuário de teste: $TestUserEmail (o Flow resolve cr40f_emailbetinhos pelo cr40f_emailmicrosoft do usuário)"

@@ -49,9 +49,9 @@ export default function NotificationTestPanel({ live, tasks = [], onSend }) {
         <div>
           <span className="eyebrow">Operação controlada</span>
           <h2 id="notification-test-title">Módulo de teste de notificações</h2>
-          <p>Dispare um evento real para validar o fluxo de e-mail sem notificar usuários operacionais.</p>
+          <p>Dispare um evento real para validar o fluxo usando o e-mail operacional do usuário conectado.</p>
         </div>
-        <span className="notification-test-target"><Mail size={14} /> noreply@betinhos.onmicrosoft.com</span>
+        <span className="notification-test-target"><Mail size={14} /> e-mail operacional do usuário</span>
       </div>
       <div className="notification-test-body">
         {!live && <div className="notification-test-local-note"><AlertTriangle size={15} /> Conecte o Planner ao Dataverse para habilitar o envio real.</div>}

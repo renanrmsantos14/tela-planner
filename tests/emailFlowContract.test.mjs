@@ -2,9 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
-test("Flow de e-mail do Planner é restrito ao receptor de teste e idempotente", async () => {
+test("Flow de teste resolve o e-mail operacional a partir do usuário Microsoft", async () => {
   const source = await readFile(new URL("../scripts/create-planner-email-flow.ps1", import.meta.url), "utf8");
-  assert.match(source, /noreply@betinhos\.onmicrosoft\.com/);
   assert.match(source, /shared_office365/);
   assert.match(source, /new_sharedoffice365_f87d5/);
   assert.match(source, /operationId.*SendEmailV2/);
@@ -18,6 +17,12 @@ test("Flow de e-mail do Planner é restrito ao receptor de teste e idempotente",
   assert.match(source, /cr40f_chaveidempotente/);
   assert.match(source, /cr40f_canal.*100000001/);
   assert.match(source, /cr40f_status.*100000002/);
+  assert.match(source, /Compose_Test_User_Email/);
+  assert.match(source, /actorEmail/);
+  assert.match(source, /cr40f_emailmicrosoft eq/);
+  assert.match(source, /cr40f_emailbetinhos/);
+  assert.match(source, /cr40f_status.*100000003/);
+  assert.match(source, /Condition_No_Operational_Email/);
   assert.match(source, /item\/cr40f_Destinatario@odata\.bind/);
   assert.doesNotMatch(source, /item\/cr40f_destinatario@odata\.bind/);
   assert.match(source, /role=&quot;presentation&quot;/);
@@ -30,9 +35,8 @@ test("Flow de e-mail do Planner é restrito ao receptor de teste e idempotente",
   assert.doesNotMatch(source, /coalesce\(outputs\('Compose_Context'\)\?\['plannerBaseUrl'\], 'https:\/\/org23b93544\.crm2\.dynamics\.com'\)/);
   assert.match(source, /workflows\?`\$select=workflowid,name,statecode,statuscode/);
   assert.match(source, /Where-Object \{ \$_.name -eq \$FlowName \}/);
-  assert.doesNotMatch(source, /emailMessage\/To.*cr40f_emailmicrosoft/);
-  assert.match(source, /cr40f_emailbetinhos/);
-  assert.doesNotMatch(source, /emailMessage\/To.*outputs\('Get_system_user'\)/);
+  assert.doesNotMatch(source, /TestRecipientEmail/);
+  assert.doesNotMatch(source, /cr40f_emailbetinhos eq/);
 });
 
 test("Flow automático de e-mail replica destinatários das notificações e não envia ao autor", async () => {

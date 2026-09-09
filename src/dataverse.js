@@ -1092,7 +1092,7 @@ async function createEvent(xrm, taskId, type, description, field = "", previous 
   return request(xrm, `/${entitySetName(EVENT_TABLE)}`, { method: "POST", body: JSON.stringify(payload) });
 }
 
-function emailDispatchFeedback(dispatch, recipientEmail = "noreply@betinhos.onmicrosoft.com") {
+function emailDispatchFeedback(dispatch, recipientEmail = "") {
   if (!dispatch) return { status: "pending", type: "pending", text: "Evento criado, mas o Flow ainda não confirmou o disparo." };
   if (dispatch.status === "sent") return { status: "sent", type: "success", text: `E-mail enviado para ${dispatch.recipientEmail || recipientEmail}.`, dispatch };
   if (dispatch.status === "failed") {
@@ -1103,15 +1103,15 @@ function emailDispatchFeedback(dispatch, recipientEmail = "noreply@betinhos.onmi
   return { status: "pending", type: "pending", text: "Evento criado, mas o Flow ainda não confirmou o disparo.", dispatch };
 }
 
-async function waitForLiveEmailDispatch(xrm, idempotencyKey, recipientEmail) {
-  const escapedKey = String(idempotencyKey || "").replace(/'/g, "''");
-  const query = `?$select=cr40f_plannerdisparoid,cr40f_status,cr40f_statustexto,cr40f_destinatariotexto,cr40f_chaveidempotente,cr40f_erro,cr40f_tentativa,cr40f_enviadoem,createdon,modifiedon,_cr40f_destinatario_value&$filter=cr40f_chaveidempotente eq '${escapedKey}'&$orderby=createdon desc&$top=1`;
+async function waitForLiveEmailDispatch(xrm, eventId) {
+  const escapedEventId = cleanId(eventId).replace(/'/g, "''");
+  const query = `?$select=cr40f_plannerdisparoid,cr40f_status,cr40f_statustexto,cr40f_destinatariotexto,cr40f_chaveidempotente,cr40f_erro,cr40f_tentativa,cr40f_enviadoem,createdon,modifiedon,_cr40f_destinatario_value&$filter=startswith(cr40f_chaveidempotente,'${escapedEventId}|') and cr40f_canal eq 100000001&$orderby=createdon desc&$top=1`;
   const deadline = Date.now() + 10000;
   let lastError = null;
   while (Date.now() <= deadline) {
     try {
       const rows = await retrieveMany(xrm, EMAIL_DISPATCH_TABLE, query);
-      if (rows[0]) return emailDispatchFeedback(normalizeEmailDispatch(rows[0]), recipientEmail);
+      if (rows[0]) return emailDispatchFeedback(normalizeEmailDispatch(rows[0]), rows[0].cr40f_destinatariotexto || "");
     } catch (error) {
       lastError = error;
       break;
@@ -1120,7 +1120,7 @@ async function waitForLiveEmailDispatch(xrm, idempotencyKey, recipientEmail) {
     await new Promise((resolve) => globalThis.setTimeout(resolve, 1000));
   }
   if (lastError) return { status: "unknown", type: "error", text: `Evento criado, mas não foi possível confirmar o envio: ${lastError.message || "consulta indisponível"}` };
-  return emailDispatchFeedback(null, recipientEmail);
+  return emailDispatchFeedback(null);
 }
 
 async function sendLiveNotificationTest(xrm, state, input = {}) {
@@ -1136,12 +1136,11 @@ async function sendLiveNotificationTest(xrm, state, input = {}) {
     `[Teste] ${type}: ${message}`,
     "notification:test",
     "",
-    JSON.stringify({ testNotification: true, testType: type }),
+    JSON.stringify({ testNotification: true, testType: type, actorEmail: String(state.currentUserEmail || "").trim().toLowerCase() }),
   );
   const eventId = cleanId(event?.cr40f_plannertarefaeventoid || event?.[`${EVENT_TABLE}id`]);
-  const recipientEmail = "noreply@betinhos.onmicrosoft.com";
   const dispatch = eventId
-    ? await waitForLiveEmailDispatch(xrm, `${eventId}|${recipientEmail}|test|Email`, recipientEmail)
+    ? await waitForLiveEmailDispatch(xrm, eventId)
     : { status: "unknown", type: "error", text: "Evento criado, mas a API não devolveu o identificador para confirmar o e-mail." };
   return { state: await loadLiveState(xrm), emailDispatch: dispatch };
 }
