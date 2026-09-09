@@ -3208,7 +3208,7 @@ function TeamManager({ teams = [], tasks = [], employees = [], onSave, onDelete 
   );
 }
 
-function SettingsView({ onReset, onAdminCleanup, live, teams = [], tasks = [], notifications = [], employees = [], personalTags = [], onSaveTeam, onDeleteTeam, onImportPlannerTasks, onCreatePersonalTag, onUpdatePersonalTag, onArchivePersonalTag, onReorderPersonalTags }) {
+function SettingsView({ onReset, onAdminCleanup, live, teams = [], tasks = [], contacts = [], notifications = [], employees = [], personalTags = [], onSaveTeam, onDeleteTeam, onImportPlannerTasks, onCreatePersonalTag, onUpdatePersonalTag, onArchivePersonalTag, onReorderPersonalTags }) {
   return (
     <div className="page-content">
       <PageHeader
@@ -3267,7 +3267,7 @@ function SettingsView({ onReset, onAdminCleanup, live, teams = [], tasks = [], n
         </div>
         <PlannerImportView live={live} employees={employees} onImport={onImportPlannerTasks} />
       </section>
-      <AdminCleanupPanel live={live} counts={{ tasks: tasks.length, completedTasks: tasks.filter((task) => task.status === "done").length, personalTags: personalTags.length, notifications: notifications.length }} onCleanup={onAdminCleanup} />
+      <AdminCleanupPanel live={live} counts={{ tasks: tasks.length, completedTasks: tasks.filter((task) => task.status === "done").length, personalTags: personalTags.length, notifications: notifications.length, teams: teams.length, contacts: contacts.length, taskActivity: tasks.reduce((total, task) => total + (task.comments?.length || 0) + (task.returns?.length || 0) + (task.history?.length || 0), 0), taskAttachments: tasks.reduce((total, task) => total + (task.attachments?.length || 0), 0), assignedTasks: tasks.filter((task) => task.assigneeIds?.length || task.teamIds?.length || task.teamId).length, datedTasks: tasks.filter((task) => task.dueDate).length, plannerRecords: tasks.length + personalTags.length + notifications.length + teams.length + contacts.length }} employees={employees} teams={teams} tasks={tasks} contacts={contacts} onCleanup={onAdminCleanup} />
       <div className="settings-secondary-grid">
         <section className="panel personal-tags-settings-panel" aria-labelledby="personal-tags-settings-title">
           <div className="panel-heading">
@@ -7171,7 +7171,7 @@ export default function App() {
       );
     return (
       <Suspense fallback={<LoadingFallback />}>
-          <LazySettingsView onReset={reloadData} onAdminCleanup={adminCleanup} live={store.live} teams={state.teams} tasks={state.tasks} notifications={state.notifications} employees={state.employees} personalTags={state.personalTags} onCreatePersonalTag={createPersonalTag} onUpdatePersonalTag={updatePersonalTag} onArchivePersonalTag={archivePersonalTag} onReorderPersonalTags={reorderPersonalTags} onSaveTeam={saveTeam} onDeleteTeam={deleteTeam} onImportPlannerTasks={importPlannerTasks} />
+          <LazySettingsView onReset={reloadData} onAdminCleanup={adminCleanup} live={store.live} teams={state.teams} tasks={state.tasks} contacts={state.contacts} notifications={state.notifications} employees={state.employees} personalTags={state.personalTags} onCreatePersonalTag={createPersonalTag} onUpdatePersonalTag={updatePersonalTag} onArchivePersonalTag={archivePersonalTag} onReorderPersonalTags={reorderPersonalTags} onSaveTeam={saveTeam} onDeleteTeam={deleteTeam} onImportPlannerTasks={importPlannerTasks} />
       </Suspense>
     );
   };

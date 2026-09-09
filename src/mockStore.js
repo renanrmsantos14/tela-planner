@@ -635,14 +635,39 @@ export function deleteTask(state, id) {
 }
 
 export function adminCleanup(state, action) {
+  const request = typeof action === "string" ? { action } : action;
+  const actionId = request?.action;
   const next = { ...state };
-  if (action === "completed_tasks") next.tasks = (state.tasks || []).filter((task) => task.status !== "done");
-  else if (action === "all_tasks") next.tasks = [];
-  else if (action === "all_tags") {
+  if (actionId === "completed_tasks") next.tasks = (state.tasks || []).filter((task) => task.status !== "done");
+  else if (actionId === "all_tasks") next.tasks = [];
+  else if (actionId === "all_tags") {
     next.personalTags = [];
     next.personalTagAssignments = [];
     next.tasks = (state.tasks || []).map((task) => ({ ...task, personalTagIds: [] }));
-  } else if (action === "notifications") next.notifications = [];
+  } else if (actionId === "notifications") next.notifications = [];
+  else if (actionId === "user_tasks") next.tasks = (state.tasks || []).filter((task) => !(task.assigneeIds || []).includes(request.employeeId) || (request.status && task.status !== request.status) || (request.teamId && !(task.teamIds || []).includes(request.teamId) && task.teamId !== request.teamId));
+  else if (actionId === "remove_user_assignments") next.tasks = (state.tasks || []).map((task) => {
+    if ((request.status && task.status !== request.status) || (request.teamId && !(task.teamIds || []).includes(request.teamId) && task.teamId !== request.teamId)) return task;
+    const assigneeIds = (task.assigneeIds || []).filter((id) => id !== request.employeeId);
+    const assigneeNames = assigneeIds.map((id) => (state.employees || []).find((employee) => employee.id === id)?.name).filter(Boolean);
+    return { ...task, assigneeIds, assigneeNames, assigneeName: assigneeNames.join(", ") };
+  });
+  else if (actionId === "user_notifications") next.notifications = (state.notifications || []).filter((item) => item.recipientEmployeeId !== request.employeeId);
+  else if (actionId === "user_tags") {
+    const removedIds = (state.personalTags || []).filter((tag) => tag.ownerUserId === request.userId).map((tag) => tag.id);
+    next.personalTags = (state.personalTags || []).filter((tag) => !removedIds.includes(tag.id));
+    next.personalTagAssignments = (state.personalTagAssignments || []).filter((item) => !removedIds.includes(item.tagId));
+    next.tasks = (state.tasks || []).map((task) => ({ ...task, personalTagIds: (task.personalTagIds || []).filter((id) => !removedIds.includes(id)) }));
+  } else if (actionId === "user_contacts") next.contacts = (state.contacts || []).filter((contact) => !(contact.assigneeIds || []).includes(request.employeeId) && contact.ownerEmployeeId !== request.employeeId);
+  else if (actionId === "all_teams") next.teams = [];
+  else if (actionId === "all_contacts") next.contacts = [];
+  else if (actionId === "task_activity") {
+    next.collectionEvents = [];
+    next.tasks = (state.tasks || []).map((task) => ({ ...task, comments: [], returns: [], history: [] }));
+  } else if (actionId === "task_attachments") next.tasks = (state.tasks || []).map((task) => ({ ...task, attachments: [] }));
+  else if (actionId === "task_assignments") next.tasks = (state.tasks || []).map((task) => ({ ...task, assignmentMode: "people", assigneeIds: [], assigneeNames: [], assigneeName: "", teamIds: [], teamNames: [], teamId: "", teamName: "" }));
+  else if (actionId === "task_due_dates") next.tasks = (state.tasks || []).map((task) => ({ ...task, dueDate: "", waitingContext: { ...normalizeWaitingContext(task.waitingContext), dueDate: "" } }));
+  else if (actionId === "all_planner_data") Object.assign(next, { tasks: [], personalTags: [], personalTagAssignments: [], teams: [], contacts: [], notifications: [], collectionEvents: [] });
   else throw new Error("Ação administrativa inválida.");
   return saveState(next);
 }

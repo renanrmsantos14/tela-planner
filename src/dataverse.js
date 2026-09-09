@@ -1327,13 +1327,15 @@ async function deleteLiveTask(xrm, state, id) {
 }
 
 async function adminCleanupLive(xrm, state, action) {
-  if (action === "completed_tasks" || action === "all_tasks") {
-    const tasks = action === "completed_tasks" ? (state.tasks || []).filter((task) => task.status === "done") : (state.tasks || []);
+  const adminRequest = typeof action === "string" ? { action } : action;
+  const actionId = adminRequest?.action;
+  if (actionId === "completed_tasks" || actionId === "all_tasks") {
+    const tasks = actionId === "completed_tasks" ? (state.tasks || []).filter((task) => task.status === "done") : (state.tasks || []);
     let nextState = state;
     for (const task of tasks) nextState = await deleteLiveTask(xrm, nextState, task.id);
     return nextState;
   }
-  if (action === "all_tags") {
+  if (actionId === "all_tags") {
     for (const tag of state.personalTags || []) {
       const relations = await retrieveMany(xrm, PERSONAL_TAG_TASK_TABLE, `?$select=${PERSONAL_TAG_TASK_TABLE}id&$filter=_cr40f_tag_value eq ${cleanId(tag.id)}`);
       await Promise.all(relations.map((relation) => request(xrm, `/${entitySetName(PERSONAL_TAG_TASK_TABLE)}(${cleanId(relation[`${PERSONAL_TAG_TASK_TABLE}id`])})`, { method: "DELETE" })));
@@ -1341,9 +1343,78 @@ async function adminCleanupLive(xrm, state, action) {
     }
     return { ...state, personalTags: [], tasks: (state.tasks || []).map((task) => ({ ...task, personalTagIds: [] })) };
   }
-  if (action === "notifications") {
+  if (actionId === "notifications") {
     await Promise.all((state.notifications || []).map((notification) => request(xrm, `/${entitySetName(NOTIFICATION_TABLE)}(${cleanId(notification.id)})`, { method: "DELETE" })));
     return { ...state, notifications: [] };
+  }
+  const scopedTasks = () => (state.tasks || []).filter((task) => (task.assigneeIds || []).includes(adminRequest.employeeId) && (!adminRequest.status || task.status === adminRequest.status) && (!adminRequest.teamId || (task.teamIds || []).includes(adminRequest.teamId) || task.teamId === adminRequest.teamId));
+  if (actionId === "user_tasks") {
+    let nextState = state;
+    for (const task of scopedTasks()) nextState = await deleteLiveTask(xrm, nextState, task.id);
+    return nextState;
+  }
+  if (actionId === "remove_user_assignments") {
+    let nextState = state;
+    for (const task of scopedTasks()) {
+      const assigneeIds = (task.assigneeIds || []).filter((id) => id !== adminRequest.employeeId);
+      const assigneeNames = assigneeIds.map((id) => (state.employees || []).find((employee) => employee.id === id)?.name).filter(Boolean);
+      nextState = await updateLiveTask(xrm, nextState, task.id, { assigneeIds, assigneeNames });
+    }
+    return nextState;
+  }
+  if (actionId === "user_notifications") {
+    const rows = await retrieveMany(xrm, NOTIFICATION_TABLE, `?$select=cr40f_plannernotificacaoid&$filter=_cr40f_destinatario_value eq ${cleanId(adminRequest.employeeId)}`);
+    await Promise.all(rows.map((row) => request(xrm, `/${entitySetName(NOTIFICATION_TABLE)}(${cleanId(row.cr40f_plannernotificacaoid)})`, { method: "DELETE" })));
+    return { ...state, notifications: (state.notifications || []).filter((item) => item.recipientEmployeeId !== adminRequest.employeeId) };
+  }
+  if (actionId === "user_tags") {
+    if (!adminRequest.userId) throw new Error("O funcionário selecionado não possui usuário Dataverse vinculado.");
+    const tags = await retrieveMany(xrm, PERSONAL_TAG_TABLE, `?$select=cr40f_plannertagpessoalid&$filter=_cr40f_usuario_value eq ${cleanId(adminRequest.userId)}`);
+    for (const tag of tags) {
+      const id = tag.cr40f_plannertagpessoalid;
+      const relations = await retrieveMany(xrm, PERSONAL_TAG_TASK_TABLE, `?$select=${PERSONAL_TAG_TASK_TABLE}id&$filter=_cr40f_tag_value eq ${cleanId(id)}`);
+      await Promise.all(relations.map((relation) => request(xrm, `/${entitySetName(PERSONAL_TAG_TASK_TABLE)}(${cleanId(relation[`${PERSONAL_TAG_TASK_TABLE}id`])})`, { method: "DELETE" })));
+      await request(xrm, `/${entitySetName(PERSONAL_TAG_TABLE)}(${cleanId(id)})`, { method: "DELETE" });
+    }
+    return loadLiveState(xrm);
+  }
+  if (actionId === "user_contacts" || actionId === "all_contacts") {
+    requireContactSchema();
+    throw new Error("A tabela live de Contatos ainda não está provisionada neste Planner.");
+  }
+  if (actionId === "all_teams") {
+    let nextState = state;
+    for (const team of state.teams || []) nextState = await deleteLiveTeam(xrm, nextState, team.id);
+    return nextState;
+  }
+  if (actionId === "task_activity") {
+    const events = await retrieveMany(xrm, EVENT_TABLE, "?$select=cr40f_plannertarefaeventoid,cr40f_campo&$filter=statecode eq 0");
+    await Promise.all(events.filter((event) => event.cr40f_campo !== "anexo").map((event) => request(xrm, `/${entitySetName(EVENT_TABLE)}(${cleanId(event.cr40f_plannertarefaeventoid)})`, { method: "DELETE" })));
+    return loadLiveState(xrm);
+  }
+  if (actionId === "task_attachments") {
+    const events = await retrieveMany(xrm, EVENT_TABLE, "?$select=cr40f_plannertarefaeventoid,_cr40f_tarefa_value,cr40f_campo,cr40f_valornovo&$filter=cr40f_campo eq 'anexo' and statecode eq 0");
+    for (const event of events) {
+      let attachment = {};
+      try { attachment = JSON.parse(event.cr40f_valornovo || "{}"); } catch { attachment = {}; }
+      await deleteLiveAttachment(xrm, state, event._cr40f_tarefa_value, { ...attachment, eventId: event.cr40f_plannertarefaeventoid });
+    }
+    return loadLiveState(xrm);
+  }
+  if (actionId === "task_assignments") {
+    let nextState = state;
+    for (const task of state.tasks || []) nextState = await updateLiveTask(xrm, nextState, task.id, { assignmentMode: "people", assigneeIds: [], assigneeNames: [], teamIds: [], teamNames: [] });
+    return nextState;
+  }
+  if (actionId === "task_due_dates") {
+    let nextState = state;
+    for (const task of (state.tasks || []).filter((item) => item.dueDate)) nextState = await updateLiveTask(xrm, nextState, task.id, { dueDate: "", waitingContext: { ...normalizeWaitingContext(task.waitingContext), dueDate: "" } });
+    return nextState;
+  }
+  if (actionId === "all_planner_data") {
+    let nextState = state;
+    for (const step of ["task_attachments", "notifications", "all_tags", "all_tasks", "all_teams"]) nextState = await adminCleanupLive(xrm, nextState, step);
+    return nextState;
   }
   throw new Error("Ação administrativa inválida.");
 }

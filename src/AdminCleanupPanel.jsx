@@ -6,9 +6,24 @@ const ACTIONS = [
   { id: "all_tasks", label: "Apagar todas as tasks", detail: "Remove todas as tasks e seus vínculos locais.", countKey: "tasks" },
   { id: "all_tags", label: "Apagar todas as tags", detail: "Remove tags pessoais e suas associações.", countKey: "personalTags" },
   { id: "notifications", label: "Limpar notificações", detail: "Remove todo o histórico local de notificações.", countKey: "notifications" },
+  { id: "all_teams", label: "Apagar todas as equipes", detail: "Remove as equipes cadastradas no Planner.", countKey: "teams" },
+  { id: "all_contacts", label: "Apagar todos os contatos", detail: "Remove todos os casos do Planner.", countKey: "contacts" },
+  { id: "task_activity", label: "Limpar históricos das tasks", detail: "Remove comentários, retornos e histórico operacional.", countKey: "taskActivity" },
+  { id: "task_attachments", label: "Apagar anexos das tasks", detail: "Remove registros e arquivos pelo Flow do SharePoint.", countKey: "taskAttachments" },
+  { id: "task_assignments", label: "Limpar responsáveis", detail: "Remove pessoas e equipes responsáveis sem apagar tasks.", countKey: "assignedTasks" },
+  { id: "task_due_dates", label: "Limpar todos os prazos", detail: "Remove os prazos definidos nas tasks.", countKey: "datedTasks" },
+  { id: "all_planner_data", label: "Limpar todos os dados do Planner", detail: "Remove tasks, tags, equipes, contatos e notificações do ambiente atual.", countKey: "plannerRecords" },
 ];
 
-export default function AdminCleanupPanel({ live, counts = {}, onCleanup }) {
+const USER_ACTIONS = [
+  { id: "user_tasks", label: "Apagar tasks deste usuário", detail: "Apaga somente as tasks que correspondem aos filtros." },
+  { id: "remove_user_assignments", label: "Remover usuário das tasks", detail: "Mantém as tasks e remove apenas essa pessoa dos responsáveis." },
+  { id: "user_notifications", label: "Apagar notificações do usuário", detail: "Remove as notificações destinadas à pessoa selecionada." },
+  { id: "user_tags", label: "Apagar tags do usuário", detail: "Remove as tags pessoais e seus vínculos." },
+  { id: "user_contacts", label: "Apagar contatos do usuário", detail: "Remove casos sob responsabilidade da pessoa selecionada." },
+];
+
+export default function AdminCleanupPanel({ live, counts = {}, employees = [], teams = [], tasks = [], contacts = [], onCleanup }) {
   const [open, setOpen] = useState(false);
   const [authenticated, setAuthenticated] = useState(false);
   const [credentials, setCredentials] = useState({ user: "", password: "" });
@@ -16,6 +31,7 @@ export default function AdminCleanupPanel({ live, counts = {}, onCleanup }) {
   const [pendingAction, setPendingAction] = useState("");
   const [confirmText, setConfirmText] = useState("");
   const [busy, setBusy] = useState(false);
+  const [scope, setScope] = useState({ employeeId: "", status: "", teamId: "" });
 
   const login = (event) => {
     event.preventDefault();
@@ -32,7 +48,8 @@ export default function AdminCleanupPanel({ live, counts = {}, onCleanup }) {
     setBusy(true);
     setError("");
     try {
-      await onCleanup(pendingAction);
+      const employee = employees.find((item) => item.id === scope.employeeId);
+      await onCleanup({ action: pendingAction, ...scope, userId: employee?.userId || "" });
       setPendingAction("");
       setConfirmText("");
     } catch (failure) {
@@ -67,6 +84,19 @@ export default function AdminCleanupPanel({ live, counts = {}, onCleanup }) {
               <div><strong>{action.label}</strong><span>{action.detail}</span></div>
               <span className="admin-action-count">{counts[action.countKey] || 0}</span>
               <button className="button button-danger" type="button" onClick={() => { setPendingAction(action.id); setConfirmText(""); setError(""); }} disabled={!counts[action.countKey]}><Trash2 size={14} />Excluir</button>
+            </div>)}
+            <div className="admin-user-scope">
+              <strong>Limpeza por usuário</strong>
+              <div>
+                <label>Usuário<select value={scope.employeeId} onChange={(event) => setScope((value) => ({ ...value, employeeId: event.target.value }))}><option value="">Selecione</option>{employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.name}</option>)}</select></label>
+                <label>Status da task<select value={scope.status} onChange={(event) => setScope((value) => ({ ...value, status: event.target.value }))}><option value="">Todos</option><option value="todo">A fazer</option><option value="progress">Em andamento</option><option value="waiting">Aguardando</option><option value="done">Concluída</option></select></label>
+                <label>Equipe da task<select value={scope.teamId} onChange={(event) => setScope((value) => ({ ...value, teamId: event.target.value }))}><option value="">Todas</option>{teams.map((team) => <option key={team.id} value={team.id}>{team.name}</option>)}</select></label>
+              </div>
+              <small>{scope.employeeId ? `${tasks.filter((task) => task.assigneeIds?.includes(scope.employeeId) && (!scope.status || task.status === scope.status) && (!scope.teamId || task.teamIds?.includes(scope.teamId) || task.teamId === scope.teamId)).length} task(s) correspondem aos filtros · ${contacts.filter((contact) => contact.assigneeIds?.includes(scope.employeeId) || contact.ownerEmployeeId === scope.employeeId).length} contato(s)` : "Selecione um usuário para habilitar as ações abaixo."}</small>
+            </div>
+            {USER_ACTIONS.map((action) => <div className="admin-action-row" key={action.id}>
+              <div><strong>{action.label}</strong><span>{action.detail}</span></div>
+              <button className="button button-danger" type="button" onClick={() => { setPendingAction(action.id); setConfirmText(""); setError(""); }} disabled={!scope.employeeId}><Trash2 size={14} />Excluir</button>
             </div>)}
           </div>
         )}
