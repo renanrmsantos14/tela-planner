@@ -157,7 +157,7 @@ $definition = @'
             "parameters": {
               "entityName": "cr40f_plannerdisparos",
               "item/cr40f_name": "@concat('Email teste | ', outputs('Compose_Type'))",
-              "item/cr40f_destinatario@odata.bind": "@concat('/cr40f_funcionarioses(', first(outputs('List_Test_Recipient')?['body/value'])?['cr40f_funcionariosid'], ')')",
+              "item/cr40f_Destinatario@odata.bind": "@concat('/cr40f_funcionarioses(', first(outputs('List_Test_Recipient')?['body/value'])?['cr40f_funcionariosid'], ')')",
               "item/cr40f_destinatariotexto": "@outputs('Compose_Test_Recipient')",
               "item/cr40f_canal": 100000001,
               "item/cr40f_categoria": 100000000,
@@ -183,7 +183,7 @@ $definition = @'
             "parameters": {
               "entityName": "cr40f_plannerdisparos",
               "item/cr40f_name": "@concat('Email teste falhou | ', outputs('Compose_Type'))",
-              "item/cr40f_destinatario@odata.bind": "@concat('/cr40f_funcionarioses(', first(outputs('List_Test_Recipient')?['body/value'])?['cr40f_funcionariosid'], ')')",
+              "item/cr40f_Destinatario@odata.bind": "@concat('/cr40f_funcionarioses(', first(outputs('List_Test_Recipient')?['body/value'])?['cr40f_funcionariosid'], ')')",
               "item/cr40f_destinatariotexto": "@outputs('Compose_Test_Recipient')",
               "item/cr40f_canal": 100000001,
               "item/cr40f_categoria": 100000000,

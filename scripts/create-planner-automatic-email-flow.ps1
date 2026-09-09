@@ -156,7 +156,7 @@ $definition = @'
                         "parameters": {
                           "entityName": "cr40f_plannerdisparos",
                           "item/cr40f_name": "@concat('Email | ', outputs('Get_recipient')?['body/cr40f_emailmicrosoft'])",
-                          "item/cr40f_destinatario@odata.bind": "@concat('/cr40f_funcionarioses(', item(), ')')",
+                          "item/cr40f_Destinatario@odata.bind": "@concat('/cr40f_funcionarioses(', item(), ')')",
                           "item/cr40f_destinatariotexto": "@outputs('Get_recipient')?['body/cr40f_emailmicrosoft']",
                           "item/cr40f_canal": 100000001,
                           "item/cr40f_categoria": 100000000,
@@ -182,7 +182,7 @@ $definition = @'
                         "parameters": {
                           "entityName": "cr40f_plannerdisparos",
                           "item/cr40f_name": "@concat('Email falhou | ', outputs('Get_recipient')?['body/cr40f_emailmicrosoft'])",
-                          "item/cr40f_destinatario@odata.bind": "@concat('/cr40f_funcionarioses(', item(), ')')",
+                          "item/cr40f_Destinatario@odata.bind": "@concat('/cr40f_funcionarioses(', item(), ')')",
                           "item/cr40f_destinatariotexto": "@outputs('Get_recipient')?['body/cr40f_emailmicrosoft']",
                           "item/cr40f_canal": 100000001,
                           "item/cr40f_categoria": 100000000,
@@ -211,7 +211,7 @@ $definition = @'
                       "parameters": {
                         "entityName": "cr40f_plannerdisparos",
                         "item/cr40f_name": "@concat('Email sem endereço | ', item())",
-                        "item/cr40f_destinatario@odata.bind": "@concat('/cr40f_funcionarioses(', item(), ')')",
+                        "item/cr40f_Destinatario@odata.bind": "@concat('/cr40f_funcionarioses(', item(), ')')",
                         "item/cr40f_destinatariotexto": "@item()",
                         "item/cr40f_canal": 100000001,
                         "item/cr40f_categoria": 100000000,
