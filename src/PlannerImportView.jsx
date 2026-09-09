@@ -329,8 +329,10 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
   };
 
   const updateEmployeeMapping = (graphUserId, employeeId) => {
-    setEmployeeMapText(JSON.stringify({ ...employeeMap, [graphUserId]: employeeId }, null, 2));
-    setAnalysis(null);
+    const nextEmployeeMapText = JSON.stringify({ ...employeeMap, [graphUserId]: employeeId }, null, 2);
+    setEmployeeMapText(nextEmployeeMapText);
+    setAnalysis(analyzePlannerImport({ planId, tasksText, bucketsText, detailsText, employeeMapText: nextEmployeeMapText }));
+    setConfirmed(false);
   };
 
   const handlePlanChange = (nextPlanId) => {
