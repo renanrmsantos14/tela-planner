@@ -91,14 +91,13 @@ button { cursor: pointer; }
 .drawer-title-field { min-width: 0; flex: 1; display: grid; gap: 6px; }
 .drawer-title-label-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 22px; }
 .drawer-title-label { color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .02em; }
-.task-visibility-button { position: relative; width: 44px; height: 44px; display: grid; place-items: center; flex: 0 0 auto; padding: 0; border: 1px solid transparent; border-radius: 12px; color: #8796a8; background: transparent; cursor: pointer; transition: color 180ms var(--ease-out), background-color 180ms var(--ease-out), border-color 180ms var(--ease-out), box-shadow 220ms var(--ease-out), transform 120ms ease-out; }
+.task-visibility-button { width: 34px; height: 34px; display: grid; place-items: center; flex: 0 0 auto; padding: 0; border: 1px solid transparent; border-radius: 9px; color: #8796a8; background: transparent; cursor: pointer; transition: color 160ms var(--ease-out), background-color 160ms var(--ease-out), border-color 160ms var(--ease-out), transform 120ms ease-out; }
 .task-visibility-button:hover, .task-visibility-button:focus-visible { color: var(--blue); border-color: #d7e2f3; background: var(--blue-soft); outline: 0; }
-.task-visibility-button:active { transform: scale(.9); }
-.task-visibility-button.is-active { color: var(--blue); border-color: #cddcf4; background: var(--blue-soft); box-shadow: 0 0 0 4px rgba(33,89,210,.08), 0 7px 18px rgba(33,89,210,.13); }
-.task-visibility-button.is-active::after { content: ""; position: absolute; inset: 4px; border: 1px solid rgba(33,89,210,.35); border-radius: 9px; pointer-events: none; animation: task-visibility-ring 520ms var(--ease-out); }
-.task-visibility-button svg { animation: task-visibility-pop 260ms var(--ease-out); }
-@keyframes task-visibility-pop { 0% { transform: scale(.72) rotate(-8deg); opacity: .45; } 65% { transform: scale(1.12) rotate(3deg); opacity: 1; } 100% { transform: scale(1) rotate(0); opacity: 1; } }
-@keyframes task-visibility-ring { 0% { opacity: 0; transform: scale(.72); } 45% { opacity: 1; } 100% { opacity: 0; transform: scale(1.22); } }
+.task-visibility-button:focus-visible { outline: 2px solid rgba(33,89,210,.22); outline-offset: 2px; }
+.task-visibility-button:active { transform: scale(.94); }
+.task-visibility-button.is-active { color: var(--blue); border-color: #d7e2f3; background: var(--blue-soft); }
+.task-visibility-button svg { animation: task-visibility-toggle 180ms var(--ease-out); }
+@keyframes task-visibility-toggle { from { transform: scale(.86) rotate(-6deg); opacity: .6; } to { transform: scale(1) rotate(0); opacity: 1; } }
 .task-card-title-row, .task-title-inline { min-width: 0; display: flex; align-items: center; gap: 6px; }
 .task-card-title-row h3 { min-width: 0; flex: 1; }
 .task-title-inline strong, .task-title-inline > span:not(.task-visibility-mark) { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
