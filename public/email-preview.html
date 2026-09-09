@@ -52,6 +52,10 @@
       .control-button { min-height: 44px; padding: 0 11px; border: 0; border-radius: 8px; color: #667085; background: transparent; font-size: 11px; font-weight: 700; cursor: pointer; transition: background-color 160ms ease, color 160ms ease, transform 160ms ease; }
       .control-button:hover { color: var(--ink); background: #fff; transform: translateY(-1px); }
       .control-button.is-active { color: #075b55; background: var(--accent-soft); box-shadow: 0 1px 3px rgba(13, 100, 93, .14); }
+      .scenario-control { display: inline-flex; align-items: center; gap: 8px; min-height: 52px; padding: 4px 9px 4px 12px; border: 1px solid #dfe4ea; border-radius: 12px; background: #f8fafb; }
+      .scenario-control label { color: #7a8797; font-size: 10px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; }
+      .scenario-control select { min-height: 44px; max-width: 245px; padding: 0 30px 0 10px; border: 1px solid #dfe4ea; border-radius: 8px; color: var(--ink); background: #fff; font-size: 11px; font-weight: 700; cursor: pointer; }
+      .scenario-control select:focus-visible { outline: 3px solid #76a9ff; outline-offset: 2px; }
 
       .preview-layout { display: grid; grid-template-columns: minmax(0, 1fr) 284px; gap: 24px; width: min(1440px, calc(100% - 40px)); margin: 0 auto; padding: 32px 0 52px; }
       .mail-stage { min-width: 0; overflow: auto; padding: clamp(20px, 3vw, 52px); border: 1px solid #dfe4ea; border-radius: 22px; background: linear-gradient(145deg, #e8edf1, #dce3e9); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .8), 0 14px 35px rgba(25, 44, 65, .05); }
@@ -112,6 +116,8 @@
         .control-group { width: 100%; overflow-x: auto; justify-content: flex-start; }
         .control-label { min-width: 66px; }
         .control-button { flex: 0 0 auto; }
+        .scenario-control { width: 100%; justify-content: space-between; }
+        .scenario-control select { flex: 1; max-width: none; }
       }
 
       @media (prefers-reduced-motion: reduce) {
@@ -146,6 +152,31 @@
             <button class="control-button" type="button" data-stress="long" aria-pressed="false">Texto longo</button>
             <button class="control-button" type="button" data-stress="dark" aria-pressed="false">Dark mode</button>
             <button class="control-button" type="button" data-stress="dpi" aria-pressed="false">DPI 125%</button>
+          </div>
+          <div class="scenario-control">
+            <label for="emailScenario">Cenário</label>
+            <select id="emailScenario" aria-label="Tipo de notificação por e-mail">
+              <optgroup label="Tarefas">
+                <option value="assignment">Nova tarefa atribuída</option>
+                <option value="assignees">Responsáveis alterados</option>
+                <option value="status">Status alterado</option>
+                <option value="waiting">Retorno aguardado</option>
+                <option value="waiting_return">Retorno registrado</option>
+                <option value="mention">Você foi mencionado</option>
+              </optgroup>
+              <optgroup label="Prazos">
+                <option value="due_today">Tarefa vence hoje</option>
+                <option value="due_soon">Prazo se aproximando</option>
+                <option value="overdue">Tarefa atrasada</option>
+              </optgroup>
+              <optgroup label="Atendimento">
+                <option value="contact_assignment">Novo caso atribuído</option>
+                <option value="contact_transfer">Caso transferido para você</option>
+              </optgroup>
+              <optgroup label="Teste">
+                <option value="test">Teste de notificação</option>
+              </optgroup>
+            </select>
           </div>
         </div>
       </header>
@@ -200,14 +231,14 @@
                               <!--[if mso]>
                               <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" href="https://org23b93544.crm2.dynamics.com" style="height:46px;v-text-anchor:middle;width:210px;" arcsize="12%" fillcolor="#14213d" strokecolor="#14213d">
                                 <w:anchorlock/>
-                                <center style="color:#ffffff;font-family:Segoe UI,Arial,sans-serif;font-size:14px;font-weight:700;">Abrir tarefa no Planner →</center>
+                                <center id="emailCtaLabelMso" style="color:#ffffff;font-family:Segoe UI,Arial,sans-serif;font-size:14px;font-weight:700;">Abrir tarefa no Planner →</center>
                               </v:roundrect>
                               <![endif]-->
                               <!--[if !mso]><!-- -->
                               <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top:26px;">
                                 <tr>
                                   <td bgcolor="#14213d" style="border-radius:8px;background-color:#14213d;">
-                                    <a href="https://org23b93544.crm2.dynamics.com" style="display:inline-block;padding:13px 19px;color:#ffffff!important;font-size:14px;line-height:20px;font-weight:700;text-decoration:none;"><span style="color:#ffffff!important;">Abrir tarefa no Planner →</span></a>
+                                    <a href="https://org23b93544.crm2.dynamics.com" style="display:inline-block;padding:13px 19px;color:#ffffff!important;font-size:14px;line-height:20px;font-weight:700;text-decoration:none;"><span id="emailCtaLabel" style="color:#ffffff!important;">Abrir tarefa no Planner →</span></a>
                                   </td>
                                 </tr>
                               </table>
@@ -264,8 +295,25 @@
       const emailCopy = document.querySelector("#emailCopy");
       const emailDetail = document.querySelector("#emailDetail");
       const modeText = document.querySelector("#modeText");
+      const emailScenario = document.querySelector("#emailScenario");
+      const emailCtaLabel = document.querySelector("#emailCtaLabel");
+      const emailCtaLabelMso = document.querySelector("#emailCtaLabelMso");
       let currentClient = "outlook";
       let currentStress = "normal";
+      const scenarios = {
+        assignment: { subject: "[Planner] Nova tarefa atribuída", title: "Nova tarefa atribuída", copy: "Você recebeu uma nova tarefa no Planner. Abra a tarefa para ver os detalhes e continuar a operação.", detail: "<strong>Tarefa:</strong> Revisar confirmação do passageiro<br /><strong>Responsável:</strong> Você · <strong>Prazo:</strong> Hoje, 17:00", cta: "Abrir tarefa no Planner →" },
+        assignees: { subject: "[Planner] Responsáveis alterados", title: "Responsáveis alterados", copy: "A composição dos responsáveis desta tarefa foi atualizada. Revise sua participação e os próximos passos.", detail: "<strong>Tarefa:</strong> Revisar confirmação do passageiro<br /><strong>Atualização:</strong> Você foi adicionado à tarefa" },
+        status: { subject: "[Planner] Status da tarefa alterado", title: "Status da tarefa alterado", copy: "Uma tarefa da sua operação mudou de status. Abra o Planner para acompanhar o andamento.", detail: "<strong>Tarefa:</strong> Revisar confirmação do passageiro<br /><strong>Novo status:</strong> Em andamento" },
+        waiting: { subject: "[Planner] Retorno aguardado", title: "Retorno aguardado", copy: "Uma tarefa está aguardando uma confirmação sua ou do seu time para continuar.", detail: "<strong>Tarefa:</strong> Confirmar disponibilidade do veículo<br /><strong>Aguardando:</strong> Confirmação da operação" },
+        waiting_return: { subject: "[Planner] Retorno registrado", title: "Retorno registrado", copy: "Um retorno foi registrado em uma tarefa que você acompanha.", detail: "<strong>Tarefa:</strong> Confirmar disponibilidade do veículo<br /><strong>Retorno:</strong> Veículo confirmado para o atendimento" },
+        mention: { subject: "[Planner] Você foi mencionado", title: "Você foi mencionado", copy: "Você foi mencionado em uma atualização do Planner. Abra a tarefa para responder e manter a operação em movimento.", detail: "<strong>Tarefa:</strong> Revisar confirmação do passageiro<br /><strong>Comentário:</strong> Preciso do seu retorno até o fim do dia" },
+        due_today: { subject: "[Planner] Tarefa vence hoje", title: "Tarefa vence hoje", copy: "Uma tarefa sob sua responsabilidade vence hoje. Confira os detalhes e avance antes do prazo.", detail: "<strong>Tarefa:</strong> Revisar confirmação do passageiro<br /><strong>Prazo:</strong> Hoje, 17:00" },
+        due_soon: { subject: "[Planner] Prazo se aproximando", title: "Prazo se aproximando", copy: "O prazo de uma tarefa está se aproximando. Organize o próximo passo com antecedência.", detail: "<strong>Tarefa:</strong> Confirmar disponibilidade do veículo<br /><strong>Prazo:</strong> Amanhã, 08:30" },
+        overdue: { subject: "[Planner] Tarefa atrasada", title: "Tarefa atrasada", copy: "Uma tarefa ultrapassou o prazo previsto. Abra o Planner para regularizar a pendência.", detail: "<strong>Tarefa:</strong> Enviar confirmação do passageiro<br /><strong>Vencida em:</strong> 08/09/2026" },
+        contact_assignment: { subject: "[Planner] Novo caso atribuído", title: "Novo caso atribuído", copy: "Um novo caso de atendimento foi atribuído a você. Abra o Planner para iniciar a tratativa.", detail: "<strong>Caso:</strong> Passageiro aguardando confirmação<br /><strong>Canal:</strong> E-mail", cta: "Abrir caso no Planner →" },
+        contact_transfer: { subject: "[Planner] Caso transferido para você", title: "Caso transferido para você", copy: "Um caso de atendimento foi transferido para sua fila. Revise o histórico antes de responder.", detail: "<strong>Caso:</strong> Ajuste de embarque corporativo<br /><strong>Transferido por:</strong> Marina Alves", cta: "Abrir caso no Planner →" },
+        test: { subject: "[Planner | teste] Teste de notificação", title: "Teste de notificação", copy: "Esta é uma mensagem de teste para validar o conteúdo e a entrega do e-mail do Planner.", detail: "<strong>Campo:</strong> notification:test<br /><strong>Evento:</strong> 2576b355-75ac-f111-aaac-7ced8da8c473", cta: "Abrir tarefa no Planner →" },
+      };
 
       function updateModeText() {
         const client = currentClient === "outlook" ? "Outlook Windows" : "Outlook Web";
@@ -314,6 +362,17 @@
             : "<strong>Tarefa:</strong> Revisar confirmação do passageiro<br /><strong>Prazo:</strong> Hoje, 17:00";
           updateModeText();
         });
+      });
+
+      emailScenario.addEventListener("change", () => {
+        const scenario = scenarios[emailScenario.value] || scenarios.assignment;
+        emailSubject.textContent = scenario.subject;
+        emailTitle.textContent = scenario.title;
+        emailCopy.textContent = scenario.copy;
+        emailDetail.innerHTML = scenario.detail;
+        emailCtaLabel.textContent = scenario.cta || "Abrir tarefa no Planner →";
+        emailCtaLabelMso.textContent = scenario.cta || "Abrir tarefa no Planner →";
+        updateModeText();
       });
     </script>
   </body>
