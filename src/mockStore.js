@@ -40,23 +40,23 @@ const MOCK_IMAGE_PREVIEWS = {
 
 export function seedState() {
   const quotes = [
-    { id: "quote-1008", code: "COT-1008", title: "Transfer executivo · Aeroporto GRU", client: "Grupo Horizonte", status: "Em análise", deadline: dateFromToday(0), value: "R$ 1.280,00" },
-    { id: "quote-1007", code: "COT-1007", title: "Van executiva · Evento corporativo", client: "Norte & Sul Eventos", status: "Aguardando fornecedor", deadline: dateFromToday(2), value: "R$ 4.950,00" },
-    { id: "quote-1006", code: "COT-1006", title: "Carro blindado · Diretoria", client: "Alvorada Capital", status: "Em análise", deadline: dateFromToday(1), value: "R$ 2.400,00" },
-    { id: "quote-1005", code: "COT-1005", title: "Recepção de convidados · Congonhas", client: "Casa 9 Produções", status: "Respondida", deadline: dateFromToday(-1), value: "R$ 860,00" },
+    { id: "quote-1008", code: "COT-1008", title: "Transfer executivo · Aeroporto GRU", client: "Grupo Horizonte", status: "Em análise pelo financeiro", deadline: dateFromToday(0), value: "R$ 1.280,00" },
+    { id: "quote-1007", code: "COT-1007", title: "Van executiva · Evento corporativo", client: "Norte & Sul Eventos", status: "Aguardando informação", deadline: dateFromToday(2), value: "R$ 4.950,00" },
+    { id: "quote-1006", code: "COT-1006", title: "Carro blindado · Diretoria", client: "Alvorada Capital", status: "Em análise pelo financeiro", deadline: dateFromToday(1), value: "R$ 2.400,00" },
+    { id: "quote-1005", code: "COT-1005", title: "Recepção de convidados · Congonhas", client: "Casa 9 Produções", status: "Respondida ao cliente", deadline: dateFromToday(-1), value: "R$ 860,00" },
     { id: "quote-1004", code: "COT-1004", title: "Roadshow executivo · São Paulo e Campinas", client: "Vértice Tecnologia", status: "Nova", deadline: dateFromToday(3), value: "R$ 8.740,00" },
-    { id: "quote-1003", code: "COT-1003", title: "Traslado de palestrantes · Expo Center Norte", client: "Mosaico Eventos", status: "Em análise", deadline: dateFromToday(4), value: "R$ 3.260,00" },
-    { id: "quote-1002", code: "COT-1002", title: "Disposição diária · Alphaville", client: "Lumen Energia", status: "Aguardando fornecedor", deadline: dateFromToday(5), value: "R$ 6.180,00" },
+    { id: "quote-1003", code: "COT-1003", title: "Traslado de palestrantes · Expo Center Norte", client: "Mosaico Eventos", status: "Em análise pelo financeiro", deadline: dateFromToday(4), value: "R$ 3.260,00" },
+    { id: "quote-1002", code: "COT-1002", title: "Disposição diária · Alphaville", client: "Lumen Energia", status: "Aguardando informação", deadline: dateFromToday(5), value: "R$ 6.180,00" },
     { id: "quote-1001", code: "COT-1001", title: "Transfer internacional · GRU–Faria Lima", client: "Kairós Health", status: "Nova", deadline: dateFromToday(1), value: "R$ 1.960,00" },
-    { id: "quote-0999", code: "COT-0999", title: "Transporte de equipe · Guarujá", client: "Aurora Produções", status: "Respondida", deadline: dateFromToday(-3), value: "R$ 5.480,00" },
-    { id: "quote-0998", code: "COT-0998", title: "Transfer para conselho · Itaim Bibi", client: "Orbe Consultoria", status: "Em análise", deadline: dateFromToday(0), value: "R$ 2.150,00" },
+    { id: "quote-0999", code: "COT-0999", title: "Transporte de equipe · Guarujá", client: "Aurora Produções", status: "Respondida ao cliente", deadline: dateFromToday(-3), value: "R$ 5.480,00" },
+    { id: "quote-0998", code: "COT-0998", title: "Transfer para conselho · Itaim Bibi", client: "Orbe Consultoria", status: "Em análise pelo financeiro", deadline: dateFromToday(0), value: "R$ 2.150,00" },
     { id: "quote-0997", code: "COT-0997", title: "Operação de embarque · Viracopos", client: "Delta Foods", status: "Nova", deadline: dateFromToday(6), value: "R$ 3.890,00" },
-    { id: "quote-0996", code: "COT-0996", title: "Apoio logístico · Hotel Fasano", client: "Estação 21", status: "Respondida", deadline: dateFromToday(-5), value: "R$ 1.740,00" },
+    { id: "quote-0996", code: "COT-0996", title: "Apoio logístico · Hotel Fasano", client: "Estação 21", status: "Respondida ao cliente", deadline: dateFromToday(-5), value: "R$ 1.740,00" },
     { id: "quote-0995", code: "COT-0995", title: "Transfer de executivos · São José dos Campos", client: "Nexa Industrial", status: "Nova", deadline: dateFromToday(7), value: "R$ 4.620,00" },
-    { id: "quote-0994", code: "COT-0994", title: "Frota dedicada · Convenção anual", client: "Pilar Seguros", status: "Em análise", deadline: dateFromToday(8), value: "R$ 12.900,00" },
-    { id: "quote-0993", code: "COT-0993", title: "Recepção VIP · Hotel Unique", client: "Leste Mídia", status: "Aguardando fornecedor", deadline: dateFromToday(2), value: "R$ 2.780,00" },
+    { id: "quote-0994", code: "COT-0994", title: "Frota dedicada · Convenção anual", client: "Pilar Seguros", status: "Em análise pelo financeiro", deadline: dateFromToday(8), value: "R$ 12.900,00" },
+    { id: "quote-0993", code: "COT-0993", title: "Recepção VIP · Hotel Unique", client: "Leste Mídia", status: "Aguardando informação", deadline: dateFromToday(2), value: "R$ 2.780,00" },
     { id: "quote-0992", code: "COT-0992", title: "Transfer noturno · Santos–GRU", client: "Maré Logística", status: "Nova", deadline: dateFromToday(9), value: "R$ 2.340,00" },
-    { id: "quote-0991", code: "COT-0991", title: "Veículo executivo · Diretoria regional", client: "Horizon Bio", status: "Respondida", deadline: dateFromToday(-7), value: "R$ 7.350,00" },
+    { id: "quote-0991", code: "COT-0991", title: "Veículo executivo · Diretoria regional", client: "Horizon Bio", status: "Respondida ao cliente", deadline: dateFromToday(-7), value: "R$ 7.350,00" },
   ];
   const tasks = [
     task("task-1", "Preparar proposta comercial", "quote-1008", "COT-1008", "Transfer executivo · Aeroporto GRU", "doing", "high", "Marina Alves", "Comercial", dateFromToday(0), "Revisar composição de preço e confirmar janela de embarque."),
@@ -854,7 +854,7 @@ export function markAllNotificationsRead(state, recipientEmployeeId, readAt = ne
 export function ensureQuoteTask(state, quote) {
   const existing = state.tasks.find((taskItem) => taskItem.quoteId === quote.id && !taskItem.parentTaskId);
   if (existing) return state;
-  return createTask(state, { title: `Acompanhar ${quote.code}`, quoteId: quote.id, quoteCode: quote.code, quoteTitle: quote.title, dueDate: quote.deadline, priority: "medium", assigneeName: "Não atribuído", teamName: "Comercial", description: `Acompanhar a cotação ${quote.code} até a resposta ao cliente.` });
+  return createTask(state, { title: `Acompanhar ${quote.code}`, quoteId: quote.id, quoteCode: quote.code, quoteTitle: quote.title, dueDate: quote.deadline, priority: "medium", assigneeName: "Não atribuído", teamName: "Financeiro", description: `Acompanhar a cotação ${quote.code} até a resposta ao cliente.` });
 }
 
 export function createQuote(state, input = {}) {
@@ -867,10 +867,12 @@ export function createQuote(state, input = {}) {
     serviceType: input.serviceType || "", vehicleType: input.vehicleType || "", origin: input.origin || "", destination: input.destination || "",
     passengers: input.passengers || "", serviceDate: input.serviceDate || "", returnDate: input.returnDate || "",
     clientContact: input.clientContact || "", clientEmail: input.clientEmail || "", clientPhone: input.clientPhone || "",
-    commercialTerms: input.commercialTerms || "", notes: input.notes || "", priority: input.priority || "medium", plannerTaskId: "", createdAt: now, modifiedAt: now,
+    commercialTerms: input.commercialTerms || "", notes: input.notes || "", priority: input.priority || "medium", channel: input.channel || "", hasReturn: Boolean(input.returnDate), lossReason: input.lossReason || "", responseSent: false, finalizationAt: "", plannerTaskId: "", createdAt: now, modifiedAt: now,
   };
   const withQuote = { ...state, quotes: [quote, ...(state.quotes || [])] };
-  const withTask = createTask(withQuote, { title: `Acompanhar ${quote.code}`, quoteId: quote.id, quoteCode: quote.code, quoteTitle: quote.title, dueDate: quote.deadline, priority: quote.priority, assigneeName: "Não atribuído", teamName: "Comercial", description: `Acompanhar a cotação ${quote.code} até a resposta ao cliente.` });
+  const assigneeIds = input.assigneeIds || [];
+  const assigneeNames = input.assigneeNames || assigneeIds.map((id) => withQuote.employees?.find((employee) => employee.id === id)?.name).filter(Boolean);
+  const withTask = createTask(withQuote, { title: `Acompanhar ${quote.code}`, quoteId: quote.id, quoteCode: quote.code, quoteTitle: quote.title, dueDate: quote.deadline, priority: quote.priority, assigneeIds, assigneeNames, assigneeName: assigneeNames.join(", ") || "Não atribuído", teamName: "Financeiro", description: `Acompanhar a cotação ${quote.code} até a resposta ao cliente.` });
   const task = withTask.tasks.find((item) => item.quoteId === quote.id && !item.parentTaskId);
   return saveState({ ...withTask, quotes: withTask.quotes.map((item) => item.id === quote.id ? { ...item, plannerTaskId: task?.id || "", modifiedAt: now } : item) });
 }
@@ -879,11 +881,22 @@ export function updateQuote(state, id, patch = {}) {
   const existing = (state.quotes || []).find((quote) => quote.id === id);
   if (!existing) throw new Error("Cotação não encontrada.");
   const nextQuote = { ...existing, ...patch, id, modifiedAt: new Date().toISOString() };
+  const outcomeStatus = nextQuote.status;
+  const terminal = ["Perdida", "Cancelada", "Convertida em serviço"].includes(outcomeStatus);
   return saveState({
     ...state,
     quotes: state.quotes.map((quote) => quote.id === id ? nextQuote : quote),
-    tasks: state.tasks.map((taskItem) => taskItem.quoteId === id ? { ...taskItem, title: taskItem.parentTaskId ? taskItem.title : `Acompanhar ${nextQuote.code || "cotação"}`, quoteCode: nextQuote.code || taskItem.quoteCode, quoteTitle: nextQuote.title || taskItem.quoteTitle, dueDate: nextQuote.deadline || taskItem.dueDate, priority: nextQuote.priority || taskItem.priority } : taskItem),
+    tasks: state.tasks.map((taskItem) => taskItem.quoteId === id ? { ...taskItem, title: taskItem.parentTaskId ? taskItem.title : `Acompanhar ${nextQuote.code || "cotação"}`, quoteCode: nextQuote.code || taskItem.quoteCode, quoteTitle: nextQuote.title || taskItem.quoteTitle, dueDate: nextQuote.deadline || taskItem.dueDate, priority: nextQuote.priority || taskItem.priority, ...(terminal && !taskItem.parentTaskId ? { status: "done", completedAt: nextQuote.finalizationAt || new Date().toISOString() } : {}) } : taskItem),
   });
+}
+
+export function markQuoteSent(state, id) {
+  return updateQuote(state, id, { responseSent: true, status: "Respondida ao cliente", finalizationAt: new Date().toISOString() });
+}
+
+export function setQuoteOutcome(state, id, outcome, reason = "") {
+  if (outcome === "Perdida" && !String(reason).trim()) throw new Error("Informe o motivo da perda.");
+  return updateQuote(state, id, { status: outcome, lossReason: outcome === "Perdida" ? String(reason).trim() : "", finalizationAt: new Date().toISOString() });
 }
 
 export function resetState() {

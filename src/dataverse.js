@@ -17,6 +17,8 @@ import {
   ensureQuoteTask as ensureMockQuoteTask,
   createQuote as createMockQuote,
   updateQuote as updateMockQuote,
+  markQuoteSent as markMockQuoteSent,
+  setQuoteOutcome as setMockQuoteOutcome,
   loadState as loadMockState,
   markAllNotificationsRead as markAllMockNotificationsRead,
   markNotificationRead as markMockNotificationRead,
@@ -154,6 +156,18 @@ const STATUS_VALUES = { todo: 100000000, doing: 100000001, waiting: 100000002, d
 const PRIORITY_VALUES = { low: 100000000, medium: 100000001, high: 100000002, urgent: 100000003 };
 const STATUS_BY_VALUE = Object.fromEntries(Object.entries(STATUS_VALUES).map(([key, value]) => [value, key]));
 const PRIORITY_BY_VALUE = Object.fromEntries(Object.entries(PRIORITY_VALUES).map(([key, value]) => [value, key]));
+const QUOTE_STATUS_VALUES = Object.freeze({
+  "Nova": 100004000,
+  "Em análise pelo financeiro": 100004001,
+  "Aguardando informação": 100004002,
+  "Cotada": 100004003,
+  "Respondida ao cliente": 100004004,
+  "Cancelada": 100004005,
+  "Perdida": 100004006,
+  "Convertida em serviço": 100004007,
+});
+const QUOTE_PRIORITY_VALUES = Object.freeze({ low: 100003000, medium: 100003001, high: 100003002, urgent: 100003003 });
+const QUOTE_CHANNEL_VALUES = Object.freeze({ WhatsApp: 100001000, Telefone: 100001001, "E-mail": 100001002 });
 const lookupCache = new Map();
 
 function sanitizePathSegment(value, fallback = "sem-codigo") {
@@ -547,7 +561,25 @@ function normalizeQuote(row) {
     code: row.cr40f_numerodacotacao || "",
     title: row.cr40f_titulo || "Sem título",
     client: row.cr40f_clienteempresa || "",
-    status: row["cr40f_statuscotacao@OData.Community.Display.V1.FormattedValue"] || "",
+    status: row["cr40f_statuscotacao@OData.Community.Display.V1.FormattedValue"] || Object.entries(QUOTE_STATUS_VALUES).find(([, value]) => value === row.cr40f_statuscotacao)?.[0] || "",
+    channel: row["cr40f_canalentrada@OData.Community.Display.V1.FormattedValue"] || Object.entries(QUOTE_CHANNEL_VALUES).find(([, value]) => value === row.cr40f_canalentrada)?.[0] || "",
+    clientContact: row.cr40f_contatocliente || "",
+    clientEmail: row.cr40f_emailcliente || "",
+    clientPhone: row.cr40f_telefonewhatsapp || "",
+    serviceType: row.cr40f_tiposervico || "",
+    vehicleType: row.cr40f_tipoveiculo || "",
+    origin: row.cr40f_origem || "",
+    destination: row.cr40f_destino || "",
+    serviceDate: row.cr40f_datahoraservico || "",
+    returnDate: row.cr40f_datahoraretorno || "",
+    passengers: row.cr40f_quantidadepassageiros == null ? "" : String(row.cr40f_quantidadepassageiros),
+    hasReturn: Boolean(row.cr40f_retorno),
+    notes: row.cr40f_observacoespedido || "",
+    priority: Object.entries(QUOTE_PRIORITY_VALUES).find(([, value]) => value === row.cr40f_prioridade)?.[0] || "medium",
+    commercialTerms: row.cr40f_condicaocomercial || "",
+    responseSent: Boolean(row.cr40f_respostaenviadacliente),
+    finalizationAt: row.cr40f_datahorafinalizacao || "",
+    lossReason: row.cr40f_motivoperda || "",
     deadline: dateOnly(row.cr40f_prazoresponder),
     value: row.cr40f_valorcotado == null ? "" : String(row.cr40f_valorcotado),
     plannerTaskId: row.cr40f_plannertaskid || "",
@@ -555,6 +587,10 @@ function normalizeQuote(row) {
     teamsLink: row.cr40f_linkmensagemteams || "",
   };
 }
+
+const QUOTE_SELECT = [
+  "cr40f_pedidodecotacaoid", "cr40f_numerodacotacao", "cr40f_titulo", "cr40f_clienteempresa", "cr40f_contatocliente", "cr40f_telefonewhatsapp", "cr40f_emailcliente", "cr40f_canalentrada", "cr40f_tiposervico", "cr40f_tipoveiculo", "cr40f_origem", "cr40f_destino", "cr40f_datahoraservico", "cr40f_retorno", "cr40f_datahoraretorno", "cr40f_quantidadepassageiros", "cr40f_observacoespedido", "cr40f_prioridade", "cr40f_statuscotacao", "cr40f_prazoresponder", "cr40f_valorcotado", "cr40f_condicaocomercial", "cr40f_respostaenviadacliente", "cr40f_datahorafinalizacao", "cr40f_plannertaskid", "cr40f_linktarefaplanner", "cr40f_linkmensagemteams",
+].join(",");
 
 async function primaryNameAttribute(xrm, table) {
   const metadata = await request(xrm, `/EntityDefinitions(LogicalName='${table}')?$select=PrimaryNameAttribute`);
@@ -864,10 +900,10 @@ export async function loadSupplementalState(xrm, state) {
   const quoteIds = [...new Set((state.tasks || []).map((task) => cleanId(task.quoteId)).filter(Boolean))];
   const quoteChunks = Array.from({ length: Math.ceil(quoteIds.length / 50) }, (_, index) => quoteIds.slice(index * 50, index * 50 + 50));
   const loadLinkedQuotes = () => {
-    if (!quoteIds.length) return retrieveMany(xrm, QUOTE_TABLE, "?$select=cr40f_pedidodecotacaoid,cr40f_numerodacotacao,cr40f_titulo,cr40f_clienteempresa,cr40f_statuscotacao,cr40f_prazoresponder,cr40f_valorcotado,cr40f_plannertaskid,cr40f_linktarefaplanner,cr40f_linkmensagemteams&$filter=statecode eq 0&$orderby=modifiedon desc&$top=25");
+    if (!quoteIds.length) return retrieveMany(xrm, QUOTE_TABLE, `?$select=${QUOTE_SELECT}&$filter=statecode eq 0&$orderby=modifiedon desc&$top=25`);
     return Promise.all(quoteChunks.map((chunk) => {
     const filter = chunk.map((id) => `cr40f_pedidodecotacaoid eq ${id}`).join(" or ");
-    return retrieveMany(xrm, QUOTE_TABLE, `?$select=cr40f_pedidodecotacaoid,cr40f_numerodacotacao,cr40f_titulo,cr40f_clienteempresa,cr40f_statuscotacao,cr40f_prazoresponder,cr40f_valorcotado,cr40f_plannertaskid,cr40f_linktarefaplanner,cr40f_linkmensagemteams&$filter=statecode eq 0 and (${filter})`);
+    return retrieveMany(xrm, QUOTE_TABLE, `?$select=${QUOTE_SELECT}&$filter=statecode eq 0 and (${filter})`);
     })).then((pages) => pages.flat());
   };
   const [quotes, qualityErrors, qualityActions] = await Promise.all([
@@ -894,14 +930,14 @@ export async function searchQuotes(xrm, query) {
   const escaped = String(query || "").trim().replace(/'/g, "''");
   if (!escaped) return [];
   const filter = `contains(cr40f_numerodacotacao,'${escaped}') or contains(cr40f_titulo,'${escaped}') or contains(cr40f_clienteempresa,'${escaped}')`;
-  const rows = await measureStage("busca de cotações", () => retrieveMany(xrm, QUOTE_TABLE, `?$select=cr40f_pedidodecotacaoid,cr40f_numerodacotacao,cr40f_titulo,cr40f_clienteempresa,cr40f_statuscotacao,cr40f_prazoresponder,cr40f_valorcotado,cr40f_plannertaskid,cr40f_linktarefaplanner,cr40f_linkmensagemteams&$filter=statecode eq 0 and (${filter})&$orderby=modifiedon desc&$top=25`));
+  const rows = await measureStage("busca de cotações", () => retrieveMany(xrm, QUOTE_TABLE, `?$select=${QUOTE_SELECT}&$filter=statecode eq 0 and (${filter})&$orderby=modifiedon desc&$top=25`));
   return rows.map(normalizeQuote);
 }
 
 async function loadLiveState(xrm) {
   const currentUserId = cleanId(xrm.Utility?.getGlobalContext?.().userSettings?.userId);
   const [quotes, rows, events, relations, assigneeRelations, qualityErrors, qualityActions, employees, currentUserEmail, teams, teamRelations, personalTagData] = await Promise.all([
-    retrieveMany(xrm, QUOTE_TABLE, "?$select=cr40f_pedidodecotacaoid,cr40f_numerodacotacao,cr40f_titulo,cr40f_clienteempresa,cr40f_statuscotacao,cr40f_prazoresponder,cr40f_valorcotado,cr40f_plannertaskid,cr40f_linktarefaplanner,cr40f_linkmensagemteams&$filter=statecode eq 0&$orderby=modifiedon desc"),
+    retrieveMany(xrm, QUOTE_TABLE, `?$select=${QUOTE_SELECT}&$filter=statecode eq 0&$orderby=modifiedon desc`),
     retrievePlannerTasks(xrm),
     retrieveMany(xrm, EVENT_TABLE, "?$select=cr40f_plannertarefaeventoid,_cr40f_tarefa_value,cr40f_tipo,cr40f_campo,cr40f_descricao,cr40f_valornovo,cr40f_ocorridoem,_cr40f_autor_value,_createdby_value&$orderby=cr40f_ocorridoem desc"),
     retrieveMany(xrm, RELATION_TABLE, "?$select=cr40f_plannertarearelacaoid,_cr40f_tarefapai_value,_cr40f_subtarefa_value&$filter=statecode eq 0"),
@@ -1449,7 +1485,104 @@ async function ensureLiveQuoteTask(xrm, state, quote) {
   const existing = state.tasks.find((item) => item.quoteId === quote.id && !item.parentTaskId);
   if (existing || quote.plannerTaskId) return state;
   const reference = String(quote.code || quote.title || "").trim();
-  return createLiveTask(xrm, state, { title: `Acompanhar ${reference || "cotação"}`, quoteId: quote.id, quoteCode: quote.code || "", quoteTitle: quote.title || "", dueDate: quote.deadline, priority: "medium", sourceType: "quote", assigneeName: "Não atribuído", teamName: "Comercial", description: `Acompanhar a cotação ${reference || "selecionada"} até a resposta ao cliente.` });
+  return createLiveTask(xrm, state, { title: `Acompanhar ${reference || "cotação"}`, quoteId: quote.id, quoteCode: quote.code || "", quoteTitle: quote.title || "", dueDate: quote.deadline, priority: "medium", sourceType: "quote", assigneeName: "Não atribuído", teamName: "Financeiro", description: `Acompanhar a cotação ${reference || "selecionada"} até a resposta ao cliente.` });
+}
+
+function quoteDateTime(value) {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? String(value) : date.toISOString();
+}
+
+function quoteMoney(value) {
+  if (value === "" || value === null || value === undefined) return null;
+  const raw = String(value).trim();
+  const number = typeof value === "number" ? value : Number(raw.includes(",") ? raw.replace(/[^0-9,-]/g, "").replace(/\./g, "").replace(",", ".") : raw.replace(/[^0-9.-]/g, ""));
+  return Number.isFinite(number) ? number : null;
+}
+
+function quotePayload(input = {}, includeUnset = false) {
+  const payload = {};
+  const has = (key) => includeUnset || Object.prototype.hasOwnProperty.call(input, key);
+  const set = (key, field, value) => { if (has(key)) payload[field] = value; };
+  set("title", "cr40f_titulo", input.title == null ? "" : String(input.title).trim());
+  set("client", "cr40f_clienteempresa", input.client == null ? "" : String(input.client).trim());
+  set("clientContact", "cr40f_contatocliente", input.clientContact == null ? "" : String(input.clientContact).trim());
+  set("clientPhone", "cr40f_telefonewhatsapp", input.clientPhone == null ? "" : String(input.clientPhone).trim());
+  set("clientEmail", "cr40f_emailcliente", input.clientEmail == null ? "" : String(input.clientEmail).trim());
+  set("channel", "cr40f_canalentrada", QUOTE_CHANNEL_VALUES[input.channel] ?? input.channel);
+  set("serviceType", "cr40f_tiposervico", input.serviceType == null ? "" : String(input.serviceType).trim());
+  set("vehicleType", "cr40f_tipoveiculo", input.vehicleType == null ? "" : String(input.vehicleType).trim());
+  set("origin", "cr40f_origem", input.origin == null ? "" : String(input.origin).trim());
+  set("destination", "cr40f_destino", input.destination == null ? "" : String(input.destination).trim());
+  if (has("serviceDate")) payload.cr40f_datahoraservico = quoteDateTime(input.serviceDate);
+  if (has("returnDate")) payload.cr40f_datahoraretorno = quoteDateTime(input.returnDate);
+  if (has("hasReturn") || has("returnDate")) payload.cr40f_retorno = Boolean(input.hasReturn || input.returnDate);
+  if (has("passengers")) payload.cr40f_quantidadepassageiros = input.passengers === "" ? null : Number(input.passengers);
+  set("notes", "cr40f_observacoespedido", input.notes == null ? "" : String(input.notes));
+  if (has("priority")) payload.cr40f_prioridade = QUOTE_PRIORITY_VALUES[input.priority] ?? input.priority;
+  if (has("status")) payload.cr40f_statuscotacao = QUOTE_STATUS_VALUES[input.status] ?? input.status;
+  if (has("deadline")) payload.cr40f_prazoresponder = input.deadline ? `${input.deadline}T12:00:00Z` : null;
+  if (has("value")) payload.cr40f_valorcotado = quoteMoney(input.value);
+  set("commercialTerms", "cr40f_condicaocomercial", input.commercialTerms == null ? "" : String(input.commercialTerms));
+  if (has("responseSent")) payload.cr40f_respostaenviadacliente = Boolean(input.responseSent);
+  if (has("finalizationAt")) payload.cr40f_datahorafinalizacao = quoteDateTime(input.finalizationAt);
+  if (input.lossReason && !payload.cr40f_motivoperda) {
+    const existingNotes = String(payload.cr40f_observacoespedido || "").trim();
+    payload.cr40f_observacoespedido = `${existingNotes}${existingNotes ? "\n" : ""}Motivo da perda: ${String(input.lossReason).trim()}`;
+  }
+  return payload;
+}
+
+async function resolveFinanceTeamId(xrm, state) {
+  const existing = (state.teams || []).find((team) => String(team.name || "").trim().toLowerCase() === "financeiro");
+  if (existing?.id) return existing.id;
+  const primaryName = await primaryNameAttribute(xrm, TEAM_TABLE);
+  return resolveIdByName(xrm, TEAM_TABLE, primaryName, "Financeiro");
+}
+
+async function createLiveQuote(xrm, state, input = {}) {
+  const payload = quotePayload(input, true);
+  const created = await request(xrm, `/${entitySetName(QUOTE_TABLE)}`, { method: "POST", body: JSON.stringify(payload) });
+  const quoteId = cleanId(created?.cr40f_pedidodecotacaoid || created?.[`${QUOTE_TABLE}id`]);
+  if (!quoteId) throw new Error("Dataverse criou a cotação sem retornar o ID.");
+  try {
+    const nextState = await loadLiveState(xrm);
+    const taskState = await createLiveTask(xrm, nextState, { title: `Acompanhar ${created.cr40f_numerodacotacao || input.title || "cotação"}`, quoteId, quoteCode: created.cr40f_numerodacotacao || "", quoteTitle: input.title || "", dueDate: input.deadline || "", priority: input.priority || "medium", sourceType: "quote", assigneeIds: input.assigneeIds || [], assigneeNames: input.assigneeNames || [], assignmentMode: "people", description: `Acompanhar a cotação ${created.cr40f_numerodacotacao || "selecionada"} até a resposta ao cliente.` });
+    const createdQuote = (taskState.quotes || []).find((quote) => cleanId(quote.id) === quoteId);
+    const linkedTask = (taskState.tasks || []).find((task) => cleanId(task.quoteId) === quoteId && !task.parentTaskId);
+    const teamId = await resolveFinanceTeamId(xrm, taskState);
+    if (linkedTask && teamId) await replaceTaskTeams(xrm, linkedTask.id, { assignmentMode: "team", teamIds: [teamId] });
+    if (createdQuote && linkedTask) await request(xrm, `/${entitySetName(QUOTE_TABLE)}(${quoteId})`, { method: "PATCH", body: JSON.stringify({ cr40f_plannertaskid: linkedTask.id }) });
+    return loadLiveState(xrm);
+  } catch (error) {
+    try { await request(xrm, `/${entitySetName(QUOTE_TABLE)}(${quoteId})`, { method: "DELETE" }); } catch (cleanupError) { console.warn("[Planner] falha ao desfazer cotação sem tarefa", cleanupError); }
+    throw new Error(`Cotação criada, mas não foi possível criar o acompanhamento no Planner. ${error.message || "Tente novamente."}`);
+  }
+}
+
+async function updateLiveQuote(xrm, state, id, patch = {}) {
+  const quoteId = cleanId(id);
+  const existing = (state.quotes || []).find((quote) => cleanId(quote.id) === quoteId);
+  if (!existing) throw new Error("Cotação não encontrada.");
+  await request(xrm, `/${entitySetName(QUOTE_TABLE)}(${quoteId})`, { method: "PATCH", body: JSON.stringify(quotePayload(patch)) });
+  const task = (state.tasks || []).find((item) => cleanId(item.quoteId) === quoteId && !item.parentTaskId);
+  if (task) {
+    const terminal = ["Perdida", "Cancelada", "Convertida em serviço"].includes(patch.status);
+    await updateLiveTask(xrm, state, task.id, { title: patch.title ? `Acompanhar ${patch.code || existing.code || "cotação"}` : undefined, dueDate: patch.deadline, priority: patch.priority, status: terminal ? "done" : undefined, assigneeIds: patch.assigneeIds, assigneeNames: patch.assigneeNames });
+  }
+  return loadLiveState(xrm);
+}
+
+async function markLiveQuoteSent(xrm, state, id) {
+  return updateLiveQuote(xrm, state, id, { responseSent: true, status: "Respondida ao cliente", finalizationAt: new Date().toISOString() });
+}
+
+async function setLiveQuoteOutcome(xrm, state, id, outcome, reason = "") {
+  if (outcome === "Perdida" && !String(reason).trim()) throw new Error("Informe o motivo da perda.");
+  const existing = (state.quotes || []).find((quote) => cleanId(quote.id) === cleanId(id));
+  const notes = outcome === "Perdida" ? `${String(existing?.notes || "").trim()}${existing?.notes ? "\n" : ""}Motivo da perda: ${String(reason).trim()}` : undefined;
+  return updateLiveQuote(xrm, state, id, { status: outcome, lossReason: reason, notes, finalizationAt: new Date().toISOString() });
 }
 
 async function deleteLiveTask(xrm, state, id) {
@@ -1683,6 +1816,8 @@ function createMockDataStore() {
     ensureQuoteTask: async (state, quote) => withMode(ensureMockQuoteTask(state, quote)),
     createQuote: async (state, input) => withMode(createMockQuote(state, input)),
     updateQuote: async (state, id, patch) => withMode(updateMockQuote(state, id, patch)),
+    markQuoteSent: async (state, id) => withMode(markMockQuoteSent(state, id)),
+    setQuoteOutcome: async (state, id, outcome, reason) => withMode(setMockQuoteOutcome(state, id, outcome, reason)),
     save: async (state) => persist(state),
     reset: async () => withMode(resetMockState()),
     openQuote: () => undefined,
@@ -1746,8 +1881,10 @@ export function createDataStore() {
     addAttachment: (state, id, file) => addLiveAttachment(xrm, state, id, file),
     deleteAttachment: (state, taskId, attachment) => deleteLiveAttachment(xrm, state, taskId, attachment),
     ensureQuoteTask: (state, quote) => ensureLiveQuoteTask(xrm, state, quote),
-    createQuote: async () => { throw new Error("Criação de cotação no Dataverse ainda não está publicada para este ambiente."); },
-    updateQuote: async () => { throw new Error("Edição de cotação no Dataverse ainda não está publicada para este ambiente."); },
+    createQuote: (state, input) => createLiveQuote(xrm, state, input),
+    updateQuote: (state, id, patch) => updateLiveQuote(xrm, state, id, patch),
+    markQuoteSent: (state, id) => markLiveQuoteSent(xrm, state, id),
+    setQuoteOutcome: (state, id, outcome, reason) => setLiveQuoteOutcome(xrm, state, id, outcome, reason),
     save: (state) => loadLiveState(xrm),
     reset: () => loadLiveState(xrm),
     openQuote: (id) => xrm.Navigation?.openForm?.({ entityName: QUOTE_TABLE, entityId: cleanId(id) }),

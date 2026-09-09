@@ -2237,3 +2237,10 @@ button { cursor: pointer; }
 @media (max-width: 620px) { .quote-workspace-header { flex-direction: column; } .quote-workspace-actions { width: 100%; } .quote-workspace-actions .button { flex: 1; justify-content: center; } .quote-form-grid { grid-template-columns: 1fr; } }
 @media (max-width: 620px) { .quote-workspace-layer { padding: 0; } .quote-workspace { min-height: 100dvh; border-radius: 0; } }
 @keyframes quote-workspace-backdrop-in { from { opacity: 0; } to { opacity: 1; } }
+.quote-email-iframe { display: block; width: 100%; min-height: 680px; border: 0; background: #0a2f41; }
+.quote-workspace-footer { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 14px 22px 22px; border-top: 1px solid var(--line); }
+.quote-outcome-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.quote-form-feedback { margin: 14px 0 0; padding: 10px 12px; border-radius: 8px; color: #8b2f2f; background: #fff0ef; font-size: 12px; font-weight: 700; }
+.required-mark { color: var(--red); }
+.button-danger { color: #8b2f2f; border-color: #e3b4b0; background: #fff7f6; }
+@media (max-width: 900px) { .quote-workspace-footer { align-items: flex-start; flex-direction: column; } .quote-outcome-actions { justify-content: flex-start; } }

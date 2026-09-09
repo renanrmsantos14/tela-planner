@@ -6513,6 +6513,26 @@ export default function App() {
       store.live ? "Cotação sincronizada." : "Cotação atualizada.",
     );
   }, [currentEmployee, runOptimisticMutation, state, store]);
+  const markQuoteSent = useCallback((id) => {
+    if (!store.markQuoteSent) return Promise.resolve(false);
+    const finalizationAt = new Date().toISOString();
+    return runOptimisticMutation(
+      (current) => ({ ...current, quotes: (current.quotes || []).map((quote) => quote.id === id ? { ...quote, responseSent: true, status: "Respondida ao cliente", finalizationAt } : quote) }),
+      () => store.markQuoteSent(confirmedStateRef.current || state, id),
+      store.live ? "Registrando envio…" : "Registrando envio no mock…",
+      store.live ? "Envio registrado." : "Envio registrado no mock.",
+    );
+  }, [runOptimisticMutation, state, store]);
+  const setQuoteOutcome = useCallback((id, outcome, reason = "") => {
+    if (!store.setQuoteOutcome) return Promise.resolve(false);
+    const finalizationAt = new Date().toISOString();
+    return runOptimisticMutation(
+      (current) => ({ ...current, quotes: (current.quotes || []).map((quote) => quote.id === id ? { ...quote, status: outcome, lossReason: outcome === "Perdida" ? reason : "", finalizationAt } : quote), tasks: (current.tasks || []).map((task) => task.quoteId === id && !task.parentTaskId ? { ...task, status: "done", completedAt: finalizationAt } : task) }),
+      () => store.setQuoteOutcome(confirmedStateRef.current || state, id, outcome, reason),
+      store.live ? "Registrando resultado…" : "Registrando resultado no mock…",
+      store.live ? "Resultado registrado." : "Resultado registrado no mock.",
+    );
+  }, [runOptimisticMutation, state, store]);
   const archiveContact = useCallback(
     (contact) => {
       const archivedAt = new Date().toISOString();
@@ -7144,7 +7164,7 @@ export default function App() {
         />
       );
     if (active === "quotes")
-      return <QuotesView state={viewState} onOpenTask={openTask} onCreateQuote={createQuote} onUpdateQuote={updateQuote} workspaceEnabled={QUOTE_WORKSPACE_V2_ENABLED} />;
+      return <QuotesView state={viewState} onOpenTask={openTask} onCreateQuote={createQuote} onUpdateQuote={updateQuote} onMarkQuoteSent={markQuoteSent} onSetQuoteOutcome={setQuoteOutcome} workspaceEnabled={QUOTE_WORKSPACE_V2_ENABLED} />;
     if (active === "board")
       return (
         <BoardView

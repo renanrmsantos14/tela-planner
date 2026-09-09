@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { addAttachment, addComment, archivePersonalTag, createPersonalTag, createTask, createTeam, createQuote, deleteAttachment, deleteTask, deleteTeam, ensureQuoteTask, loadPersonalTags, replaceTaskPersonalTags, resolveWaitingReturn, seedState, updatePersonalTag, updateTask, updateTeam, updateQuote } from "../src/mockStore.js";
+import { addAttachment, addComment, archivePersonalTag, createPersonalTag, createTask, createTeam, createQuote, deleteAttachment, deleteTask, deleteTeam, ensureQuoteTask, loadPersonalTags, markQuoteSent, replaceTaskPersonalTags, resolveWaitingReturn, seedState, setQuoteOutcome, updatePersonalTag, updateTask, updateTeam, updateQuote } from "../src/mockStore.js";
 import { localDateKey } from "../src/management.js";
 
 function withStorage() {
@@ -145,6 +145,20 @@ test("atualiza dados comerciais e replica campos operacionais na tarefa", () => 
   assert.equal(task.quoteTitle, "Título revisado");
   assert.equal(task.dueDate, "2026-09-30");
   assert.equal(task.priority, "high");
+});
+
+test("registra envio e resultados da cotação sem criar reserva", () => {
+  withStorage();
+  const initial = createQuote(seedState(), { title: "Transfer", client: "Cliente", clientContact: "Contato", channel: "WhatsApp", serviceType: "Transfer", origin: "A", destination: "B", serviceDate: "2026-09-20T10:00", deadline: "2026-09-19" });
+  const quote = initial.quotes[0];
+  const sent = markQuoteSent(initial, quote.id);
+  assert.equal(sent.quotes[0].status, "Respondida ao cliente");
+  assert.equal(sent.quotes[0].responseSent, true);
+  const lost = setQuoteOutcome(sent, quote.id, "Perdida", "Preço acima do orçamento");
+  assert.equal(lost.quotes[0].status, "Perdida");
+  assert.equal(lost.tasks.find((task) => task.quoteId === quote.id && !task.parentTaskId).status, "done");
+  assert.throws(() => setQuoteOutcome(sent, quote.id, "Perdida"), /motivo/);
+  assert.equal(lost.reservations, undefined);
 });
 
 test("preserva origem na tarefa criada", () => {
