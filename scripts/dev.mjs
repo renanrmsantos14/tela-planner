@@ -7,14 +7,6 @@ const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "
 const defaultPort = 5192;
 const viteBin = path.join(projectRoot, "node_modules", "vite", "bin", "vite.js");
 
-function runPowerShell(command) {
-  return execFileSync("powershell.exe", ["-NoProfile", "-Command", command], {
-    cwd: projectRoot,
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"],
-  }).trim();
-}
-
 function getListeners() {
   const output = execFileSync("netstat.exe", ["-ano", "-p", "tcp"], {
     cwd: projectRoot,
@@ -23,31 +15,13 @@ function getListeners() {
 
   return output
     .split(/\r?\n/)
-    .map((line) => line.match(/^\s*TCP\s+\S+:(\d+)\s+\S+\s+LISTENING\s+(\d+)\s*$/i))
-    .filter(Boolean)
-    .map((match) => ({ port: Number(match[1]), pid: Number(match[2]) }));
-}
-
-function getProcess(pid) {
-  let output;
-  try {
-    output = runPowerShell(
-      `Get-CimInstance Win32_Process -Filter \"ProcessId = ${pid}\" | Select-Object ProcessId,CommandLine | ConvertTo-Json -Compress`
-    );
-  } catch {
-    return null;
-  }
-  if (!output) return null;
-  const process = JSON.parse(output);
-  return {
-    pid: Number(process.ProcessId),
-    commandLine: String(process.CommandLine || ""),
-  };
-}
-
-function isSameProject(process) {
-  const root = projectRoot.toLowerCase().replaceAll("/", "\\");
-  return process?.commandLine.toLowerCase().replaceAll("/", "\\").includes(root);
+    .map((line) => line.trim().split(/\s+/))
+    .filter((parts) => parts[0]?.toUpperCase() === "TCP" && parts[3]?.toUpperCase() === "LISTENING")
+    .map((parts) => ({
+      port: Number(parts[1].slice(parts[1].lastIndexOf(":") + 1)),
+      pid: Number(parts[4]),
+    }))
+    .filter((listener) => Number.isInteger(listener.port) && Number.isInteger(listener.pid));
 }
 
 function killProcessTree(pid) {
@@ -77,18 +51,12 @@ let port = defaultPort;
 const listener = getListeners().find((item) => item.port === defaultPort);
 
 if (listener) {
-  const owner = getProcess(listener.pid);
-  if (isSameProject(owner)) {
-    console.log(`Projeto já estava rodando na porta ${defaultPort}. Reiniciando...`);
-    killProcessTree(listener.pid);
-    waitForPortRelease(defaultPort);
-  } else {
-    console.error(`[Tela Planner] Porta ${defaultPort} está em uso por outro projeto. Feche esse processo e inicie novamente para manter o login Microsoft funcionando em http://localhost:${defaultPort}/.`);
-    process.exit(1);
-  }
+  console.log(`Porta ${defaultPort} já estava em uso (PID ${listener.pid}). Reiniciando...`);
+  killProcessTree(listener.pid);
+  waitForPortRelease(defaultPort);
 }
 
-const child = spawn(process.execPath, [viteBin, "--host", "127.0.0.1", "--port", String(port), "--strictPort"], {
+const child = spawn(process.execPath, [viteBin, "--host", "localhost", "--port", String(port), "--strictPort"], {
   cwd: projectRoot,
   stdio: "inherit",
 });
