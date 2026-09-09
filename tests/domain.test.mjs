@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { addOptimisticAttachment, addOptimisticComment, addOptimisticReturn, applyOptimisticTaskPatch, buildAssigneeOptions, buildOptimisticTask, buildTaskCreationInput, canRegisterWaitingReturn, filterTasks, findCreatedMainTask, getDueBucket, getDueBucketForEmployee, hasTaskResponsible, isOverdue, mentionedEmployees, migrateLegacyTeams, normalizeAssigneeNames, normalizeTeam, normalizeWaitingContext, quoteTaskTitle, resolveTaskAssignment, sortBoardTasks, sortTasks, STATUSES, taskDisplayDueDate, taskStats, teamResponsibilitySummary, validateWaitingContext, waitingContextSummary } from "../src/domain.js";
+import { addOptimisticAttachment, addOptimisticComment, addOptimisticReturn, applyOptimisticTaskPatch, buildAssigneeOptions, buildOptimisticTask, buildTaskCreationInput, canRegisterWaitingReturn, filterTasks, findCreatedMainTask, formatDate, formatLongDate, getDueBucket, getDueBucketForEmployee, hasTaskResponsible, isOverdue, mentionedEmployees, migrateLegacyTeams, normalizeAssigneeNames, normalizePersonalTag, normalizePersonalTagIds, normalizeTeam, normalizeWaitingContext, quoteTaskTitle, resolveTaskAssignment, sortBoardTasks, sortTasks, STATUSES, taskDisplayDueDate, taskStats, teamResponsibilitySummary, validatePersonalTag, validateWaitingContext, waitingContextSummary } from "../src/domain.js";
 
 const tasks = [
   { id: "1", title: "Atrasada", quoteTitle: "Cotação A", assigneeName: "Marina", status: "todo", priority: "high", dueDate: "2026-08-01" },
@@ -81,6 +81,26 @@ test("filtra por uma ou mais equipes", () => {
 test("filtra por um ou mais responsáveis", () => {
   assert.deepEqual(filterTasks(tasks, { query: "", assignee: ["Marina", "Camila"] }).map((task) => task.id), ["1", "3"]);
   assert.equal(filterTasks(tasks, { query: "", assignee: "Rafael" }).length, 1);
+});
+
+test("normaliza data inválida sem quebrar a renderização", () => {
+  assert.equal(formatDate("não-é-uma-data"), "Sem prazo");
+  assert.equal(formatLongDate("2026-08-03T00:00:00.000Z"), "03 de agosto de 2026");
+});
+
+test("normaliza e valida tags pessoais por usuário", () => {
+  const tag = normalizePersonalTag({ id: "tag-1", name: "  Cobrar Cliente  ", color: "#1d5ce8", sortOrder: -4 }, "user-1");
+  assert.deepEqual(tag, { id: "tag-1", name: "Cobrar Cliente", color: "#1d5ce8", sortOrder: 0, archived: false, ownerUserId: "user-1" });
+  assert.deepEqual(normalizePersonalTagIds(["tag-1", "tag-1", "", null]), ["tag-1"]);
+  assert.equal(validatePersonalTag({ name: " cobrar cliente " }, [tag]).valid, false);
+  assert.equal(validatePersonalTag({ name: " cobrar cliente " }, [{ ...tag, archived: true }]).valid, false);
+  assert.equal(validatePersonalTag({ name: "Acompanhar" }, [tag]).valid, true);
+});
+
+test("filtra tarefas por qualquer uma das tags pessoais selecionadas", () => {
+  const tagged = tasks.map((task, index) => ({ ...task, personalTagIds: index === 0 ? ["tag-cobrar"] : index === 1 ? ["tag-vip"] : [] }));
+  assert.deepEqual(filterTasks(tagged, { personalTag: ["tag-cobrar", "tag-vip"] }).map((task) => task.id), ["1", "2"]);
+  assert.equal(filterTasks(tagged, { personalTag: ["tag-cobrar"], status: ["doing"] }).length, 0);
 });
 
 test("resolve menções por nome ignorando acentos e caixa", () => {

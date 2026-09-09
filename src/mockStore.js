@@ -3,8 +3,11 @@ import {
   canRegisterWaitingReturn,
   normalizeAssigneeNames,
   normalizeWaitingContext,
+  normalizePersonalTag,
+  normalizePersonalTagIds,
   resolveTaskAssignment,
   STATUSES,
+  validatePersonalTag,
   validateWaitingContext,
   waitingContextSummary,
 } from "./domain.js";
@@ -234,14 +237,14 @@ export function seedState() {
     { id: "notification-1", taskId: "task-42", recipientEmployeeId: "employee-renan", type: "mention", title: "Rafael mencionou você", message: "Preciso do retorno do parceiro até o fim do dia.", occurredAt: new Date().toISOString(), readAt: "" },
     { id: "notification-2", taskId: "task-40", recipientEmployeeId: "employee-renan", type: "due_today", title: "Tarefa vence hoje", message: "Revisar pendências prioritárias do dia", occurredAt: new Date(Date.now() - 3600000).toISOString(), readAt: "" },
   ];
-  return { quotes, tasks: migrated.tasks, contacts, employees, teams: migrated.teams, quality, notifications, collectionEvents: [], lastUpdated: new Date().toISOString() };
+  return { quotes, tasks: migrated.tasks, personalTags: [], currentUserId: "user-renan", contacts, employees, teams: migrated.teams, quality, notifications, collectionEvents: [], lastUpdated: new Date().toISOString() };
 }
 
 function task(id, title, quoteId, quoteCode, quoteTitle, status, priority, assigneeName, teamName, dueDate, description, parentTaskId = null, context = {}) {
   const assigneeNames = normalizeAssigneeNames(assigneeName);
   return {
     id, title, parentTaskId, quoteId, quoteCode, quoteTitle, status, priority, assigneeNames, assigneeName: assigneeNames.join(", "), teamName, dueDate,
-    description, checklist: context.checklist || [], labels: [quoteCode], sourceType: quoteId ? "quote" : "manual", sourceId: quoteId, sourceLabel: quoteId ? "Pedido de cotação" : "Tarefa manual", sourceCode: quoteCode, ...context, waitingContext: normalizeWaitingContext(context.waitingContext), comments: context.comments || [], returns: context.returns || [], attachments: context.attachments || [],
+    description, checklist: context.checklist || [], labels: [quoteCode], personalTagIds: normalizePersonalTagIds(context.personalTagIds), sourceType: quoteId ? "quote" : "manual", sourceId: quoteId, sourceLabel: quoteId ? "Pedido de cotação" : "Tarefa manual", sourceCode: quoteCode, ...context, waitingContext: normalizeWaitingContext(context.waitingContext), comments: context.comments || [], returns: context.returns || [], attachments: context.attachments || [],
     history: context.history || [{ id: uid("history"), text: "Tarefa criada no cenário de demonstração.", createdAt: new Date().toISOString(), author: "Sistema" }],
   };
 }
@@ -251,9 +254,26 @@ export function loadState() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return seedState();
     const state = JSON.parse(raw);
-    if (state.teams) return { collectionEvents: [], contacts: [], ...state };
+    if (state.teams) {
+      return {
+        collectionEvents: [],
+        contacts: [],
+        personalTags: [],
+        currentUserId: "user-renan",
+        ...state,
+        tasks: (state.tasks || []).map((taskItem) => ({ ...taskItem, personalTagIds: normalizePersonalTagIds(taskItem.personalTagIds) })),
+      };
+    }
     const migrated = migrateLegacyTeams(state.tasks || [], state.employees || [], ["Comercial", "Financeiro", "Operação", "Qualidade"]);
-    return { collectionEvents: [], contacts: [], ...state, tasks: migrated.tasks, teams: migrated.teams };
+    return {
+      collectionEvents: [],
+      contacts: [],
+      personalTags: [],
+      currentUserId: "user-renan",
+      ...state,
+      tasks: migrated.tasks.map((taskItem) => ({ ...taskItem, personalTagIds: normalizePersonalTagIds(taskItem.personalTagIds) })),
+      teams: migrated.teams,
+    };
   } catch {
     return seedState();
   }
@@ -296,7 +316,7 @@ export function createTask(state, input) {
     status, priority: input.priority || "medium", assignmentMode: assignment.assignmentMode, teamIds: assignment.teamIds, teamNames: assignment.teamNames, teamId: assignment.teamId, assigneeNames, assigneeName: assigneeNames.join(", "), assigneeIds,
     creatorEmployeeId: input.actorEmployeeId || "", creatorUserId: input.actorUserId || "", contactId: input.contactId || "",
     teamName: assignment.teamName || input.teamName || "", dueDate: input.dueDate || "", description: input.description || "", waitingContext,
-    checklist: input.checklist || [], labels: input.quoteCode ? [input.quoteCode] : [], sourceType, sourceId: input.sourceId || input.quoteId || null, sourceLabel: input.sourceLabel || (sourceType === "quality" ? "Ação de qualidade" : sourceType === "quote" ? "Pedido de cotação" : "Tarefa manual"), sourceCode: input.sourceCode || input.quoteCode || "", comments: [], attachments: [],
+    checklist: input.checklist || [], labels: input.quoteCode ? [input.quoteCode] : [], personalTagIds: normalizePersonalTagIds(input.personalTagIds), sourceType, sourceId: input.sourceId || input.quoteId || null, sourceLabel: input.sourceLabel || (sourceType === "quality" ? "Ação de qualidade" : sourceType === "quote" ? "Pedido de cotação" : "Tarefa manual"), sourceCode: input.sourceCode || input.quoteCode || "", comments: [], attachments: [],
     history: [{ id: uid("history"), text: "Tarefa criada no mock.", createdAt: new Date().toISOString(), author: "Você" }],
   };
   const notifications = [...(state.notifications || [])];
@@ -355,6 +375,57 @@ export function updateTask(state, id, patch) {
     notifications.unshift({ id: uid("notification"), taskId: id, recipientEmployeeId, type: "mention", title: "Você foi mencionado", message: next.title, occurredAt: new Date().toISOString(), readAt: "", dedupeKey: notificationDedupeKey({ recipientId: recipientEmployeeId, taskId: id, type: "mention", eventId }) });
   });
   return saveState({ ...state, tasks, notifications });
+}
+
+export function loadPersonalTags(state, ownerUserId = state.currentUserId || "") {
+  return (state.personalTags || [])
+    .filter((tag) => !ownerUserId || tag.ownerUserId === ownerUserId)
+    .map((tag) => normalizePersonalTag(tag, ownerUserId))
+    .sort((left, right) => left.sortOrder - right.sortOrder || left.name.localeCompare(right.name, "pt-BR"));
+}
+
+export function createPersonalTag(state, input = {}) {
+  const ownerUserId = String(input.ownerUserId || state.currentUserId || "").replace(/[{}]/g, "");
+  if (!ownerUserId) throw new Error("Usuário atual não identificado para criar a tag.");
+  const existing = loadPersonalTags(state, ownerUserId);
+  const validation = validatePersonalTag({ ...input, ownerUserId }, existing);
+  if (!validation.valid) throw new Error(validation.error);
+  const tag = normalizePersonalTag({ ...validation.value, id: uid("personal-tag"), ownerUserId, sortOrder: existing.length });
+  return saveState({ ...state, personalTags: [...(state.personalTags || []), tag] });
+}
+
+export function updatePersonalTag(state, id, patch = {}) {
+  const existing = (state.personalTags || []).find((tag) => tag.id === id);
+  if (!existing) throw new Error("Tag pessoal não encontrada.");
+  const ownerUserId = String(existing.ownerUserId || state.currentUserId || "").replace(/[{}]/g, "");
+  if (state.currentUserId && ownerUserId !== String(state.currentUserId).replace(/[{}]/g, "")) throw new Error("Tag pessoal não pertence ao usuário atual.");
+  const currentTags = loadPersonalTags(state, ownerUserId);
+  const validation = validatePersonalTag({ ...existing, ...patch, id, ownerUserId }, currentTags);
+  if (!validation.valid) throw new Error(validation.error);
+  const nextTag = normalizePersonalTag({ ...existing, ...validation.value, id, ownerUserId });
+  return saveState({ ...state, personalTags: (state.personalTags || []).map((tag) => tag.id === id ? nextTag : tag) });
+}
+
+export function archivePersonalTag(state, id) {
+  const existing = (state.personalTags || []).find((tag) => tag.id === id);
+  if (!existing) throw new Error("Tag pessoal não encontrada.");
+  if (state.currentUserId && existing.ownerUserId !== String(state.currentUserId).replace(/[{}]/g, "")) throw new Error("Tag pessoal não pertence ao usuário atual.");
+  return saveState({ ...state, personalTags: (state.personalTags || []).map((tag) => tag.id === id ? { ...tag, archived: true } : tag) });
+}
+
+export function reorderPersonalTags(state, orderedIds = []) {
+  const order = new Map(orderedIds.map((id, index) => [id, index]));
+  const currentUserId = String(state.currentUserId || "").replace(/[{}]/g, "");
+  return saveState({ ...state, personalTags: (state.personalTags || []).map((tag) => tag.ownerUserId === currentUserId && order.has(tag.id) ? { ...tag, sortOrder: order.get(tag.id) } : tag) });
+}
+
+export function replaceTaskPersonalTags(state, taskId, tagIds = [], ownerUserId = state.currentUserId || "") {
+  const allowedIds = new Set(loadPersonalTags(state, ownerUserId).map((tag) => tag.id));
+  const nextIds = normalizePersonalTagIds(tagIds).filter((id) => allowedIds.has(id));
+  return saveState({
+    ...state,
+    tasks: (state.tasks || []).map((taskItem) => taskItem.id === taskId ? { ...taskItem, personalTagIds: nextIds } : taskItem),
+  });
 }
 
 function teamRecipients(state, task) {

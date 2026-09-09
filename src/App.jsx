@@ -1942,17 +1942,27 @@ const Board = memo(function Board({
   );
 });
 
-function PersonalTagPicker({ tags = [], value = [], onChange }) {
+function PersonalTagPicker({ tags = [], value = [], onChange, onCreate }) {
   const [visibleCount, setVisibleCount] = useState(tags.length);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState("select");
+  const [newTagName, setNewTagName] = useState("");
+  const [newTagColor, setNewTagColor] = useState(DEFAULT_PERSONAL_TAG_COLOR);
   const pickerRef = useRef(null);
   const inlineRef = useRef(null);
   const moreRef = useRef(null);
+  const addRef = useRef(null);
   const tagRefs = useRef(new Map());
   const selectedIds = Array.isArray(value) ? value : [];
   const selected = new Set(selectedIds);
   const activeTags = tags.filter((tag) => !tag.archived);
-  const tagSignature = activeTags.map((tag) => `${tag.id}:${tag.name}`).join("|");
+  const orderedTags = [
+    ...activeTags.filter((tag) => selected.has(tag.id)),
+    ...activeTags.filter((tag) => !selected.has(tag.id)),
+  ];
+  const selectedCount = activeTags.filter((tag) => selected.has(tag.id)).length;
+  const tagSignature = orderedTags.map((tag) => `${tag.id}:${tag.name}`).join("|");
+  const [selectedOverflow, setSelectedOverflow] = useState(false);
 
   useLayoutEffect(() => {
     const picker = pickerRef.current;
@@ -1963,18 +1973,42 @@ function PersonalTagPicker({ tags = [], value = [], onChange }) {
       const pickerWidth = picker.getBoundingClientRect().width;
       if (!pickerWidth) return;
       const gap = Number.parseFloat(getComputedStyle(inline).columnGap || "7") || 7;
-      const widths = activeTags.map((tag) => tagRefs.current.get(tag.id)?.getBoundingClientRect().width || 0);
+      const widths = orderedTags.map((tag) => tagRefs.current.get(tag.id)?.getBoundingClientRect().width || 0);
+      const selectedWidths = widths.slice(0, selectedCount);
+      const selectedWidth = selectedWidths.reduce((sum, width) => sum + width, 0) + gap * Math.max(0, selectedWidths.length - 1);
       const totalWidth = widths.reduce((sum, width) => sum + width, 0) + gap * Math.max(0, widths.length - 1);
-      if (totalWidth <= pickerWidth + 1) {
+      const addWidth = onCreate ? (addRef.current?.getBoundingClientRect().width || 34) : 0;
+      const addGap = addWidth ? gap : 0;
+      const availableWithoutMore = pickerWidth - addWidth - addGap;
+      if (selectedOverflow && selectedWidth <= availableWithoutMore + 1) {
+        setSelectedOverflow(false);
+        return;
+      }
+      if (selectedWidth > availableWithoutMore + 1) {
+        setSelectedOverflow(true);
+        setVisibleCount(selectedCount);
+        return;
+      }
+      if (totalWidth <= availableWithoutMore + 1) {
+        setSelectedOverflow(false);
         setVisibleCount(activeTags.length);
         return;
       }
 
       const moreWidth = moreRef.current?.getBoundingClientRect().width || 34;
-      const availableWidth = Math.max(0, pickerWidth - moreWidth - gap);
+      const availableWidth = Math.max(0, pickerWidth - addWidth - moreWidth - gap - addGap);
+      if (selectedWidth > availableWidth + 1) {
+        setSelectedOverflow(true);
+        setVisibleCount(selectedCount);
+        return;
+      }
+      setSelectedOverflow(false);
       let usedWidth = 0;
-      let count = 0;
-      widths.forEach((width) => {
+      let count = selectedCount;
+      selectedWidths.forEach((width, index) => {
+        usedWidth += (index ? gap : 0) + width;
+      });
+      widths.slice(selectedCount).forEach((width) => {
         const nextWidth = usedWidth + (count ? gap : 0) + width;
         if (nextWidth <= availableWidth + 1) {
           usedWidth = nextWidth;
@@ -1988,18 +2022,34 @@ function PersonalTagPicker({ tags = [], value = [], onChange }) {
     const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(measure);
     observer?.observe(picker);
     return () => observer?.disconnect();
-  }, [tagSignature, activeTags.length]);
+  }, [tagSignature, activeTags.length, onCreate, selectedCount, selectedOverflow]);
 
-  if (!activeTags.length) return <span className="personal-tag-empty">Crie sua primeira tag no gerenciador.</span>;
-  const shownTags = activeTags.slice(0, visibleCount);
-  const hasMore = visibleCount < activeTags.length;
+  const shownTags = orderedTags.slice(0, visibleCount);
+  const hasMore = visibleCount < orderedTags.length;
+  const visibleUnselectedCount = Math.max(0, visibleCount - selectedCount);
+  const showAddButton = onCreate && (!hasMore || visibleUnselectedCount > 0);
   const toggleTag = (tagId) => onChange(selected.has(tagId) ? selectedIds.filter((id) => id !== tagId) : [...selectedIds, tagId]);
+  const openCreateModal = () => {
+    setModalMode("create");
+    setIsModalOpen(true);
+  };
+  const createTag = (event) => {
+    event.preventDefault();
+    const name = newTagName.trim();
+    if (!name || !onCreate) return;
+    Promise.resolve(onCreate({ name, color: newTagColor })).then((success) => {
+      if (success === false) return;
+      setNewTagName("");
+      setNewTagColor(DEFAULT_PERSONAL_TAG_COLOR);
+      setModalMode("select");
+    });
+  };
 
   return (
     <>
-      <div className="personal-tag-picker" ref={pickerRef} role="group" aria-label="Tags pessoais da tarefa">
+      <div className={`personal-tag-picker ${selectedOverflow ? "has-selected-overflow" : ""}`} ref={pickerRef} role="group" aria-label="Tags pessoais da tarefa">
         <div className="personal-tag-picker-inline" ref={inlineRef}>
-          {activeTags.map((tag, index) => {
+          {activeTags.length ? orderedTags.map((tag, index) => {
             const checked = selected.has(tag.id);
             return (
               <button
@@ -2018,7 +2068,7 @@ function PersonalTagPicker({ tags = [], value = [], onChange }) {
                 {tag.name}
               </button>
             );
-          })}
+          }) : <span className="personal-tag-empty">Crie sua primeira tag no gerenciador.</span>}
         </div>
         {hasMore && (
           <button
@@ -2030,6 +2080,11 @@ function PersonalTagPicker({ tags = [], value = [], onChange }) {
             title="Escolher mais tags"
           >
             ...
+          </button>
+        )}
+        {showAddButton && (
+          <button className="personal-tag-add" ref={addRef} type="button" onClick={openCreateModal} aria-label="Adicionar tag" title="Adicionar tag">
+            <Plus size={14} />
           </button>
         )}
       </div>
@@ -2046,32 +2101,55 @@ function PersonalTagPicker({ tags = [], value = [], onChange }) {
                 <header className="personal-tags-modal-header">
                   <div>
                     <span className="eyebrow">Personalização</span>
-                    <h3 id="personal-tags-modal-title">Escolher tags</h3>
+                    <h3 id="personal-tags-modal-title">{modalMode === "create" ? "Adicionar tag" : "Escolher tags"}</h3>
                   </div>
                   <button className="icon-button" type="button" onClick={() => setIsModalOpen(false)} aria-label="Fechar seleção de tags"><X size={17} /></button>
                 </header>
-                <div className="personal-tags-modal-list" role="group" aria-label="Todas as tags pessoais">
-                  {activeTags.map((tag) => {
-                    const checked = selected.has(tag.id);
-                    return (
-                      <button
-                        className={`personal-tag-chip ${checked ? "is-selected" : ""}`}
-                        key={tag.id}
-                        type="button"
-                        onClick={() => toggleTag(tag.id)}
-                        aria-pressed={checked}
-                        style={{ "--personal-tag-color": tag.color }}
-                      >
-                        <span className="personal-tag-dot" aria-hidden="true" />
-                        {tag.name}
-                      </button>
-                    );
-                  })}
-                </div>
-                <footer className="personal-tags-modal-footer">
-                  <span>{selectedIds.length} selecionada{selectedIds.length === 1 ? "" : "s"}</span>
-                  <button className="button button-primary button-small" type="button" onClick={() => setIsModalOpen(false)}>Concluir</button>
-                </footer>
+                {modalMode === "create" ? (
+                  <form className="personal-tags-modal-create" onSubmit={createTag}>
+                    <label>
+                      Nome da tag
+                      <input autoFocus value={newTagName} onChange={(event) => setNewTagName(event.target.value.slice(0, 32))} maxLength={32} placeholder="Ex.: VIP" />
+                    </label>
+                    <div className="personal-tag-color-options" role="group" aria-label="Cor da nova tag">
+                      {PERSONAL_TAG_COLORS.map((item) => (
+                        <button key={item} className={`personal-tag-color ${newTagColor === item ? "is-selected" : ""}`} type="button" style={{ "--personal-tag-color": item }} onClick={() => setNewTagColor(item)} aria-label={`Usar cor ${item}`} aria-pressed={newTagColor === item} />
+                      ))}
+                    </div>
+                    <footer className="personal-tags-modal-footer">
+                      <button className="button button-quiet button-small" type="button" onClick={() => setModalMode("select")}>Voltar</button>
+                      <button className="button button-primary button-small" type="submit" disabled={!newTagName.trim()}><Plus size={14} /> Criar tag</button>
+                    </footer>
+                  </form>
+                ) : (
+                  <>
+                    <div className="personal-tags-modal-list" role="group" aria-label="Todas as tags pessoais">
+                      {orderedTags.map((tag) => {
+                        const checked = selected.has(tag.id);
+                        return (
+                          <button
+                            className={`personal-tag-chip ${checked ? "is-selected" : ""}`}
+                            key={tag.id}
+                            type="button"
+                            onClick={() => toggleTag(tag.id)}
+                            aria-pressed={checked}
+                            style={{ "--personal-tag-color": tag.color, "--personal-tag-index": index }}
+                          >
+                            <span className="personal-tag-dot" aria-hidden="true" />
+                            {tag.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <footer className="personal-tags-modal-footer">
+                      <span>{selectedIds.length} selecionada{selectedIds.length === 1 ? "" : "s"}</span>
+                      <div className="personal-tags-modal-footer-actions">
+                        {onCreate && <button className="button button-secondary button-small" type="button" onClick={openCreateModal}><Plus size={14} /> Adicionar tag</button>}
+                        <button className="button button-primary button-small" type="button" onClick={() => setIsModalOpen(false)}>Concluir</button>
+                      </div>
+                    </footer>
+                  </>
+                )}
               </section>
             </div>,
             document.body,
@@ -3858,6 +3936,7 @@ function TaskDrawerContent({
   state,
   teams = [],
   personalTags = [],
+  onCreatePersonalTag,
   currentEmployee,
   loadAttachmentContent,
   showChecklistOnCard,
@@ -4328,7 +4407,7 @@ function TaskDrawerContent({
         </header>
         <div className="drawer-body" ref={drawerBodyRef} onPaste={handlePaste}>
           <section className="drawer-personal-tags" aria-label="Minhas tags">
-            <PersonalTagPicker tags={personalTags} value={form.personalTagIds || []} onChange={(value) => set("personalTagIds", value)} />
+            <PersonalTagPicker tags={personalTags} value={form.personalTagIds || []} onChange={(value) => set("personalTagIds", value)} onCreate={onCreatePersonalTag} />
           </section>
           <div className="drawer-title">
             <label className="drawer-title-field" htmlFor={`task-title-${taskItem.id}`}>
@@ -5200,7 +5279,7 @@ function InlineSubtasksEditor({ items, setItems }) {
   );
 }
 
-function NewTaskDrawer({ employees = [], teams = [], personalTags = [], initialStatus = "todo", initialInput = {}, onClose, onSave }) {
+function NewTaskDrawer({ employees = [], teams = [], personalTags = [], onCreatePersonalTag, initialStatus = "todo", initialInput = {}, onClose, onSave }) {
   const [form, setForm] = useState({
     title: "",
     status: initialStatus,
@@ -5364,7 +5443,7 @@ function NewTaskDrawer({ employees = [], teams = [], personalTags = [], initialS
         </header>
         <div className="drawer-body" onPaste={handlePaste}>
           <section className="drawer-personal-tags" aria-label="Minhas tags">
-            <PersonalTagPicker tags={personalTags} value={form.personalTagIds || []} onChange={(value) => set("personalTagIds", value)} />
+            <PersonalTagPicker tags={personalTags} value={form.personalTagIds || []} onChange={(value) => set("personalTagIds", value)} onCreate={onCreatePersonalTag} />
           </section>
           <div className="drawer-title">
             <label className="drawer-title-field" htmlFor="new-task-title">
@@ -7054,6 +7133,7 @@ export default function App() {
           state={state}
           teams={state.teams}
           personalTags={state.personalTags}
+          onCreatePersonalTag={createPersonalTag}
           currentEmployee={currentEmployee}
           showChecklistOnCard={Boolean(checklistVisibility[selected.id])}
           onToggleChecklistOnCard={(visible) =>
@@ -7081,6 +7161,7 @@ export default function App() {
           employees={state.employees}
           teams={state.teams}
           personalTags={state.personalTags}
+          onCreatePersonalTag={createPersonalTag}
           initialInput={taskFromContact}
           onClose={() => setTaskFromContact(null)}
           onSave={createNewTask}
@@ -7091,6 +7172,7 @@ export default function App() {
           employees={state.employees}
           teams={state.teams}
           personalTags={state.personalTags}
+          onCreatePersonalTag={createPersonalTag}
           initialStatus={creatingStatus}
           initialInput={creatingInput}
           onClose={() => setCreating(false)}

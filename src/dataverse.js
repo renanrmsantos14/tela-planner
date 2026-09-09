@@ -7,6 +7,7 @@ import {
   withDailyNotifications,
   resolveWaitingReturn as resolveMockWaitingReturn,
   createTask as createMockTask,
+  createPersonalTag as createMockPersonalTag,
   createTeam as createMockTeam,
   deleteTeam as deleteMockTeam,
   deleteAttachment as deleteMockAttachment,
@@ -16,9 +17,14 @@ import {
   loadState as loadMockState,
   markAllNotificationsRead as markAllMockNotificationsRead,
   markNotificationRead as markMockNotificationRead,
+  archivePersonalTag as archiveMockPersonalTag,
+  loadPersonalTags as loadMockPersonalTags,
+  reorderPersonalTags as reorderMockPersonalTags,
+  replaceTaskPersonalTags as replaceMockTaskPersonalTags,
   resetState as resetMockState,
   saveState as saveMockState,
   updateTask as updateMockTask,
+  updatePersonalTag as updateMockPersonalTag,
   updateTeam as updateMockTeam,
   createContact as createMockContact,
   updateContact as updateMockContact,
@@ -28,6 +34,8 @@ import {
   applyOptimisticTaskPatch,
   canRegisterWaitingReturn,
   normalizeAssigneeNames,
+  normalizePersonalTag,
+  normalizePersonalTagIds,
   normalizeWaitingContext,
   STATUSES,
   validateWaitingContext,
@@ -76,6 +84,8 @@ const TEAM_ICON_FIELD = "cr40f_icone";
 const TEAM_MEMBER_TABLE = "cr40f_plannerequipemembro";
 const TASK_TEAM_FIELD = "cr40f_equipeplanner";
 const NOTIFICATION_TABLE = "cr40f_plannernotificacao";
+const PERSONAL_TAG_TABLE = "cr40f_plannertagpessoal";
+const PERSONAL_TAG_TASK_TABLE = "cr40f_plannertagpessoaltarefa";
 const ENVIRONMENT_VARIABLE_DEFINITION_TABLE = "environmentvariabledefinition";
 const ENVIRONMENT_VARIABLE_VALUE_TABLE = "environmentvariablevalue";
 const FLOW_URL_SCHEMA = "new_URLFlowsalvararquivosSharePoint";
@@ -126,6 +136,8 @@ const ENTITY_SETS = Object.freeze({
   [TEAM_TABLE]: "cr40f_plannerequipes",
   [TEAM_MEMBER_TABLE]: "cr40f_plannerequipemembros",
   [NOTIFICATION_TABLE]: "cr40f_plannernotificacaos",
+  [PERSONAL_TAG_TABLE]: "cr40f_plannertagpessoals",
+  [PERSONAL_TAG_TASK_TABLE]: "cr40f_plannertagpessoaltarefas",
   [ENVIRONMENT_VARIABLE_DEFINITION_TABLE]: "environmentvariabledefinitions",
   [ENVIRONMENT_VARIABLE_VALUE_TABLE]: "environmentvariablevalues",
   systemuser: "systemusers",
@@ -371,6 +383,94 @@ async function bindLookup(xrm, payload, entity, attribute, target, id) {
   if (!id) return;
   const navigation = await resolveLookupNavigation(xrm, entity, attribute, target);
   payload[`${navigation}@odata.bind`] = `/${entitySetName(target)}(${cleanId(id)})`;
+}
+
+function normalizeLivePersonalTag(row, currentUserId) {
+  return normalizePersonalTag({
+    id: row.cr40f_plannertagpessoalid,
+    name: row.cr40f_nome || row.cr40f_name || "",
+    color: row.cr40f_cor,
+    sortOrder: row.cr40f_ordem,
+    archived: row.cr40f_arquivada,
+    ownerUserId: row._cr40f_usuario_value || currentUserId,
+  }, currentUserId);
+}
+
+async function loadLivePersonalTagData(xrm, currentUserId) {
+  if (!currentUserId) return { personalTags: [], personalTagAssignments: [] };
+  try {
+    const [tagRows, relationRows] = await Promise.all([
+      retrieveMany(xrm, PERSONAL_TAG_TABLE, `?$select=cr40f_plannertagpessoalid,cr40f_name,cr40f_nome,cr40f_cor,cr40f_ordem,cr40f_arquivada,_cr40f_usuario_value&$filter=_cr40f_usuario_value eq ${cleanId(currentUserId)} and statecode eq 0&$orderby=cr40f_ordem asc,cr40f_nome asc`),
+      retrieveMany(xrm, PERSONAL_TAG_TASK_TABLE, `?$select=cr40f_plannertagpessoaltarefaid,_cr40f_tag_value,_cr40f_tarefa_value,_cr40f_usuario_value&$filter=_cr40f_usuario_value eq ${cleanId(currentUserId)} and statecode eq 0`),
+    ]);
+    return {
+      personalTags: tagRows.map((row) => normalizeLivePersonalTag(row, currentUserId)),
+      personalTagAssignments: relationRows.map((row) => ({ id: row.cr40f_plannertagpessoaltarefaid, tagId: row._cr40f_tag_value || "", taskId: row._cr40f_tarefa_value || "", ownerUserId: row._cr40f_usuario_value || currentUserId })),
+    };
+  } catch (error) {
+    console.warn("[Planner] tags pessoais indisponíveis; mantendo o Planner operacional", error);
+    return { personalTags: [], personalTagAssignments: [], personalTagsUnavailable: true };
+  }
+}
+
+function applyPersonalTagsToTasks(tasks = [], assignments = []) {
+  const tagsByTask = new Map();
+  assignments.forEach((item) => {
+    const list = tagsByTask.get(item.taskId) || [];
+    list.push(item.tagId);
+    tagsByTask.set(item.taskId, list);
+  });
+  return tasks.map((task) => ({ ...task, personalTagIds: normalizePersonalTagIds(tagsByTask.get(task.id) || task.personalTagIds) }));
+}
+
+async function createLivePersonalTag(xrm, state, input = {}) {
+  const ownerUserId = cleanId(input.ownerUserId || state.currentUserId);
+  const existing = (state.personalTags || []).filter((tag) => tag.ownerUserId === ownerUserId);
+  const name = String(input.name || "").trim().slice(0, 32);
+  const duplicate = existing.some((tag) => normalizePersonalTag(tag).name.localeCompare(name, "pt-BR", { sensitivity: "base" }) === 0);
+  if (!name) throw new Error("Informe um nome para a tag.");
+  if (duplicate) throw new Error("Você já tem uma tag com esse nome.");
+  const payload = { cr40f_name: name, cr40f_nome: name, cr40f_cor: input.color || "#1d5ce8", cr40f_ordem: existing.length, cr40f_arquivada: false };
+  await bindLookup(xrm, payload, PERSONAL_TAG_TABLE, "cr40f_usuario", "systemuser", ownerUserId);
+  const created = await request(xrm, `/${entitySetName(PERSONAL_TAG_TABLE)}`, { method: "POST", body: JSON.stringify(payload) });
+  if (!created?.cr40f_plannertagpessoalid) throw new Error("Dataverse criou a tag sem retornar o ID.");
+  return loadLiveState(xrm);
+}
+
+async function updateLivePersonalTag(xrm, state, id, patch = {}) {
+  const existing = (state.personalTags || []).find((tag) => tag.id === id);
+  if (!existing) throw new Error("Tag pessoal não encontrada.");
+  const name = patch.name === undefined ? existing.name : String(patch.name || "").trim().slice(0, 32);
+  if (!name) throw new Error("Informe um nome para a tag.");
+  const duplicate = (state.personalTags || []).some((tag) => tag.id !== id && tag.ownerUserId === existing.ownerUserId && normalizePersonalTag(tag).name.localeCompare(name, "pt-BR", { sensitivity: "base" }) === 0);
+  if (duplicate) throw new Error("Você já tem uma tag com esse nome.");
+  const payload = { cr40f_name: name, cr40f_nome: name };
+  if (patch.color !== undefined) payload.cr40f_cor = patch.color;
+  if (patch.sortOrder !== undefined) payload.cr40f_ordem = Math.max(0, Number(patch.sortOrder) || 0);
+  if (patch.archived !== undefined) payload.cr40f_arquivada = Boolean(patch.archived);
+  await request(xrm, `/${entitySetName(PERSONAL_TAG_TABLE)}(${cleanId(id)})`, { method: "PATCH", body: JSON.stringify(payload) });
+  return loadLiveState(xrm);
+}
+
+async function reorderLivePersonalTags(xrm, state, orderedIds = []) {
+  await Promise.all(orderedIds.map((id, index) => request(xrm, `/${entitySetName(PERSONAL_TAG_TABLE)}(${cleanId(id)})`, { method: "PATCH", body: JSON.stringify({ cr40f_ordem: index }) })));
+  return loadLiveState(xrm);
+}
+
+async function replaceLiveTaskPersonalTags(xrm, state, taskId, tagIds = {}, ownerUserId = state.currentUserId) {
+  const ids = normalizePersonalTagIds(Array.isArray(tagIds) ? tagIds : tagIds.tagIds);
+  const allowed = new Set((state.personalTags || []).filter((tag) => tag.ownerUserId === ownerUserId).map((tag) => tag.id));
+  const nextIds = ids.filter((id) => allowed.has(id));
+  const current = await retrieveMany(xrm, PERSONAL_TAG_TASK_TABLE, `?$select=cr40f_plannertagpessoaltarefaid&$filter=_cr40f_usuario_value eq ${cleanId(ownerUserId)} and _cr40f_tarefa_value eq ${cleanId(taskId)} and statecode eq 0`);
+  await Promise.all(current.map((row) => request(xrm, `/${entitySetName(PERSONAL_TAG_TASK_TABLE)}(${cleanId(row.cr40f_plannertagpessoaltarefaid)})`, { method: "DELETE" })));
+  await Promise.all(nextIds.map(async (tagId) => {
+    const payload = { cr40f_name: `${cleanId(taskId)}-${cleanId(tagId)}-${cleanId(ownerUserId)}` };
+    await bindLookup(xrm, payload, PERSONAL_TAG_TASK_TABLE, "cr40f_tarefa", TASK_TABLE, taskId);
+    await bindLookup(xrm, payload, PERSONAL_TAG_TASK_TABLE, "cr40f_tag", PERSONAL_TAG_TABLE, tagId);
+    await bindLookup(xrm, payload, PERSONAL_TAG_TASK_TABLE, "cr40f_usuario", "systemuser", ownerUserId);
+    await request(xrm, `/${entitySetName(PERSONAL_TAG_TASK_TABLE)}`, { method: "POST", body: JSON.stringify(payload) });
+  }));
+  return loadLiveState(xrm);
 }
 
 export function normalizeMicrosoftEmail(value) {
@@ -717,7 +817,7 @@ function measureStage(name, operation) {
   });
 }
 
-function buildCoreState(xrm, rows, relations, assigneeRelations, employees, currentUserEmail = "", teams = [], teamRelations = []) {
+function buildCoreState(xrm, rows, relations, assigneeRelations, employees, currentUserEmail = "", teams = [], teamRelations = [], personalTagData = {}) {
   const employeeRecords = employees.map((row) => ({ id: row.cr40f_funcionariosid, name: row.cr40f_nomecompleto || row.new_apelido || "Sem nome", apelido: row.new_apelido || "", emailMicrosoft: row.cr40f_emailmicrosoft || "", mentionSearchText: [row.cr40f_nomecompleto, row.new_apelido].filter(Boolean).join(" "), userId: row._cr40f_usuariodataverse_value || "", externalNotificationsAvailable: Boolean(row._cr40f_usuariodataverse_value) }));
   const employeeById = new Map(employeeRecords.map((employee) => [cleanId(employee.id).toLowerCase(), employee]));
   const relationByChild = new Map(relations.map(normalizeRelation).map((item) => [item.childTaskId, item.parentTaskId]));
@@ -728,16 +828,17 @@ function buildCoreState(xrm, rows, relations, assigneeRelations, employees, curr
     list.push({ id: item._cr40f_funcionario_value, name: item["_cr40f_funcionario_value@OData.Community.Display.V1.FormattedValue"] || employee?.name || "Sem nome", userId: employee?.userId || "" });
     assigneesByTask.set(item._cr40f_tarefa_value, list);
   });
-  const tasks = rows.map((row) => {
+  const tasks = applyPersonalTagsToTasks(rows.map((row) => {
     const task = normalizeTask(row, [], assigneesByTask.get(row.cr40f_plannertarefaid) || [], teamRelations);
     const creator = employeeRecords.find((employee) => cleanId(employee.userId).toLowerCase() === cleanId(task.creatorUserId).toLowerCase());
     return { ...applyDynamicTeamAssignment(task, teams, employeeRecords), creatorEmployeeId: creator?.id || "", parentTaskId: relationByChild.get(row.cr40f_plannertarefaid) || null, detailsLoaded: false };
-  });
-  return { quotes: [], employees: employeeRecords, teams, currentUserEmail, currentUserId: cleanId(xrm.Utility?.getGlobalContext?.().userSettings?.userId), quality: [], tasks, notifications: [], lastUpdated: new Date().toISOString(), live: true, loading: { core: false, quotes: true, quality: true, notifications: true } };
+  }), personalTagData.personalTagAssignments || []);
+  return { quotes: [], employees: employeeRecords, teams, currentUserEmail, currentUserId: cleanId(xrm.Utility?.getGlobalContext?.().userSettings?.userId), personalTags: personalTagData.personalTags || [], personalTagsUnavailable: Boolean(personalTagData.personalTagsUnavailable), quality: [], tasks, notifications: [], lastUpdated: new Date().toISOString(), live: true, loading: { core: false, quotes: true, quality: true, notifications: true } };
 }
 
 export async function loadCoreState(xrm) {
-  const [rows, relations, assigneeRelations, employees, currentUserEmail, teams, teamRelations] = await Promise.all([
+  const currentUserId = cleanId(xrm.Utility?.getGlobalContext?.().userSettings?.userId);
+  const [rows, relations, assigneeRelations, employees, currentUserEmail, teams, teamRelations, personalTagData] = await Promise.all([
     measureStage("tarefas", () => retrievePlannerTasks(xrm)),
     measureStage("relações", () => retrieveMany(xrm, RELATION_TABLE, "?$select=cr40f_plannertarearelacaoid,_cr40f_tarefapai_value,_cr40f_subtarefa_value&$filter=statecode eq 0")),
     measureStage("responsáveis", () => retrieveMany(xrm, ASSIGNEE_RELATION_TABLE, "?$select=cr40f_plannertarearesponsavelid,_cr40f_tarefa_value,_cr40f_funcionario_value&$filter=statecode eq 0")),
@@ -745,9 +846,10 @@ export async function loadCoreState(xrm) {
     measureStage("identidade atual", () => loadCurrentUserEmail(xrm)),
     measureStage("equipes do Planner", () => loadPlannerTeams(xrm)),
     measureStage("equipes das tarefas", () => retrieveOptional(xrm, TASK_TEAM_RELATION_TABLE, "?$select=cr40f_plannertarefaequipeid,_cr40f_tarefa_value,_cr40f_equipe_value&$filter=statecode eq 0", "relação tarefa/equipe")),
+    measureStage("tags pessoais", () => loadLivePersonalTagData(xrm, currentUserId)),
   ]);
   await measureStage("vínculos Microsoft", () => reconcileEmployeeUserLinks(xrm, employees));
-  return buildCoreState(xrm, rows, relations, assigneeRelations, employees, currentUserEmail, teams, teamRelations.map(normalizeTaskTeamRelation));
+  return buildCoreState(xrm, rows, relations, assigneeRelations, employees, currentUserEmail, teams, teamRelations.map(normalizeTaskTeamRelation), personalTagData);
 }
 
 export async function loadSupplementalState(xrm, state) {
@@ -789,7 +891,8 @@ export async function searchQuotes(xrm, query) {
 }
 
 async function loadLiveState(xrm) {
-  const [quotes, rows, events, relations, assigneeRelations, qualityErrors, qualityActions, employees, currentUserEmail, teams, teamRelations] = await Promise.all([
+  const currentUserId = cleanId(xrm.Utility?.getGlobalContext?.().userSettings?.userId);
+  const [quotes, rows, events, relations, assigneeRelations, qualityErrors, qualityActions, employees, currentUserEmail, teams, teamRelations, personalTagData] = await Promise.all([
     retrieveMany(xrm, QUOTE_TABLE, "?$select=cr40f_pedidodecotacaoid,cr40f_numerodacotacao,cr40f_titulo,cr40f_clienteempresa,cr40f_statuscotacao,cr40f_prazoresponder,cr40f_valorcotado,cr40f_plannertaskid,cr40f_linktarefaplanner,cr40f_linkmensagemteams&$filter=statecode eq 0&$orderby=modifiedon desc"),
     retrievePlannerTasks(xrm),
     retrieveMany(xrm, EVENT_TABLE, "?$select=cr40f_plannertarefaeventoid,_cr40f_tarefa_value,cr40f_tipo,cr40f_campo,cr40f_descricao,cr40f_valornovo,cr40f_ocorridoem,_cr40f_autor_value,_createdby_value&$orderby=cr40f_ocorridoem desc"),
@@ -801,6 +904,7 @@ async function loadLiveState(xrm) {
     loadCurrentUserEmail(xrm),
     loadPlannerTeams(xrm),
     retrieveOptional(xrm, TASK_TEAM_RELATION_TABLE, "?$select=cr40f_plannertarefaequipeid,_cr40f_tarefa_value,_cr40f_equipe_value&$filter=statecode eq 0", "relação tarefa/equipe"),
+    loadLivePersonalTagData(xrm, currentUserId),
   ]);
   await measureStage("vínculos Microsoft", () => reconcileEmployeeUserLinks(xrm, employees));
   const employeeRecords = employees.map((row) => ({ id: row.cr40f_funcionariosid, name: row.cr40f_nomecompleto || row.new_apelido || "Sem nome", apelido: row.new_apelido || "", emailMicrosoft: row.cr40f_emailmicrosoft || "", mentionSearchText: [row.cr40f_nomecompleto, row.new_apelido].filter(Boolean).join(" "), userId: row._cr40f_usuariodataverse_value || "", externalNotificationsAvailable: Boolean(row._cr40f_usuariodataverse_value) }));
@@ -815,16 +919,16 @@ async function loadLiveState(xrm) {
   });
   const eventsByTask = new Map();
   events.forEach((event) => { const list = eventsByTask.get(event._cr40f_tarefa_value) || []; list.push(event); eventsByTask.set(event._cr40f_tarefa_value, list); });
-  const tasks = rows.map((row) => {
+  const tasks = applyPersonalTagsToTasks(rows.map((row) => {
     const task = normalizeTask(row, eventsByTask.get(row.cr40f_plannertarefaid) || [], assigneesByTask.get(row.cr40f_plannertarefaid) || [], teamRelations.map(normalizeTaskTeamRelation));
     const creator = employeeRecords.find((employee) => cleanId(employee.userId).toLowerCase() === cleanId(task.creatorUserId).toLowerCase());
     return { ...applyDynamicTeamAssignment(task, teams, employeeRecords), creatorEmployeeId: creator?.id || "", parentTaskId: relationByChild.get(row.cr40f_plannertarefaid) || null };
-  });
+  }), personalTagData.personalTagAssignments || []);
   const quoteById = new Map(quotes.map((row) => [row.cr40f_pedidodecotacaoid, normalizeQuote(row)]));
   const employeesWithProfiles = employeeRecords;
   const quality = [...qualityErrors.map((row) => normalizeQuality(row, "error")), ...qualityActions.map((row) => normalizeQuality(row, "action"))].map((item) => ({ ...item, assigneeProfiles: employeeById.has(cleanId(item.assigneeId).toLowerCase()) ? [employeesWithProfiles.find((employee) => cleanId(employee.id).toLowerCase() === cleanId(item.assigneeId).toLowerCase())] : [] }));
   const tasksWithProfiles = tasks.map((task) => ({ ...task, assigneeProfiles: task.assigneeProfiles?.length ? task.assigneeProfiles : task.assigneeIds.map((id) => employeesWithProfiles.find((employee) => cleanId(employee.id).toLowerCase() === cleanId(id).toLowerCase())).filter(Boolean), quoteCode: quoteById.get(task.quoteId)?.code || "", quoteTitle: quoteById.get(task.quoteId)?.title || "" }));
-  return { quotes: [...quoteById.values()], employees: employeesWithProfiles, teams, currentUserEmail, currentUserId: cleanId(xrm.Utility?.getGlobalContext?.().userSettings?.userId), quality, tasks: tasksWithProfiles, notifications: [], collectionEvents: normalizeCollectionEvents(events), lastUpdated: new Date().toISOString(), live: true };
+  return { quotes: [...quoteById.values()], employees: employeesWithProfiles, teams, currentUserEmail, currentUserId, personalTags: personalTagData.personalTags || [], personalTagsUnavailable: Boolean(personalTagData.personalTagsUnavailable), quality, tasks: tasksWithProfiles, notifications: [], collectionEvents: normalizeCollectionEvents(events), lastUpdated: new Date().toISOString(), live: true };
 }
 
 function normalizeNotification(row) {
@@ -1303,6 +1407,12 @@ function createMockDataStore() {
     createTeam: async (state, input) => withMode(createMockTeam(state, input)),
     updateTeam: async (state, id, patch) => withMode(updateMockTeam(state, id, patch)),
     deleteTeam: async (state, id) => withMode(deleteMockTeam(state, id)),
+    loadPersonalTags: async (state, ownerUserId) => loadMockPersonalTags(state, ownerUserId),
+    createPersonalTag: async (state, input) => withMode(createMockPersonalTag(state, input)),
+    updatePersonalTag: async (state, id, patch) => withMode(updateMockPersonalTag(state, id, patch)),
+    archivePersonalTag: async (state, id) => withMode(archiveMockPersonalTag(state, id)),
+    reorderPersonalTags: async (state, orderedIds) => withMode(reorderMockPersonalTags(state, orderedIds)),
+    replaceTaskPersonalTags: async (state, taskId, tagIds, ownerUserId) => withMode(replaceMockTaskPersonalTags(state, taskId, tagIds, ownerUserId)),
     createTask: async (state, input) => withMode(createMockTask(state, input)),
     importPlannerTasks: async (state, rows = []) => {
       let nextState = state;
@@ -1368,6 +1478,12 @@ export function createDataStore() {
     createTeam: (state, input) => createLiveTeam(xrm, state, input),
     updateTeam: (state, id, patch) => updateLiveTeam(xrm, state, id, patch),
     deleteTeam: (state, id) => deleteLiveTeam(xrm, state, id),
+    loadPersonalTags: async (state) => state.personalTags || [],
+    createPersonalTag: (state, input) => createLivePersonalTag(xrm, state, input),
+    updatePersonalTag: (state, id, patch) => updateLivePersonalTag(xrm, state, id, patch),
+    archivePersonalTag: (state, id) => updateLivePersonalTag(xrm, state, id, { archived: true }),
+    reorderPersonalTags: (state, orderedIds) => reorderLivePersonalTags(xrm, state, orderedIds),
+    replaceTaskPersonalTags: (state, taskId, tagIds, ownerUserId) => replaceLiveTaskPersonalTags(xrm, state, taskId, tagIds, ownerUserId),
     createTask: (state, input) => createLiveTask(xrm, state, input),
     importPlannerTasks: (state, rows) => importLivePlannerTasks(xrm, rows),
     createContact: async () => { requireContactSchema(); return null; },

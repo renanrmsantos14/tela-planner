@@ -32,6 +32,43 @@ export const TASK_SOURCES = [
   { id: "quality", label: "Qualidade", tone: "warning" },
 ];
 
+export const PERSONAL_TAG_COLORS = [
+  "#1d5ce8",
+  "#2d796f",
+  "#b87900",
+  "#b84b5b",
+  "#7052a3",
+  "#4f6b82",
+];
+export const DEFAULT_PERSONAL_TAG_COLOR = PERSONAL_TAG_COLORS[0];
+
+export function normalizePersonalTag(value = {}, ownerUserId = "") {
+  const source = value && typeof value === "object" ? value : {};
+  const color = PERSONAL_TAG_COLORS.includes(source.color) ? source.color : DEFAULT_PERSONAL_TAG_COLOR;
+  return {
+    id: String(source.id || "").trim(),
+    name: String(source.name || source.nome || "").trim().slice(0, 32),
+    color,
+    sortOrder: Number.isFinite(Number(source.sortOrder)) ? Math.max(0, Number(source.sortOrder)) : 0,
+    archived: Boolean(source.archived),
+    ownerUserId: String(source.ownerUserId || ownerUserId || "").replace(/[{}]/g, ""),
+  };
+}
+
+export function normalizePersonalTagIds(value) {
+  const values = Array.isArray(value) ? value : value ? [value] : [];
+  return [...new Set(values.map((item) => String(item || "").trim()).filter(Boolean))];
+}
+
+export function validatePersonalTag(input = {}, existing = []) {
+  const name = String(input.name || "").trim().slice(0, 32);
+  if (!name) return { valid: false, error: "Informe um nome para a tag." };
+  const normalized = normalizeText(name);
+  const duplicate = existing.some((tag) => normalizeText(tag.name) === normalized && tag.id !== input.id);
+  if (duplicate) return { valid: false, error: "Você já tem uma tag com esse nome." };
+  return { valid: true, error: "", value: normalizePersonalTag({ ...input, name }) };
+}
+
 export const statusById = (id) => STATUSES.find((item) => item.id === id) || STATUSES[0];
 export const priorityById = (id) => PRIORITIES.find((item) => item.id === id) || PRIORITIES[1];
 export const sourceById = (id) => TASK_SOURCES.find((item) => item.id === id) || TASK_SOURCES[0];
@@ -400,13 +437,25 @@ export function isDueToday(task, today = new Date()) {
 }
 
 export function formatDate(value) {
-  if (!value) return "Sem prazo";
-  return SHORT_DATE_FORMATTER.format(new Date(`${value}T12:00:00`)).replace(" de ", " ");
+  const date = parseDisplayDate(value);
+  if (!date) return "Sem prazo";
+  return SHORT_DATE_FORMATTER.format(date).replace(" de ", " ");
 }
 
 export function formatLongDate(value) {
-  if (!value) return "Sem prazo definido";
-  return LONG_DATE_FORMATTER.format(new Date(`${value}T12:00:00`));
+  const date = parseDisplayDate(value);
+  if (!date) return "Sem prazo definido";
+  return LONG_DATE_FORMATTER.format(date);
+}
+
+function parseDisplayDate(value) {
+  if (!value) return null;
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
+  const text = String(value).trim();
+  if (!text) return null;
+  const dateKey = text.match(/^\d{4}-\d{2}-\d{2}/)?.[0];
+  const date = dateKey ? new Date(`${dateKey}T12:00:00`) : new Date(text);
+  return Number.isNaN(date.getTime()) ? null : date;
 }
 
 export function filterTasks(tasks, filters = {}, employee, teams = []) {
@@ -418,6 +467,7 @@ export function filterTasks(tasks, filters = {}, employee, teams = []) {
   const priorityValues = new Set(selectedValues(filters.priority));
   const sourceValues = new Set(selectedValues(filters.source));
   const teamValues = selectedValues(filters.team);
+  const personalTagValues = new Set(selectedValues(filters.personalTag));
   return tasks.filter((task) => {
     if (statusValues.size && !statusValues.has(task.status)) return false;
     if (priorityValues.size && !priorityValues.has(task.priority)) return false;
@@ -432,6 +482,7 @@ export function filterTasks(tasks, filters = {}, employee, teams = []) {
       const taskTeams = task.teamNames?.length ? task.teamNames : [task.teamName].filter(Boolean);
       if (!teamValues.some((value) => taskTeams.includes(value))) return false;
     }
+    if (personalTagValues.size && !normalizePersonalTagIds(task.personalTagIds).some((id) => personalTagValues.has(id))) return false;
     if (!query) return true;
     const assigneeSearch = [task.assigneeName, ...(Array.isArray(task.assigneeNames) ? task.assigneeNames : [])].filter(Boolean).join(" ");
     return [task.title, task.quoteTitle, assigneeSearch, task.teamName].some((value) => {

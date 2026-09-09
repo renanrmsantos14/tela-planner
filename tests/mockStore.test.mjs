@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { addAttachment, addComment, createTask, createTeam, deleteAttachment, deleteTask, deleteTeam, ensureQuoteTask, resolveWaitingReturn, seedState, updateTask, updateTeam } from "../src/mockStore.js";
+import { addAttachment, addComment, archivePersonalTag, createPersonalTag, createTask, createTeam, deleteAttachment, deleteTask, deleteTeam, ensureQuoteTask, loadPersonalTags, replaceTaskPersonalTags, resolveWaitingReturn, seedState, updatePersonalTag, updateTask, updateTeam } from "../src/mockStore.js";
 import { localDateKey } from "../src/management.js";
 
 function withStorage() {
@@ -29,6 +29,22 @@ test("cria e atualiza tarefa sem alterar a referência original", () => {
   const updated = updateTask(next, created.id, { status: "done" });
   assert.equal(updated.tasks.at(-1).status, "done");
   assert.equal(initial.tasks.length, 44);
+});
+
+test("mantém tags pessoais isoladas por usuário e vinculadas à tarefa", () => {
+  withStorage();
+  const initial = seedState();
+  const created = createPersonalTag(initial, { name: "Cobrar", color: "#b87900", ownerUserId: "user-renan" });
+  const otherUser = createPersonalTag(created, { name: "Minha fila", ownerUserId: "user-outro" });
+  const renanTags = loadPersonalTags(otherUser, "user-renan");
+  assert.deepEqual(renanTags.map((tag) => tag.name), ["Cobrar"]);
+  const taskTagged = replaceTaskPersonalTags(otherUser, "task-1", [renanTags[0].id], "user-renan");
+  assert.deepEqual(taskTagged.tasks.find((task) => task.id === "task-1").personalTagIds, [renanTags[0].id]);
+  const renamed = updatePersonalTag(taskTagged, renanTags[0].id, { name: "Cobrar hoje" });
+  assert.equal(renamed.personalTags.find((tag) => tag.id === renanTags[0].id).name, "Cobrar hoje");
+  const archived = archivePersonalTag(renamed, renanTags[0].id);
+  assert.equal(loadPersonalTags(archived, "user-renan")[0].archived, true);
+  assert.deepEqual(archived.tasks.find((task) => task.id === "task-1").personalTagIds, [renanTags[0].id]);
 });
 
 test("mantém subtarefa vinculada à tarefa-pai no mock", () => {
