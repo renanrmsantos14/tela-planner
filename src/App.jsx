@@ -2292,11 +2292,11 @@ const FilterBar = memo(function FilterBar({
     [teams],
   );
   const activeFilterCount = [
-    filters.query,
+    filters.query?.trim(),
     filters.assignee?.length,
     filters.status?.length,
     filters.priority?.length,
-    filters.team?.length || filters.team,
+    Array.isArray(filters.team) ? filters.team.length : filters.team,
     filters.personalTag?.length,
   ].filter(Boolean).length;
   return (
