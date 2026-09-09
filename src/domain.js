@@ -521,11 +521,14 @@ function compareBoardTasks(left, right, key, employee, teams) {
   const rightPriority = BOARD_PRIORITY_RANK[right.priority] ?? 2;
   const leftTitle = normalizeText(left.title);
   const rightTitle = normalizeText(right.title);
+  const leftCreated = Date.parse(left.createdAt || "") || 0;
+  const rightCreated = Date.parse(right.createdAt || "") || 0;
   const compare = (a, b) => a === b ? 0 : a < b ? -1 : 1;
   const values = {
     dueDate: compare(leftDue, rightDue),
     priority: compare(leftPriority, rightPriority),
     updatedAt: compare(taskActivityTimestamp(left), taskActivityTimestamp(right)),
+    createdAt: compare(leftCreated, rightCreated),
     title: leftTitle.localeCompare(rightTitle, "pt-BR"),
   };
   return values[key] || values.dueDate || values.priority || values.title || String(left.id || "").localeCompare(String(right.id || ""));

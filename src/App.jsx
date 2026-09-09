@@ -1223,6 +1223,7 @@ const BOARD_SORT_OPTIONS = [
   ["dueDate", "Prazo", "Mais próximo primeiro", "Mais distante primeiro"],
   ["priority", "Prioridade", "Mais alta primeiro", "Mais baixa primeiro"],
   ["updatedAt", "Atualização", "Mais recente primeiro", "Mais antiga primeiro"],
+  ["createdAt", "Criação", "Mais recente primeiro", "Mais antiga primeiro"],
   ["title", "Título", "A–Z", "Z–A"],
 ];
 const BOARD_SORT_DEFAULT = { key: "dueDate", direction: "asc" };

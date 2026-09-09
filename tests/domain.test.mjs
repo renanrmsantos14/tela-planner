@@ -56,18 +56,20 @@ test("filtra por texto, status e prioridade", () => {
   assert.equal(filterTasks(tasks, { query: "", status: ["doing", "waiting"], priority: ["medium", "high"] }).length, 1);
 });
 
-test("ordena cards do quadro por prazo, prioridade, atualização e título", () => {
+test("ordena cards do quadro por prazo, prioridade, atualização, criação e título", () => {
   const boardTasks = [
     { id: "done", title: "Zeta", status: "done", priority: "high", dueDate: "2026-08-01", createdAt: "2026-08-01T10:00:00Z" },
     { id: "low", title: "Beta", status: "todo", priority: "low", dueDate: "", createdAt: "2026-08-03T10:00:00Z" },
     { id: "high", title: "Alfa", status: "todo", priority: "high", dueDate: "2026-08-04", createdAt: "2026-08-02T10:00:00Z" },
-    { id: "medium", title: "Gama", status: "todo", priority: "medium", dueDate: "2026-08-02", history: [{ createdAt: "2026-08-05T10:00:00Z" }] },
-    { id: "updated", title: "Delta", status: "todo", priority: "low", dueDate: "2026-08-06", updatedAt: "2026-08-06T10:00:00Z", history: [{ createdAt: "2026-08-07T10:00:00Z" }] },
+    { id: "medium", title: "Gama", status: "todo", priority: "medium", dueDate: "2026-08-02", createdAt: "2026-08-04T10:00:00Z", history: [{ createdAt: "2026-08-05T10:00:00Z" }] },
+    { id: "updated", title: "Delta", status: "todo", priority: "low", dueDate: "2026-08-06", createdAt: "2026-08-05T10:00:00Z", updatedAt: "2026-08-06T10:00:00Z", history: [{ createdAt: "2026-08-07T10:00:00Z" }] },
   ];
 
   assert.deepEqual(sortBoardTasks(boardTasks).map((task) => task.id), ["medium", "high", "updated", "low", "done"]);
   assert.deepEqual(sortBoardTasks(boardTasks, { key: "priority", direction: "asc" }).map((task) => task.id), ["high", "medium", "updated", "low", "done"]);
   assert.deepEqual(sortBoardTasks(boardTasks, { key: "updatedAt", direction: "desc" }).map((task) => task.id), ["updated", "medium", "low", "high", "done"]);
+  assert.deepEqual(sortBoardTasks(boardTasks, { key: "createdAt", direction: "asc" }).map((task) => task.id), ["high", "low", "medium", "updated", "done"]);
+  assert.deepEqual(sortBoardTasks(boardTasks, { key: "createdAt", direction: "desc" }).map((task) => task.id), ["updated", "medium", "low", "high", "done"]);
   assert.deepEqual(sortBoardTasks(boardTasks, { key: "title", direction: "asc" }).map((task) => task.id), ["high", "low", "updated", "medium", "done"]);
   assert.deepEqual(sortBoardTasks(boardTasks, { key: "title", direction: "desc" }).map((task) => task.id), ["medium", "updated", "low", "high", "done"]);
 });
