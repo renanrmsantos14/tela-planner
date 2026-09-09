@@ -1942,7 +1942,7 @@ const Board = memo(function Board({
   );
 });
 
-function PersonalTagPicker({ tags = [], value = [], onChange, onCreate }) {
+function PersonalTagPicker({ tags = [], tasks = [], value = [], onChange, onCreate }) {
   const [visibleCount, setVisibleCount] = useState(tags.length);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState("select");
@@ -1956,13 +1956,35 @@ function PersonalTagPicker({ tags = [], value = [], onChange, onCreate }) {
   const selectedIds = Array.isArray(value) ? value : [];
   const selected = new Set(selectedIds);
   const activeTags = tags.filter((tag) => !tag.archived);
+  const recentTagOrder = new Map();
+  [...tasks].sort((left, right) => String(left.updatedAt || left.createdAt || "").localeCompare(String(right.updatedAt || right.createdAt || ""))).forEach((task) => {
+    normalizePersonalTagIds(task.personalTagIds).forEach((tagId) => recentTagOrder.set(tagId, task.updatedAt || task.createdAt || ""));
+  });
+  const recentTags = [...activeTags].sort((left, right) => {
+    const rightUsed = recentTagOrder.get(right.id);
+    const leftUsed = recentTagOrder.get(left.id);
+    if (rightUsed || leftUsed) return String(rightUsed || "").localeCompare(String(leftUsed || ""));
+    return left.name.localeCompare(right.name, "pt-BR", { sensitivity: "base" });
+  });
   const orderedTags = [
-    ...activeTags.filter((tag) => selected.has(tag.id)),
-    ...activeTags.filter((tag) => !selected.has(tag.id)),
+    ...recentTags.filter((tag) => selected.has(tag.id)),
+    ...recentTags.filter((tag) => !selected.has(tag.id)),
   ];
   const selectedCount = activeTags.filter((tag) => selected.has(tag.id)).length;
   const tagSignature = orderedTags.map((tag) => `${tag.id}:${tag.name}`).join("|");
   const [selectedOverflow, setSelectedOverflow] = useState(false);
+  const visibleCountRef = useRef(visibleCount);
+  const selectedOverflowRef = useRef(selectedOverflow);
+  const updateVisibleCount = (next) => {
+    if (visibleCountRef.current === next) return;
+    visibleCountRef.current = next;
+    setVisibleCount(next);
+  };
+  const updateSelectedOverflow = (next) => {
+    if (selectedOverflowRef.current === next) return;
+    selectedOverflowRef.current = next;
+    setSelectedOverflow(next);
+  };
 
   useLayoutEffect(() => {
     const picker = pickerRef.current;
@@ -1980,29 +2002,29 @@ function PersonalTagPicker({ tags = [], value = [], onChange, onCreate }) {
       const addWidth = onCreate ? (addRef.current?.getBoundingClientRect().width || 34) : 0;
       const addGap = addWidth ? gap : 0;
       const availableWithoutMore = pickerWidth - addWidth - addGap;
-      if (selectedOverflow && selectedWidth <= availableWithoutMore + 1) {
-        setSelectedOverflow(false);
+      if (selectedOverflowRef.current && selectedWidth <= availableWithoutMore + 1) {
+        updateSelectedOverflow(false);
         return;
       }
       if (selectedWidth > availableWithoutMore + 1) {
-        setSelectedOverflow(true);
-        setVisibleCount(selectedCount);
+        updateSelectedOverflow(true);
+        updateVisibleCount(selectedCount);
         return;
       }
       if (totalWidth <= availableWithoutMore + 1) {
-        setSelectedOverflow(false);
-        setVisibleCount(activeTags.length);
+        updateSelectedOverflow(false);
+        updateVisibleCount(activeTags.length);
         return;
       }
 
       const moreWidth = moreRef.current?.getBoundingClientRect().width || 34;
       const availableWidth = Math.max(0, pickerWidth - addWidth - moreWidth - gap - addGap);
       if (selectedWidth > availableWidth + 1) {
-        setSelectedOverflow(true);
-        setVisibleCount(selectedCount);
+        updateSelectedOverflow(true);
+        updateVisibleCount(selectedCount);
         return;
       }
-      setSelectedOverflow(false);
+      updateSelectedOverflow(false);
       let usedWidth = 0;
       let count = selectedCount;
       selectedWidths.forEach((width, index) => {
@@ -2015,14 +2037,14 @@ function PersonalTagPicker({ tags = [], value = [], onChange, onCreate }) {
           count += 1;
         }
       });
-      setVisibleCount(count);
+      updateVisibleCount(count);
     };
 
     measure();
     const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(measure);
     observer?.observe(picker);
     return () => observer?.disconnect();
-  }, [tagSignature, activeTags.length, onCreate, selectedCount, selectedOverflow]);
+  }, [tagSignature, activeTags.length, onCreate, selectedCount]);
 
   const shownTags = orderedTags.slice(0, visibleCount);
   const hasMore = visibleCount < orderedTags.length;
@@ -2124,7 +2146,7 @@ function PersonalTagPicker({ tags = [], value = [], onChange, onCreate }) {
                 ) : (
                   <>
                     <div className="personal-tags-modal-list" role="group" aria-label="Todas as tags pessoais">
-                      {orderedTags.map((tag) => {
+                      {[...activeTags].sort((left, right) => left.name.localeCompare(right.name, "pt-BR", { sensitivity: "base" })).map((tag) => {
                         const checked = selected.has(tag.id);
                         return (
                           <button
@@ -2133,7 +2155,7 @@ function PersonalTagPicker({ tags = [], value = [], onChange, onCreate }) {
                             type="button"
                             onClick={() => toggleTag(tag.id)}
                             aria-pressed={checked}
-                            style={{ "--personal-tag-color": tag.color, "--personal-tag-index": index }}
+                            style={{ "--personal-tag-color": tag.color }}
                           >
                             <span className="personal-tag-dot" aria-hidden="true" />
                             {tag.name}
@@ -2159,11 +2181,11 @@ function PersonalTagPicker({ tags = [], value = [], onChange, onCreate }) {
   );
 }
 
-function PersonalTagManager({ tags = [], onCreate, onUpdate, onArchive, onReorder }) {
+function PersonalTagManager({ tags = [], onCreate, onUpdate, onArchive }) {
   const [name, setName] = useState("");
   const [color, setColor] = useState(DEFAULT_PERSONAL_TAG_COLOR);
   const [tagToDelete, setTagToDelete] = useState(null);
-  const activeTags = tags.filter((tag) => !tag.archived).sort((left, right) => left.sortOrder - right.sortOrder);
+  const activeTags = tags.filter((tag) => !tag.archived).sort((left, right) => left.name.localeCompare(right.name, "pt-BR", { sensitivity: "base" }));
   const submit = (event) => {
     event.preventDefault();
     if (!name.trim()) return;
@@ -2171,13 +2193,6 @@ function PersonalTagManager({ tags = [], onCreate, onUpdate, onArchive, onReorde
       setName("");
       setColor(DEFAULT_PERSONAL_TAG_COLOR);
     });
-  };
-  const move = (index, direction) => {
-    const next = [...activeTags];
-    const target = index + direction;
-    if (target < 0 || target >= next.length) return;
-    [next[index], next[target]] = [next[target], next[index]];
-    onReorder(next.map((tag) => tag.id));
   };
   return (
     <div className="personal-tag-manager" aria-label="Gerenciar tags pessoais">
@@ -2192,15 +2207,13 @@ function PersonalTagManager({ tags = [], onCreate, onUpdate, onArchive, onReorde
       </form>
       {activeTags.length ? (
         <div className="personal-tag-manager-list">
-          {activeTags.map((tag, index) => (
+          {activeTags.map((tag) => (
             <div className="personal-tag-manager-row" key={tag.id}>
               <span className="personal-tag-dot personal-tag-manager-dot" style={{ "--personal-tag-color": tag.color }} aria-hidden="true" />
               <input className="personal-tag-badge" style={{ "--personal-tag-color": tag.color }} defaultValue={tag.name} maxLength={32} aria-label={`Nome da tag ${tag.name}`} onBlur={(event) => {
                 if (event.target.value.trim() && event.target.value.trim() !== tag.name) onUpdate(tag.id, { name: event.target.value });
               }} />
               <div className="personal-tag-manager-actions">
-                <button className="icon-button icon-button-small" type="button" onClick={() => move(index, -1)} disabled={index === 0} aria-label={`Mover ${tag.name} para cima`}><ChevronUp size={14} /></button>
-                <button className="icon-button icon-button-small" type="button" onClick={() => move(index, 1)} disabled={index === activeTags.length - 1} aria-label={`Mover ${tag.name} para baixo`}><ChevronDown size={14} /></button>
                 {tagToDelete?.id === tag.id ? (
                   <div className="subtask-remove-confirm" role="group" aria-label={`Confirmar exclusão de ${tag.name}`}>
                     <button className="button button-danger" type="button" onClick={() => { setTagToDelete(null); onArchive(tag.id); }}>Excluir</button>
@@ -3213,7 +3226,7 @@ function SettingsView({ onReset, live, teams = [], tasks = [], employees = [], p
             </div>
             <Tag size={19} aria-hidden="true" />
           </div>
-          <PersonalTagManager tags={personalTags} onCreate={onCreatePersonalTag} onUpdate={onUpdatePersonalTag} onArchive={onArchivePersonalTag} onReorder={onReorderPersonalTags} />
+          <PersonalTagManager tags={personalTags} onCreate={onCreatePersonalTag} onUpdate={onUpdatePersonalTag} onArchive={onArchivePersonalTag} />
         </section>
         <TeamManager teams={teams} tasks={tasks} employees={employees} onSave={onSaveTeam} onDelete={onDeleteTeam} />
       </div>
@@ -4407,7 +4420,7 @@ function TaskDrawerContent({
         </header>
         <div className="drawer-body" ref={drawerBodyRef} onPaste={handlePaste}>
           <section className="drawer-personal-tags" aria-label="Minhas tags">
-            <PersonalTagPicker tags={personalTags} value={form.personalTagIds || []} onChange={(value) => set("personalTagIds", value)} onCreate={onCreatePersonalTag} />
+            <PersonalTagPicker tags={personalTags} tasks={state.tasks || []} value={form.personalTagIds || []} onChange={(value) => set("personalTagIds", value)} onCreate={onCreatePersonalTag} />
           </section>
           <div className="drawer-title">
             <label className="drawer-title-field" htmlFor={`task-title-${taskItem.id}`}>
@@ -5279,7 +5292,7 @@ function InlineSubtasksEditor({ items, setItems }) {
   );
 }
 
-function NewTaskDrawer({ employees = [], teams = [], personalTags = [], onCreatePersonalTag, initialStatus = "todo", initialInput = {}, onClose, onSave }) {
+function NewTaskDrawer({ employees = [], teams = [], personalTags = [], tasks = [], onCreatePersonalTag, initialStatus = "todo", initialInput = {}, onClose, onSave }) {
   const [form, setForm] = useState({
     title: "",
     status: initialStatus,
@@ -5443,7 +5456,7 @@ function NewTaskDrawer({ employees = [], teams = [], personalTags = [], onCreate
         </header>
         <div className="drawer-body" onPaste={handlePaste}>
           <section className="drawer-personal-tags" aria-label="Minhas tags">
-            <PersonalTagPicker tags={personalTags} value={form.personalTagIds || []} onChange={(value) => set("personalTagIds", value)} onCreate={onCreatePersonalTag} />
+            <PersonalTagPicker tags={personalTags} tasks={tasks} value={form.personalTagIds || []} onChange={(value) => set("personalTagIds", value)} onCreate={onCreatePersonalTag} />
           </section>
           <div className="drawer-title">
             <label className="drawer-title-field" htmlFor="new-task-title">
@@ -6973,6 +6986,7 @@ export default function App() {
           taskScope={taskScope}
           onScopeChange={onTaskScopeChange}
           personalTags={state.personalTags}
+          tasks={state.tasks}
           onCreatePersonalTag={createPersonalTag}
           onUpdatePersonalTag={updatePersonalTag}
           onArchivePersonalTag={archivePersonalTag}
@@ -6992,6 +7006,7 @@ export default function App() {
           taskScope={taskScope}
           onScopeChange={onTaskScopeChange}
           personalTags={state.personalTags}
+          tasks={state.tasks}
           onCreatePersonalTag={createPersonalTag}
           onUpdatePersonalTag={updatePersonalTag}
           onArchivePersonalTag={archivePersonalTag}
