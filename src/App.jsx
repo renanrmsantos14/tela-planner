@@ -32,6 +32,8 @@ import {
   FileSpreadsheet,
   FileText,
   Flag,
+  Eye,
+  EyeOff,
   LayoutDashboard,
   ListFilter,
   LoaderCircle,
@@ -72,6 +74,7 @@ import {
   formatLongDate,
   getDueBucketForEmployee,
   hasTaskResponsible,
+  isTaskVisibleToEmployee,
   isDueToday,
   mentionedEmployees,
   normalizeWaitingContext,
@@ -2050,7 +2053,7 @@ function PersonalTagPicker({ tags = [], tasks = [], value = [], onChange, onCrea
 
   const shownTags = orderedTags.slice(0, visibleCount);
   const displayTags = showAllTags ? orderedTags : orderedTags.filter((tag) => selected.has(tag.id));
-  const hasMore = !showAllTags && activeTags.some((tag) => !selected.has(tag.id));
+  const hasMore = !showAllTags;
   const visibleUnselectedCount = Math.max(0, visibleCount - selectedCount);
   const showAddButton = showAllTags && onCreate;
   const toggleTag = (tagId) => onChange(selected.has(tagId) ? selectedIds.filter((id) => id !== tagId) : [...selectedIds, tagId]);
@@ -2100,19 +2103,19 @@ function PersonalTagPicker({ tags = [], tasks = [], value = [], onChange, onCrea
               <Plus size={14} />
             </button>
           )}
+          {hasMore && (
+            <button
+              className={`personal-tag-more ${[...selected].some((id) => !shownTags.some((tag) => tag.id === id)) ? "has-selected" : ""}`}
+              ref={moreRef}
+              type="button"
+              onClick={() => { setModalMode("select"); setIsModalOpen(true); }}
+              aria-label={`Escolher tags; ${activeTags.length - selectedCount} não selecionadas`}
+              title="Escolher mais tags"
+            >
+              ...
+            </button>
+          )}
         </div>
-        {hasMore && (
-          <button
-            className={`personal-tag-more ${[...selected].some((id) => !shownTags.some((tag) => tag.id === id)) ? "has-selected" : ""}`}
-            ref={moreRef}
-            type="button"
-            onClick={() => { setModalMode("select"); setIsModalOpen(true); }}
-            aria-label={`Escolher tags; ${activeTags.length - visibleCount} ocultas`}
-            title="Escolher mais tags"
-          >
-            ...
-          </button>
-        )}
       </div>
       {isModalOpen && typeof document !== "undefined" && document.body
         ? createPortal(
@@ -2919,7 +2922,7 @@ function CalendarView({
   );
 }
 
-function QualityView({ state, onCreate, onCreateTask, filters, setFilters }) {
+function QualityView({ state, currentEmployee, onCreate, onCreateTask, filters, setFilters }) {
   const quality = state.quality || [];
   const query = normalizeText(filters.query);
   const taskFilters = useMemo(() => ({ ...filters, query: "" }), [filters]);
@@ -2941,14 +2944,14 @@ function QualityView({ state, onCreate, onCreateTask, filters, setFilters }) {
             linkedTask?.title,
           ].some((value) => normalizeText(value).includes(query));
         const matchesTaskFilters = linkedTask
-          ? filterTasks([linkedTask], taskFilters).length > 0
+          ? filterTasks([linkedTask], taskFilters, currentEmployee, state.teams).length > 0
           : !filters.assignee?.length &&
             !filters.priority?.length &&
             !filters.source?.length &&
             !filters.team?.length;
         return matchesQuery && matchesTaskFilters;
       }),
-    [quality, taskBySourceId, query, taskFilters, filters],
+    [quality, taskBySourceId, query, taskFilters, filters, currentEmployee, state.teams],
   );
   return (
     <div className="page-content">
@@ -4427,8 +4430,20 @@ function TaskDrawerContent({
             <PersonalTagPicker tags={personalTags} tasks={state.tasks || []} value={form.personalTagIds || []} onChange={(value) => set("personalTagIds", value)} onCreate={onCreatePersonalTag} />
           </section>
           <div className="drawer-title">
-            <label className="drawer-title-field" htmlFor={`task-title-${taskItem.id}`}>
-              <span className="drawer-title-label">Título da tarefa</span>
+            <div className="drawer-title-field">
+              <div className="drawer-title-label-row">
+                <label className="drawer-title-label" htmlFor={`task-title-${taskItem.id}`}>Título da tarefa</label>
+                <button
+                  className={`task-visibility-button ${form.restrictedVisibility ? "is-active" : ""}`}
+                  type="button"
+                  onClick={() => set("restrictedVisibility", !form.restrictedVisibility)}
+                  aria-label={form.restrictedVisibility ? "Mostrar tarefa para todos" : "Mostrar tarefa somente para responsáveis e criador"}
+                  aria-pressed={Boolean(form.restrictedVisibility)}
+                  title={form.restrictedVisibility ? "Mostrar para todos" : "Restringir aos responsáveis e criador"}
+                >
+                  {form.restrictedVisibility ? <EyeOff size={15} /> : <Eye size={15} />}
+                </button>
+              </div>
               <input
                 id={`task-title-${taskItem.id}`}
                 value={form.title}
@@ -4436,7 +4451,7 @@ function TaskDrawerContent({
                 placeholder="Escreva o título da tarefa"
                 aria-label="Título da tarefa"
               />
-            </label>
+            </div>
           </div>
           {taskItem.quoteId && (
             <button
@@ -5463,8 +5478,20 @@ function NewTaskDrawer({ employees = [], teams = [], personalTags = [], tasks = 
             <PersonalTagPicker tags={personalTags} tasks={tasks} value={form.personalTagIds || []} onChange={(value) => set("personalTagIds", value)} onCreate={onCreatePersonalTag} showAllTags />
           </section>
           <div className="drawer-title">
-            <label className="drawer-title-field" htmlFor="new-task-title">
-              <span className="drawer-title-label">Título da tarefa</span>
+            <div className="drawer-title-field">
+              <div className="drawer-title-label-row">
+                <label className="drawer-title-label" htmlFor="new-task-title">Título da tarefa</label>
+                <button
+                  className={`task-visibility-button ${form.restrictedVisibility ? "is-active" : ""}`}
+                  type="button"
+                  onClick={() => set("restrictedVisibility", !form.restrictedVisibility)}
+                  aria-label={form.restrictedVisibility ? "Mostrar tarefa para todos" : "Mostrar tarefa somente para responsáveis e criador"}
+                  aria-pressed={Boolean(form.restrictedVisibility)}
+                  title={form.restrictedVisibility ? "Mostrar para todos" : "Restringir aos responsáveis e criador"}
+                >
+                  {form.restrictedVisibility ? <EyeOff size={15} /> : <Eye size={15} />}
+                </button>
+              </div>
               <input
                 id="new-task-title"
                 autoFocus
@@ -5473,7 +5500,7 @@ function NewTaskDrawer({ employees = [], teams = [], personalTags = [], tasks = 
                 placeholder="Ex.: Confirmar motorista"
                 aria-label="Título da tarefa"
               />
-            </label>
+            </div>
           </div>
           <div className="drawer-field-grid new-task-quick-fields">
             <div className="drawer-status-priority-grid">
@@ -5886,7 +5913,7 @@ export default function App() {
   }, [store, mergeConfirmed]);
   useEffect(() => {
     const task = state.tasks.find((item) => item.id === selectedId);
-    if (!selectedId || !task || task.detailsLoaded || task.detailsLoading || !store.loadTaskDetails) return;
+    if (!selectedId || !task || !isTaskVisibleToEmployee(task, currentEmployee, state.teams) || task.detailsLoaded || task.detailsLoading || !store.loadTaskDetails) return;
     setState((current) => ({
       ...current,
       tasks: current.tasks.map((item) => item.id === selectedId ? { ...item, detailsLoading: true } : item),
@@ -5900,7 +5927,7 @@ export default function App() {
         ...current,
         tasks: current.tasks.map((item) => item.id === selectedId ? { ...item, detailsLoading: false, detailsError: failure.message || "Não foi possível carregar o histórico." } : item),
       })));
-  }, [selectedId, state.tasks, store]);
+  }, [currentEmployee, selectedId, state.tasks, state.teams, store]);
   const runMutation = useCallback(
     (operation, message) =>
       operation
@@ -6011,17 +6038,22 @@ export default function App() {
   );
   const selected = useMemo(() => {
     const taskItem = state?.tasks.find((item) => item.id === selectedId);
-    if (!taskItem) return undefined;
+    if (!taskItem || !isTaskVisibleToEmployee(taskItem, currentEmployee, state?.teams)) return undefined;
     const failedPatch = failedTaskDraft?.id === taskItem.id ? failedTaskDraft.patch : null;
     const pendingPatch = pendingTaskDraft?.id === taskItem.id ? pendingTaskDraft.patch : null;
     return failedPatch || pendingPatch
       ? { ...taskItem, ...pendingPatch, ...failedPatch, syncStatus: undefined }
       : taskItem;
-  }, [state, selectedId, failedTaskDraft, pendingTaskDraft]);
+  }, [currentEmployee, state, selectedId, failedTaskDraft, pendingTaskDraft]);
   const openTask = useCallback((id) => {
+    const task = state.tasks.find((item) => item.id === id);
+    if (task && !isTaskVisibleToEmployee(task, currentEmployee, state.teams)) {
+      showNotice("Esta tarefa não está disponível para este usuário.", 3600);
+      return;
+    }
     setSelectedContactId("");
     setSelectedId(id);
-  }, []);
+  }, [currentEmployee, showNotice, state.tasks, state.teams]);
   const openContact = useCallback((id) => {
     setSelectedId("");
     setActive("contacts");
@@ -6946,7 +6978,7 @@ export default function App() {
         />
       );
     if (active === "management")
-      return <ManagementView state={state} onOpenTask={openTask} onCollect={collectTask} onRegisterWaitingReturn={openWaitingReturn} />;
+      return <ManagementView state={state} currentEmployee={currentEmployee} onOpenTask={openTask} onCollect={collectTask} onRegisterWaitingReturn={openWaitingReturn} />;
     if (active === "contacts")
       return (
         <ContactsView
@@ -7044,6 +7076,7 @@ export default function App() {
         <Suspense fallback={<LoadingFallback />}>
           <LazyQualityView
             state={state}
+            currentEmployee={currentEmployee}
             onCreate={createQualityTask}
             onCreateTask={openCreate}
             filters={filters}
