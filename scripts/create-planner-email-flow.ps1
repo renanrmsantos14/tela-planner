@@ -218,6 +218,11 @@ $definition = @'
 '@
 
 $definition = $definition.Replace('__TEST_RECIPIENT__', $TestRecipientEmail)
+$definition = $definition.Replace('cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; border=&quot;0&quot; style=&quot;', 'cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; border=&quot;0&quot; style=&quot;border:0;border-collapse:collapse;border-spacing:0;mso-table-lspace:0pt;mso-table-rspace:0pt;')
+$definition = $definition.Replace('width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; border=&quot;0&quot; style=&quot;max-width:600px;', 'width=&quot;600&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; border=&quot;0&quot; style=&quot;width:100%;max-width:600px;')
+$definition = $definition.Replace('mso-table-rspace:0pt;max-width:600px;background-color:', 'mso-table-rspace:0pt;width:600px;max-width:600px;background-color:')
+$definition = $definition.Replace('color:#ffffff;font-size:14px;line-height:20px;font-weight:700;text-decoration:none;', 'color:#ffffff!important;font-size:14px;line-height:20px;font-weight:700;text-decoration:none;')
+$definition = $definition.Replace('>Abrir tarefa no Planner &rarr;</a>', '><font color=&quot;#ffffff&quot; style=&quot;color:#ffffff!important;&quot;>Abrir tarefa no Planner &rarr;</font></a>')
 $definitionObject = $definition | ConvertFrom-Json
 $mainActions = $definitionObject.actions
 $definitionObject.actions = [ordered]@{

@@ -21,6 +21,9 @@ test("Flow de e-mail do Planner é restrito ao receptor de teste e idempotente",
   assert.match(source, /item\/cr40f_Destinatario@odata\.bind/);
   assert.doesNotMatch(source, /item\/cr40f_destinatario@odata\.bind/);
   assert.match(source, /role=&quot;presentation&quot;/);
+  assert.match(source, /border-collapse:collapse/);
+  assert.match(source, /width:600px;max-width:600px/);
+  assert.match(source, /color:#ffffff!important/);
   assert.match(source, /Abrir tarefa no Planner &rarr;/);
   assert.match(source, /Detalhes do teste/);
   assert.match(source, /lang=&quot;pt-BR&quot;/);
@@ -53,6 +56,9 @@ test("Flow automático de e-mail replica destinatários das notificações e nã
   assert.match(source, /item\/cr40f_Destinatario@odata\.bind/);
   assert.doesNotMatch(source, /item\/cr40f_destinatario@odata\.bind/);
   assert.match(source, /role=&quot;presentation&quot;/);
+  assert.match(source, /border-collapse:collapse/);
+  assert.match(source, /width:600px;max-width:600px/);
+  assert.match(source, /color:#ffffff!important/);
   assert.match(source, /outputs\('Compose_Context'\)\?\['plannerBaseUrl'\]/);
   assert.doesNotMatch(source, /coalesce\(outputs\('Compose_Context'\)\?\['plannerBaseUrl'\], 'https:\/\/org23b93544\.crm2\.dynamics\.com'\)/);
 });
