@@ -19,12 +19,19 @@ test("prévia local do e-mail mantém contrato compatível com Outlook", async (
   assert.match(source, /id="previewControls"/);
   assert.match(source, /aria-pressed="true"/);
   assert.match(source, /data-legend="status"/);
-  for (const scenario of ["assignment", "mention", "waiting", "waiting_return", "status", "assignees", "overdue", "due_today", "due_soon", "contact_assignment", "contact_transfer", "test"]) {
+  for (const scenario of ["assignment", "mention", "waiting", "waiting_return", "status", "assignees", "deadline", "update", "overdue", "due_today", "due_soon", "contact_assignment", "contact_transfer", "test", "flow_error"]) {
     assert.match(source, new RegExp(`value="${scenario}"`));
   }
   assert.match(source, /id="emailScenario"/);
   assert.match(source, /id="emailCtaLabel"/);
   assert.match(source, /Abrir caso no Planner/);
+  assert.match(source, /data=taskId%3Dtask-40/);
+  assert.match(source, /data=contactId%3Dcontact-42/);
+  assert.match(source, /data-tone/);
+  assert.match(source, /flow_error/);
+  for (const toneColor of ["#0d645d", "#2f6fbb", "#b7791f", "#b42318"]) {
+    assert.match(source, new RegExp(toneColor.replace("#", "\\#")));
+  }
   assert.match(source, /min-height:\s*44px/);
   assert.match(source, /prefers-reduced-motion/);
   assert.doesNotMatch(source, /<link[^>]+stylesheet/);
