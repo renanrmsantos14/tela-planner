@@ -8,6 +8,10 @@ test("Flow de e-mail do Planner é restrito ao receptor de teste e idempotente",
   assert.match(source, /shared_office365/);
   assert.match(source, /new_sharedoffice365_f87d5/);
   assert.match(source, /operationId.*SendEmailV2/);
+  assert.match(source, /emailMessage\/From.*noreply@betinhos\.com\.br/);
+  assert.match(source, /Scope_ErrorNotification/);
+  assert.match(source, /Scope_Main.*@\('Failed', 'TimedOut', 'Skipped'\)/s);
+  assert.match(source, /emailMessage\/Subject.*ERRO NO FLUXO/);
   assert.match(source, /cr40f_campo eq 'notification:test'/);
   assert.match(source, /outputs\('Compose_Type'\).*test.*decodeUriComponent\('%C3%A7'\).*decodeUriComponent\('%C3%A3'\)/);
   assert.match(source, /Destinat.*decodeUriComponent\('%C3%A1'\).*rio:/);
@@ -34,6 +38,10 @@ test("Flow automático de e-mail replica destinatários das notificações e nã
   assert.match(source, /cr40f_emailmicrosoft/);
   assert.match(source, /Condition_NotAuthor/);
   assert.match(source, /operationId.*SendEmailV2/);
+  assert.match(source, /emailMessage\/From.*noreply@betinhos\.com\.br/);
+  assert.match(source, /Scope_ErrorNotification/);
+  assert.match(source, /Scope_Main.*@\('Failed', 'TimedOut', 'Skipped'\)/s);
+  assert.match(source, /emailMessage\/Subject.*ERRO NO FLUXO/);
   assert.match(source, /cr40f_chaveidempotente/);
   assert.match(source, /\|Email/);
   assert.match(source, /item\/cr40f_canal.*100000001/);

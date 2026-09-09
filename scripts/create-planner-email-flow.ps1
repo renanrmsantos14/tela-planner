@@ -137,6 +137,7 @@ $definition = @'
           "inputs": {
             "parameters": {
               "emailMessage/To": "@outputs('Compose_Test_Recipient')",
+              "emailMessage/From": "noreply@betinhos.com.br",
               "emailMessage/Subject": "@concat('[Planner | teste] ', outputs('Compose_Type_Label'))",
               "emailMessage/Body": "@concat('<!DOCTYPE html><html lang=&quot;pt-BR&quot;><head><meta charset=&quot;utf-8&quot;></head><body style=&quot;margin:0;padding:0;background-color:#f5f7fa;color:#172033;font-family:Segoe UI,Arial,sans-serif;-webkit-text-size-adjust:100%&quot;><span style=&quot;display:none!important;font-size:1px;color:#f5f7fa;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden&quot;>Atualiza', decodeUriComponent('%C3%A7'), decodeUriComponent('%C3%A3'), 'o de tarefa no Planner.</span><table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; border=&quot;0&quot; style=&quot;background-color:#f5f7fa&quot;><tr><td align=&quot;center&quot; style=&quot;padding:32px 16px&quot;><table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; border=&quot;0&quot; style=&quot;max-width:600px;background-color:#ffffff;border:1px solid #e7ebf0;border-radius:16px&quot;><tr><td style=&quot;padding:28px 32px 24px;border-bottom:1px solid #eef1f5&quot;><p style=&quot;margin:0;color:#14213d;font-size:12px;line-height:16px;font-weight:700;letter-spacing:1.8px&quot;>BETINHOS <span style=&quot;color:#c89b3c&quot;>/</span> PLANNER</p></td></tr><tr><td style=&quot;padding:36px 32px 32px&quot;><p style=&quot;margin:0 0 12px;color:#667085;font-size:13px;line-height:20px;font-weight:600;text-transform:uppercase;letter-spacing:.6px&quot;>Notifica', decodeUriComponent('%C3%A7'), decodeUriComponent('%C3%A3'), 'o de tarefa</p><h1 style=&quot;margin:0 0 16px;color:#14213d;font-size:28px;line-height:36px;font-weight:700;letter-spacing:-.4px&quot;>', outputs('Compose_Type_Label'), '</h1><p style=&quot;margin:0;color:#475467;font-size:16px;line-height:26px&quot;>', outputs('Compose_Message'), '</p><table role=&quot;presentation&quot; width=&quot;100%&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; border=&quot;0&quot; style=&quot;margin-top:28px;background-color:#f8fafc;border-left:3px solid #c89b3c&quot;><tr><td style=&quot;padding:16px 18px&quot;><p style=&quot;margin:0 0 6px;color:#667085;font-size:12px;line-height:18px;font-weight:700;text-transform:uppercase;letter-spacing:.5px&quot;>Detalhes do teste</p><p style=&quot;margin:0;color:#475467;font-size:13px;line-height:21px&quot;><strong>Campo:</strong> ', coalesce(triggerOutputs()?['body/cr40f_campo'], concat('n', decodeUriComponent('%C3%A3'), 'o informado')), '<br><strong>Evento:</strong> ', triggerOutputs()?['body/cr40f_plannertarefaeventoid'], '</p></td></tr></table>', if(empty(outputs('Compose_Context')?['plannerBaseUrl']), '<p style=&quot;margin:28px 0 0;color:#667085;font-size:13px;line-height:20px&quot;>Abra a tarefa diretamente no Planner para continuar.</p>', concat('<table role=&quot;presentation&quot; cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; border=&quot;0&quot; style=&quot;margin-top:28px&quot;><tr><td bgcolor=&quot;#14213d&quot; style=&quot;border-radius:9px&quot;><a href=&quot;', outputs('Compose_Context')?['plannerBaseUrl'], '/WebResources/new_TelaPlanner.html?data=taskId%3D', triggerOutputs()?['body/_cr40f_tarefa_value'], '&quot; style=&quot;display:inline-block;padding:14px 22px;color:#ffffff;font-size:14px;line-height:20px;font-weight:700;text-decoration:none&quot;>Abrir tarefa no Planner &rarr;</a></td></tr></table>')), '</td></tr><tr><td style=&quot;padding:20px 32px 28px;border-top:1px solid #eef1f5&quot;><p style=&quot;margin:0;color:#98a2b3;font-size:12px;line-height:18px&quot;>E-mail de teste do Planner.<br>Destinat', decodeUriComponent('%C3%A1'), 'rio: ', outputs('Compose_Test_Recipient'), '</p></td></tr></table></td></tr></table></body></html>')",
               "emailMessage/Importance": "Normal"
@@ -217,6 +218,39 @@ $definition = @'
 '@
 
 $definition = $definition.Replace('__TEST_RECIPIENT__', $TestRecipientEmail)
+$definitionObject = $definition | ConvertFrom-Json
+$mainActions = $definitionObject.actions
+$definitionObject.actions = [ordered]@{
+  Scope_Main = [ordered]@{
+    type = 'Scope'
+    actions = $mainActions
+  }
+  Scope_ErrorNotification = [ordered]@{
+    type = 'Scope'
+    runAfter = [ordered]@{ Scope_Main = @('Failed', 'TimedOut', 'Skipped') }
+    actions = [ordered]@{
+      Send_Error_Email = [ordered]@{
+        type = 'OpenApiConnection'
+        inputs = [ordered]@{
+          parameters = [ordered]@{
+            'emailMessage/To' = 'noreply@betinhos.onmicrosoft.com'
+            'emailMessage/From' = 'noreply@betinhos.com.br'
+            'emailMessage/Subject' = 'ERRO NO FLUXO - Planner | Notificação por e-mail - Teste'
+            'emailMessage/Body' = '<p>Ocorreu um erro no fluxo <strong>Planner | Notificação por e-mail - Teste</strong>.</p><p>Consulte o histórico de execução no Power Automate.</p>'
+            'emailMessage/Importance' = 'High'
+          }
+          host = [ordered]@{
+            apiId = '/providers/Microsoft.PowerApps/apis/shared_office365'
+            operationId = 'SendEmailV2'
+            connectionName = 'shared_office365'
+          }
+          authentication = "@parameters('$authentication')"
+        }
+      }
+    }
+  }
+}
+$definition = $definitionObject | ConvertTo-Json -Depth 100 -Compress
 $clientData = @{
   properties = @{
     connectionReferences = @{

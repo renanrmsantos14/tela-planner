@@ -2,6 +2,7 @@ param(
   [string]$EnvironmentUrl = 'https://org23b93544.crm2.dynamics.com',
   [string]$ConnectionReferenceLogicalName = 'new_sharedcommondataserviceforapps_25a23',
   [string]$TeamsConnectionReferenceLogicalName = 'new_sharedteams_80676',
+  [string]$OutlookConnectionReferenceLogicalName = 'new_sharedoffice365_f87d5',
   [string]$FlowName = 'Planner | Notificação imediata',
   [string]$WorkflowId = ''
 )
@@ -270,9 +271,43 @@ $definition = @'
 '@
 
 $definition = $definition.Replace('new_sharedcommondataserviceforapps_25a23', $ConnectionReferenceLogicalName)
+$definitionObject = $definition | ConvertFrom-Json
+$mainActions = $definitionObject.actions
+$definitionObject.actions = [ordered]@{
+  Scope_Main = [ordered]@{
+    type = 'Scope'
+    actions = $mainActions
+  }
+  Scope_ErrorNotification = [ordered]@{
+    type = 'Scope'
+    runAfter = [ordered]@{ Scope_Main = @('Failed', 'TimedOut', 'Skipped') }
+    actions = [ordered]@{
+      Send_Error_Email = [ordered]@{
+        type = 'OpenApiConnection'
+        inputs = [ordered]@{
+          parameters = [ordered]@{
+            'emailMessage/To' = 'noreply@betinhos.onmicrosoft.com'
+            'emailMessage/From' = 'noreply@betinhos.com.br'
+            'emailMessage/Subject' = 'ERRO NO FLUXO - Planner | Notificação imediata'
+            'emailMessage/Body' = '<p>Ocorreu um erro no fluxo <strong>Planner | Notificação imediata</strong>.</p><p>Consulte o histórico de execução no Power Automate.</p>'
+            'emailMessage/Importance' = 'High'
+          }
+          host = [ordered]@{
+            apiId = '/providers/Microsoft.PowerApps/apis/shared_office365'
+            operationId = 'SendEmailV2'
+            connectionName = 'shared_office365'
+          }
+          authentication = "@parameters('$authentication')"
+        }
+      }
+    }
+  }
+}
+$definition = $definitionObject | ConvertTo-Json -Depth 100 -Compress
 $clientData = @{ properties = @{ connectionReferences = @{
   shared_commondataserviceforapps = @{ runtimeSource = 'embedded'; connection = @{ connectionReferenceLogicalName = $ConnectionReferenceLogicalName }; api = @{ name = 'shared_commondataserviceforapps' } }
   shared_teams = @{ runtimeSource = 'embedded'; connection = @{ connectionReferenceLogicalName = $TeamsConnectionReferenceLogicalName }; api = @{ name = 'shared_teams' } }
+  shared_office365 = @{ runtimeSource = 'embedded'; connection = @{ connectionReferenceLogicalName = $OutlookConnectionReferenceLogicalName }; api = @{ name = 'shared_office365' } }
 }; definition = ($definition | ConvertFrom-Json) }; schemaVersion = '1.0.0.0' } | ConvertTo-Json -Depth 50 -Compress
 $payload = @{ category = 5; name = $FlowName; type = 1; primaryentity = 'none'; clientdata = $clientData } | ConvertTo-Json -Depth 50
 $headers.Prefer = 'return=representation'

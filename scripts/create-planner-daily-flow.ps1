@@ -1,6 +1,7 @@
 param(
   [string]$EnvironmentUrl = 'https://org23b93544.crm2.dynamics.com',
   [string]$ConnectionReferenceLogicalName = 'new_sharedcommondataserviceforapps_25a23',
+  [string]$OutlookConnectionReferenceLogicalName = 'new_sharedoffice365_f87d5',
   [string]$FlowName = 'Planner | Cobrança diária',
   [string]$WorkflowId = ''
 )
@@ -74,7 +75,43 @@ $definition = @'
 '@
 
 $definition = $definition.Replace('new_sharedcommondataserviceforapps_25a23', $ConnectionReferenceLogicalName)
-$clientData = @{ properties = @{ connectionReferences = @{ shared_commondataserviceforapps = @{ runtimeSource = 'embedded'; connection = @{ connectionReferenceLogicalName = $ConnectionReferenceLogicalName }; api = @{ name = 'shared_commondataserviceforapps' } } }; definition = ($definition | ConvertFrom-Json) }; schemaVersion = '1.0.0.0' } | ConvertTo-Json -Depth 100 -Compress
+$definitionObject = $definition | ConvertFrom-Json
+$mainActions = $definitionObject.actions
+$definitionObject.actions = [ordered]@{
+  Scope_Main = [ordered]@{
+    type = 'Scope'
+    actions = $mainActions
+  }
+  Scope_ErrorNotification = [ordered]@{
+    type = 'Scope'
+    runAfter = [ordered]@{ Scope_Main = @('Failed', 'TimedOut', 'Skipped') }
+    actions = [ordered]@{
+      Send_Error_Email = [ordered]@{
+        type = 'OpenApiConnection'
+        inputs = [ordered]@{
+          parameters = [ordered]@{
+            'emailMessage/To' = 'noreply@betinhos.onmicrosoft.com'
+            'emailMessage/From' = 'noreply@betinhos.com.br'
+            'emailMessage/Subject' = 'ERRO NO FLUXO - Planner | Cobrança diária'
+            'emailMessage/Body' = '<p>Ocorreu um erro no fluxo <strong>Planner | Cobrança diária</strong>.</p><p>Consulte o histórico de execução no Power Automate.</p>'
+            'emailMessage/Importance' = 'High'
+          }
+          host = [ordered]@{
+            apiId = '/providers/Microsoft.PowerApps/apis/shared_office365'
+            operationId = 'SendEmailV2'
+            connectionName = 'shared_office365'
+          }
+          authentication = "@parameters('$authentication')"
+        }
+      }
+    }
+  }
+}
+$definition = $definitionObject | ConvertTo-Json -Depth 100 -Compress
+$clientData = @{ properties = @{ connectionReferences = @{
+  shared_commondataserviceforapps = @{ runtimeSource = 'embedded'; connection = @{ connectionReferenceLogicalName = $ConnectionReferenceLogicalName }; api = @{ name = 'shared_commondataserviceforapps' } }
+  shared_office365 = @{ runtimeSource = 'embedded'; connection = @{ connectionReferenceLogicalName = $OutlookConnectionReferenceLogicalName }; api = @{ name = 'shared_office365' } }
+}; definition = ($definition | ConvertFrom-Json) }; schemaVersion = '1.0.0.0' } | ConvertTo-Json -Depth 100 -Compress
 $payload = @{ category = 5; name = $FlowName; type = 1; primaryentity = 'none'; clientdata = $clientData } | ConvertTo-Json -Depth 100
 $filter = [uri]::EscapeDataString("name eq '$($FlowName.Replace("'", "''"))'")
 $existing = (Invoke-RestMethod -Uri "$EnvironmentUrl/api/data/v9.2/workflows?`$select=workflowid&`$filter=$filter" -Headers $headers).value | Select-Object -First 1
@@ -82,4 +119,10 @@ if ($existing) { $WorkflowId = $existing.workflowid }
 $method = if ($WorkflowId) { 'Patch' } else { 'Post' }
 $uri = if ($WorkflowId) { "$EnvironmentUrl/api/data/v9.2/workflows($WorkflowId)" } else { "$EnvironmentUrl/api/data/v9.2/workflows" }
 $body = if ($WorkflowId) { @{ clientdata = $clientData } | ConvertTo-Json -Depth 100 } else { $payload }
-(Invoke-WebRequest -Uri $uri -Headers $headers -Method $method -Body $body).Headers['OData-EntityId']
+if ($WorkflowId) {
+  Invoke-RestMethod -Uri $uri -Headers $headers -Method Patch -Body $body | Out-Null
+} else {
+  $created = Invoke-RestMethod -Uri $uri -Headers $headers -Method Post -Body $body
+  $WorkflowId = $created.workflowid
+}
+Write-Output "Flow atualizado: $WorkflowId (o estado de ativação não foi alterado)"
