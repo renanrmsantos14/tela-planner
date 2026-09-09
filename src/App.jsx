@@ -136,6 +136,8 @@ import {
   normalizeContact,
 } from "./contactDomain.js";
 
+const QUOTE_WORKSPACE_V2_ENABLED = import.meta.env.VITE_QUOTES_WORKSPACE_V2 !== "false";
+
 const CENTRAL_NAV_ITEMS = [
   ["dashboard", "Início", LayoutDashboard],
   ["board", "Tarefas", ClipboardList],
@@ -6493,6 +6495,24 @@ export default function App() {
     },
     [currentEmployee, runOptimisticMutation, state, store],
   );
+  const createQuote = useCallback((input = {}) => {
+    if (!store.createQuote) return Promise.resolve(false);
+    return runOptimisticMutation(
+      (current) => current,
+      () => store.createQuote(confirmedStateRef.current || state, { ...input, actorEmployeeId: currentEmployee?.id || "" }),
+      store.live ? "Cotação em sincronização…" : "Criando cotação no mock local…",
+      store.live ? "Cotação enviada para sincronização." : "Cotação criada no mock local.",
+    );
+  }, [currentEmployee, runOptimisticMutation, state, store]);
+  const updateQuote = useCallback((id, patch = {}) => {
+    if (!store.updateQuote) return Promise.resolve(false);
+    return runOptimisticMutation(
+      (current) => ({ ...current, quotes: (current.quotes || []).map((quote) => quote.id === id ? { ...quote, ...patch, syncStatus: "syncing" } : quote) }),
+      () => store.updateQuote(confirmedStateRef.current || state, id, { ...patch, actorEmployeeId: currentEmployee?.id || "" }),
+      store.live ? "Cotação em sincronização…" : "Cotação atualizada no mock local.",
+      store.live ? "Cotação sincronizada." : "Cotação atualizada.",
+    );
+  }, [currentEmployee, runOptimisticMutation, state, store]);
   const archiveContact = useCallback(
     (contact) => {
       const archivedAt = new Date().toISOString();
@@ -7124,7 +7144,7 @@ export default function App() {
         />
       );
     if (active === "quotes")
-      return <QuotesView state={viewState} onOpenTask={openTask} />;
+      return <QuotesView state={viewState} onOpenTask={openTask} onCreateQuote={createQuote} onUpdateQuote={updateQuote} workspaceEnabled={QUOTE_WORKSPACE_V2_ENABLED} />;
     if (active === "board")
       return (
         <BoardView

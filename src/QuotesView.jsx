@@ -6,6 +6,10 @@ import {
   ChevronDown,
   FileText,
   Link2,
+  Plus,
+  Save,
+  ArrowLeft,
+  Eye,
   Search,
   X,
 } from "lucide-react";
@@ -78,11 +82,44 @@ function compareQuotes(left, right, key) {
   return String(leftValue).localeCompare(String(rightValue), "pt-BR");
 }
 
-export default function QuotesView({ state, onOpenTask }) {
+const QUOTE_FORM_FIELDS = [
+  ["client", "Cliente / empresa", "text"], ["clientContact", "Contato", "text"], ["clientEmail", "E-mail", "email"], ["clientPhone", "WhatsApp / telefone", "tel"],
+  ["serviceType", "Tipo de serviço", "text"], ["vehicleType", "Tipo de veículo", "text"], ["origin", "Origem", "text"], ["destination", "Destino", "text"],
+  ["passengers", "Passageiros", "number"], ["serviceDate", "Data/hora do serviço", "datetime-local"], ["returnDate", "Data/hora do retorno", "datetime-local"],
+  ["deadline", "Prazo para responder", "date"], ["value", "Valor cotado", "text"], ["commercialTerms", "Condição comercial", "textarea"], ["notes", "Observações do pedido", "textarea"],
+];
+
+function QuoteWorkspace({ quote, onBack, onSave, onPreview, saving = false }) {
+  const [draft, setDraft] = useState(() => ({ status: "Nova", priority: "medium", ...(quote || {}) }));
+  const [preview, setPreview] = useState(false);
+  const update = (key, value) => setDraft((current) => ({ ...current, [key]: value }));
+  const submit = (event) => { event.preventDefault(); if (!draft.title?.trim() || !draft.client?.trim()) return; onSave?.(draft); };
+  const previewName = draft.clientContact || draft.client || "cliente";
+  return (
+    <section className="panel quote-workspace" aria-label={quote ? `Editar cotação ${quote.code}` : "Nova cotação"}>
+      <header className="quote-workspace-header">
+        <div><button className="button button-quiet" type="button" onClick={onBack}><ArrowLeft size={15} />Voltar para a lista</button><span className="eyebrow">{quote ? "EDIÇÃO OPERACIONAL" : "NOVA SOLICITAÇÃO"}</span><h2>{quote ? `${quote.code || "Cotação"} · editar` : "Criar cotação"}</h2></div>
+        <div className="quote-workspace-actions"><button className="button button-secondary" type="button" onClick={() => setPreview((value) => !value)}><Eye size={15} />{preview ? "Ocultar prévia" : "Prévia do e-mail"}</button><button className="button button-primary" type="submit" form="quote-workspace-form" disabled={saving}><Save size={15} />{saving ? "Salvando…" : "Salvar cotação"}</button></div>
+      </header>
+      <div className="quote-workspace-layout">
+        <form id="quote-workspace-form" className="quote-form" onSubmit={submit}>
+          <div className="quote-form-section"><span className="eyebrow">IDENTIFICAÇÃO</span><label>Título<input required value={draft.title || ""} onChange={(event) => update("title", event.target.value)} placeholder="Ex.: Transfer executivo · Aeroporto GRU" /></label><div className="quote-form-grid"><label>Status<select value={draft.status || "Nova"} onChange={(event) => update("status", event.target.value)}>{DEFAULT_STATUS_ORDER.map((item) => <option key={item}>{item}</option>)}</select></label><label>Prioridade<select value={draft.priority || "medium"} onChange={(event) => update("priority", event.target.value)}><option value="low">Baixa</option><option value="medium">Média</option><option value="high">Alta</option></select></label></div></div>
+          <div className="quote-form-section"><span className="eyebrow">DADOS DA SOLICITAÇÃO</span><div className="quote-form-grid">{QUOTE_FORM_FIELDS.map(([key, label, type]) => <label key={key}>{label}{type === "textarea" ? <textarea rows={3} value={draft[key] || ""} onChange={(event) => update(key, event.target.value)} /> : <input type={type} value={draft[key] || ""} onChange={(event) => update(key, event.target.value)} />}</label>)}</div></div>
+          <p className="quote-form-hint">Ao salvar uma nova cotação, o acompanhamento principal é criado junto no modo local. No Dataverse, a operação será liberada após publicação do contrato transacional.</p>
+        </form>
+        {preview && <aside className="quote-email-preview" aria-label="Prévia do e-mail da cotação"><div className="quote-email-preview-bar"><span>Prévia do e-mail</span><small>{draft.code || "Rascunho"}</small></div><div className="quote-email-sheet"><strong>Olá, {previewName}.</strong><p>Recebemos sua solicitação de cotação e preparamos um resumo executivo dos dados registrados.</p><hr /><h3>{draft.title || "Nova cotação"}</h3><dl><div><dt>Serviço</dt><dd>{draft.serviceType || "A definir"}</dd></div><div><dt>Veículo</dt><dd>{draft.vehicleType || "A definir"}</dd></div><div><dt>Rota</dt><dd>{[draft.origin, draft.destination].filter(Boolean).join(" → ") || "A definir"}</dd></div><div><dt>Valor</dt><dd>{draft.value || "Em composição"}</dd></div></dl><p className="quote-email-note">Valores e condições sujeitos à validação operacional e comercial.</p></div></aside>}
+      </div>
+    </section>
+  );
+}
+
+export default function QuotesView({ state, onOpenTask, onCreateQuote, onUpdateQuote, workspaceEnabled = true }) {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("");
   const [sort, setSort] = useState({ key: "", direction: "asc" });
   const [selectedQuote, setSelectedQuote] = useState(null);
+  const [editingQuote, setEditingQuote] = useState(null);
+  const [savingQuote, setSavingQuote] = useState(false);
   const quotes = state.quotes || [];
   const tasksByQuote = useMemo(() => {
     const map = new Map();
@@ -129,12 +166,9 @@ export default function QuotesView({ state, onOpenTask }) {
         <div>
           <span className="eyebrow">ACOMPANHAMENTO COMERCIAL</span>
           <h1>Cotações</h1>
-          <p>Consulte status, prazos e valores das cotações em andamento.</p>
+          <p>{workspaceEnabled ? "Gerencie dados, prazos, valores e acompanhamento das cotações." : "Consulte status, prazos e valores das cotações em andamento."}</p>
         </div>
-        <span className="quotes-readonly-note">
-          <FileText size={15} />
-          Consulta operacional
-        </span>
+          {workspaceEnabled && <button className="button button-primary" type="button" onClick={() => setEditingQuote({})}><Plus size={15} />Nova cotação</button>}
       </div>
 
       <div className="metric-grid quotes-metrics">
@@ -224,6 +258,7 @@ export default function QuotesView({ state, onOpenTask }) {
           </div>
         )}
       </section>
+      {workspaceEnabled && editingQuote && <QuoteWorkspace quote={editingQuote.id ? quotes.find((item) => item.id === editingQuote.id) || editingQuote : editingQuote} saving={savingQuote} onBack={() => setEditingQuote(null)} onSave={(draft) => { setSavingQuote(true); const operation = draft.id ? onUpdateQuote?.(draft.id, draft) : onCreateQuote?.(draft); Promise.resolve(operation).finally(() => setSavingQuote(false)).then((success) => { if (success !== false) setEditingQuote(null); }); }} />}
       {selectedQuote && (
         <div className="drawer-layer" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedQuote(null); }}>
           <aside className="task-drawer quote-detail-drawer" aria-label={`Detalhes da cotação ${selectedQuote.code || ""}`}>
@@ -242,9 +277,10 @@ export default function QuotesView({ state, onOpenTask }) {
                 <div><span>Prazo de resposta</span><strong className={isOverdueQuote(selectedQuote) ? "danger-text" : ""}>{formatDate(selectedQuote.deadline)}</strong></div>
                 <div><span>Valor cotado</span><strong>{selectedQuote.value || "—"}</strong></div>
               </div>
-              <div className="quote-detail-note"><FileText size={16} /><span>Esta tela é somente para consulta. A criação e a solicitação de cotações acontecem fora do Planner.</span></div>
+              <div className="quote-detail-note"><FileText size={16} /><span>{workspaceEnabled ? "Dados comerciais e operacionais podem ser editados no workspace da cotação." : "Esta tela é somente para consulta. A criação e a solicitação de cotações acontecem fora do Planner."}</span></div>
             </div>
             <footer className="drawer-footer">
+              {workspaceEnabled && <button className="button button-primary" type="button" onClick={() => { setEditingQuote(selectedQuote); setSelectedQuote(null); }}><Save size={15} />Editar cotação</button>}
               {selectedTask && <button className="button button-secondary" type="button" onClick={() => { setSelectedQuote(null); onOpenTask?.(selectedTask.id); }}><Link2 size={15} />Ver tarefa vinculada</button>}
               <button className="button button-quiet" type="button" onClick={() => setSelectedQuote(null)}>Fechar</button>
             </footer>

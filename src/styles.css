@@ -2206,3 +2206,31 @@ button { cursor: pointer; }
   .admin-action-row { grid-template-columns: minmax(0, 1fr) auto; }
   .admin-action-row > .button:last-child { grid-column: 2; }
 }
+.quote-workspace { margin-top: 18px; }
+.quote-workspace-header { display: flex; justify-content: space-between; gap: 18px; align-items: flex-start; padding: 20px 22px; border-bottom: 1px solid var(--line); }
+.quote-workspace-header h2 { margin: 6px 0 0; }
+.quote-workspace-header .button-quiet { margin-bottom: 12px; }
+.quote-workspace-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.quote-workspace-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 380px); gap: 18px; padding: 20px 22px 24px; }
+.quote-form { min-width: 0; }
+.quote-form-section + .quote-form-section { margin-top: 22px; padding-top: 20px; border-top: 1px solid var(--line); }
+.quote-form-section > .eyebrow { display: block; margin-bottom: 12px; }
+.quote-form label { display: flex; flex-direction: column; gap: 6px; color: var(--secondary); font-size: 12px; font-weight: 600; }
+.quote-form input, .quote-form select, .quote-form textarea { width: 100%; border: 1px solid var(--line); border-radius: 8px; background: #fcfcfb; color: var(--primary); padding: 10px 11px; font: inherit; font-weight: 400; }
+.quote-form textarea { resize: vertical; min-height: 84px; }
+.quote-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.quote-form-grid label { min-width: 0; }
+.quote-form-hint { margin: 20px 0 0; color: var(--tertiary); font-size: 12px; line-height: 1.5; }
+.quote-email-preview { min-width: 0; border: 1px solid var(--line); border-radius: 12px; background: #f3f0ea; overflow: hidden; align-self: start; position: sticky; top: 18px; }
+.quote-email-preview-bar { display: flex; justify-content: space-between; padding: 12px 14px; background: #112f28; color: #f6f1e7; font-size: 12px; }
+.quote-email-preview-bar small { color: #d2c2a8; }
+.quote-email-sheet { margin: 16px; padding: 22px 18px; min-height: 460px; background: #fffdfa; color: #2b261f; box-shadow: 0 8px 22px rgba(38, 32, 24, .1); font-size: 12px; line-height: 1.6; }
+.quote-email-sheet h3 { font-size: 16px; margin: 18px 0 12px; }
+.quote-email-sheet hr { border: 0; border-top: 1px solid #e9dfd2; margin: 18px 0; }
+.quote-email-sheet dl { margin: 0; }
+.quote-email-sheet dl > div { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px solid #f0ebe3; }
+.quote-email-sheet dt { color: #756c60; }
+.quote-email-sheet dd { margin: 0; text-align: right; font-weight: 600; }
+.quote-email-note { margin-top: 24px; padding: 12px; background: #112f28; color: #f6f1e7; font-size: 11px; }
+@media (max-width: 900px) { .quote-workspace-layout { grid-template-columns: 1fr; } .quote-email-preview { position: static; } }
+@media (max-width: 620px) { .quote-workspace-header { flex-direction: column; } .quote-workspace-actions { width: 100%; } .quote-workspace-actions .button { flex: 1; justify-content: center; } .quote-form-grid { grid-template-columns: 1fr; } }

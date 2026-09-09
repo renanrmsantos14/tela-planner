@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { addAttachment, addComment, archivePersonalTag, createPersonalTag, createTask, createTeam, deleteAttachment, deleteTask, deleteTeam, ensureQuoteTask, loadPersonalTags, replaceTaskPersonalTags, resolveWaitingReturn, seedState, updatePersonalTag, updateTask, updateTeam } from "../src/mockStore.js";
+import { addAttachment, addComment, archivePersonalTag, createPersonalTag, createTask, createTeam, createQuote, deleteAttachment, deleteTask, deleteTeam, ensureQuoteTask, loadPersonalTags, replaceTaskPersonalTags, resolveWaitingReturn, seedState, updatePersonalTag, updateTask, updateTeam, updateQuote } from "../src/mockStore.js";
 import { localDateKey } from "../src/management.js";
 
 function withStorage() {
@@ -122,6 +122,29 @@ test("bloqueia segunda tarefa principal ativa para a mesma cotação no mock", (
     () => createTask(initial, { title: "Duplicada", quoteId: "quote-1008", quoteCode: "COT-1008" }),
     /acompanhamento principal ativo/,
   );
+});
+
+test("cria cotação e acompanhamento principal no mesmo estado mock", () => {
+  withStorage();
+  const next = createQuote(seedState(), { title: "Transfer novo", client: "Cliente novo", deadline: "2026-09-20", priority: "high" });
+  const quote = next.quotes[0];
+  const task = next.tasks.find((item) => item.quoteId === quote.id && !item.parentTaskId);
+  assert.match(quote.code, /^COT-\d{4}$/);
+  assert.ok(task);
+  assert.equal(quote.plannerTaskId, task.id);
+  assert.equal(task.priority, "high");
+});
+
+test("atualiza dados comerciais e replica campos operacionais na tarefa", () => {
+  withStorage();
+  const initial = seedState();
+  const quote = initial.quotes[0];
+  const next = updateQuote(initial, quote.id, { title: "Título revisado", deadline: "2026-09-30", priority: "high" });
+  const task = next.tasks.find((item) => item.quoteId === quote.id && !item.parentTaskId);
+  assert.equal(next.quotes.find((item) => item.id === quote.id).title, "Título revisado");
+  assert.equal(task.quoteTitle, "Título revisado");
+  assert.equal(task.dueDate, "2026-09-30");
+  assert.equal(task.priority, "high");
 });
 
 test("preserva origem na tarefa criada", () => {

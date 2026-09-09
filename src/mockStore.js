@@ -857,6 +857,35 @@ export function ensureQuoteTask(state, quote) {
   return createTask(state, { title: `Acompanhar ${quote.code}`, quoteId: quote.id, quoteCode: quote.code, quoteTitle: quote.title, dueDate: quote.deadline, priority: "medium", assigneeName: "Não atribuído", teamName: "Comercial", description: `Acompanhar a cotação ${quote.code} até a resposta ao cliente.` });
 }
 
+export function createQuote(state, input = {}) {
+  const now = new Date().toISOString();
+  const sequence = Math.max(0, ...(state.quotes || []).map((quote) => Number.parseInt(String(quote.code || "").replace(/\D/g, ""), 10) || 0)) + 1;
+  const quote = {
+    id: uid("quote"), code: input.code || `COT-${String(sequence).padStart(4, "0")}`,
+    title: String(input.title || "Nova cotação").trim(), client: String(input.client || "").trim(),
+    status: input.status || "Nova", deadline: input.deadline || "", value: input.value || "",
+    serviceType: input.serviceType || "", vehicleType: input.vehicleType || "", origin: input.origin || "", destination: input.destination || "",
+    passengers: input.passengers || "", serviceDate: input.serviceDate || "", returnDate: input.returnDate || "",
+    clientContact: input.clientContact || "", clientEmail: input.clientEmail || "", clientPhone: input.clientPhone || "",
+    commercialTerms: input.commercialTerms || "", notes: input.notes || "", priority: input.priority || "medium", plannerTaskId: "", createdAt: now, modifiedAt: now,
+  };
+  const withQuote = { ...state, quotes: [quote, ...(state.quotes || [])] };
+  const withTask = createTask(withQuote, { title: `Acompanhar ${quote.code}`, quoteId: quote.id, quoteCode: quote.code, quoteTitle: quote.title, dueDate: quote.deadline, priority: quote.priority, assigneeName: "Não atribuído", teamName: "Comercial", description: `Acompanhar a cotação ${quote.code} até a resposta ao cliente.` });
+  const task = withTask.tasks.find((item) => item.quoteId === quote.id && !item.parentTaskId);
+  return saveState({ ...withTask, quotes: withTask.quotes.map((item) => item.id === quote.id ? { ...item, plannerTaskId: task?.id || "", modifiedAt: now } : item) });
+}
+
+export function updateQuote(state, id, patch = {}) {
+  const existing = (state.quotes || []).find((quote) => quote.id === id);
+  if (!existing) throw new Error("Cotação não encontrada.");
+  const nextQuote = { ...existing, ...patch, id, modifiedAt: new Date().toISOString() };
+  return saveState({
+    ...state,
+    quotes: state.quotes.map((quote) => quote.id === id ? nextQuote : quote),
+    tasks: state.tasks.map((taskItem) => taskItem.quoteId === id ? { ...taskItem, title: taskItem.parentTaskId ? taskItem.title : `Acompanhar ${nextQuote.code || "cotação"}`, quoteCode: nextQuote.code || taskItem.quoteCode, quoteTitle: nextQuote.title || taskItem.quoteTitle, dueDate: nextQuote.deadline || taskItem.dueDate, priority: nextQuote.priority || taskItem.priority } : taskItem),
+  });
+}
+
 export function resetState() {
   const next = seedState();
   localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
