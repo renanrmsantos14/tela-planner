@@ -89,14 +89,14 @@ const QUOTE_FORM_FIELDS = [
   ["deadline", "Prazo para responder", "date"], ["value", "Valor cotado", "text"], ["commercialTerms", "Condição comercial", "textarea"], ["notes", "Observações do pedido", "textarea"],
 ];
 
-function QuoteWorkspace({ quote, onBack, onSave, onPreview, saving = false }) {
+function QuoteWorkspace({ quote, onBack, onSave, saving = false }) {
   const [draft, setDraft] = useState(() => ({ status: "Nova", priority: "medium", ...(quote || {}) }));
   const [preview, setPreview] = useState(false);
   const update = (key, value) => setDraft((current) => ({ ...current, [key]: value }));
   const submit = (event) => { event.preventDefault(); if (!draft.title?.trim() || !draft.client?.trim()) return; onSave?.(draft); };
   const previewName = draft.clientContact || draft.client || "cliente";
   return (
-    <section className="panel quote-workspace" aria-label={quote ? `Editar cotação ${quote.code}` : "Nova cotação"}>
+    <section className="panel quote-workspace" role="dialog" aria-modal="true" aria-label={quote ? `Editar cotação ${quote.code}` : "Nova cotação"}>
       <header className="quote-workspace-header">
         <div><button className="button button-quiet" type="button" onClick={onBack}><ArrowLeft size={15} />Voltar para a lista</button><span className="eyebrow">{quote ? "EDIÇÃO OPERACIONAL" : "NOVA SOLICITAÇÃO"}</span><h2>{quote ? `${quote.code || "Cotação"} · editar` : "Criar cotação"}</h2></div>
         <div className="quote-workspace-actions"><button className="button button-secondary" type="button" onClick={() => setPreview((value) => !value)}><Eye size={15} />{preview ? "Ocultar prévia" : "Prévia do e-mail"}</button><button className="button button-primary" type="submit" form="quote-workspace-form" disabled={saving}><Save size={15} />{saving ? "Salvando…" : "Salvar cotação"}</button></div>
@@ -258,7 +258,7 @@ export default function QuotesView({ state, onOpenTask, onCreateQuote, onUpdateQ
           </div>
         )}
       </section>
-      {workspaceEnabled && editingQuote && <QuoteWorkspace quote={editingQuote.id ? quotes.find((item) => item.id === editingQuote.id) || editingQuote : editingQuote} saving={savingQuote} onBack={() => setEditingQuote(null)} onSave={(draft) => { setSavingQuote(true); const operation = draft.id ? onUpdateQuote?.(draft.id, draft) : onCreateQuote?.(draft); Promise.resolve(operation).finally(() => setSavingQuote(false)).then((success) => { if (success !== false) setEditingQuote(null); }); }} />}
+      {workspaceEnabled && editingQuote && <div className="quote-workspace-layer" onMouseDown={(event) => { if (event.target === event.currentTarget) setEditingQuote(null); }}><QuoteWorkspace quote={editingQuote.id ? quotes.find((item) => item.id === editingQuote.id) || editingQuote : editingQuote} saving={savingQuote} onBack={() => setEditingQuote(null)} onSave={(draft) => { setSavingQuote(true); const operation = draft.id ? onUpdateQuote?.(draft.id, draft) : onCreateQuote?.(draft); Promise.resolve(operation).finally(() => setSavingQuote(false)).then((success) => { if (success !== false) setEditingQuote(null); }); }} /></div>}
       {selectedQuote && (
         <div className="drawer-layer" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedQuote(null); }}>
           <aside className="task-drawer quote-detail-drawer" aria-label={`Detalhes da cotação ${selectedQuote.code || ""}`}>

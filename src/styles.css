@@ -2206,7 +2206,8 @@ button { cursor: pointer; }
   .admin-action-row { grid-template-columns: minmax(0, 1fr) auto; }
   .admin-action-row > .button:last-child { grid-column: 2; }
 }
-.quote-workspace { margin-top: 18px; }
+.quote-workspace-layer { position: fixed; inset: 0; z-index: 180; overflow: auto; padding: 16px; background: rgba(4, 24, 48, .58); animation: quote-workspace-backdrop-in 160ms ease-out both; }
+.quote-workspace { width: min(1180px, 100%); min-height: calc(100dvh - 32px); margin: 0 auto; }
 .quote-workspace-header { display: flex; justify-content: space-between; gap: 18px; align-items: flex-start; padding: 20px 22px; border-bottom: 1px solid var(--line); }
 .quote-workspace-header h2 { margin: 6px 0 0; }
 .quote-workspace-header .button-quiet { margin-bottom: 12px; }
@@ -2234,3 +2235,5 @@ button { cursor: pointer; }
 .quote-email-note { margin-top: 24px; padding: 12px; background: #112f28; color: #f6f1e7; font-size: 11px; }
 @media (max-width: 900px) { .quote-workspace-layout { grid-template-columns: 1fr; } .quote-email-preview { position: static; } }
 @media (max-width: 620px) { .quote-workspace-header { flex-direction: column; } .quote-workspace-actions { width: 100%; } .quote-workspace-actions .button { flex: 1; justify-content: center; } .quote-form-grid { grid-template-columns: 1fr; } }
+@media (max-width: 620px) { .quote-workspace-layer { padding: 0; } .quote-workspace { min-height: 100dvh; border-radius: 0; } }
+@keyframes quote-workspace-backdrop-in { from { opacity: 0; } to { opacity: 1; } }
