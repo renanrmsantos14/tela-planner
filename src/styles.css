@@ -732,6 +732,15 @@ button { cursor: pointer; }
 .personal-tag-manager-actions { margin-left: auto; }
 .personal-tag-manager-actions .subtask-delete { opacity: 1; }
 
+.custom-select-option-color, .custom-select-selected-dot { width: 9px; height: 9px; flex: 0 0 9px; border-radius: 50%; background: var(--custom-select-option-color); box-shadow: 0 0 0 2px color-mix(in srgb, var(--custom-select-option-color) 16%, transparent); }
+.custom-select-selected-dot { width: 8px; height: 8px; flex-basis: 8px; }
+.personal-tag-filter-select { width: min(210px, 100%); }
+.personal-tag-filter-select .custom-select-trigger { border-color: #d7dfea; background: #f8fafc; }
+.personal-tag-filter-select .custom-select-trigger:hover, .personal-tag-filter-select.is-open .custom-select-trigger { border-color: #91aee8; background: #fff; }
+.personal-tag-filter-select .custom-select-option { min-height: 42px; gap: 9px; background: #fff; }
+.personal-tag-filter-select .custom-select-option.is-selected { background: color-mix(in srgb, var(--blue-soft) 44%, #fff); }
+.personal-tag-filter-select .custom-select-option-name { font-weight: 700; }
+
 @media (max-width: 980px) {
   .settings-secondary-grid { grid-template-columns: 1fr; }
 }

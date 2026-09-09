@@ -2370,10 +2370,11 @@ const FilterBar = memo(function FilterBar({
           options={teamOptions}
         />
         <SearchableMultiSelect
+          className="personal-tag-filter-select"
           value={filters.personalTag || []}
           onChange={(value) => setFilters((current) => ({ ...current, personalTag: value }))}
           placeholder="Minhas tags"
-          options={personalTags.filter((tag) => !tag.archived).map((tag) => ({ value: tag.id, label: tag.name }))}
+          options={personalTags.filter((tag) => !tag.archived).map((tag) => ({ value: tag.id, label: tag.name, color: tag.color }))}
         />
         {activeFilterCount > 0 && (
           <button

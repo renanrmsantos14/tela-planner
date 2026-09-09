@@ -174,6 +174,7 @@ export default function SearchableSelect({
         value: String(option?.value ?? ""),
         label: String(option?.label ?? ""),
         subtitle: option?.subtitle ? String(option.subtitle) : "",
+        color: option?.color ? String(option.color) : "",
         search: String(option?.search ?? ""),
         searchText: normalizeSearchText(
           `${option?.label ?? ""} ${option?.search ?? ""}`,
@@ -577,6 +578,9 @@ export default function SearchableSelect({
         >
           {multiple && selectedOptions.length > 0 ? (
             <span className="custom-select-multiple-value">
+              {selectedOptions[0].color && (
+                <span className="custom-select-selected-dot" style={{ "--custom-select-option-color": selectedOptions[0].color }} aria-hidden="true" />
+              )}
               <span className="custom-select-multiple-primary">
                 {selectedOptions[0].label}
               </span>
@@ -673,6 +677,7 @@ export default function SearchableSelect({
                   key={option.value}
                   type="button"
                   className={`custom-select-option${multiple ? " custom-select-option--multiple" : ""}${index === highlightedIndex ? " is-active" : ""}${selectedValueSet.has(option.value) ? " is-selected" : ""}`}
+                  style={option.color ? { "--custom-select-option-color": option.color } : undefined}
                   role="option"
                   aria-selected={selectedValueSet.has(option.value)}
                   tabIndex={-1}
@@ -681,6 +686,9 @@ export default function SearchableSelect({
                 >
                   {multiple && (
                     <span className="custom-select-option-check" aria-hidden="true" />
+                  )}
+                  {option.color && (
+                    <span className="custom-select-option-color" style={{ "--custom-select-option-color": option.color }} aria-hidden="true" />
                   )}
                   {option.subtitle ? (
                     <>
