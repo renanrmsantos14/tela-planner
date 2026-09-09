@@ -2,6 +2,64 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
+function compileFlowDefinition(source, testUserEmail = "usuario@example.com") {
+  const block = source.match(/\$definition = @'\r?\n([\s\S]*?)\r?\n'@/);
+  assert.ok(block, "bloco JSON da definição não encontrado");
+  let json = block[1].replaceAll("__TEST_USER_EMAIL__", testUserEmail);
+  const replacements = source.matchAll(/\$definition = \$definition\.Replace\('((?:''|[^'])*)', '((?:''|[^'])*)'\)/g);
+  for (const [, encodedFrom, encodedTo] of replacements) {
+    const from = encodedFrom.replaceAll("''", "'");
+    const to = encodedTo.replaceAll("''", "'");
+    json = json.replaceAll(from, to);
+  }
+  return JSON.parse(json);
+}
+
+function findAction(node, actionName) {
+  if (!node || typeof node !== "object") return null;
+  if (node.actions?.[actionName]) return node.actions[actionName];
+  for (const value of Object.values(node)) {
+    const found = findAction(value, actionName);
+    if (found) return found;
+  }
+  return null;
+}
+
+test("HTML compilado do Flow usa atributos válidos e CTA no shell do Power Apps", async () => {
+  const source = await readFile(new URL("../scripts/create-planner-email-flow.ps1", import.meta.url), "utf8");
+  const definition = compileFlowDefinition(source);
+  const sendEmail = findAction(definition, "Send_Email");
+  const composeCta = findAction(definition, "Compose_Cta_Url");
+  assert.ok(sendEmail, "ação Send_Email não encontrada");
+  assert.ok(composeCta, "ação Compose_Cta_Url não encontrada");
+  const body = sendEmail.inputs.parameters["emailMessage/Body"];
+
+  assert.match(body, /<table role="presentation"/);
+  assert.match(body, /<a href="/);
+  assert.doesNotMatch(body, /&quot;/);
+  assert.match(body, /Compose_Cta_Url/);
+  assert.match(composeCta.inputs, /plannerAppUrl/);
+  assert.match(composeCta.inputs, /main\.aspx/);
+  assert.doesNotMatch(composeCta.inputs, /outputs\('Compose_Cta_Url'\)/);
+});
+
+test("HTML compilado do Flow automático preserva o mesmo CTA válido", async () => {
+  const source = await readFile(new URL("../scripts/create-planner-automatic-email-flow.ps1", import.meta.url), "utf8");
+  const definition = compileFlowDefinition(source);
+  const sendEmail = findAction(definition, "Send_Email");
+  const composeCta = findAction(definition, "Compose_Cta_Url");
+  assert.ok(sendEmail, "ação Send_Email não encontrada");
+  assert.ok(composeCta, "ação Compose_Cta_Url não encontrada");
+  const body = sendEmail.inputs.parameters["emailMessage/Body"];
+
+  assert.match(body, /<a href="/);
+  assert.doesNotMatch(body, /&quot;/);
+  assert.match(body, /Compose_Cta_Url/);
+  assert.match(composeCta.inputs, /plannerAppUrl/);
+  assert.match(composeCta.inputs, /main\.aspx/);
+  assert.doesNotMatch(composeCta.inputs, /outputs\('Compose_Cta_Url'\)/);
+});
+
 test("Flow de teste resolve o e-mail operacional a partir do usuário Microsoft", async () => {
   const source = await readFile(new URL("../scripts/create-planner-email-flow.ps1", import.meta.url), "utf8");
   assert.match(source, /shared_office365/);

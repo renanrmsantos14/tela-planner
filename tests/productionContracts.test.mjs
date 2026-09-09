@@ -22,11 +22,20 @@ test("Flow imediato cobre todos os eventos e usa array vazio válido", async () 
 });
 
 test("eventos de notificação carregam o ambiente atual do WebResource", async () => {
-  const source = await readSource("../src/dataverse.js");
+  const dataverse = await import("../src/dataverse.js");
+  assert.equal(typeof dataverse.withNotificationEnvironment, "function");
+  const xrm = {
+    Utility: {
+      getGlobalContext: () => ({
+        getClientUrl: () => "https://org.example.crm.dynamics.com/",
+        getCurrentAppUrl: () => "https://org.example.crm.dynamics.com/main.aspx?appid=APP-ID",
+      }),
+    },
+  };
 
-  assert.match(source, /function withNotificationEnvironment/);
-  assert.match(source, /getClientUrl/);
-  assert.match(source, /plannerBaseUrl/);
+  const context = JSON.parse(dataverse.withNotificationEnvironment(xrm, "notification:test", "{}"));
+  assert.equal(context.plannerBaseUrl, "https://org.example.crm.dynamics.com");
+  assert.equal(context.plannerAppUrl, "https://org.example.crm.dynamics.com/main.aspx?appid=APP-ID");
 });
 
 test("prévia preserva o MIME persistido quando o Flow retorna rótulo incorreto", async () => {

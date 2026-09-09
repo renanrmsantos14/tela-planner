@@ -138,8 +138,13 @@ $definition = @'
         ]
       },
       "actions": {
+        "Compose_Cta_Url": {
+          "type": "Compose",
+          "inputs": "@if(empty(outputs('Compose_Context')?['plannerBaseUrl']), '', concat(coalesce(outputs('Compose_Context')?['plannerAppUrl'], concat(outputs('Compose_Context')?['plannerBaseUrl'], '/main.aspx')), if(contains(coalesce(outputs('Compose_Context')?['plannerAppUrl'], ''), '?'), '&', '?'), 'pagetype=webresource&webresourceName=new_TelaPlanner.html&data=taskId%3D', triggerOutputs()?['body/_cr40f_tarefa_value']))"
+        },
         "Send_Email": {
           "type": "OpenApiConnection",
+          "runAfter": { "Compose_Cta_Url": [ "Succeeded" ] },
           "inputs": {
             "parameters": {
               "emailMessage/To": "@outputs('Compose_Test_Recipient')",
@@ -268,6 +273,8 @@ $definition = $definition.Replace('width=&quot;100%&quot; cellpadding=&quot;0&qu
 $definition = $definition.Replace('mso-table-rspace:0pt;max-width:600px;background-color:', 'mso-table-rspace:0pt;width:600px;max-width:600px;background-color:')
 $definition = $definition.Replace('color:#ffffff;font-size:14px;line-height:20px;font-weight:700;text-decoration:none;', 'color:#ffffff!important;font-size:14px;line-height:20px;font-weight:700;text-decoration:none;')
 $definition = $definition.Replace('>Abrir tarefa no Planner &rarr;</a>', '><font color=&quot;#ffffff&quot; style=&quot;color:#ffffff!important;&quot;>Abrir tarefa no Planner &rarr;</font></a>')
+$definition = $definition.Replace('outputs(''Compose_Context'')?[''plannerBaseUrl''], ''/WebResources/new_TelaPlanner.html?data=taskId%3D'', triggerOutputs()?[''body/_cr40f_tarefa_value'']', 'replace(outputs(''Compose_Cta_Url''), ''&'', ''&amp;'')')
+$definition = $definition.Replace('&quot;', '\"')
 $definitionObject = $definition | ConvertFrom-Json
 $mainActions = $definitionObject.actions
 $definitionObject.actions = [ordered]@{

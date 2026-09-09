@@ -1074,13 +1074,15 @@ async function markLiveNotificationRead(xrm, notificationId, readAt = new Date()
   return readAt;
 }
 
-function withNotificationEnvironment(xrm, field, next) {
+export function withNotificationEnvironment(xrm, field, next) {
   if (!String(field || "").startsWith("notification:")) return next;
   try {
     const context = JSON.parse(next || "{}");
-    const clientUrl = xrm.Utility?.getGlobalContext?.().getClientUrl?.()?.replace(/\/$/, "");
+    const globalContext = xrm.Utility?.getGlobalContext?.();
+    const clientUrl = globalContext?.getClientUrl?.()?.replace(/\/$/, "");
+    const appUrl = globalContext?.getCurrentAppUrl?.()?.replace(/\/$/, "");
     if (!clientUrl || !context || Array.isArray(context) || typeof context !== "object") return next;
-    return JSON.stringify({ ...context, plannerBaseUrl: clientUrl });
+    return JSON.stringify({ ...context, plannerBaseUrl: clientUrl, plannerAppUrl: appUrl || "" });
   } catch {
     return next;
   }
