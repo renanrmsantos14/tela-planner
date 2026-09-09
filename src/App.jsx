@@ -14,6 +14,7 @@ import { createPortal } from "react-dom";
 import {
   ArrowUpRight,
   ArrowDownUp,
+  Archive,
   BellRing,
   CalendarDays,
   Check,
@@ -49,6 +50,7 @@ import {
   ShieldAlert,
   Sparkles,
   Target,
+  Tag,
   UserRound,
   Users,
   X,
@@ -62,6 +64,7 @@ import {
   buildAssigneeOptions,
   buildOptimisticTask,
   buildTaskCreationInput,
+  DEFAULT_PERSONAL_TAG_COLOR,
   canRegisterWaitingReturn,
   EMPTY_WAITING_CONTEXT,
   filterTasks,
@@ -73,9 +76,11 @@ import {
   isDueToday,
   mentionedEmployees,
   normalizeWaitingContext,
+  normalizePersonalTagIds,
   normalizeAssigneeNames,
   normalizeText,
   PRIORITIES,
+  PERSONAL_TAG_COLORS,
   quoteTaskTitle,
   resolveTaskAssignment,
   sortTasks,
@@ -83,7 +88,6 @@ import {
   sourceById,
   STATUSES,
   statusById,
-  TASK_SOURCES,
   taskDisplayDueDate,
   taskStats,
   teamResponsibilitySummary,
@@ -168,10 +172,6 @@ const PRIORITY_OPTIONS = PRIORITIES.map((item) => ({
   value: item.id,
   label: item.label,
 }));
-const SOURCE_OPTIONS = TASK_SOURCES.map((item) => ({
-  value: item.id,
-  label: item.label,
-}));
 const TEAM_OPTIONS = ["Comercial", "Financeiro", "Operação", "Qualidade"];
 const CALENDAR_WEEKDAY_FORMATTER = new Intl.DateTimeFormat("pt-BR", {
   weekday: "short",
@@ -192,6 +192,7 @@ function createDefaultFilters() {
     priority: [],
     source: [],
     team: [],
+    personalTag: [],
   };
 }
 
@@ -1942,12 +1943,89 @@ const Board = memo(function Board({
   );
 });
 
+function PersonalTagPicker({ tags = [], value = [], onChange }) {
+  const selected = new Set(Array.isArray(value) ? value : []);
+  const activeTags = tags.filter((tag) => !tag.archived);
+  if (!activeTags.length) return <span className="personal-tag-empty">Crie sua primeira tag no gerenciador.</span>;
+  return (
+    <div className="personal-tag-picker" role="group" aria-label="Tags pessoais da tarefa">
+      {activeTags.map((tag) => {
+        const checked = selected.has(tag.id);
+        return (
+          <button
+            className={`personal-tag-chip ${checked ? "is-selected" : ""}`}
+            key={tag.id}
+            type="button"
+            onClick={() => onChange(checked ? [...selected].filter((id) => id !== tag.id) : [...selected, tag.id])}
+            aria-pressed={checked}
+            style={{ "--personal-tag-color": tag.color }}
+          >
+            <span className="personal-tag-dot" aria-hidden="true" />
+            {tag.name}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function PersonalTagManager({ tags = [], onCreate, onUpdate, onArchive, onReorder }) {
+  const [name, setName] = useState("");
+  const [color, setColor] = useState(DEFAULT_PERSONAL_TAG_COLOR);
+  const activeTags = tags.filter((tag) => !tag.archived).sort((left, right) => left.sortOrder - right.sortOrder);
+  const submit = (event) => {
+    event.preventDefault();
+    if (!name.trim()) return;
+    Promise.resolve(onCreate({ name, color })).then(() => {
+      setName("");
+      setColor(DEFAULT_PERSONAL_TAG_COLOR);
+    });
+  };
+  const move = (index, direction) => {
+    const next = [...activeTags];
+    const target = index + direction;
+    if (target < 0 || target >= next.length) return;
+    [next[index], next[target]] = [next[target], next[index]];
+    onReorder(next.map((tag) => tag.id));
+  };
+  return (
+    <div className="personal-tag-manager" aria-label="Gerenciar tags pessoais">
+      <form className="personal-tag-create" onSubmit={submit}>
+        <input value={name} onChange={(event) => setName(event.target.value.slice(0, 32))} maxLength={32} placeholder="Nova tag" aria-label="Nome da nova tag" />
+        <div className="personal-tag-color-options" role="group" aria-label="Cor da nova tag">
+          {PERSONAL_TAG_COLORS.map((item) => (
+            <button key={item} className={`personal-tag-color ${color === item ? "is-selected" : ""}`} type="button" style={{ "--personal-tag-color": item }} onClick={() => setColor(item)} aria-label={`Usar cor ${item}`} aria-pressed={color === item} />
+          ))}
+        </div>
+        <button className="button button-secondary button-small" type="submit" disabled={!name.trim()}><Plus size={14} /> Criar</button>
+      </form>
+      {activeTags.length ? (
+        <div className="personal-tag-manager-list">
+          {activeTags.map((tag, index) => (
+            <div className="personal-tag-manager-row" key={tag.id}>
+              <input className="personal-tag-badge" style={{ "--personal-tag-color": tag.color }} defaultValue={tag.name} maxLength={32} aria-label={`Nome da tag ${tag.name}`} onBlur={(event) => {
+                if (event.target.value.trim() && event.target.value.trim() !== tag.name) onUpdate(tag.id, { name: event.target.value });
+              }} />
+              <div className="personal-tag-manager-actions">
+                <button className="icon-button icon-button-small" type="button" onClick={() => move(index, -1)} disabled={index === 0} aria-label={`Mover ${tag.name} para cima`}><ChevronUp size={14} /></button>
+                <button className="icon-button icon-button-small" type="button" onClick={() => move(index, 1)} disabled={index === activeTags.length - 1} aria-label={`Mover ${tag.name} para baixo`}><ChevronDown size={14} /></button>
+                <button className="icon-button icon-button-small" type="button" onClick={() => onArchive(tag.id)} aria-label={`Arquivar ${tag.name}`} title="Arquivar tag"><Archive size={14} /></button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : <div className="personal-tag-empty">Nenhuma tag pessoal criada.</div>}
+    </div>
+  );
+}
+
 const FilterBar = memo(function FilterBar({
   filters,
   setFilters,
   onCreate,
   employees = [],
   teams = [],
+  personalTags = [],
 }) {
   const [expanded, setExpanded] = useState(false);
   const assigneeOptions = useMemo(
@@ -1963,8 +2041,8 @@ const FilterBar = memo(function FilterBar({
     filters.assignee?.length,
     filters.status?.length,
     filters.priority?.length,
-    filters.source?.length,
     filters.team?.length || filters.team,
+    filters.personalTag?.length,
   ].filter(Boolean).length;
   return (
     <div className={`filter-bar ${expanded ? "is-expanded" : "is-collapsed"}`}>
@@ -2029,20 +2107,18 @@ const FilterBar = memo(function FilterBar({
           options={PRIORITY_OPTIONS}
         />
         <SearchableMultiSelect
-          value={filters.source}
-          onChange={(value) =>
-            setFilters((current) => ({ ...current, source: value }))
-          }
-          placeholder="Todas as origens"
-          options={SOURCE_OPTIONS}
-        />
-        <SearchableMultiSelect
           value={Array.isArray(filters.team) ? filters.team : filters.team ? [filters.team] : []}
           onChange={(value) =>
             setFilters((current) => ({ ...current, team: value }))
           }
           placeholder="Todas as equipes"
           options={teamOptions}
+        />
+        <SearchableMultiSelect
+          value={filters.personalTag || []}
+          onChange={(value) => setFilters((current) => ({ ...current, personalTag: value }))}
+          placeholder="Minhas tags"
+          options={personalTags.filter((tag) => !tag.archived).map((tag) => ({ value: tag.id, label: tag.name }))}
         />
         <button
           className="button button-quiet"
@@ -2133,6 +2209,11 @@ function BoardView({
   onNavigate,
   taskScope,
   onScopeChange,
+  personalTags,
+  onCreatePersonalTag,
+  onUpdatePersonalTag,
+  onArchivePersonalTag,
+  onReorderPersonalTags,
 }) {
   const [sort, setSort] = useState(readBoardSortPreference);
   useEffect(() => {
@@ -2203,6 +2284,11 @@ function BoardView({
         onCreate={onCreate}
         employees={state.employees}
         teams={state.teams}
+        personalTags={personalTags}
+        onCreatePersonalTag={onCreatePersonalTag}
+        onUpdatePersonalTag={onUpdatePersonalTag}
+        onArchivePersonalTag={onArchivePersonalTag}
+        onReorderPersonalTags={onReorderPersonalTags}
       />
       {isMobile ? (
         <MobileBoardList
@@ -2247,6 +2333,11 @@ function ListView({
   currentEmployee,
   taskScope,
   onScopeChange,
+  personalTags,
+  onCreatePersonalTag,
+  onUpdatePersonalTag,
+  onArchivePersonalTag,
+  onReorderPersonalTags,
 }) {
   const [sort, setSort] = useState({ key: "", direction: "asc" });
   const filtered = useMemo(() => {
@@ -2279,6 +2370,11 @@ function ListView({
         onCreate={onCreate}
         employees={state.employees}
         teams={state.teams}
+        personalTags={personalTags}
+        onCreatePersonalTag={onCreatePersonalTag}
+        onUpdatePersonalTag={onUpdatePersonalTag}
+        onArchivePersonalTag={onArchivePersonalTag}
+        onReorderPersonalTags={onReorderPersonalTags}
       />
       <section className="panel task-table">
         <div className="table-header" role="row">
@@ -2386,6 +2482,11 @@ function CalendarView({
   currentEmployee,
   taskScope,
   onScopeChange,
+  personalTags,
+  onCreatePersonalTag,
+  onUpdatePersonalTag,
+  onArchivePersonalTag,
+  onReorderPersonalTags,
 }) {
   const today = new Date();
   const todayKey = calendarDateKey(today);
@@ -2471,6 +2572,11 @@ function CalendarView({
         onCreate={() => onCreate("todo", { dueDate: selectedDate })}
         employees={state.employees}
         teams={state.teams}
+        personalTags={personalTags}
+        onCreatePersonalTag={onCreatePersonalTag}
+        onUpdatePersonalTag={onUpdatePersonalTag}
+        onArchivePersonalTag={onArchivePersonalTag}
+        onReorderPersonalTags={onReorderPersonalTags}
       />
       <div className="calendar-navigation" aria-label="Navegação da agenda">
         <button
@@ -2747,9 +2853,7 @@ function TeamManager({ teams = [], tasks = [], employees = [], onSave, onDelete 
     <section className="panel teams-settings-panel" aria-labelledby="teams-settings-title">
       <div className="panel-heading teams-panel-heading">
         <div>
-          <span className="eyebrow">Atribuição rápida</span>
           <h2 id="teams-settings-title">Equipes do Planner</h2>
-          <p className="panel-copy">Cadastre grupos de trabalho e use seus membros ao criar uma tarefa.</p>
         </div>
         <div className="team-panel-actions">
           <div className="team-total" aria-label={`${teams.length} ${teams.length === 1 ? "equipe cadastrada" : "equipes cadastradas"}`}><strong>{teams.length}</strong><span>{teams.length === 1 ? "equipe" : "equipes"}</span></div>
@@ -2854,7 +2958,7 @@ function TeamManager({ teams = [], tasks = [], employees = [], onSave, onDelete 
   );
 }
 
-function SettingsView({ onReset, live, teams = [], tasks = [], employees = [], onSaveTeam, onDeleteTeam, onImportPlannerTasks }) {
+function SettingsView({ onReset, live, teams = [], tasks = [], employees = [], personalTags = [], onSaveTeam, onDeleteTeam, onImportPlannerTasks, onCreatePersonalTag, onUpdatePersonalTag, onArchivePersonalTag, onReorderPersonalTags }) {
   return (
     <div className="page-content">
       <PageHeader
@@ -2913,7 +3017,20 @@ function SettingsView({ onReset, live, teams = [], tasks = [], employees = [], o
         </div>
         <PlannerImportView live={live} employees={employees} onImport={onImportPlannerTasks} />
       </section>
-      <TeamManager teams={teams} tasks={tasks} employees={employees} onSave={onSaveTeam} onDelete={onDeleteTeam} />
+      <div className="settings-secondary-grid">
+        <section className="panel personal-tags-settings-panel" aria-labelledby="personal-tags-settings-title">
+          <div className="panel-heading">
+            <div>
+              <span className="eyebrow">Personalização</span>
+              <h2 id="personal-tags-settings-title">Minhas tags</h2>
+              <p className="panel-copy">Crie e organize etiquetas privadas para encontrar suas tarefas mais rápido.</p>
+            </div>
+            <Tag size={19} aria-hidden="true" />
+          </div>
+          <PersonalTagManager tags={personalTags} onCreate={onCreatePersonalTag} onUpdate={onUpdatePersonalTag} onArchive={onArchivePersonalTag} onReorder={onReorderPersonalTags} />
+        </section>
+        <TeamManager teams={teams} tasks={tasks} employees={employees} onSave={onSaveTeam} onDelete={onDeleteTeam} />
+      </div>
     </div>
   );
 }
@@ -3632,6 +3749,7 @@ function TaskDrawerContent({
   task: taskItem,
   state,
   teams = [],
+  personalTags = [],
   currentEmployee,
   loadAttachmentContent,
   showChecklistOnCard,
@@ -3690,6 +3808,7 @@ function TaskDrawerContent({
             teamNames: taskItem.teamNames || [],
             teamId: taskItem.teamId || "",
             assigneeIds: taskItem.assigneeIds || [],
+            personalTagIds: normalizePersonalTagIds(taskItem.personalTagIds),
             assigneeName: normalizeAssigneeNames(
               taskItem.assigneeNames || taskItem.assigneeName,
             ).filter((name) => name !== "Não atribuído"),
@@ -3800,9 +3919,9 @@ function TaskDrawerContent({
     ...draftAttachments,
   ];
   const isDirty =
-    ["title", "status", "priority", "assignmentMode", "teamIds", "teamNames", "teamId", "teamName", "dueDate", "description", "waitingContext"].some(
+    ["title", "status", "priority", "assignmentMode", "teamIds", "teamNames", "teamId", "teamName", "dueDate", "description", "waitingContext", "personalTagIds"].some(
       (key) =>
-        JSON.stringify(form[key] || "") !== JSON.stringify(taskItem[key] || ""),
+        JSON.stringify(key === "personalTagIds" ? normalizePersonalTagIds(form[key]) : form[key] || "") !== JSON.stringify(key === "personalTagIds" ? normalizePersonalTagIds(taskItem[key]) : taskItem[key] || ""),
     ) ||
     JSON.stringify(form.assigneeName || []) !==
       JSON.stringify(
@@ -3937,6 +4056,7 @@ function TaskDrawerContent({
         actorUserId: currentEmployee?.userId || "",
         description: form.description,
         waitingContext: normalizeWaitingContext(form.waitingContext),
+        personalTagIds: form.personalTagIds || [],
       }),
     )
       .then((success) => {
@@ -4099,6 +4219,9 @@ function TaskDrawerContent({
           </button>
         </header>
         <div className="drawer-body" ref={drawerBodyRef} onPaste={handlePaste}>
+          <section className="drawer-personal-tags" aria-label="Minhas tags">
+            <PersonalTagPicker tags={personalTags} value={form.personalTagIds || []} onChange={(value) => set("personalTagIds", value)} />
+          </section>
           <div className="drawer-title">
             <label className="drawer-title-field" htmlFor={`task-title-${taskItem.id}`}>
               <span className="drawer-title-label">Título da tarefa</span>
@@ -4893,7 +5016,7 @@ function InlineSubtasksEditor({ items, setItems }) {
     setDraft("");
   };
   return (
-    <section className="creation-subtasks">
+    <section className={`creation-subtasks ${items.length === 0 ? "is-empty" : ""}`}>
       <div className="drawer-section-heading">
         <h3>Subtarefas</h3>
         <span className="section-hint">opcional</span>
@@ -4969,7 +5092,7 @@ function InlineSubtasksEditor({ items, setItems }) {
   );
 }
 
-function NewTaskDrawer({ employees = [], teams = [], initialStatus = "todo", initialInput = {}, onClose, onSave }) {
+function NewTaskDrawer({ employees = [], teams = [], personalTags = [], initialStatus = "todo", initialInput = {}, onClose, onSave }) {
   const [form, setForm] = useState({
     title: "",
     status: initialStatus,
@@ -4985,6 +5108,7 @@ function NewTaskDrawer({ employees = [], teams = [], initialStatus = "todo", ini
     description: "",
     waitingContext: { ...EMPTY_WAITING_CONTEXT },
     ...initialInput,
+    personalTagIds: normalizePersonalTagIds(initialInput.personalTagIds),
   });
   const [draftAttachments, setDraftAttachments] = useState([]);
   const [subtasks, setSubtasks] = useState([]);
@@ -5132,6 +5256,9 @@ function NewTaskDrawer({ employees = [], teams = [], initialStatus = "todo", ini
           </button>
         </header>
         <div className="drawer-body" onPaste={handlePaste}>
+          <section className="drawer-personal-tags" aria-label="Minhas tags">
+            <PersonalTagPicker tags={personalTags} value={form.personalTagIds || []} onChange={(value) => set("personalTagIds", value)} />
+          </section>
           <div className="drawer-title">
             <label className="drawer-title-field" htmlFor="new-task-title">
               <span className="drawer-title-label">Título da tarefa</span>
@@ -5294,6 +5421,7 @@ export default function App() {
     teams: [],
     currentUserEmail: "",
     currentUserId: "",
+    personalTags: [],
     quality: [],
     notifications: [],
     collectionEvents: [],
@@ -5751,6 +5879,58 @@ export default function App() {
     },
     [state, store, runOptimisticMutation, showNotice],
   );
+  const createPersonalTag = useCallback(
+    (input = {}) => {
+      if (!store.createPersonalTag) return Promise.resolve(false);
+      const ownerUserId = state.currentUserId || currentEmployee?.userId || "";
+      const optimisticId = `optimistic-personal-tag-${Date.now()}`;
+      const optimisticTag = { id: optimisticId, name: String(input.name || "").trim().slice(0, 32), color: input.color || DEFAULT_PERSONAL_TAG_COLOR, sortOrder: (state.personalTags || []).length, archived: false, ownerUserId };
+      return runOptimisticMutation(
+        (current) => ({ ...current, personalTags: [...(current.personalTags || []), optimisticTag] }),
+        () => store.createPersonalTag(state, { ...input, ownerUserId }),
+        store.live ? "Tag criada. Sincronizando..." : "Tag criada no mock local.",
+        store.live ? "Tag sincronizada." : "Tag criada.",
+      );
+    },
+    [currentEmployee?.userId, runOptimisticMutation, state, store],
+  );
+  const updatePersonalTag = useCallback(
+    (id, patch) => {
+      if (!store.updatePersonalTag) return Promise.resolve(false);
+      return runOptimisticMutation(
+        (current) => ({ ...current, personalTags: (current.personalTags || []).map((tag) => tag.id === id ? { ...tag, ...patch } : tag) }),
+        () => store.updatePersonalTag(state, id, patch),
+        "Atualizando tag...",
+        "Tag atualizada.",
+      );
+    },
+    [runOptimisticMutation, state, store],
+  );
+  const archivePersonalTag = useCallback(
+    (id) => {
+      if (!store.archivePersonalTag) return Promise.resolve(false);
+      return runOptimisticMutation(
+        (current) => ({ ...current, personalTags: (current.personalTags || []).map((tag) => tag.id === id ? { ...tag, archived: true } : tag) }),
+        () => store.archivePersonalTag(state, id),
+        "Arquivando tag...",
+        "Tag arquivada.",
+      );
+    },
+    [runOptimisticMutation, state, store],
+  );
+  const reorderPersonalTags = useCallback(
+    (orderedIds) => {
+      if (!store.reorderPersonalTags) return Promise.resolve(false);
+      const order = new Map(orderedIds.map((id, index) => [id, index]));
+      return runOptimisticMutation(
+        (current) => ({ ...current, personalTags: (current.personalTags || []).map((tag) => order.has(tag.id) ? { ...tag, sortOrder: order.get(tag.id) } : tag) }),
+        () => store.reorderPersonalTags(state, orderedIds),
+        "Reordenando tags...",
+        "Ordem das tags salva.",
+      );
+    },
+    [runOptimisticMutation, state, store],
+  );
   const saveTask = useCallback(
     (id, patch) => {
       const existingTask = state.tasks.find((taskItem) => taskItem.id === id);
@@ -5775,7 +5955,13 @@ export default function App() {
       const shouldReopen = id === selectedId;
       return runOptimisticMutation(
         (current) => applyOptimisticTaskPatch(current, id, nextPatch),
-        () => store.updateTask(state, id, nextPatch),
+        async () => {
+      const { personalTagIds: _personalTagIds, ...taskPatch } = nextPatch;
+      const nextState = await store.updateTask(state, id, taskPatch);
+          return nextPatch.personalTagIds !== undefined && store.replaceTaskPersonalTags
+            ? store.replaceTaskPersonalTags(nextState, id, nextPatch.personalTagIds, state.currentUserId || currentEmployee?.userId || "")
+            : nextState;
+        },
         "",
         "",
       ).then((success) => {
@@ -6123,7 +6309,11 @@ export default function App() {
             commonTask.title,
           );
           if (!parent) throw new Error("Tarefa criada, mas não foi possível localizar o registro para enviar os anexos.");
-          onProgress?.({
+          const withTags = commonTask.personalTagIds !== undefined && store.replaceTaskPersonalTags
+            ? store.replaceTaskPersonalTags(nextState, parent.id, commonTask.personalTagIds, state.currentUserId || currentEmployee?.userId || "")
+            : nextState;
+          return Promise.resolve(withTags).then((taggedState) => {
+            onProgress?.({
             label: attachments.length
               ? "Tarefa criada. Preparando anexos…"
               : "Finalizando tarefa…",
@@ -6143,7 +6333,7 @@ export default function App() {
                   dueDate: "",
                 }),
               ),
-            Promise.resolve(nextState),
+            Promise.resolve(taggedState),
           );
           return attachments.reduce(
             (promise, attachment, index) =>
@@ -6177,6 +6367,7 @@ export default function App() {
               }),
             withSubtasks,
           );
+          });
         });
       };
       return runOptimisticCreate(
@@ -6537,6 +6728,11 @@ export default function App() {
               onCreate={openCreate}
               employees={state.employees}
               teams={state.teams}
+              personalTags={state.personalTags}
+              onCreatePersonalTag={createPersonalTag}
+              onUpdatePersonalTag={updatePersonalTag}
+              onArchivePersonalTag={archivePersonalTag}
+              onReorderPersonalTags={reorderPersonalTags}
             />
           }
           onClearFilters={() => setFilters(createDefaultFilters())}
@@ -6590,6 +6786,11 @@ export default function App() {
           onNavigate={navigate}
           taskScope={taskScope}
           onScopeChange={onTaskScopeChange}
+          personalTags={state.personalTags}
+          onCreatePersonalTag={createPersonalTag}
+          onUpdatePersonalTag={updatePersonalTag}
+          onArchivePersonalTag={archivePersonalTag}
+          onReorderPersonalTags={reorderPersonalTags}
         />
       );
     if (active === "list")
@@ -6604,6 +6805,11 @@ export default function App() {
           onNavigate={navigate}
           taskScope={taskScope}
           onScopeChange={onTaskScopeChange}
+          personalTags={state.personalTags}
+          onCreatePersonalTag={createPersonalTag}
+          onUpdatePersonalTag={updatePersonalTag}
+          onArchivePersonalTag={archivePersonalTag}
+          onReorderPersonalTags={reorderPersonalTags}
         />
       );
     if (active === "calendar")
@@ -6618,6 +6824,11 @@ export default function App() {
           onNavigate={navigate}
           taskScope={taskScope}
           onScopeChange={onTaskScopeChange}
+          personalTags={state.personalTags}
+          onCreatePersonalTag={createPersonalTag}
+          onUpdatePersonalTag={updatePersonalTag}
+          onArchivePersonalTag={archivePersonalTag}
+          onReorderPersonalTags={reorderPersonalTags}
         />
       );
     if (active === "more") return <MoreView onNavigate={navigate} />;
@@ -6637,7 +6848,7 @@ export default function App() {
       );
     return (
       <Suspense fallback={<LoadingFallback />}>
-          <LazySettingsView onReset={reloadData} live={store.live} teams={state.teams} tasks={state.tasks} employees={state.employees} onSaveTeam={saveTeam} onDeleteTeam={deleteTeam} onImportPlannerTasks={importPlannerTasks} />
+          <LazySettingsView onReset={reloadData} live={store.live} teams={state.teams} tasks={state.tasks} employees={state.employees} personalTags={state.personalTags} onCreatePersonalTag={createPersonalTag} onUpdatePersonalTag={updatePersonalTag} onArchivePersonalTag={archivePersonalTag} onReorderPersonalTags={reorderPersonalTags} onSaveTeam={saveTeam} onDeleteTeam={deleteTeam} onImportPlannerTasks={importPlannerTasks} />
       </Suspense>
     );
   };
@@ -6735,6 +6946,7 @@ export default function App() {
           task={selected}
           state={state}
           teams={state.teams}
+          personalTags={state.personalTags}
           currentEmployee={currentEmployee}
           showChecklistOnCard={Boolean(checklistVisibility[selected.id])}
           onToggleChecklistOnCard={(visible) =>
@@ -6761,6 +6973,7 @@ export default function App() {
         <NewTaskDrawer
           employees={state.employees}
           teams={state.teams}
+          personalTags={state.personalTags}
           initialInput={taskFromContact}
           onClose={() => setTaskFromContact(null)}
           onSave={createNewTask}
@@ -6770,6 +6983,7 @@ export default function App() {
         <NewTaskDrawer
           employees={state.employees}
           teams={state.teams}
+          personalTags={state.personalTags}
           initialStatus={creatingStatus}
           initialInput={creatingInput}
           onClose={() => setCreating(false)}
