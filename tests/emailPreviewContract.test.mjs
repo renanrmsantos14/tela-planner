@@ -16,5 +16,10 @@ test("prévia local do e-mail mantém contrato compatível com Outlook", async (
   assert.match(source, /data-stress="dark"/);
   assert.match(source, /data-stress="dpi"/);
   assert.match(source, /DPI\/zoom 125%/);
+  assert.match(source, /id="previewControls"/);
+  assert.match(source, /aria-pressed="true"/);
+  assert.match(source, /data-legend="status"/);
+  assert.match(source, /min-height:\s*44px/);
+  assert.match(source, /prefers-reduced-motion/);
   assert.doesNotMatch(source, /<link[^>]+stylesheet/);
 });
