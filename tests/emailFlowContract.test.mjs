@@ -34,6 +34,7 @@ test("Flow de e-mail do Planner é restrito ao receptor de teste e idempotente",
 test("Flow automático de e-mail replica destinatários das notificações e não envia ao autor", async () => {
   const source = await readFile(new URL("../scripts/create-planner-automatic-email-flow.ps1", import.meta.url), "utf8");
   assert.match(source, /Planner \| Notifica.*autom.*tica por e-mail/);
+  assert.match(source, /ConvertTo-Utf8JsonBytes/);
   assert.match(source, /startswith\(cr40f_campo, 'notification:'\)/);
   assert.match(source, /Compose_Recipients/);
   assert.match(source, /notificationRecipientIds/);

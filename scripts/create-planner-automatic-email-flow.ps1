@@ -18,6 +18,11 @@ $headers = @{
   Prefer = 'return=representation'
 }
 
+function ConvertTo-Utf8JsonBytes([object]$Value) {
+  $json = $Value | ConvertTo-Json -Depth 100 -Compress
+  return ,([Text.Encoding]::UTF8.GetBytes($json))
+}
+
 $definition = @'
 {
   "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
@@ -311,10 +316,12 @@ if ($WorkflowId) {
   Invoke-RestMethod -Uri $targetUri -Headers $headers -Method Patch -Body (@{ statecode = 0; statuscode = 1 } | ConvertTo-Json) | Out-Null
   Invoke-RestMethod -Uri $targetUri -Headers $headers -Method Patch -Body (@{ clientdata = $clientData } | ConvertTo-Json -Depth 100) | Out-Null
 } else {
-  $created = Invoke-RestMethod -Uri "$EnvironmentUrl/api/data/v9.2/workflows" -Headers $headers -Method Post -Body $payload
+  $created = Invoke-RestMethod -Uri "$EnvironmentUrl/api/data/v9.2/workflows" -Headers $headers -Method Post -Body ([Text.Encoding]::UTF8.GetBytes($payload))
   $WorkflowId = $created.workflowid
   $targetUri = "$EnvironmentUrl/api/data/v9.2/workflows($WorkflowId)"
 }
+
+Invoke-RestMethod -Uri $targetUri -Headers $headers -Method Patch -Body (ConvertTo-Utf8JsonBytes @{ name = $FlowName }) | Out-Null
 
 Invoke-RestMethod -Uri $targetUri -Headers $headers -Method Patch -Body (@{ statecode = 1; statuscode = 2 } | ConvertTo-Json) | Out-Null
 
