@@ -2862,13 +2862,6 @@ function TeamManager({ teams = [], tasks = [], employees = [], onSave, onDelete 
       </div>
       <div className="team-manager-body">
         <div className="team-list-column">
-          <div className="team-list-heading">
-            <div>
-              <strong>Equipes cadastradas</strong>
-              <span>Selecione uma equipe para editar seus membros.</span>
-            </div>
-            <span className="team-list-count">{teams.length}</span>
-          </div>
           <div className="team-list">
           {teams.length ? teams.map((team, index) => {
             const isExpanded = expandedTeamId === team.id;
