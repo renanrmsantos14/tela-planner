@@ -9,6 +9,14 @@ As tabelas abaixo pertencem à solução `AppBetinhos`:
 
 Antes de ativar os fluxos, crie chaves alternativas para `cr40f_chavededupe` e `cr40f_chaveidempotente`. Conceda ao usuário somente leitura/gravação das próprias notificações; a conta de conexão dos fluxos deve criar notificações e disparos.
 
+## Flow `Planner | Notificação por e-mail - Teste`
+
+Provisionamento versionado: `powershell -ExecutionPolicy Bypass -File scripts/create-planner-email-flow.ps1` (o script atualiza pelo nome, sem duplicar).
+
+Esta primeira versão é deliberadamente restrita ao receptor `noreply@betinhos.onmicrosoft.com`. Ela escuta os eventos `notification:*`, evita reenvio pela chave `<evento>|<receptor>|<tipo>|Email`, envia pelo conector Office 365 Outlook e registra o resultado em `cr40f_plannerdisparo` com canal `Email`. O lookup do receptor é resolvido em `cr40f_funcionarios` para satisfazer o contrato de auditoria do disparo.
+
+O teste usa a conexão de solução `new_sharedoffice365_f87d5`, confirmada no DEV. Não há resolução para destinatários reais nesta etapa.
+
 ## Flow `Planner | Notificação imediata`
 
 Provisionamento versionado: `powershell -ExecutionPolicy Bypass -File scripts/create-planner-immediate-flow.ps1` (o script atualiza pelo nome, sem duplicar).
@@ -24,7 +32,7 @@ Provisionamento versionado: `powershell -ExecutionPolicy Bypass -File scripts/cr
 5. Para cada destinatário, montar chave `<evento>|<destinatario>|<tipo>` e consultar `cr40f_plannernotificacao` por `cr40f_chavededupe`. Criar somente quando ausente.
 6. Resolver `cr40f_funcionarios.cr40f_usuariodataverse` e `systemuser.internalemailaddress`.
 7. Sem identidade: criar `cr40f_plannerdisparo` com status `100000003` (Sem identidade). Com identidade: usar a ação atual **Postar mensagem em chat ou canal** e registrar Enviado (`100000001`) ou Falha (`100000002`), tentativa, erro e ID externo.
-8. Não enviar e-mail neste fluxo. Configurar retry por destinatário para que uma falha não encerre o processamento dos demais.
+8. Não enviar e-mail neste fluxo; o envio de teste fica isolado no Flow `Planner | Notificação por e-mail - Teste`. Configurar retry por destinatário para que uma falha não encerre o processamento dos demais.
 
 ## Flow `Planner | Cobrança diária`
 
@@ -38,7 +46,7 @@ Provisionamento versionado: `powershell -ExecutionPolicy Bypass -File scripts/cr
    - cobrança começa no vencimento e repete em cada dia útil enquanto a tarefa estiver aberta;
    - no primeiro dia útil após o vencimento, incluir também o criador.
 4. Criar uma notificação interna por tarefa/destinatário/tipo/data. Chave: `<destinatario>|<tarefa>|<tipo>|<yyyy-MM-dd>`.
-5. Agrupar por destinatário e enviar exatamente um resumo no Teams, com seções vencem hoje e atrasadas. Não enviar e-mail nesta primeira versão.
+5. Agrupar por destinatário e enviar exatamente um resumo no Teams, com seções vencem hoje e atrasadas. O e-mail diário ainda não faz parte desta primeira etapa.
 6. Link de cada tarefa: `new_TelaPlanner.html?data=taskId=<guid>`.
 7. Registrar um disparo por canal com chave `<destinatario>|<yyyy-MM-dd>|ResumoDiario|<canal>` e os mesmos estados do fluxo imediato.
 
@@ -54,3 +62,5 @@ Os flows devem usar referências de conexão da solução para Dataverse, Teams 
 - Confirmar isolamento de notificações entre criador, responsável e terceiro.
 - Confirmar retry e erro final em `cr40f_plannerdisparo`.
 - Confirmar que uma cobrança manual da mesma tarefa não é aceita duas vezes no mesmo dia.
+- Gerar um evento controlado e confirmar no Outlook o recebimento em `noreply@betinhos.onmicrosoft.com`, além de conferir o registro `Email/Enviado` em `cr40f_plannerdisparo`.
+- Reprocessar o mesmo evento e confirmar que a chave idempotente impede um segundo e-mail.
