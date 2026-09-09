@@ -1953,7 +1953,6 @@ function PersonalTagPicker({ tags = [], tasks = [], value = [], onChange, onCrea
   const moreRef = useRef(null);
   const addRef = useRef(null);
   const tagRefs = useRef(new Map());
-  const previousTagRects = useRef(new Map());
   const selectedIds = Array.isArray(value) ? value : [];
   const selected = new Set(selectedIds);
   const activeTags = tags.filter((tag) => !tag.archived);
@@ -1967,10 +1966,7 @@ function PersonalTagPicker({ tags = [], tasks = [], value = [], onChange, onCrea
     if (rightUsed || leftUsed) return String(rightUsed || "").localeCompare(String(leftUsed || ""));
     return left.name.localeCompare(right.name, "pt-BR", { sensitivity: "base" });
   });
-  const orderedTags = [
-    ...recentTags.filter((tag) => selected.has(tag.id)),
-    ...recentTags.filter((tag) => !selected.has(tag.id)),
-  ];
+  const orderedTags = recentTags;
   const selectedCount = activeTags.filter((tag) => selected.has(tag.id)).length;
   const tagSignature = orderedTags.map((tag) => `${tag.id}:${tag.name}`).join("|");
   const [selectedOverflow, setSelectedOverflow] = useState(false);
@@ -2055,29 +2051,10 @@ function PersonalTagPicker({ tags = [], tasks = [], value = [], onChange, onCrea
   const shownTags = orderedTags.slice(0, visibleCount);
   const displayTags = showAllTags ? orderedTags : orderedTags.filter((tag) => selected.has(tag.id));
   const hasMore = !showAllTags && activeTags.some((tag) => !selected.has(tag.id));
-  const displayTagSignature = displayTags.map((tag) => tag.id).join("|");
   const visibleUnselectedCount = Math.max(0, visibleCount - selectedCount);
   const showAddButton = showAllTags && onCreate;
   const toggleTag = (tagId) => onChange(selected.has(tagId) ? selectedIds.filter((id) => id !== tagId) : [...selectedIds, tagId]);
 
-  useLayoutEffect(() => {
-    const nextRects = new Map();
-    const reduceMotion = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-    displayTags.forEach((tag) => {
-      const node = tagRefs.current.get(tag.id);
-      if (!node) return;
-      const rect = node.getBoundingClientRect();
-      const previous = previousTagRects.current.get(tag.id);
-      if (previous && !reduceMotion && (previous.left !== rect.left || previous.top !== rect.top)) {
-        node.animate(
-          [{ transform: `translate(${previous.left - rect.left}px, ${previous.top - rect.top}px)` }, { transform: "translate(0, 0)" }],
-          { duration: 220, easing: "cubic-bezier(.23, 1, .32, 1)" },
-        );
-      }
-      nextRects.set(tag.id, rect);
-    });
-    previousTagRects.current = nextRects;
-  }, [displayTagSignature, showAllTags]);
   const openCreateModal = () => {
     setModalMode("create");
     setIsModalOpen(true);
