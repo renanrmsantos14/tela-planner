@@ -8,7 +8,7 @@ test("Flow de e-mail do Planner é restrito ao receptor de teste e idempotente",
   assert.match(source, /shared_office365/);
   assert.match(source, /new_sharedoffice365_f87d5/);
   assert.match(source, /operationId.*SendEmailV2/);
-  assert.match(source, /startswith\(cr40f_campo, 'notification:'\)/);
+  assert.match(source, /cr40f_campo eq 'notification:test'/);
   assert.match(source, /outputs\('Compose_Type'\).*test.*decodeUriComponent\('%C3%A7'\).*decodeUriComponent\('%C3%A3'\)/);
   assert.match(source, /Destinat.*decodeUriComponent\('%C3%A1'\).*rio:/);
   assert.match(source, /cr40f_chaveidempotente/);
@@ -23,4 +23,21 @@ test("Flow de e-mail do Planner é restrito ao receptor de teste e idempotente",
   assert.match(source, /Where-Object \{ \$_.name -eq \$FlowName \}/);
   assert.doesNotMatch(source, /emailMessage\/To.*cr40f_emailmicrosoft/);
   assert.doesNotMatch(source, /emailMessage\/To.*outputs\('Get_system_user'\)/);
+});
+
+test("Flow automático de e-mail replica destinatários das notificações e não envia ao autor", async () => {
+  const source = await readFile(new URL("../scripts/create-planner-automatic-email-flow.ps1", import.meta.url), "utf8");
+  assert.match(source, /Planner \| Notifica.*autom.*tica por e-mail/);
+  assert.match(source, /startswith\(cr40f_campo, 'notification:'\)/);
+  assert.match(source, /Compose_Recipients/);
+  assert.match(source, /notificationRecipientIds/);
+  assert.match(source, /cr40f_emailmicrosoft/);
+  assert.match(source, /Condition_NotAuthor/);
+  assert.match(source, /operationId.*SendEmailV2/);
+  assert.match(source, /cr40f_chaveidempotente/);
+  assert.match(source, /\|Email/);
+  assert.match(source, /item\/cr40f_canal.*100000001/);
+  assert.match(source, /role=&quot;presentation&quot;/);
+  assert.match(source, /outputs\('Compose_Context'\)\?\['plannerBaseUrl'\]/);
+  assert.doesNotMatch(source, /coalesce\(outputs\('Compose_Context'\)\?\['plannerBaseUrl'\], 'https:\/\/org23b93544\.crm2\.dynamics\.com'\)/);
 });
