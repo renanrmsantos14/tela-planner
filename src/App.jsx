@@ -14,7 +14,6 @@ import { createPortal } from "react-dom";
 import {
   ArrowUpRight,
   ArrowDownUp,
-  Archive,
   BellRing,
   CalendarDays,
   Check,
@@ -1944,34 +1943,148 @@ const Board = memo(function Board({
 });
 
 function PersonalTagPicker({ tags = [], value = [], onChange }) {
-  const selected = new Set(Array.isArray(value) ? value : []);
+  const [visibleCount, setVisibleCount] = useState(tags.length);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const pickerRef = useRef(null);
+  const inlineRef = useRef(null);
+  const moreRef = useRef(null);
+  const tagRefs = useRef(new Map());
+  const selectedIds = Array.isArray(value) ? value : [];
+  const selected = new Set(selectedIds);
   const activeTags = tags.filter((tag) => !tag.archived);
+  const tagSignature = activeTags.map((tag) => `${tag.id}:${tag.name}`).join("|");
+
+  useLayoutEffect(() => {
+    const picker = pickerRef.current;
+    const inline = inlineRef.current;
+    if (!picker || !inline || !activeTags.length) return undefined;
+
+    const measure = () => {
+      const pickerWidth = picker.getBoundingClientRect().width;
+      if (!pickerWidth) return;
+      const gap = Number.parseFloat(getComputedStyle(inline).columnGap || "7") || 7;
+      const widths = activeTags.map((tag) => tagRefs.current.get(tag.id)?.getBoundingClientRect().width || 0);
+      const totalWidth = widths.reduce((sum, width) => sum + width, 0) + gap * Math.max(0, widths.length - 1);
+      if (totalWidth <= pickerWidth + 1) {
+        setVisibleCount(activeTags.length);
+        return;
+      }
+
+      const moreWidth = moreRef.current?.getBoundingClientRect().width || 34;
+      const availableWidth = Math.max(0, pickerWidth - moreWidth - gap);
+      let usedWidth = 0;
+      let count = 0;
+      widths.forEach((width) => {
+        const nextWidth = usedWidth + (count ? gap : 0) + width;
+        if (nextWidth <= availableWidth + 1) {
+          usedWidth = nextWidth;
+          count += 1;
+        }
+      });
+      setVisibleCount(count);
+    };
+
+    measure();
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(measure);
+    observer?.observe(picker);
+    return () => observer?.disconnect();
+  }, [tagSignature, activeTags.length]);
+
   if (!activeTags.length) return <span className="personal-tag-empty">Crie sua primeira tag no gerenciador.</span>;
+  const shownTags = activeTags.slice(0, visibleCount);
+  const hasMore = visibleCount < activeTags.length;
+  const toggleTag = (tagId) => onChange(selected.has(tagId) ? selectedIds.filter((id) => id !== tagId) : [...selectedIds, tagId]);
+
   return (
-    <div className="personal-tag-picker" role="group" aria-label="Tags pessoais da tarefa">
-      {activeTags.map((tag) => {
-        const checked = selected.has(tag.id);
-        return (
+    <>
+      <div className="personal-tag-picker" ref={pickerRef} role="group" aria-label="Tags pessoais da tarefa">
+        <div className="personal-tag-picker-inline" ref={inlineRef}>
+          {activeTags.map((tag, index) => {
+            const checked = selected.has(tag.id);
+            return (
+              <button
+                className={`personal-tag-chip ${index < visibleCount ? "" : "is-measured-hidden"} ${checked ? "is-selected" : ""}`}
+                key={tag.id}
+                ref={(node) => {
+                  if (node) tagRefs.current.set(tag.id, node);
+                  else tagRefs.current.delete(tag.id);
+                }}
+                type="button"
+                onClick={() => toggleTag(tag.id)}
+                aria-pressed={checked}
+                style={{ "--personal-tag-color": tag.color }}
+              >
+                <span className="personal-tag-dot" aria-hidden="true" />
+                {tag.name}
+              </button>
+            );
+          })}
+        </div>
+        {hasMore && (
           <button
-            className={`personal-tag-chip ${checked ? "is-selected" : ""}`}
-            key={tag.id}
+            className={`personal-tag-more ${[...selected].some((id) => !shownTags.some((tag) => tag.id === id)) ? "has-selected" : ""}`}
+            ref={moreRef}
             type="button"
-            onClick={() => onChange(checked ? [...selected].filter((id) => id !== tag.id) : [...selected, tag.id])}
-            aria-pressed={checked}
-            style={{ "--personal-tag-color": tag.color }}
+            onClick={() => setIsModalOpen(true)}
+            aria-label={`Escolher tags; ${activeTags.length - visibleCount} ocultas`}
+            title="Escolher mais tags"
           >
-            <span className="personal-tag-dot" aria-hidden="true" />
-            {tag.name}
+            ...
           </button>
-        );
-      })}
-    </div>
+        )}
+      </div>
+      {isModalOpen && typeof document !== "undefined" && document.body
+        ? createPortal(
+            <div
+              className="personal-tags-modal-layer"
+              role="presentation"
+              onMouseDown={(event) => {
+                if (event.target === event.currentTarget) setIsModalOpen(false);
+              }}
+            >
+              <section className="personal-tags-modal" role="dialog" aria-modal="true" aria-labelledby="personal-tags-modal-title">
+                <header className="personal-tags-modal-header">
+                  <div>
+                    <span className="eyebrow">Personalização</span>
+                    <h3 id="personal-tags-modal-title">Escolher tags</h3>
+                  </div>
+                  <button className="icon-button" type="button" onClick={() => setIsModalOpen(false)} aria-label="Fechar seleção de tags"><X size={17} /></button>
+                </header>
+                <div className="personal-tags-modal-list" role="group" aria-label="Todas as tags pessoais">
+                  {activeTags.map((tag) => {
+                    const checked = selected.has(tag.id);
+                    return (
+                      <button
+                        className={`personal-tag-chip ${checked ? "is-selected" : ""}`}
+                        key={tag.id}
+                        type="button"
+                        onClick={() => toggleTag(tag.id)}
+                        aria-pressed={checked}
+                        style={{ "--personal-tag-color": tag.color }}
+                      >
+                        <span className="personal-tag-dot" aria-hidden="true" />
+                        {tag.name}
+                      </button>
+                    );
+                  })}
+                </div>
+                <footer className="personal-tags-modal-footer">
+                  <span>{selectedIds.length} selecionada{selectedIds.length === 1 ? "" : "s"}</span>
+                  <button className="button button-primary button-small" type="button" onClick={() => setIsModalOpen(false)}>Concluir</button>
+                </footer>
+              </section>
+            </div>,
+            document.body,
+          )
+        : null}
+    </>
   );
 }
 
 function PersonalTagManager({ tags = [], onCreate, onUpdate, onArchive, onReorder }) {
   const [name, setName] = useState("");
   const [color, setColor] = useState(DEFAULT_PERSONAL_TAG_COLOR);
+  const [tagToDelete, setTagToDelete] = useState(null);
   const activeTags = tags.filter((tag) => !tag.archived).sort((left, right) => left.sortOrder - right.sortOrder);
   const submit = (event) => {
     event.preventDefault();
@@ -2009,7 +2122,16 @@ function PersonalTagManager({ tags = [], onCreate, onUpdate, onArchive, onReorde
               <div className="personal-tag-manager-actions">
                 <button className="icon-button icon-button-small" type="button" onClick={() => move(index, -1)} disabled={index === 0} aria-label={`Mover ${tag.name} para cima`}><ChevronUp size={14} /></button>
                 <button className="icon-button icon-button-small" type="button" onClick={() => move(index, 1)} disabled={index === activeTags.length - 1} aria-label={`Mover ${tag.name} para baixo`}><ChevronDown size={14} /></button>
-                <button className="icon-button icon-button-small" type="button" onClick={() => onArchive(tag.id)} aria-label={`Arquivar ${tag.name}`} title="Arquivar tag"><Archive size={14} /></button>
+                {tagToDelete?.id === tag.id ? (
+                  <div className="subtask-remove-confirm" role="group" aria-label={`Confirmar exclusão de ${tag.name}`}>
+                    <button className="button button-danger" type="button" onClick={() => { setTagToDelete(null); onArchive(tag.id); }}>Excluir</button>
+                    <button className="button button-quiet" type="button" onClick={() => setTagToDelete(null)}>Cancelar</button>
+                  </div>
+                ) : (
+                  <button className="subtask-delete" type="button" onClick={() => setTagToDelete(tag)} aria-label={`Excluir ${tag.name}`} title="Excluir tag">
+                    <Trash2 size={13} />
+                  </button>
+                )}
               </div>
             </div>
           ))}
@@ -2903,14 +3025,6 @@ function TeamManager({ teams = [], tasks = [], employees = [], onSave, onDelete 
             <header className="drawer-header"><div><span className="eyebrow">Atribuição rápida</span><h2 id="team-editor-title">{draft.id ? "Editar equipe" : "Nova equipe"}</h2></div><button className="icon-button" type="button" aria-label="Fechar formulário" onClick={() => setTeamDrawerOpen(false)}><X size={19} /></button></header>
             <div className="drawer-body">
         <div className="team-form">
-          <div className="team-form-intro">
-            <span className="team-form-icon" aria-hidden="true"><Users size={19} /></span>
-            <div>
-              <span className="eyebrow">{draft.id ? "Editar equipe" : "Nova equipe"}</span>
-              <strong>{draft.id ? "Ajuste a composição da equipe" : "Monte seu atalho de atribuição"}</strong>
-              <p>{draft.id ? "As tarefas existentes mantêm o snapshot salvo. Alterações valem para as próximas atribuições." : "Ao selecionar esta equipe numa tarefa, seus membros entram como responsáveis."}</p>
-            </div>
-          </div>
           <div className="team-form-fields">
             <label className="team-form-field">
               <span className="team-form-label"><span>Nome da equipe</span><span className="team-form-required">Obrigatório</span></span>
@@ -5236,7 +5350,6 @@ function NewTaskDrawer({ employees = [], teams = [], personalTags = [], initialS
         <header className="drawer-header">
           <div>
             <span className="eyebrow">Nova tarefa</span>
-            <span className="drawer-code">CRIAÇÃO MANUAL</span>
           </div>
           <button
             className="icon-button"
