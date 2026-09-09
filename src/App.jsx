@@ -2097,7 +2097,7 @@ function PersonalTagPicker({ tags = [], tasks = [], value = [], onChange, onCrea
             className={`personal-tag-more ${[...selected].some((id) => !shownTags.some((tag) => tag.id === id)) ? "has-selected" : ""}`}
             ref={moreRef}
             type="button"
-            onClick={() => setIsModalOpen(true)}
+            onClick={() => { setModalMode("select"); setIsModalOpen(true); }}
             aria-label={`Escolher tags; ${activeTags.length - visibleCount} ocultas`}
             title="Escolher mais tags"
           >
