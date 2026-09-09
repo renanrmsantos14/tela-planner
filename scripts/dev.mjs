@@ -15,12 +15,15 @@ function getListeners() {
 
   return output
     .split(/\r?\n/)
-    .map((line) => line.trim().split(/\s+/))
-    .filter((parts) => parts[0]?.toUpperCase() === "TCP" && parts[3]?.toUpperCase() === "LISTENING")
-    .map((parts) => ({
-      port: Number(parts[1].slice(parts[1].lastIndexOf(":") + 1)),
-      pid: Number(parts[4]),
-    }))
+    .filter((line) => /^\s*TCP\s+/i.test(line) && /\sLISTENING\s+/i.test(line))
+    .map((line) => {
+      const parts = line.trim().split(/\s+/);
+      const localEndpoint = parts[1] || "";
+      return {
+        port: Number(localEndpoint.slice(localEndpoint.lastIndexOf(":") + 1)),
+        pid: Number(parts.at(-1)),
+      };
+    })
     .filter((listener) => Number.isInteger(listener.port) && Number.isInteger(listener.pid));
 }
 
