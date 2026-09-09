@@ -15,6 +15,10 @@ Provisionamento versionado: `powershell -ExecutionPolicy Bypass -File scripts/cr
 
 Esta primeira versão é deliberadamente restrita ao receptor `noreply@betinhos.onmicrosoft.com`. Ela escuta os eventos `notification:*`, evita reenvio pela chave `<evento>|<receptor>|<tipo>|Email`, envia pelo conector Office 365 Outlook e registra o resultado em `cr40f_plannerdisparo` com canal `Email`. O lookup do receptor é resolvido em `cr40f_funcionarios` para satisfazer o contrato de auditoria do disparo.
 
+Separação de endereços: `cr40f_emailmicrosoft` identifica o login/conta Microsoft e não deve ser usado como destinatário operacional. O endereço que recebe o e-mail real é `cr40f_emailbetinhos`. O Flow automático usa somente esse campo; não existe fallback para o login. Quando ele estiver vazio, o disparo é registrado como `Sem endereço de e-mail` e nenhum e-mail é enviado.
+
+O Flow de teste continua usando o receptor fixo `noreply@betinhos.onmicrosoft.com`, procurando o funcionário de teste pelo campo `cr40f_emailbetinhos` apenas para manter o lookup de auditoria.
+
 O teste usa a conexão de solução `new_sharedoffice365_f87d5`, confirmada no DEV. Não há resolução para destinatários reais nesta etapa.
 
 No Planner, `Configurações` exibe o **Módulo de teste de notificações** somente como envio real quando o Dataverse está conectado. O usuário escolhe uma tarefa, o tipo e a mensagem; o clique grava o evento controlado `notification:test`. O evento não leva responsáveis nem destinatários operacionais e, nesta etapa, o Flow envia exclusivamente para `noreply@betinhos.onmicrosoft.com`. No modo local, o botão permanece desabilitado.

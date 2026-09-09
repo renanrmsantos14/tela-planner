@@ -91,8 +91,8 @@ $definition = @'
       "inputs": {
         "parameters": {
           "entityName": "cr40f_funcionarioses",
-          "$select": "cr40f_funcionariosid,cr40f_nomecompleto,cr40f_emailmicrosoft",
-          "$filter": "cr40f_emailmicrosoft eq '@{outputs('Compose_Test_Recipient')}' and statecode eq 0",
+          "$select": "cr40f_funcionariosid,cr40f_nomecompleto,cr40f_emailbetinhos",
+          "$filter": "cr40f_emailbetinhos eq '@{outputs('Compose_Test_Recipient')}' and statecode eq 0",
           "$top": 1,
           "accept": "application/json;odata.metadata=minimal"
         },

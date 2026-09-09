@@ -28,6 +28,7 @@ test("Flow de e-mail do Planner é restrito ao receptor de teste e idempotente",
   assert.match(source, /workflows\?`\$select=workflowid,name,statecode,statuscode/);
   assert.match(source, /Where-Object \{ \$_.name -eq \$FlowName \}/);
   assert.doesNotMatch(source, /emailMessage\/To.*cr40f_emailmicrosoft/);
+  assert.match(source, /cr40f_emailbetinhos/);
   assert.doesNotMatch(source, /emailMessage\/To.*outputs\('Get_system_user'\)/);
 });
 
@@ -38,7 +39,8 @@ test("Flow automático de e-mail replica destinatários das notificações e nã
   assert.match(source, /startswith\(cr40f_campo, 'notification:'\)/);
   assert.match(source, /Compose_Recipients/);
   assert.match(source, /notificationRecipientIds/);
-  assert.match(source, /cr40f_emailmicrosoft/);
+  assert.match(source, /cr40f_emailbetinhos/);
+  assert.doesNotMatch(source, /cr40f_emailmicrosoft/);
   assert.match(source, /Condition_NotAuthor/);
   assert.match(source, /operationId.*SendEmailV2/);
   assert.match(source, /emailMessage\/From.*noreply@betinhos\.com\.br/);
