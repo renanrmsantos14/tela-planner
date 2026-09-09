@@ -1,5 +1,5 @@
 import React, { memo, useCallback, useMemo } from "react";
-import { ArrowUpRight, CalendarDays, CheckCircle2, Clock3, Users } from "lucide-react";
+import { ArrowUpRight, CalendarDays, CheckCircle2, Clock3, EyeOff, Users } from "lucide-react";
 import { formatDate } from "./domain";
 import AssigneeDisplay from "./AssigneeDisplay.jsx";
 import { filterWorkItems, sortWorkItems, workItemStats } from "./workItems";
@@ -75,7 +75,7 @@ const CentralRow = memo(function CentralRow({ item, onOpen, onComplete }) {
   const canComplete = Boolean(onComplete) && ["task", "quote_followup"].includes(item.source) && !item.isTerminal;
   return <article className="central-row">
     <button className="central-row-open" type="button" onClick={() => onOpen(item)} aria-label={`Abrir ${item.title}`}>
-      <div className="central-row-main"><SourceBadge source={item.source} /><strong>{item.title}</strong><span>{item.context}</span></div>
+      <div className="central-row-main"><SourceBadge source={item.source} /><div className="task-title-inline"><strong>{item.title}</strong>{item.restrictedVisibility && <span className="task-visibility-mark" role="img" title="Visível somente para responsáveis e criador" aria-label="Tarefa oculta: visível somente para responsáveis e criador"><EyeOff size={13} strokeWidth={2.2} aria-hidden="true" /></span>}</div><span>{item.context}</span></div>
       <div className="central-row-meta"><AssigneeDisplay value={item.assigneeProfiles?.length ? item.assigneeProfiles : item.assigneeNames || item.assigneeName} small /><span className={item.isOverdue ? "danger-text" : ""}><CalendarDays size={13} aria-hidden="true" />{formatDate(item.dueAt)}</span><span className={`central-status central-${item.statusGroup}`}>{statusLabel}</span><ArrowUpRight size={16} aria-hidden="true" /></div>
     </button>
     {canComplete && <button className="central-row-complete" type="button" onClick={() => onComplete(item.sourceRecordId)} aria-label={`Concluir ${item.title}`}><CheckCircle2 size={15} />Concluir</button>}

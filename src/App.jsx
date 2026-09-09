@@ -329,6 +329,19 @@ function SourceBadge({ sourceType }) {
   );
 }
 
+function RestrictedVisibilityMark({ className = "" }) {
+  return (
+    <span
+      className={`task-visibility-mark ${className}`.trim()}
+      role="img"
+      title="Visível somente para responsáveis e criador"
+      aria-label="Tarefa oculta: visível somente para responsáveis e criador"
+    >
+      <EyeOff size={13} strokeWidth={2.2} aria-hidden="true" />
+    </span>
+  );
+}
+
 function WaitingContextFields({ value, onChange, employees = [], teams = [], error = "" }) {
   const context = normalizeWaitingContext(value);
   const employeeOptions = employees
@@ -788,10 +801,21 @@ function isActionableNotification(item, tasks) {
   return item.type === "status" && tasks.some((task) => task.id === item.taskId && task.status === "waiting");
 }
 
+function notificationsVisibleToEmployee(notifications = [], tasks = [], employee, teams = []) {
+  const taskById = new Map(tasks.map((task) => [task.id, task]));
+  return notifications.filter((item) => {
+    if (!item.taskId) return true;
+    const task = taskById.get(item.taskId);
+    return !task || isTaskVisibleToEmployee(task, employee, teams);
+  });
+}
+
 function NotificationsPanel({
   notifications,
   tasks,
   contacts = [],
+  currentEmployee,
+  teams = [],
   error = "",
   onClose,
   onOpenTask,
@@ -800,15 +824,16 @@ function NotificationsPanel({
   onMarkAllRead,
 }) {
   const [notificationFilter, setNotificationFilter] = useState("all");
-  const unread = unreadCount(notifications);
-  const actionableNotifications = notifications.filter((item) => isActionableNotification(item, tasks));
-  const informationalNotifications = notifications.filter((item) => !isActionableNotification(item, tasks));
+  const scopedNotifications = notificationsVisibleToEmployee(notifications, tasks, currentEmployee, teams);
+  const unread = unreadCount(scopedNotifications);
+  const actionableNotifications = scopedNotifications.filter((item) => isActionableNotification(item, tasks));
+  const informationalNotifications = scopedNotifications.filter((item) => !isActionableNotification(item, tasks));
   const filterOptions = [
-    { id: "all", label: "Todas", icon: BellRing, items: notifications },
+    { id: "all", label: "Todas", icon: BellRing, items: scopedNotifications },
     { id: "actionable", label: "Pendentes", icon: ListChecks, items: actionableNotifications },
     { id: "informational", label: "Informativas", icon: FileText, items: informationalNotifications },
   ];
-  const visibleNotifications = [...(notificationFilter === "actionable" ? actionableNotifications : notificationFilter === "informational" ? informationalNotifications : notifications)].sort((left, right) => {
+  const visibleNotifications = [...(notificationFilter === "actionable" ? actionableNotifications : notificationFilter === "informational" ? informationalNotifications : scopedNotifications)].sort((left, right) => {
     return new Date(right.occurredAt || 0).getTime() - new Date(left.occurredAt || 0).getTime();
   });
 
@@ -947,6 +972,7 @@ function AppShell({
   contacts = [],
   live,
   currentEmployee,
+  teams = [],
   personalStats,
   openTaskCount,
   mentionEmployees = [],
@@ -966,7 +992,9 @@ function AppShell({
       ? mentionEmployees
       : globalThis.__plannerEmployees || [],
   );
-  const stats = personalStats || taskStats(tasks);
+  const visibleTasks = tasks.filter((task) => isTaskVisibleToEmployee(task, currentEmployee, teams));
+  const stats = personalStats || taskStats(visibleTasks);
+  const visibleNotifications = notificationsVisibleToEmployee(notifications, tasks, currentEmployee, teams);
   const todayLabel = TODAY_LABEL_FORMATTER.format(new Date()).replace(".", "");
   const userName = currentEmployee?.name || "Usuário não vinculado";
   const desktopNavActive =
@@ -1173,9 +1201,11 @@ function AppShell({
       )}
       {notificationsOpen && (
         <NotificationsPanel
-          notifications={notifications}
-          tasks={tasks}
+          notifications={visibleNotifications}
+          tasks={visibleTasks}
           contacts={contacts}
+          currentEmployee={currentEmployee}
+          teams={teams}
           error={notificationError}
           onClose={() => setNotificationsOpen(false)}
           onOpenTask={(item) => {
@@ -1472,7 +1502,10 @@ const TaskCard = memo(function TaskCard({
           </button>
         )}
       </div>
-      <h3>{taskItem.title}</h3>
+      <div className="task-card-title-row">
+        <h3>{taskItem.title}</h3>
+        {taskItem.restrictedVisibility && <RestrictedVisibilityMark />}
+      </div>
       {(taskItem.sourceType || taskItem.quoteId) && (
         <div className="task-source-row">
           <SourceBadge
@@ -2647,7 +2680,10 @@ function ListView({
                 </span>
               )}
               <div className="table-task-copy">
-                <strong>{taskItem.title}</strong>
+                <div className="task-title-inline">
+                  <strong>{taskItem.title}</strong>
+                  {taskItem.restrictedVisibility && <RestrictedVisibilityMark />}
+                </div>
                 {taskItem.status === "waiting" && waitingContextSummary(taskItem.waitingContext) && (
                   <small>{waitingContextSummary(taskItem.waitingContext)}</small>
                 )}
@@ -2902,7 +2938,10 @@ function CalendarView({
             <span className="agenda-time">{formatDate(taskDisplayDueDate(taskItem, currentEmployee, state.teams))}</span>
             <div className="agenda-line" />
             <div className="agenda-info">
-              <strong>{taskItem.title}</strong>
+              <div className="task-title-inline">
+                <strong>{taskItem.title}</strong>
+                {taskItem.restrictedVisibility && <RestrictedVisibilityMark />}
+              </div>
               <span>
                 {taskItem.quoteCode} · {taskItem.assigneeName}
               </span>
@@ -4018,6 +4057,7 @@ function TaskDrawerContent({
             teamNames: taskItem.teamNames || [],
             teamId: taskItem.teamId || "",
             assigneeIds: taskItem.assigneeIds || [],
+            restrictedVisibility: Boolean(taskItem.restrictedVisibility),
             personalTagIds: normalizePersonalTagIds(taskItem.personalTagIds),
             assigneeName: normalizeAssigneeNames(
               taskItem.assigneeNames || taskItem.assigneeName,
@@ -4129,7 +4169,7 @@ function TaskDrawerContent({
     ...draftAttachments,
   ];
   const isDirty =
-    ["title", "status", "priority", "assignmentMode", "teamIds", "teamNames", "teamId", "teamName", "dueDate", "description", "waitingContext", "personalTagIds"].some(
+    ["title", "status", "priority", "assignmentMode", "teamIds", "teamNames", "teamId", "teamName", "dueDate", "description", "waitingContext", "personalTagIds", "restrictedVisibility"].some(
       (key) =>
         JSON.stringify(key === "personalTagIds" ? normalizePersonalTagIds(form[key]) : form[key] || "") !== JSON.stringify(key === "personalTagIds" ? normalizePersonalTagIds(taskItem[key]) : taskItem[key] || ""),
     ) ||
@@ -4258,6 +4298,7 @@ function TaskDrawerContent({
         assigneeIds: form.assigneeIds || [],
         assigneeNames: normalizeAssigneeNames(form.assigneeName),
         teamName: form.teamName,
+        restrictedVisibility: Boolean(form.restrictedVisibility),
         dueDate: form.dueDate,
         deadlineChangeReason: dueDateChanged
           ? String(form.deadlineChangeReason || "").trim()
@@ -4444,7 +4485,7 @@ function TaskDrawerContent({
                   aria-pressed={Boolean(form.restrictedVisibility)}
                   title={form.restrictedVisibility ? "Mostrar para todos" : "Restringir aos responsáveis e criador"}
                 >
-                  {form.restrictedVisibility ? <EyeOff size={15} /> : <Eye size={15} />}
+                  {form.restrictedVisibility ? <EyeOff key="restricted" size={17} /> : <Eye key="public" size={17} />}
                 </button>
               </div>
               <input
@@ -5238,7 +5279,7 @@ function InlineSubtasksEditor({ items, setItems }) {
     setDraft("");
   };
   return (
-    <section className={`creation-subtasks ${items.length === 0 ? "is-empty" : ""}`}>
+    <section className="creation-subtasks" data-empty={items.length === 0 ? "true" : "false"}>
       <div className="drawer-section-heading">
         <h3>Subtarefas</h3>
         <span className="section-hint">opcional</span>
@@ -5326,6 +5367,7 @@ function NewTaskDrawer({ employees = [], teams = [], personalTags = [], tasks = 
     assigneeName: [],
     assigneeIds: [],
     teamName: "",
+    restrictedVisibility: false,
     dueDate: "",
     description: "",
     waitingContext: { ...EMPTY_WAITING_CONTEXT },
@@ -5492,7 +5534,7 @@ function NewTaskDrawer({ employees = [], teams = [], personalTags = [], tasks = 
                   aria-pressed={Boolean(form.restrictedVisibility)}
                   title={form.restrictedVisibility ? "Mostrar para todos" : "Restringir aos responsáveis e criador"}
                 >
-                  {form.restrictedVisibility ? <EyeOff size={15} /> : <Eye size={15} />}
+                  {form.restrictedVisibility ? <EyeOff key="restricted" size={17} /> : <Eye key="public" size={17} />}
                 </button>
               </div>
               <input
@@ -6188,6 +6230,10 @@ export default function App() {
         actorUserId: currentEmployee?.userId || "",
         mentionedEmployeeIds: mentionText ? mentionedEmployees(mentionText, state.employees).map((employee) => employee.id) : [],
       };
+      const visibilityChanged = Boolean(existingTask)
+        && patch.restrictedVisibility !== undefined
+        && Boolean(patch.restrictedVisibility) !== Boolean(existingTask.restrictedVisibility);
+      const previousVisibility = Boolean(existingTask?.restrictedVisibility);
       const isCompleting = existingTask?.status !== "done" && nextPatch.status === "done";
       if (isCompleting) prepareCompletionSound();
       const shouldReopen = id === selectedId;
@@ -6210,6 +6256,21 @@ export default function App() {
             setFailedTaskDraft((current) =>
               current?.id === id ? null : current,
             );
+          if (visibilityChanged) {
+            showNotice(
+              nextPatch.restrictedVisibility ? "Tarefa ocultada." : "Tarefa visível para todos.",
+              5600,
+              {
+                label: "Desfazer",
+                onClick: () => runOptimisticMutation(
+                  (current) => applyOptimisticTaskPatch(current, id, { restrictedVisibility: previousVisibility }),
+                  () => store.updateTask(state, id, { restrictedVisibility: previousVisibility }),
+                  "",
+                  "",
+                ),
+              },
+            );
+          }
           return true;
         }
         if (!shouldReopen) return false;
@@ -6855,7 +6916,11 @@ export default function App() {
   const markAllNotificationsRead = useCallback(() => {
     if (!currentEmployee?.id || !store.markAllNotificationsRead) return;
     const optimisticReadAt = new Date().toISOString();
-    const unreadIds = new Set((state.notifications || []).filter((item) => item.recipientEmployeeId === currentEmployee.id && !item.readAt).map((item) => item.id));
+    const unreadIds = new Set(
+      notificationsVisibleToEmployee(state.notifications || [], state.tasks || [], currentEmployee, state.teams || [])
+        .filter((item) => item.recipientEmployeeId === currentEmployee.id && !item.readAt)
+        .map((item) => item.id),
+    );
     if (!unreadIds.size) return;
     setState((current) => ({
       ...current,
@@ -6903,6 +6968,19 @@ export default function App() {
     },
     [onCentralModeChange],
   );
+  const visibleTasks = useMemo(
+    () => (state.tasks || []).filter((task) => isTaskVisibleToEmployee(task, currentEmployee, state.teams)),
+    [currentEmployee, state.tasks, state.teams],
+  );
+  const visibleNotifications = useMemo(
+    () => notificationsVisibleToEmployee(
+      (state.notifications || []).filter((item) => item.recipientEmployeeId === currentEmployee?.id),
+      state.tasks || [],
+      currentEmployee,
+      state.teams || [],
+    ),
+    [currentEmployee, state.notifications, state.tasks, state.teams],
+  );
   if (error)
     return (
       <div className="app-error">
@@ -6942,12 +7020,12 @@ export default function App() {
         />
       </AppShell>
     );
-  const viewState = { ...state, workItems };
+  const viewState = { ...state, tasks: visibleTasks, workItems };
   const personalItems = currentEmployee
     ? workItems.filter((item) => isAssignedToEmployee(item, currentEmployee))
     : [];
   const personalStats = workItemStats(filterWorkItems(personalItems));
-  const openTaskCount = state.tasks.filter(
+  const openTaskCount = visibleTasks.filter(
     (task) =>
       !task.parentTaskId && !["done", "cancelled"].includes(task.status),
   ).length;
@@ -6981,7 +7059,7 @@ export default function App() {
         />
       );
     if (active === "management")
-      return <ManagementView state={state} currentEmployee={currentEmployee} onOpenTask={openTask} onCollect={collectTask} onRegisterWaitingReturn={openWaitingReturn} />;
+      return <ManagementView state={viewState} currentEmployee={currentEmployee} onOpenTask={openTask} onCollect={collectTask} onRegisterWaitingReturn={openWaitingReturn} />;
     if (active === "contacts")
       return (
         <ContactsView
@@ -6989,7 +7067,7 @@ export default function App() {
           employees={state.employees}
           teams={state.teams}
           quotes={state.quotes}
-          tasks={state.tasks}
+          tasks={visibleTasks}
           currentEmployee={currentEmployee}
           selectedContactId={selectedContactId}
           contactLoading={state.contactLoading}
@@ -7006,11 +7084,11 @@ export default function App() {
         />
       );
     if (active === "quotes")
-      return <QuotesView state={state} onOpenTask={openTask} />;
+      return <QuotesView state={viewState} onOpenTask={openTask} />;
     if (active === "board")
       return (
         <BoardView
-          state={state}
+          state={viewState}
           currentEmployee={currentEmployee}
           checklistVisibility={checklistVisibility}
           onOpen={openTask}
@@ -7025,7 +7103,7 @@ export default function App() {
           taskScope={taskScope}
           onScopeChange={onTaskScopeChange}
           personalTags={state.personalTags}
-          tasks={state.tasks}
+          tasks={visibleTasks}
           onCreatePersonalTag={createPersonalTag}
           onUpdatePersonalTag={updatePersonalTag}
           onArchivePersonalTag={archivePersonalTag}
@@ -7035,7 +7113,7 @@ export default function App() {
     if (active === "list")
       return (
         <ListView
-          state={state}
+          state={viewState}
           currentEmployee={currentEmployee}
           onOpen={openTask}
           onCreate={openCreate}
@@ -7045,7 +7123,7 @@ export default function App() {
           taskScope={taskScope}
           onScopeChange={onTaskScopeChange}
           personalTags={state.personalTags}
-          tasks={state.tasks}
+          tasks={visibleTasks}
           onCreatePersonalTag={createPersonalTag}
           onUpdatePersonalTag={updatePersonalTag}
           onArchivePersonalTag={archivePersonalTag}
@@ -7055,7 +7133,7 @@ export default function App() {
     if (active === "calendar")
       return (
         <CalendarView
-          state={state}
+          state={viewState}
           currentEmployee={currentEmployee}
           onOpen={openTask}
           onCreate={openCreate}
@@ -7078,7 +7156,7 @@ export default function App() {
       ) : (
         <Suspense fallback={<LoadingFallback />}>
           <LazyQualityView
-            state={state}
+            state={viewState}
             currentEmployee={currentEmployee}
             onCreate={createQualityTask}
             onCreateTask={openCreate}
@@ -7089,7 +7167,7 @@ export default function App() {
       );
     return (
       <Suspense fallback={<LoadingFallback />}>
-          <LazySettingsView onReset={reloadData} live={store.live} teams={state.teams} tasks={state.tasks} employees={state.employees} personalTags={state.personalTags} onCreatePersonalTag={createPersonalTag} onUpdatePersonalTag={updatePersonalTag} onArchivePersonalTag={archivePersonalTag} onReorderPersonalTags={reorderPersonalTags} onSaveTeam={saveTeam} onDeleteTeam={deleteTeam} onImportPlannerTasks={importPlannerTasks} />
+          <LazySettingsView onReset={reloadData} live={store.live} teams={state.teams} tasks={visibleTasks} employees={state.employees} personalTags={state.personalTags} onCreatePersonalTag={createPersonalTag} onUpdatePersonalTag={updatePersonalTag} onArchivePersonalTag={archivePersonalTag} onReorderPersonalTags={reorderPersonalTags} onSaveTeam={saveTeam} onDeleteTeam={deleteTeam} onImportPlannerTasks={importPlannerTasks} />
       </Suspense>
     );
   };
@@ -7102,9 +7180,10 @@ export default function App() {
       contacts={state.contacts}
       live={store.live}
       currentEmployee={currentEmployee}
+      teams={state.teams}
       personalStats={personalStats}
       openTaskCount={openTaskCount}
-      notifications={(state.notifications || []).filter((item) => item.recipientEmployeeId === currentEmployee?.id)}
+      notifications={visibleNotifications}
       notificationError={state.loadErrors?.notifications || ""}
       onOpenNotification={openNotification}
       onOpenContact={openNotification}

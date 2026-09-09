@@ -31,6 +31,22 @@ test("cria e atualiza tarefa sem alterar a referência original", () => {
   assert.equal(initial.tasks.length, 44);
 });
 
+test("persiste o flag de visibilidade restrita no mock durante criação e edição", () => {
+  withStorage();
+  const initial = seedState();
+  const createdState = createTask(initial, {
+    title: "Tarefa restrita",
+    restrictedVisibility: true,
+    actorEmployeeId: "employee-renan",
+    actorUserId: "user-renan",
+  });
+  const created = createdState.tasks.at(-1);
+  assert.equal(created.restrictedVisibility, true);
+
+  const reopened = updateTask(createdState, created.id, { restrictedVisibility: false });
+  assert.equal(reopened.tasks.find((task) => task.id === created.id).restrictedVisibility, false);
+});
+
 test("mantém tags pessoais isoladas por usuário e vinculadas à tarefa", () => {
   withStorage();
   const initial = seedState();

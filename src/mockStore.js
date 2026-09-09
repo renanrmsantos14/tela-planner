@@ -244,7 +244,7 @@ function task(id, title, quoteId, quoteCode, quoteTitle, status, priority, assig
   const assigneeNames = normalizeAssigneeNames(assigneeName);
   return {
     id, title, parentTaskId, quoteId, quoteCode, quoteTitle, status, priority, assigneeNames, assigneeName: assigneeNames.join(", "), teamName, dueDate,
-    description, checklist: context.checklist || [], labels: [quoteCode], personalTagIds: normalizePersonalTagIds(context.personalTagIds), sourceType: quoteId ? "quote" : "manual", sourceId: quoteId, sourceLabel: quoteId ? "Pedido de cotação" : "Tarefa manual", sourceCode: quoteCode, ...context, waitingContext: normalizeWaitingContext(context.waitingContext), comments: context.comments || [], returns: context.returns || [], attachments: context.attachments || [],
+    description, checklist: context.checklist || [], labels: [quoteCode], personalTagIds: normalizePersonalTagIds(context.personalTagIds), sourceType: quoteId ? "quote" : "manual", sourceId: quoteId, sourceLabel: quoteId ? "Pedido de cotação" : "Tarefa manual", sourceCode: quoteCode, restrictedVisibility: Boolean(context.restrictedVisibility), ...context, waitingContext: normalizeWaitingContext(context.waitingContext), comments: context.comments || [], returns: context.returns || [], attachments: context.attachments || [],
     history: context.history || [{ id: uid("history"), text: "Tarefa criada no cenário de demonstração.", createdAt: new Date().toISOString(), author: "Sistema" }],
   };
 }
@@ -261,7 +261,7 @@ export function loadState() {
         personalTags: [],
         currentUserId: "user-renan",
         ...state,
-        tasks: (state.tasks || []).map((taskItem) => ({ ...taskItem, personalTagIds: normalizePersonalTagIds(taskItem.personalTagIds) })),
+        tasks: (state.tasks || []).map((taskItem) => ({ ...taskItem, restrictedVisibility: Boolean(taskItem.restrictedVisibility), personalTagIds: normalizePersonalTagIds(taskItem.personalTagIds) })),
       };
     }
     const migrated = migrateLegacyTeams(state.tasks || [], state.employees || [], ["Comercial", "Financeiro", "Operação", "Qualidade"]);
@@ -271,7 +271,7 @@ export function loadState() {
       personalTags: [],
       currentUserId: "user-renan",
       ...state,
-      tasks: migrated.tasks.map((taskItem) => ({ ...taskItem, personalTagIds: normalizePersonalTagIds(taskItem.personalTagIds) })),
+      tasks: migrated.tasks.map((taskItem) => ({ ...taskItem, restrictedVisibility: Boolean(taskItem.restrictedVisibility), personalTagIds: normalizePersonalTagIds(taskItem.personalTagIds) })),
       teams: migrated.teams,
     };
   } catch {
@@ -314,7 +314,7 @@ export function createTask(state, input) {
     id: uid("task"), parentTaskId: input.parentTaskId || null, quoteId: input.quoteId || null,
     quoteCode: input.quoteCode || "", quoteTitle: input.quoteTitle || "Sem vínculo", title: input.title.trim(),
     status, priority: input.priority || "medium", assignmentMode: assignment.assignmentMode, teamIds: assignment.teamIds, teamNames: assignment.teamNames, teamId: assignment.teamId, assigneeNames, assigneeName: assigneeNames.join(", "), assigneeIds,
-    creatorEmployeeId: input.actorEmployeeId || "", creatorUserId: input.actorUserId || "", contactId: input.contactId || "",
+    creatorEmployeeId: input.actorEmployeeId || "", creatorUserId: input.actorUserId || "", restrictedVisibility: Boolean(input.restrictedVisibility), contactId: input.contactId || "",
     teamName: assignment.teamName || input.teamName || "", dueDate: input.dueDate || "", description: input.description || "", waitingContext,
     checklist: input.checklist || [], labels: input.quoteCode ? [input.quoteCode] : [], personalTagIds: normalizePersonalTagIds(input.personalTagIds), sourceType, sourceId: input.sourceId || input.quoteId || null, sourceLabel: input.sourceLabel || (sourceType === "quality" ? "Ação de qualidade" : sourceType === "quote" ? "Pedido de cotação" : "Tarefa manual"), sourceCode: input.sourceCode || input.quoteCode || "", comments: [], attachments: [],
     history: [{ id: uid("history"), text: "Tarefa criada no mock.", createdAt: new Date().toISOString(), author: "Você" }],

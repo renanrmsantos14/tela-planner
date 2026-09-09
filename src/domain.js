@@ -113,6 +113,26 @@ function sameIdentifier(left, right) {
   return String(left || "").replace(/[{}]/g, "").toLowerCase() === String(right || "").replace(/[{}]/g, "").toLowerCase();
 }
 
+export function isTaskVisibleToEmployee(task = {}, employee, teams = []) {
+  if (!task.restrictedVisibility) return true;
+  if (!employee?.id && !employee?.userId) return false;
+
+  if (sameIdentifier(task.creatorEmployeeId, employee.id)
+    || (task.creatorUserId && employee.userId && sameIdentifier(task.creatorUserId, employee.userId))) return true;
+
+  const assigneeIds = task.assigneeIds || (task.assigneeId ? [task.assigneeId] : []);
+  if (assigneeIds.some((id) => sameIdentifier(id, employee.id))) return true;
+
+  const assigneeNames = task.assigneeNames || normalizeAssigneeNames(task.assigneeName);
+  if (assigneeNames.some((name) => normalizeText(name) === normalizeText(employee.name))) return true;
+
+  const taskTeamIds = uniqueStrings(task.teamIds ?? task.teamId);
+  const taskTeamNames = uniqueStrings(task.teamNames ?? task.teamName);
+  return teams
+    .filter((team) => taskTeamIds.some((id) => sameIdentifier(id, team.id)) || taskTeamNames.some((name) => normalizeText(name) === normalizeText(team.name)))
+    .some((team) => (team.memberIds || team.members || []).some((id) => sameIdentifier(id, employee.id)));
+}
+
 export function waitingReturnTargetIds(task, teams = []) {
   const context = normalizeWaitingContext(task?.waitingContext);
   const targetIds = Array.isArray(context.onIds) && context.onIds.length
@@ -201,7 +221,11 @@ export function buildOptimisticTask(input, parentTaskId = null) {
     teamNames: optimisticTeamNames,
     teamId: teamIds[0] || "",
     assigneeNames: optimisticAssigneeNames,
+    assigneeIds: [...new Set((input.assigneeIds || []).filter(Boolean).map(String))],
     assigneeName: optimisticAssigneeNames.join(", "),
+    creatorEmployeeId: input.actorEmployeeId || "",
+    creatorUserId: input.actorUserId || "",
+    restrictedVisibility: Boolean(input.restrictedVisibility),
     teamName: optimisticTeamNames.join(", ") || "Sem equipe",
     quoteId,
     quoteCode: input.quoteCode || "",
@@ -469,6 +493,7 @@ export function filterTasks(tasks, filters = {}, employee, teams = []) {
   const teamValues = selectedValues(filters.team);
   const personalTagValues = new Set(selectedValues(filters.personalTag));
   return tasks.filter((task) => {
+    if (!isTaskVisibleToEmployee(task, employee, teams)) return false;
     if (statusValues.size && !statusValues.has(task.status)) return false;
     if (priorityValues.size && !priorityValues.has(task.priority)) return false;
     if (sourceValues.size && !sourceValues.has(task.sourceType)) return false;

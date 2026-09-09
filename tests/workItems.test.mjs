@@ -79,3 +79,24 @@ test("inclui tarefa compartilhada nas pendências de cada responsável", () => {
   assert.equal(isAssignedToEmployee(items[0], { id: "e2", name: "Marina" }), true);
   assert.equal(isAssignedToEmployee(items[0], { id: "e3", name: "Outro" }), false);
 });
+
+test("remove tarefa restrita do resumo para usuário sem vínculo e mantém para o criador", () => {
+  const state = {
+    teams: [{ id: "team-op", name: "Operação", memberIds: ["e2"] }],
+    tasks: [{
+      id: "restricted",
+      title: "Alinhamento reservado",
+      status: "todo",
+      restrictedVisibility: true,
+      creatorEmployeeId: "e1",
+      assigneeIds: [],
+      assigneeNames: [],
+      teamIds: ["team-op"],
+      teamNames: ["Operação"],
+    }],
+  };
+
+  assert.equal(normalizeWorkItems(state, { id: "e1" }).length, 1);
+  assert.equal(normalizeWorkItems(state, { id: "e2" }).length, 1);
+  assert.equal(normalizeWorkItems(state, { id: "e3" }).length, 0);
+});

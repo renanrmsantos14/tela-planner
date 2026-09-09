@@ -89,7 +89,22 @@ button { cursor: pointer; }
 /* O título precisa parecer um campo editável sem dominar o drawer. */
 .drawer-title { align-items: flex-end; }
 .drawer-title-field { min-width: 0; flex: 1; display: grid; gap: 6px; }
+.drawer-title-label-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 22px; }
 .drawer-title-label { color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .02em; }
+.task-visibility-button { position: relative; width: 44px; height: 44px; display: grid; place-items: center; flex: 0 0 auto; padding: 0; border: 1px solid transparent; border-radius: 12px; color: #8796a8; background: transparent; cursor: pointer; transition: color 180ms var(--ease-out), background-color 180ms var(--ease-out), border-color 180ms var(--ease-out), box-shadow 220ms var(--ease-out), transform 120ms ease-out; }
+.task-visibility-button:hover, .task-visibility-button:focus-visible { color: var(--blue); border-color: #d7e2f3; background: var(--blue-soft); outline: 0; }
+.task-visibility-button:active { transform: scale(.9); }
+.task-visibility-button.is-active { color: var(--blue); border-color: #cddcf4; background: var(--blue-soft); box-shadow: 0 0 0 4px rgba(33,89,210,.08), 0 7px 18px rgba(33,89,210,.13); }
+.task-visibility-button.is-active::after { content: ""; position: absolute; inset: 4px; border: 1px solid rgba(33,89,210,.35); border-radius: 9px; pointer-events: none; animation: task-visibility-ring 520ms var(--ease-out); }
+.task-visibility-button svg { animation: task-visibility-pop 260ms var(--ease-out); }
+@keyframes task-visibility-pop { 0% { transform: scale(.72) rotate(-8deg); opacity: .45; } 65% { transform: scale(1.12) rotate(3deg); opacity: 1; } 100% { transform: scale(1) rotate(0); opacity: 1; } }
+@keyframes task-visibility-ring { 0% { opacity: 0; transform: scale(.72); } 45% { opacity: 1; } 100% { opacity: 0; transform: scale(1.22); } }
+.task-card-title-row, .task-title-inline { min-width: 0; display: flex; align-items: center; gap: 6px; }
+.task-card-title-row h3 { min-width: 0; flex: 1; }
+.task-title-inline strong, .task-title-inline > span:not(.task-visibility-mark) { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.task-visibility-mark { width: 22px; height: 22px; display: inline-grid; place-items: center; flex: 0 0 auto; border: 1px solid #cbdaf5; border-radius: 7px; color: var(--blue); background: var(--blue-soft); box-shadow: 0 3px 9px rgba(33,89,210,.1); }
+.task-visibility-mark svg { animation: task-visibility-mark-in 240ms var(--ease-out); }
+@keyframes task-visibility-mark-in { from { transform: scale(.65) rotate(-10deg); opacity: .35; } to { transform: scale(1) rotate(0); opacity: 1; } }
 .drawer-title input { min-height: 46px; padding: 0 12px; border: 1px solid #d9e2ed; border-radius: 10px; background: #fbfcfe; font-size: 19px; letter-spacing: -.35px; transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease; }
 .drawer-title input::placeholder { color: #91a0b2; font-size: 17px; font-weight: 600; }
 .drawer-title input:hover { border-color: #c6d3e2; background: #fff; }
@@ -124,8 +139,8 @@ button { cursor: pointer; }
 .subtask-delete:hover, .subtask-delete:focus-visible { color: var(--red); background: var(--red-soft); outline: 0; }
 .subtask-delete:disabled { cursor: progress; opacity: .4; }
 .creation-subtasks { padding-top: 20px; margin-top: 20px; border-top: 1px solid #eef1f5; }
-.creation-subtasks.is-empty { padding-top: 16px; }
-.creation-subtasks.is-empty .creation-subtask-input { padding-bottom: 16px; }
+.creation-subtasks[data-empty="true"] { padding-top: 16px; }
+.creation-subtasks[data-empty="true"] .creation-subtask-input { padding-bottom: 16px; }
 .creation-subtasks .drawer-section-heading { margin-bottom: 8px; }
 .section-hint { color: var(--tertiary); font-size: 10px; font-weight: 600; }
 .creation-subtask-row, .creation-subtask-input { display: grid; grid-template-columns: 20px minmax(0,1fr) 24px; gap: 8px; align-items: center; min-height: 32px; border-bottom: 1px solid #f0f2f5; color: var(--control); font-size: 11px; }

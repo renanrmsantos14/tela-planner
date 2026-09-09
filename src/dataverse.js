@@ -64,6 +64,7 @@ const QUOTE_TABLE = "cr40f_pedidodecotacao";
 const QUALITY_ERROR_TABLE = "cr40f_errooperacional";
 const QUALITY_ACTION_TABLE = "cr40f_acaooperacional";
 const TASK_TABLE = "cr40f_plannertarefa";
+const TASK_RESTRICTED_VISIBILITY_FIELD = "cr40f_visibilidade_restrita";
 const WAITING_CONTEXT_FIELDS = Object.freeze({
   subject: "cr40f_aguardandosujeito",
   onType: "cr40f_aguardandotipo",
@@ -320,6 +321,7 @@ function plannerTaskQuery(includeTeamLookup = true, includeWaitingContext = true
     "cr40f_checklistjson",
     "cr40f_status",
     "cr40f_prioridade",
+    TASK_RESTRICTED_VISIBILITY_FIELD,
     "cr40f_prazo",
     ...(includeWaitingContext ? Object.values(WAITING_CONTEXT_FIELDS) : []),
     "_createdby_value",
@@ -749,6 +751,7 @@ function normalizeTask(row, events = [], assignees = [], teamRelations = []) {
     checklist: parseChecklist(row.cr40f_checklistjson),
     status,
     priority,
+    restrictedVisibility: Boolean(row[TASK_RESTRICTED_VISIBILITY_FIELD]),
     dueDate: dateOnly(row.cr40f_prazo),
     waitingContext: parseWaitingContext(row),
     assigneeNames: assignees.length ? assignees.map((item) => item.name) : normalizeAssigneeNames(formatLookup(row, EMPLOYEE_ASSIGNEE_FIELD)),
@@ -1014,7 +1017,7 @@ async function createLiveTask(xrm, state, input) {
   const waitingContext = normalizeWaitingContext(input.waitingContext);
   const waitingValidation = validateWaitingContext(status, waitingContext);
   if (!waitingValidation.allowed) throw new Error(waitingValidation.error);
-  const payload = { cr40f_titulo: input.title.trim(), cr40f_descricao: input.description || "", cr40f_status: STATUS_VALUES[status], cr40f_prioridade: PRIORITY_VALUES[input.priority] || PRIORITY_VALUES.medium, cr40f_prazo: input.dueDate ? `${input.dueDate}T12:00:00Z` : null, ...waitingContextPayload(waitingContext), cr40f_origem: ORIGIN_VALUES[input.sourceType || (input.quoteId ? "quote" : "manual")], cr40f_codigoorigem: input.sourceCode || input.quoteCode || "" };
+  const payload = { cr40f_titulo: input.title.trim(), cr40f_descricao: input.description || "", cr40f_status: STATUS_VALUES[status], cr40f_prioridade: PRIORITY_VALUES[input.priority] || PRIORITY_VALUES.medium, cr40f_prazo: input.dueDate ? `${input.dueDate}T12:00:00Z` : null, [TASK_RESTRICTED_VISIBILITY_FIELD]: Boolean(input.restrictedVisibility), ...waitingContextPayload(waitingContext), cr40f_origem: ORIGIN_VALUES[input.sourceType || (input.quoteId ? "quote" : "manual")], cr40f_codigoorigem: input.sourceCode || input.quoteCode || "" };
   if (input.contactId) {
     const schema = requireContactSchema();
     await bindLookup(xrm, payload, TASK_TABLE, schema.taskLookup, schema.table, input.contactId);
@@ -1063,6 +1066,7 @@ async function updateLiveTask(xrm, state, id, patch) {
   if (patch.status !== undefined) payload.cr40f_status = STATUS_VALUES[patch.status];
   if (patch.priority !== undefined) payload.cr40f_prioridade = PRIORITY_VALUES[patch.priority];
   if (patch.dueDate !== undefined) payload.cr40f_prazo = patch.dueDate ? `${patch.dueDate}T12:00:00Z` : null;
+  if (patch.restrictedVisibility !== undefined) payload[TASK_RESTRICTED_VISIBILITY_FIELD] = Boolean(patch.restrictedVisibility);
   if (patch.waitingContext !== undefined || (patch.status !== undefined && nextStatus === "waiting")) Object.assign(payload, waitingContextPayload(waitingContext));
   const relationUpdates = [];
   if (patch.assigneeId !== undefined || patch.assigneeName !== undefined || patch.assigneeNames !== undefined || patch.assigneeIds !== undefined || patch.teamIds !== undefined || patch.teamId !== undefined) {

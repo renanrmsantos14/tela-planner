@@ -1,4 +1,4 @@
-import { getDueBucket, normalizeAssigneeNames, taskDisplayDueDate, waitingReturnTargetIds } from "./domain.js";
+import { getDueBucket, isTaskVisibleToEmployee, normalizeAssigneeNames, taskDisplayDueDate, waitingReturnTargetIds } from "./domain.js";
 
 const TERMINAL_QUALITY_STATUSES = new Set(["resolvido", "encerrado", "cancelado", "concluida", "cancelada"]);
 const TASK_STATUS_LABELS = Object.freeze({ todo: "A fazer", doing: "Em andamento", waiting: "Aguardando", done: "Concluído", cancelled: "Cancelado" });
@@ -68,7 +68,7 @@ function qualityWorkItem(item) {
 }
 
 export function normalizeWorkItems(state = {}, employee) {
-  const tasks = (state.tasks || []).map((task) => {
+  const tasks = (state.tasks || []).filter((task) => isTaskVisibleToEmployee(task, employee, state.teams)).map((task) => {
     const dueAt = taskDisplayDueDate(task, employee, state.teams);
     return {
       id: `task:${task.id}`,
@@ -79,6 +79,9 @@ export function normalizeWorkItems(state = {}, employee) {
       context: taskContext(task),
       assigneeEmployeeId: task.assigneeId || task.assigneeIds?.[0] || "",
       assigneeIds: task.assigneeIds || (task.assigneeId ? [task.assigneeId] : []),
+      creatorEmployeeId: task.creatorEmployeeId || "",
+      creatorUserId: task.creatorUserId || "",
+      restrictedVisibility: Boolean(task.restrictedVisibility),
       assigneeNames: task.assigneeNames || normalizeAssigneeNames(task.assigneeName),
       assigneeName: cleanText(task.assigneeName, "Não atribuído"),
       assigneeProfiles: task.assigneeProfiles || [],
@@ -145,7 +148,10 @@ export function isAssignedToEmployee(item, employee) {
   const employeeName = String(employee.name || "");
   const assigneeIds = [item.assigneeEmployeeId, ...(item.assigneeIds || []), ...(item.waitingTargetIds || [])].filter(Boolean).map(String);
   const assigneeNames = item.assigneeNames || (item.assigneeName ? [item.assigneeName] : []);
-  return assigneeIds.includes(employeeId) || assigneeNames.includes(employeeName);
+  return Boolean(assigneeIds.includes(employeeId)
+    || assigneeNames.includes(employeeName)
+    || String(item.creatorEmployeeId || "") === employeeId
+    || (item.creatorUserId && employee.userId && String(item.creatorUserId) === String(employee.userId)));
 }
 
 export function workItemStats(items = []) {

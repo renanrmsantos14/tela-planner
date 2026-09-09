@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { addOptimisticAttachment, addOptimisticComment, addOptimisticReturn, applyOptimisticTaskPatch, buildAssigneeOptions, buildOptimisticTask, buildTaskCreationInput, canRegisterWaitingReturn, filterTasks, findCreatedMainTask, formatDate, formatLongDate, getDueBucket, getDueBucketForEmployee, hasTaskResponsible, isOverdue, mentionedEmployees, migrateLegacyTeams, normalizeAssigneeNames, normalizePersonalTag, normalizePersonalTagIds, normalizeTeam, normalizeWaitingContext, quoteTaskTitle, resolveTaskAssignment, sortBoardTasks, sortTasks, STATUSES, taskDisplayDueDate, taskStats, teamResponsibilitySummary, validatePersonalTag, validateWaitingContext, waitingContextSummary } from "../src/domain.js";
+import { addOptimisticAttachment, addOptimisticComment, addOptimisticReturn, applyOptimisticTaskPatch, buildAssigneeOptions, buildOptimisticTask, buildTaskCreationInput, canRegisterWaitingReturn, filterTasks, findCreatedMainTask, formatDate, formatLongDate, getDueBucket, getDueBucketForEmployee, hasTaskResponsible, isOverdue, isTaskVisibleToEmployee, mentionedEmployees, migrateLegacyTeams, normalizeAssigneeNames, normalizePersonalTag, normalizePersonalTagIds, normalizeTeam, normalizeWaitingContext, quoteTaskTitle, resolveTaskAssignment, sortBoardTasks, sortTasks, STATUSES, taskDisplayDueDate, taskStats, teamResponsibilitySummary, validatePersonalTag, validateWaitingContext, waitingContextSummary } from "../src/domain.js";
 
 const tasks = [
   { id: "1", title: "Atrasada", quoteTitle: "Cotação A", assigneeName: "Marina", status: "todo", priority: "high", dueDate: "2026-08-01" },
@@ -54,6 +54,29 @@ test("usa prazo do retorno apenas para responsável de Aguardando", () => {
 test("filtra por texto, status e prioridade", () => {
   assert.equal(filterTasks(tasks, { query: "Rafael", status: "", priority: "" }).length, 1);
   assert.equal(filterTasks(tasks, { query: "", status: ["doing", "waiting"], priority: ["medium", "high"] }).length, 1);
+});
+
+test("aplica visibilidade restrita por criador, responsável, equipe e usuário externo", () => {
+  const restricted = {
+    id: "restricted-1",
+    restrictedVisibility: true,
+    creatorEmployeeId: "employee-creator",
+    creatorUserId: "user-creator",
+    assigneeIds: ["employee-assignee"],
+    assigneeNames: ["Pessoa responsável"],
+    teamIds: ["team-operation"],
+    teamNames: ["Operação"],
+  };
+  const teams = [{ id: "team-operation", name: "Operação", memberIds: ["employee-team"] }];
+
+  assert.equal(isTaskVisibleToEmployee(restricted, { id: "employee-creator" }, teams), true);
+  assert.equal(isTaskVisibleToEmployee(restricted, { userId: "user-creator" }, teams), true);
+  assert.equal(isTaskVisibleToEmployee(restricted, { id: "employee-assignee", name: "Outra pessoa" }, teams), true);
+  assert.equal(isTaskVisibleToEmployee(restricted, { id: "employee-team" }, teams), true);
+  assert.equal(isTaskVisibleToEmployee(restricted, { id: "employee-external" }, teams), false);
+  assert.equal(isTaskVisibleToEmployee({ ...restricted, assigneeIds: [], assigneeNames: [], teamIds: [], teamNames: [] }, { id: "employee-external" }, teams), false);
+  assert.equal(isTaskVisibleToEmployee({ id: "public-1" }, { id: "employee-external" }, teams), true);
+  assert.equal(filterTasks([restricted], {}, { id: "employee-external" }, teams).length, 0);
 });
 
 test("ordena cards do quadro por prazo, prioridade, atualização, criação e título", () => {
