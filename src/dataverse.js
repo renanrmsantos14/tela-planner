@@ -1,4 +1,5 @@
 import {
+  adminCleanup as adminCleanupMock,
   addAttachment as addMockAttachment,
   addContactAttachment as addMockContactAttachment,
   addContactNote as addMockContactNote,
@@ -1325,6 +1326,28 @@ async function deleteLiveTask(xrm, state, id) {
   return loadLiveState(xrm);
 }
 
+async function adminCleanupLive(xrm, state, action) {
+  if (action === "completed_tasks" || action === "all_tasks") {
+    const tasks = action === "completed_tasks" ? (state.tasks || []).filter((task) => task.status === "done") : (state.tasks || []);
+    let nextState = state;
+    for (const task of tasks) nextState = await deleteLiveTask(xrm, nextState, task.id);
+    return nextState;
+  }
+  if (action === "all_tags") {
+    for (const tag of state.personalTags || []) {
+      const relations = await retrieveMany(xrm, PERSONAL_TAG_TASK_TABLE, `?$select=${PERSONAL_TAG_TASK_TABLE}id&$filter=_cr40f_tag_value eq ${cleanId(tag.id)}`);
+      await Promise.all(relations.map((relation) => request(xrm, `/${entitySetName(PERSONAL_TAG_TASK_TABLE)}(${cleanId(relation[`${PERSONAL_TAG_TASK_TABLE}id`])})`, { method: "DELETE" })));
+      await request(xrm, `/${entitySetName(PERSONAL_TAG_TABLE)}(${cleanId(tag.id)})`, { method: "DELETE" });
+    }
+    return { ...state, personalTags: [], tasks: (state.tasks || []).map((task) => ({ ...task, personalTagIds: [] })) };
+  }
+  if (action === "notifications") {
+    await Promise.all((state.notifications || []).map((notification) => request(xrm, `/${entitySetName(NOTIFICATION_TABLE)}(${cleanId(notification.id)})`, { method: "DELETE" })));
+    return { ...state, notifications: [] };
+  }
+  throw new Error("Ação administrativa inválida.");
+}
+
 async function importLivePlannerTasks(xrm, rows = []) {
   const apiRows = Array.isArray(rows) ? rows : [];
   const taskAssigneeNavigation = await resolveLookupNavigation(xrm, TASK_TABLE, EMPLOYEE_ASSIGNEE_FIELD, EMPLOYEE_TABLE);
@@ -1415,6 +1438,7 @@ function createMockDataStore() {
     createPersonalTag: async (state, input) => withMode(createMockPersonalTag(state, input)),
     updatePersonalTag: async (state, id, patch) => withMode(updateMockPersonalTag(state, id, patch)),
     archivePersonalTag: async (state, id) => withMode(archiveMockPersonalTag(state, id)),
+    adminCleanup: async (state, action) => withMode(adminCleanupMock(state, action)),
     reorderPersonalTags: async (state, orderedIds) => withMode(reorderMockPersonalTags(state, orderedIds)),
     replaceTaskPersonalTags: async (state, taskId, tagIds, ownerUserId) => withMode(replaceMockTaskPersonalTags(state, taskId, tagIds, ownerUserId)),
     createTask: async (state, input) => withMode(createMockTask(state, input)),
@@ -1486,6 +1510,7 @@ export function createDataStore() {
     createPersonalTag: (state, input) => createLivePersonalTag(xrm, state, input),
     updatePersonalTag: (state, id, patch) => updateLivePersonalTag(xrm, state, id, patch),
     archivePersonalTag: (state, id) => updateLivePersonalTag(xrm, state, id, { archived: true }),
+    adminCleanup: (state, action) => adminCleanupLive(xrm, state, action),
     reorderPersonalTags: (state, orderedIds) => reorderLivePersonalTags(xrm, state, orderedIds),
     replaceTaskPersonalTags: (state, taskId, tagIds, ownerUserId) => replaceLiveTaskPersonalTags(xrm, state, taskId, tagIds, ownerUserId),
     createTask: (state, input) => createLiveTask(xrm, state, input),

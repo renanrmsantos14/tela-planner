@@ -634,6 +634,19 @@ export function deleteTask(state, id) {
   return saveState({ ...state, tasks: state.tasks.filter((taskItem) => taskItem.id !== id) });
 }
 
+export function adminCleanup(state, action) {
+  const next = { ...state };
+  if (action === "completed_tasks") next.tasks = (state.tasks || []).filter((task) => task.status !== "done");
+  else if (action === "all_tasks") next.tasks = [];
+  else if (action === "all_tags") {
+    next.personalTags = [];
+    next.personalTagAssignments = [];
+    next.tasks = (state.tasks || []).map((task) => ({ ...task, personalTagIds: [] }));
+  } else if (action === "notifications") next.notifications = [];
+  else throw new Error("Ação administrativa inválida.");
+  return saveState(next);
+}
+
 const CONTACT_ASSIGNMENT_KEYS = ["assignmentMode", "teamIds", "teamNames", "teamId", "teamName", "assigneeIds", "assigneeNames", "assigneeName"];
 
 function resolveContactAssignment(state, patch = {}, existing = {}) {

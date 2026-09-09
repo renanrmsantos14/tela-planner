@@ -113,6 +113,7 @@ import { TEAM_ICON_OPTIONS, TeamIcon } from "./teamIcons.jsx";
 import { MentionableField, useMentionController } from "./MentionableField.jsx";
 import LoadingFallback from "./LoadingFallback.jsx";
 import PlannerImportView from "./PlannerImportView.jsx";
+import AdminCleanupPanel from "./AdminCleanupPanel.jsx";
 import {
   filterWorkItems,
   isAssignedToEmployee,
@@ -3207,7 +3208,7 @@ function TeamManager({ teams = [], tasks = [], employees = [], onSave, onDelete 
   );
 }
 
-function SettingsView({ onReset, live, teams = [], tasks = [], employees = [], personalTags = [], onSaveTeam, onDeleteTeam, onImportPlannerTasks, onCreatePersonalTag, onUpdatePersonalTag, onArchivePersonalTag, onReorderPersonalTags }) {
+function SettingsView({ onReset, onAdminCleanup, live, teams = [], tasks = [], notifications = [], employees = [], personalTags = [], onSaveTeam, onDeleteTeam, onImportPlannerTasks, onCreatePersonalTag, onUpdatePersonalTag, onArchivePersonalTag, onReorderPersonalTags }) {
   return (
     <div className="page-content">
       <PageHeader
@@ -3266,6 +3267,7 @@ function SettingsView({ onReset, live, teams = [], tasks = [], employees = [], p
         </div>
         <PlannerImportView live={live} employees={employees} onImport={onImportPlannerTasks} />
       </section>
+      <AdminCleanupPanel live={live} counts={{ tasks: tasks.length, completedTasks: tasks.filter((task) => task.status === "done").length, personalTags: personalTags.length, notifications: notifications.length }} onCleanup={onAdminCleanup} />
       <div className="settings-secondary-grid">
         <section className="panel personal-tags-settings-panel" aria-labelledby="personal-tags-settings-title">
           <div className="panel-heading">
@@ -6763,6 +6765,7 @@ export default function App() {
     runMutation(store.reset(), "Dados recarregados.");
     setSelectedId("");
   }, [store, runMutation]);
+  const adminCleanup = useCallback((action) => runMutation(store.adminCleanup(state, action), "Limpeza administrativa concluída."), [state, store, runMutation]);
   const addComment = useCallback(
     (id, text) => {
       const actor = resolveCurrentEmployee(
@@ -7168,7 +7171,7 @@ export default function App() {
       );
     return (
       <Suspense fallback={<LoadingFallback />}>
-          <LazySettingsView onReset={reloadData} live={store.live} teams={state.teams} tasks={visibleTasks} employees={state.employees} personalTags={state.personalTags} onCreatePersonalTag={createPersonalTag} onUpdatePersonalTag={updatePersonalTag} onArchivePersonalTag={archivePersonalTag} onReorderPersonalTags={reorderPersonalTags} onSaveTeam={saveTeam} onDeleteTeam={deleteTeam} onImportPlannerTasks={importPlannerTasks} />
+          <LazySettingsView onReset={reloadData} onAdminCleanup={adminCleanup} live={store.live} teams={state.teams} tasks={state.tasks} notifications={state.notifications} employees={state.employees} personalTags={state.personalTags} onCreatePersonalTag={createPersonalTag} onUpdatePersonalTag={updatePersonalTag} onArchivePersonalTag={archivePersonalTag} onReorderPersonalTags={reorderPersonalTags} onSaveTeam={saveTeam} onDeleteTeam={deleteTeam} onImportPlannerTasks={importPlannerTasks} />
       </Suspense>
     );
   };
