@@ -89,6 +89,8 @@ test("Flow de teste resolve o e-mail operacional a partir do usuário Microsoft"
   assert.match(source, /color:#ffffff!important/);
   assert.match(source, /Abrir tarefa no Planner &rarr;/);
   assert.match(source, /Detalhes do teste/);
+  assert.match(source, /background-color:#e6f2f0;border-left:5px solid #0d645d/);
+  assert.match(source, /color:#075b55;font-size:28px/);
   assert.match(source, /lang=&quot;pt-BR&quot;/);
   assert.doesNotMatch(source, /coalesce\(outputs\('Compose_Context'\)\?\['plannerBaseUrl'\], 'https:\/\/org23b93544\.crm2\.dynamics\.com'\)/);
   assert.match(source, /workflows\?`\$select=workflowid,name,statecode,statuscode/);
@@ -121,6 +123,8 @@ test("Flow automático de e-mail replica destinatários das notificações e nã
   assert.match(source, /border-collapse:collapse/);
   assert.match(source, /width:600px;max-width:600px/);
   assert.match(source, /color:#ffffff!important/);
+  assert.match(source, /background-color:#e6f2f0;border-left:5px solid #0d645d/);
+  assert.match(source, /color:#075b55;font-size:28px/);
   assert.match(source, /outputs\('Compose_Context'\)\?\['plannerBaseUrl'\]/);
   assert.doesNotMatch(source, /coalesce\(outputs\('Compose_Context'\)\?\['plannerBaseUrl'\], 'https:\/\/org23b93544\.crm2\.dynamics\.com'\)/);
 });

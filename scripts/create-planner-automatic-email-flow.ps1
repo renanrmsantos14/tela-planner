@@ -290,6 +290,9 @@ $definitionObject.actions = [ordered]@{
   }
 }
 $definition = $definitionObject | ConvertTo-Json -Depth 100 -Compress
+$definition = $definition.Replace('background-color:#f8fafc;border-left:3px solid #c89b3c', 'background-color:#e6f2f0;border-left:5px solid #0d645d')
+$definition = $definition.Replace('color:#14213d;font-size:28px', 'color:#075b55;font-size:28px')
+
 $clientData = @{
   properties = @{
     connectionReferences = @{
