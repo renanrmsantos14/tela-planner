@@ -62,13 +62,18 @@
       .mail-sender span { display: block; margin-top: 2px; color: #98a2b3; font-size: 10px; }
       .mail-sender time { margin-left: auto; color: #98a2b3; font-size: 10px; }
       .mail-body { padding: 28px; background: #f7f8fa; }
+      .mail-body.is-dark { background: #20242a; }
+      .mail-window.is-dpi { transform: scale(1.25); transform-origin: top center; margin-bottom: 190px; }
 
       .compatibility-card { align-self: start; position: sticky; top: 98px; padding: 18px; border: 1px solid #dbe2e9; border-radius: 14px; background: rgba(255, 255, 255, .9); box-shadow: 0 8px 24px rgba(20, 37, 57, .06); }
       .compatibility-card h2 { margin: 0; color: #14213d; font-size: 14px; letter-spacing: -.15px; }
       .compatibility-card > p { margin: 6px 0 16px; color: #7a8797; font-size: 11px; line-height: 1.45; }
       .compatibility-list { display: grid; gap: 9px; margin: 0; padding: 0; list-style: none; }
-      .compatibility-list li { display: flex; gap: 8px; color: #475467; font-size: 11px; line-height: 1.35; }
-      .compatibility-list li::before { width: 6px; height: 6px; flex: 0 0 auto; margin-top: 4px; border-radius: 50%; background: #2c9a68; content: ""; }
+      .compatibility-list li { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 7px; align-items: start; color: #475467; font-size: 11px; line-height: 1.35; }
+      .signal-state { display: inline-flex; justify-content: center; min-width: 31px; padding: 2px 4px; border-radius: 999px; color: #24744f; background: #e8f6ee; font-size: 8px; font-weight: 900; letter-spacing: .45px; text-transform: uppercase; }
+      .signal-state.is-watch { color: #886417; background: #fff5d9; }
+      .signal-state.is-test { color: #315f9e; background: #eaf1ff; }
+      .stress-note { margin-top: 14px; padding-top: 13px; border-top: 1px solid #e7ebf0; color: #667085; font-size: 10px; line-height: 1.45; }
       .compatibility-note { margin-top: 16px; padding: 10px; border: 1px solid #f0dfb5; border-radius: 9px; color: #795b1b; background: #fffaf0; font-size: 10px; line-height: 1.4; }
 
       .email-preview { width: 600px; max-width: 100%; margin: 0 auto; }
@@ -111,8 +116,15 @@
           </div>
           <div class="control-group">
             <span class="control-label">Cliente</span>
-            <button class="control-button is-active" type="button" data-client="outlook">Outlook</button>
-            <button class="control-button" type="button" data-client="browser">Browser</button>
+            <button class="control-button is-active" type="button" data-client="outlook">Outlook Windows</button>
+            <button class="control-button" type="button" data-client="web">Outlook Web</button>
+          </div>
+          <div class="control-group">
+            <span class="control-label">Sinais</span>
+            <button class="control-button is-active" type="button" data-stress="normal">Normal</button>
+            <button class="control-button" type="button" data-stress="long">Texto longo</button>
+            <button class="control-button" type="button" data-stress="dark">Dark mode</button>
+            <button class="control-button" type="button" data-stress="dpi">DPI 125%</button>
           </div>
         </div>
       </header>
@@ -122,14 +134,14 @@
           <div class="mail-stage">
             <section class="mail-window" aria-label="Janela simulada do Outlook">
               <div class="mail-topbar">
-                <strong>Outlook</strong>
+                <strong id="clientLabel">Outlook Windows</strong>
                 <span>Caixa de entrada</span>
                 <span class="topbar-spacer"></span>
                 <span class="dot" aria-hidden="true"></span>
                 <span>Simulação local</span>
               </div>
               <div class="mail-subject">
-                <h1>[Planner] Nova tarefa atribuída</h1>
+                <h1 id="emailSubject">[Planner] Nova tarefa atribuída</h1>
                 <p>Atualização de tarefa no Planner.</p>
               </div>
               <div class="mail-sender">
@@ -140,7 +152,7 @@
                 </div>
                 <time datetime="2026-09-09T11:05">Hoje, 11:05</time>
               </div>
-              <div class="mail-body">
+              <div class="mail-body" id="mailBody">
                 <div class="email-preview" id="emailPreview">
                   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;background-color:#f5f7fa;color:#172033;font-family:Segoe UI,Arial,sans-serif;-webkit-text-size-adjust:100%;">
                     <tr>
@@ -154,13 +166,13 @@
                           <tr>
                             <td style="padding:34px 30px 30px;">
                               <p style="margin:0 0 11px;color:#667085;font-size:12px;line-height:18px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;">Notificação de tarefa</p>
-                              <h2 class="email-title" style="margin:0 0 15px;color:#14213d;font-size:28px;line-height:36px;font-weight:700;letter-spacing:-.4px;">Nova tarefa atribuída</h2>
-                              <p class="email-copy" style="margin:0;color:#475467;font-size:16px;line-height:25px;">Você recebeu uma nova tarefa no Planner. Abra a tarefa para ver os detalhes e continuar a operação.</p>
+                              <h2 class="email-title" id="emailTitle" style="margin:0 0 15px;color:#14213d;font-size:28px;line-height:36px;font-weight:700;letter-spacing:-.4px;">Nova tarefa atribuída</h2>
+                              <p class="email-copy" id="emailCopy" style="margin:0;color:#475467;font-size:16px;line-height:25px;">Você recebeu uma nova tarefa no Planner. Abra a tarefa para ver os detalhes e continuar a operação.</p>
                               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;margin-top:26px;background-color:#f8fafc;border-left:3px solid #c89b3c;">
                                 <tr>
                                   <td style="padding:15px 17px;">
                                     <p style="margin:0 0 5px;color:#667085;font-size:11px;line-height:17px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;">Detalhes da atualização</p>
-                                    <p style="margin:0;color:#475467;font-size:13px;line-height:21px;"><strong>Tarefa:</strong> Revisar confirmação do passageiro<br /><strong>Prazo:</strong> Hoje, 17:00</p>
+                                    <p id="emailDetail" style="margin:0;color:#475467;font-size:13px;line-height:21px;"><strong>Tarefa:</strong> Revisar confirmação do passageiro<br /><strong>Prazo:</strong> Hoje, 17:00</p>
                                   </td>
                                 </tr>
                               </table>
@@ -194,21 +206,27 @@
               </div>
             </section>
           </div>
-          <p class="mode-note"><strong>Modo:</strong> <span id="modeText">Outlook desktop simulado com tabela de 600px, CSS inline e fallback VML.</span></p>
+          <p class="mode-note"><strong>Modo:</strong> <span id="modeText">Outlook Windows simulado com tabela de 600px, CSS inline e fallback VML.</span></p>
         </div>
 
         <aside class="compatibility-card" aria-label="Contrato de compatibilidade">
           <h2>Contrato Outlook</h2>
-          <p>O HTML interno foi desenhado para sobreviver ao motor Word/Outlook.</p>
+          <p>O HTML interno foi desenhado para sobreviver ao motor Word/Outlook, inclusive em cenários de degradação.</p>
           <ul class="compatibility-list">
-            <li>Tabelas para estrutura e alinhamento.</li>
-            <li>CSS crítico aplicado inline.</li>
-            <li>Largura máxima de 600px.</li>
-            <li>Sem JavaScript no e-mail.</li>
-            <li>Fontes com fallback para Arial.</li>
-            <li>CTA com fallback para clientes sem VML.</li>
-            <li>Texto legível sem imagens externas.</li>
+            <li><span class="signal-state">OK</span><span>Motor Word: tabelas e estrutura previsível.</span></li>
+            <li><span class="signal-state">OK</span><span>CSS crítico aplicado inline.</span></li>
+            <li><span class="signal-state">OK</span><span>Sem CSS externo ou JavaScript no e-mail.</span></li>
+            <li><span class="signal-state">OK</span><span>Largura de 600px com fallback para telas menores.</span></li>
+            <li><span class="signal-state">OK</span><span>Fontes com fallback para Arial.</span></li>
+            <li><span class="signal-state">OK</span><span>CTA com fallback VML para Outlook clássico.</span></li>
+            <li><span class="signal-state">OK</span><span>Links absolutos HTTPS.</span></li>
+            <li><span class="signal-state">OK</span><span>Sem imagens externas: o conteúdo não depende de download.</span></li>
+            <li><span class="signal-state is-watch">Atenção</span><span>Dark mode pode inverter cores no cliente real.</span></li>
+            <li><span class="signal-state is-watch">Atenção</span><span>Texto longo pode alterar quebras e altura do CTA.</span></li>
+            <li><span class="signal-state is-test">Teste</span><span>DPI/zoom 125% precisa ser conferido no Outlook desktop.</span></li>
+            <li><span class="signal-state is-test">Teste</span><span>Mobile 375px disponível no controle de viewport.</span></li>
           </ul>
+          <p class="stress-note">Os sinais amarelos e azuis são limites que o navegador não consegue provar sozinho. Eles precisam ser confirmados no Hotmail/Outlook real.</p>
           <div class="compatibility-note">A moldura é interativa apenas para revisão local. O conteúdo interno é o que será levado ao `SendEmailV2`.</div>
         </aside>
       </section>
@@ -216,24 +234,59 @@
 
     <script>
       const preview = document.querySelector("#emailPreview");
+      const mailBody = document.querySelector("#mailBody");
+      const mailWindow = document.querySelector(".mail-window");
+      const clientLabel = document.querySelector("#clientLabel");
+      const emailSubject = document.querySelector("#emailSubject");
+      const emailTitle = document.querySelector("#emailTitle");
+      const emailCopy = document.querySelector("#emailCopy");
+      const emailDetail = document.querySelector("#emailDetail");
       const modeText = document.querySelector("#modeText");
+      let currentClient = "outlook";
+      let currentStress = "normal";
+
+      function updateModeText() {
+        const client = currentClient === "outlook" ? "Outlook Windows" : "Outlook Web";
+        const stress = currentStress === "normal" ? "layout normal" : currentStress === "long" ? "texto longo" : currentStress === "dark" ? "dark mode" : "zoom/DPI 125%";
+        modeText.textContent = `${client} simulado com ${stress}, tabelas, CSS inline e fallback compatível.`;
+      }
+
+      function setActive(selector, activeButton) {
+        document.querySelectorAll(selector).forEach((item) => item.classList.toggle("is-active", item === activeButton));
+      }
 
       document.querySelectorAll("[data-viewport]").forEach((button) => {
         button.addEventListener("click", () => {
           document.querySelectorAll("[data-viewport]").forEach((item) => item.classList.toggle("is-active", item === button));
           preview.classList.toggle("is-mobile", button.dataset.viewport === "mobile");
-          modeText.textContent = button.dataset.viewport === "mobile"
-            ? "Outlook mobile simulado em 375px; o e-mail continua sem dependência de CSS externo."
-            : "Outlook desktop simulado com tabela de 600px, CSS inline e fallback VML.";
+          updateModeText();
         });
       });
 
       document.querySelectorAll("[data-client]").forEach((button) => {
         button.addEventListener("click", () => {
-          document.querySelectorAll("[data-client]").forEach((item) => item.classList.toggle("is-active", item === button));
-          modeText.textContent = button.dataset.client === "outlook"
-            ? "Outlook desktop simulado com tabela de 600px, CSS inline e fallback VML."
-            : "Browser de referência: útil para comparar, mas não substitui o renderizador do Outlook.";
+          setActive("[data-client]", button);
+          currentClient = button.dataset.client;
+          clientLabel.textContent = currentClient === "outlook" ? "Outlook Windows" : "Outlook Web";
+          updateModeText();
+        });
+      });
+
+      document.querySelectorAll("[data-stress]").forEach((button) => {
+        button.addEventListener("click", () => {
+          setActive("[data-stress]", button);
+          currentStress = button.dataset.stress;
+          mailBody.classList.toggle("is-dark", currentStress === "dark");
+          mailWindow.classList.toggle("is-dpi", currentStress === "dpi");
+          emailSubject.textContent = currentStress === "long" ? "[Planner] Atualização importante: confirmar disponibilidade do veículo para o atendimento de amanhã" : "[Planner] Nova tarefa atribuída";
+          emailTitle.textContent = currentStress === "long" ? "Confirmar disponibilidade do veículo" : "Nova tarefa atribuída";
+          emailCopy.textContent = currentStress === "long"
+            ? "Você recebeu uma nova tarefa no Planner. Revise os detalhes do atendimento, confirme a disponibilidade do veículo e registre qualquer impedimento antes do prazo operacional."
+            : "Você recebeu uma nova tarefa no Planner. Abra a tarefa para ver os detalhes e continuar a operação.";
+          emailDetail.innerHTML = currentStress === "long"
+            ? "<strong>Tarefa:</strong> Confirmar disponibilidade do veículo executivo para atendimento corporativo<br /><strong>Prazo:</strong> Amanhã, 08:30"
+            : "<strong>Tarefa:</strong> Revisar confirmação do passageiro<br /><strong>Prazo:</strong> Hoje, 17:00";
+          updateModeText();
         });
       });
     </script>
