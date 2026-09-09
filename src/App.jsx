@@ -1942,7 +1942,7 @@ const Board = memo(function Board({
   );
 });
 
-function PersonalTagPicker({ tags = [], tasks = [], value = [], onChange, onCreate }) {
+function PersonalTagPicker({ tags = [], tasks = [], value = [], onChange, onCreate, showAllTags = false }) {
   const [visibleCount, setVisibleCount] = useState(tags.length);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState("select");
@@ -1990,6 +1990,11 @@ function PersonalTagPicker({ tags = [], tasks = [], value = [], onChange, onCrea
     const picker = pickerRef.current;
     const inline = inlineRef.current;
     if (!picker || !inline || !activeTags.length) return undefined;
+    if (showAllTags) {
+      setSelectedOverflow(false);
+      setVisibleCount(activeTags.length);
+      return undefined;
+    }
 
     const measure = () => {
       const pickerWidth = picker.getBoundingClientRect().width;
@@ -2044,12 +2049,13 @@ function PersonalTagPicker({ tags = [], tasks = [], value = [], onChange, onCrea
     const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(measure);
     observer?.observe(picker);
     return () => observer?.disconnect();
-  }, [tagSignature, activeTags.length, onCreate, selectedCount]);
+  }, [tagSignature, activeTags.length, onCreate, selectedCount, showAllTags]);
 
   const shownTags = orderedTags.slice(0, visibleCount);
-  const hasMore = visibleCount < orderedTags.length;
+  const displayTags = showAllTags ? orderedTags : orderedTags.filter((tag) => selected.has(tag.id));
+  const hasMore = !showAllTags && activeTags.some((tag) => !selected.has(tag.id));
   const visibleUnselectedCount = Math.max(0, visibleCount - selectedCount);
-  const showAddButton = onCreate && (!hasMore || visibleUnselectedCount > 0);
+  const showAddButton = showAllTags && onCreate;
   const toggleTag = (tagId) => onChange(selected.has(tagId) ? selectedIds.filter((id) => id !== tagId) : [...selectedIds, tagId]);
   const openCreateModal = () => {
     setModalMode("create");
@@ -2069,13 +2075,13 @@ function PersonalTagPicker({ tags = [], tasks = [], value = [], onChange, onCrea
 
   return (
     <>
-      <div className={`personal-tag-picker ${selectedOverflow ? "has-selected-overflow" : ""}`} ref={pickerRef} role="group" aria-label="Tags pessoais da tarefa">
+      <div className={`personal-tag-picker ${showAllTags ? "show-all-tags" : "show-selected-only"} ${selectedOverflow ? "has-selected-overflow" : ""}`} ref={pickerRef} role="group" aria-label="Tags pessoais da tarefa">
         <div className="personal-tag-picker-inline" ref={inlineRef}>
-          {activeTags.length ? orderedTags.map((tag, index) => {
+          {displayTags.length ? displayTags.map((tag, index) => {
             const checked = selected.has(tag.id);
             return (
               <button
-                className={`personal-tag-chip ${index < visibleCount ? "" : "is-measured-hidden"} ${checked ? "is-selected" : ""}`}
+                className={`personal-tag-chip ${index < displayTags.length ? "" : "is-measured-hidden"} ${checked ? "is-selected" : ""}`}
                 key={tag.id}
                 ref={(node) => {
                   if (node) tagRefs.current.set(tag.id, node);
@@ -2091,6 +2097,11 @@ function PersonalTagPicker({ tags = [], tasks = [], value = [], onChange, onCrea
               </button>
             );
           }) : <span className="personal-tag-empty">Crie sua primeira tag no gerenciador.</span>}
+          {showAddButton && (
+            <button className="personal-tag-add" ref={addRef} type="button" onClick={openCreateModal} aria-label="Adicionar tag" title="Adicionar tag">
+              <Plus size={14} />
+            </button>
+          )}
         </div>
         {hasMore && (
           <button
@@ -2102,11 +2113,6 @@ function PersonalTagPicker({ tags = [], tasks = [], value = [], onChange, onCrea
             title="Escolher mais tags"
           >
             ...
-          </button>
-        )}
-        {showAddButton && (
-          <button className="personal-tag-add" ref={addRef} type="button" onClick={openCreateModal} aria-label="Adicionar tag" title="Adicionar tag">
-            <Plus size={14} />
           </button>
         )}
       </div>
@@ -5456,7 +5462,7 @@ function NewTaskDrawer({ employees = [], teams = [], personalTags = [], tasks = 
         </header>
         <div className="drawer-body" onPaste={handlePaste}>
           <section className="drawer-personal-tags" aria-label="Minhas tags">
-            <PersonalTagPicker tags={personalTags} tasks={tasks} value={form.personalTagIds || []} onChange={(value) => set("personalTagIds", value)} onCreate={onCreatePersonalTag} />
+            <PersonalTagPicker tags={personalTags} tasks={tasks} value={form.personalTagIds || []} onChange={(value) => set("personalTagIds", value)} onCreate={onCreatePersonalTag} showAllTags />
           </section>
           <div className="drawer-title">
             <label className="drawer-title-field" htmlFor="new-task-title">
