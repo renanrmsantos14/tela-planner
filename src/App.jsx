@@ -2819,11 +2819,11 @@ function TeamManager({ teams = [], tasks = [], employees = [], onSave, onDelete 
               <span className="team-form-label"><span>Nome da equipe</span><span className="team-form-required">Obrigatório</span></span>
               <input value={draft.name} onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))} placeholder="Ex.: Operação" />
             </label>
-            <label className="team-form-field">
+            <div className="team-form-field">
               <span className="team-form-label"><span>Quem faz parte?</span><span className="team-form-selection">{draft.memberIds.length} {draft.memberIds.length === 1 ? "membro" : "membros"}</span></span>
               <SearchableMultiSelect value={draft.memberIds} onChange={(memberIds) => setDraft((current) => ({ ...current, memberIds }))} options={employeeOptions} placeholder="Buscar e adicionar membros" />
               <span className="team-form-hint">A mesma pessoa pode estar em mais de uma equipe.</span>
-            </label>
+            </div>
             <div className="team-form-field">
               <span className="team-form-label"><span>Ícone da equipe</span><span className="team-form-selection">Exibido nos cards</span></span>
               <div className="team-icon-options" role="radiogroup" aria-label="Ícone da equipe">
