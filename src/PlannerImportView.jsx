@@ -25,6 +25,7 @@ import {
 } from "./plannerImport.js";
 import { acquirePlannerToken, getMicrosoftAccount, getRedirectBridgeStatus, loginMicrosoft, msalConfigured } from "./msalConfig.js";
 import { fetchPlannerExport, fetchPlannerPlans } from "./plannerGraph.js";
+import SearchableSelect from "./SearchableSelect.jsx";
 import "./plannerImportAuto.css";
 
 const STEPS = [
@@ -332,8 +333,7 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
     setAnalysis(null);
   };
 
-  const handlePlanChange = (event) => {
-    const nextPlanId = event.target.value;
+  const handlePlanChange = (nextPlanId) => {
     setPlanId(nextPlanId);
     setAnalysis(null);
     setConfirmed(false);
@@ -439,10 +439,17 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
 
                       <label className="import-input-label">
                         <span><strong>Plano</strong><em>Obrigatório</em></span>
-                        <select value={planId} onChange={handlePlanChange} disabled={plansBusy || autoBusy || !plans.length}>
-                          <option value="">{plansBusy ? "Carregando seus planos…" : plans.length ? "Selecione um plano" : "Nenhum plano disponível"}</option>
-                          {plans.map((plan) => <option key={plan.id} value={plan.id}>{plan.displayName}</option>)}
-                        </select>
+                        <SearchableSelect
+                          value={planId}
+                          onChange={handlePlanChange}
+                          options={[{ value: "", label: plansBusy ? "Carregando seus planos…" : plans.length ? "Selecione um plano" : "Nenhum plano disponível" }, ...plans.map((plan) => ({ value: plan.id, label: plan.displayName }))]}
+                          placeholder={plansBusy ? "Carregando seus planos…" : plans.length ? "Selecione um plano" : "Nenhum plano disponível"}
+                          disabled={plansBusy || autoBusy || !plans.length}
+                          required
+                          clearable={false}
+                          aria-label="Plano obrigatório"
+                          className="planner-import-plan-select"
+                        />
                         <small>{plans.length ? "Selecione pelo nome. A busca começa automaticamente; o identificador fica oculto." : "Conecte a conta para carregar os planos disponíveis."}</small>
                       </label>
 
@@ -517,7 +524,7 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
               {step === 5 && <div className="import-step-content">
                 <div className="import-step-kicker"><span className="import-step-number">{workflowStepNumber(5)}</span><div><strong>{mode === "automatic" ? "Confira os responsáveis" : "Relacione os responsáveis"}</strong><span>{mode === "automatic" ? "O app tentou relacionar cada pessoa Microsoft ao funcionário correspondente." : "Converta o ID Microsoft de cada pessoa para o funcionário do seu app."}</span></div></div>
                 {mode === "automatic" && <>
-                  {analysis?.unresolvedAssignees?.length ? <div className="import-assignee-map">{analysis.unresolvedAssignees.map(({ graphUserId, taskCount }) => { const user = plannerUsers.find((item) => item.id === graphUserId); return <label className="import-assignee-map-row" key={graphUserId}><span><strong>{user?.displayName || "Responsável Microsoft"}</strong><small>{user?.email || `${taskCount} tarefa(s) atribuída(s)`}</small></span><select value={employeeMap[graphUserId] || ""} onChange={(event) => updateEmployeeMapping(graphUserId, event.target.value)}><option value="">Selecione o funcionário</option>{employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.name}</option>)}</select></label>; })}</div> : <div className="import-paste-note"><CheckCircle2 size={16} /><span>Todos os responsáveis foram relacionados automaticamente pelo e-mail Microsoft.</span></div>}
+                  {analysis?.unresolvedAssignees?.length ? <div className="import-assignee-map">{analysis.unresolvedAssignees.map(({ graphUserId, taskCount }) => { const user = plannerUsers.find((item) => item.id === graphUserId); return <label className="import-assignee-map-row" key={graphUserId}><span><strong>{user?.displayName || "Responsável Microsoft"}</strong><small>{user?.email || `${taskCount} tarefa(s) atribuída(s)`}</small></span><SearchableSelect value={employeeMap[graphUserId] || ""} onChange={(value) => updateEmployeeMapping(graphUserId, value)} options={[{ value: "", label: "Selecione o funcionário" }, ...employees.map((employee) => ({ value: employee.id, label: employee.name }))]} placeholder="Selecione o funcionário" clearable={false} aria-label={`Funcionário para ${user?.displayName || "Responsável Microsoft"}`} /></label>; })}</div> : <div className="import-paste-note"><CheckCircle2 size={16} /><span>Todos os responsáveis foram relacionados automaticamente pelo e-mail Microsoft.</span></div>}
                 </>}
                 {mode === "manual" && <div className="import-two-columns"><JsonField label="Mapa de responsáveis" value={employeeMapText} onChange={setEmployeeMapText} rows={10} hint={'Ex.: { "ID_MICROSOFT": "GUID_FUNCIONARIO" }'} /><div className="import-map-help"><strong>Copie este modelo</strong><p>Use o ID Microsoft que aparece em <code>assignments</code> e o GUID do funcionário correspondente no Dataverse.</p><div className="import-map-example"><code>{'{\n  "3389545f-…": "GUID_DO_FUNCIONARIO"\n}'}</code><CopyButton value={'{\n  "ID_MICROSOFT": "GUID_DO_FUNCIONARIO"\n}'} label="Copiar modelo" /></div></div></div>}
                 {analysis && <><div className="import-metrics"><Metric value={analysis.stats.tasks} label="tarefas" /><Metric value={analysis.stats.detailsLoaded} label="detalhes carregados" tone={analysis.stats.detailsLoaded === analysis.stats.detailsRequired ? "is-good" : "is-warning"} /><Metric value={analysis.stats.checklistTaskCount} label="com checklist" /><Metric value={analysis.stats.unresolvedAssignees} label="responsáveis pendentes" tone={analysis.stats.unresolvedAssignees ? "is-warning" : "is-good"} /></div><IssueList title="Corrija antes de continuar" items={analysis.errors} /><IssueList title="Observações" items={analysis.warnings} warning /></>}

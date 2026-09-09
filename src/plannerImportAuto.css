@@ -3,8 +3,8 @@
 .import-assignee-map-row > span { min-width: 0; display: grid; gap: 3px; }
 .import-assignee-map-row strong { overflow: hidden; color: var(--ink); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 .import-assignee-map-row small { overflow: hidden; color: var(--muted); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
-.import-assignee-map-row select { width: 100%; min-height: 38px; padding: 0 10px; border: 1px solid var(--line); border-radius: 9px; outline: 0; color: var(--control); background: #fff; font: inherit; font-size: 11px; }
-.import-assignee-map-row select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(33, 89, 210, .12); }
+.import-input-label .custom-select-trigger { min-height: 42px; background: #fff; }
+.import-assignee-map-row .custom-select-trigger { min-height: 38px; border-radius: 9px; background: #fff; font-size: 11px; }
 
 @media (max-width: 620px) {
   .import-assignee-map-row { grid-template-columns: 1fr; gap: 8px; }
