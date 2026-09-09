@@ -68,12 +68,12 @@ $definition = @'
     },
     "Compose_Type_Label": {
       "type": "Compose",
-      "inputs": "@if(equals(outputs('Compose_Type'), 'assignment'), 'Nova tarefa atribuída', if(equals(outputs('Compose_Type'), 'mention'), 'Você foi mencionado', if(equals(outputs('Compose_Type'), 'overdue'), 'Cobrança de tarefa atrasada', if(equals(outputs('Compose_Type'), 'deadline'), 'Prazo da tarefa alterado', if(equals(outputs('Compose_Type'), 'status'), 'Status da tarefa alterado', if(equals(outputs('Compose_Type'), 'test'), 'Teste de notificação', 'Atualização da tarefa'))))))",
+      "inputs": "@if(equals(outputs('Compose_Type'), 'assignment'), concat('Nova tarefa atribu', decodeUriComponent('%C3%AD'), 'da'), if(equals(outputs('Compose_Type'), 'mention'), concat('Voc', decodeUriComponent('%C3%AA'), ' foi mencionado'), if(equals(outputs('Compose_Type'), 'overdue'), concat('Cobran', decodeUriComponent('%C3%A7'), 'a de tarefa atrasada'), if(equals(outputs('Compose_Type'), 'deadline'), 'Prazo da tarefa alterado', if(equals(outputs('Compose_Type'), 'status'), 'Status da tarefa alterado', if(equals(outputs('Compose_Type'), 'test'), concat('Teste de notifica', decodeUriComponent('%C3%A7'), decodeUriComponent('%C3%A3'), 'o'), concat('Atualiza', decodeUriComponent('%C3%A7'), decodeUriComponent('%C3%A3'), 'o')))))))",
       "runAfter": { "Compose_Type": [ "Succeeded" ] }
     },
     "Compose_Message": {
       "type": "Compose",
-      "inputs": "@replace(replace(replace(coalesce(triggerOutputs()?['body/cr40f_descricao'], 'Sem descrição.'), '&', '&amp;'), '<', '&lt;'), '>', '&gt;')",
+      "inputs": "@replace(replace(replace(coalesce(triggerOutputs()?['body/cr40f_descricao'], concat('Sem descri', decodeUriComponent('%C3%A7'), decodeUriComponent('%C3%A3'), 'o.')), '&', '&amp;'), '<', '&lt;'), '>', '&gt;')",
       "runAfter": { "Compose_Type_Label": [ "Succeeded" ] }
     },
     "Compose_Test_Recipient": {
@@ -138,7 +138,7 @@ $definition = @'
             "parameters": {
               "emailMessage/To": "@outputs('Compose_Test_Recipient')",
               "emailMessage/Subject": "@concat('[Planner teste] ', outputs('Compose_Type_Label'))",
-              "emailMessage/Body": "@concat('<div style=\"font-family:Segoe UI,Arial,sans-serif;font-size:14px\"><h2>', outputs('Compose_Type_Label'), '</h2><p>', outputs('Compose_Message'), '</p><p><strong>Campo:</strong> ', coalesce(triggerOutputs()?['body/cr40f_campo'], 'não informado'), '<br><strong>Evento:</strong> ', triggerOutputs()?['body/cr40f_plannertarefaeventoid'], '</p><p><a href=&quot;', coalesce(outputs('Compose_Context')?['plannerBaseUrl'], 'https://org23b93544.crm2.dynamics.com'), '/WebResources/new_TelaPlanner.html?data=taskId%3D', triggerOutputs()?['body/_cr40f_tarefa_value'], '&quot;>Abrir tarefa no Planner</a></p><p style=\"color:#667085;font-size:12px\">E-mail de teste do Planner. Destinatário fixo: ', outputs('Compose_Test_Recipient'), '</p></div>')",
+              "emailMessage/Body": "@concat('<div style=\"font-family:Segoe UI,Arial,sans-serif;font-size:14px\"><h2>', outputs('Compose_Type_Label'), '</h2><p>', outputs('Compose_Message'), '</p><p><strong>Campo:</strong> ', coalesce(triggerOutputs()?['body/cr40f_campo'], concat('n', decodeUriComponent('%C3%A3'), 'o informado')), '<br><strong>Evento:</strong> ', triggerOutputs()?['body/cr40f_plannertarefaeventoid'], '</p><p><a href=&quot;', coalesce(outputs('Compose_Context')?['plannerBaseUrl'], 'https://org23b93544.crm2.dynamics.com'), '/WebResources/new_TelaPlanner.html?data=taskId%3D', triggerOutputs()?['body/_cr40f_tarefa_value'], '&quot;>Abrir tarefa no Planner</a></p><p style=\"color:#667085;font-size:12px\">E-mail de teste do Planner. Destinat', decodeUriComponent('%C3%A1'), 'rio fixo: ', outputs('Compose_Test_Recipient'), '</p></div>')",
               "emailMessage/Importance": "Normal"
             },
             "host": {
@@ -216,7 +216,6 @@ $definition = @'
 }
 '@
 
-$definition = Repair-Utf8Text $definition
 $definition = $definition.Replace('__TEST_RECIPIENT__', $TestRecipientEmail)
 $clientData = @{
   properties = @{
