@@ -114,6 +114,7 @@ import { MentionableField, useMentionController } from "./MentionableField.jsx";
 import LoadingFallback from "./LoadingFallback.jsx";
 import PlannerImportView from "./PlannerImportView.jsx";
 import AdminCleanupPanel from "./AdminCleanupPanel.jsx";
+import NotificationTestPanel from "./NotificationTestPanel.jsx";
 import {
   filterWorkItems,
   isAssignedToEmployee,
@@ -3208,7 +3209,7 @@ function TeamManager({ teams = [], tasks = [], employees = [], onSave, onDelete 
   );
 }
 
-function SettingsView({ onReset, onAdminCleanup, live, teams = [], tasks = [], contacts = [], notifications = [], employees = [], personalTags = [], onSaveTeam, onDeleteTeam, onImportPlannerTasks, onCreatePersonalTag, onUpdatePersonalTag, onArchivePersonalTag, onReorderPersonalTags }) {
+function SettingsView({ onReset, onAdminCleanup, onSendNotificationTest, live, teams = [], tasks = [], contacts = [], notifications = [], employees = [], personalTags = [], onSaveTeam, onDeleteTeam, onImportPlannerTasks, onCreatePersonalTag, onUpdatePersonalTag, onArchivePersonalTag, onReorderPersonalTags }) {
   return (
     <div className="page-content">
       <PageHeader
@@ -3267,6 +3268,7 @@ function SettingsView({ onReset, onAdminCleanup, live, teams = [], tasks = [], c
         </div>
         <PlannerImportView live={live} employees={employees} onImport={onImportPlannerTasks} />
       </section>
+      <NotificationTestPanel live={live} tasks={tasks} onSend={onSendNotificationTest} />
       <AdminCleanupPanel live={live} counts={{ tasks: tasks.length, completedTasks: tasks.filter((task) => task.status === "done").length, personalTags: personalTags.length, notifications: notifications.length, teams: teams.length, contacts: contacts.length, taskActivity: tasks.reduce((total, task) => total + (task.comments?.length || 0) + (task.returns?.length || 0) + (task.history?.length || 0), 0), taskAttachments: tasks.reduce((total, task) => total + (task.attachments?.length || 0), 0), assignedTasks: tasks.filter((task) => task.assigneeIds?.length || task.teamIds?.length || task.teamId).length, datedTasks: tasks.filter((task) => task.dueDate).length, plannerRecords: tasks.length + personalTags.length + notifications.length + teams.length + contacts.length }} employees={employees} teams={teams} tasks={tasks} contacts={contacts} onCleanup={onAdminCleanup} />
       <div className="settings-secondary-grid">
         <section className="panel personal-tags-settings-panel" aria-labelledby="personal-tags-settings-title">
@@ -6766,6 +6768,16 @@ export default function App() {
     setSelectedId("");
   }, [store, runMutation]);
   const adminCleanup = useCallback((action) => runMutation(store.adminCleanup(state, action), "Limpeza administrativa concluída."), [state, store, runMutation]);
+  const sendNotificationTest = useCallback((input) => {
+    if (!store.live || !store.sendNotificationTest) return Promise.reject(new Error("O envio de teste exige o ambiente Dataverse conectado."));
+    const actor = resolveCurrentEmployee(state.employees, store.live, state.currentUserEmail);
+    return store.sendNotificationTest(state, { ...input, actorEmployeeId: actor?.id || "", actorUserId: actor?.userId || "" }).then((next) => {
+      confirmedStateRef.current = next;
+      setState(applyPendingMutations(next));
+      showNotice("Evento de teste criado. Verifique o e-mail em instantes.");
+      return true;
+    });
+  }, [applyPendingMutations, showNotice, state, store]);
   const addComment = useCallback(
     (id, text) => {
       const actor = resolveCurrentEmployee(
@@ -7171,7 +7183,7 @@ export default function App() {
       );
     return (
       <Suspense fallback={<LoadingFallback />}>
-          <LazySettingsView onReset={reloadData} onAdminCleanup={adminCleanup} live={store.live} teams={state.teams} tasks={state.tasks} contacts={state.contacts} notifications={state.notifications} employees={state.employees} personalTags={state.personalTags} onCreatePersonalTag={createPersonalTag} onUpdatePersonalTag={updatePersonalTag} onArchivePersonalTag={archivePersonalTag} onReorderPersonalTags={reorderPersonalTags} onSaveTeam={saveTeam} onDeleteTeam={deleteTeam} onImportPlannerTasks={importPlannerTasks} />
+          <LazySettingsView onReset={reloadData} onAdminCleanup={adminCleanup} onSendNotificationTest={sendNotificationTest} live={store.live} teams={state.teams} tasks={state.tasks} contacts={state.contacts} notifications={state.notifications} employees={state.employees} personalTags={state.personalTags} onCreatePersonalTag={createPersonalTag} onUpdatePersonalTag={updatePersonalTag} onArchivePersonalTag={archivePersonalTag} onReorderPersonalTags={reorderPersonalTags} onSaveTeam={saveTeam} onDeleteTeam={deleteTeam} onImportPlannerTasks={importPlannerTasks} />
       </Suspense>
     );
   };

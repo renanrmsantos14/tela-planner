@@ -9,9 +9,12 @@ test("Flow de e-mail do Planner é restrito ao receptor de teste e idempotente",
   assert.match(source, /new_sharedoffice365_f87d5/);
   assert.match(source, /operationId.*SendEmailV2/);
   assert.match(source, /startswith\(cr40f_campo, 'notification:'\)/);
+  assert.match(source, /outputs\('Compose_Type'\).*test.*Teste de notificação/);
   assert.match(source, /cr40f_chaveidempotente/);
   assert.match(source, /cr40f_canal.*100000001/);
   assert.match(source, /cr40f_status.*100000002/);
+  assert.match(source, /workflows\?`\$select=workflowid,name,statecode,statuscode/);
+  assert.match(source, /Where-Object \{ \$_.name -eq \$FlowName \}/);
   assert.doesNotMatch(source, /emailMessage\/To.*cr40f_emailmicrosoft/);
   assert.doesNotMatch(source, /emailMessage\/To.*outputs\('Get_system_user'\)/);
 });

@@ -9,6 +9,13 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+function Repair-Utf8Text([string]$Value) {
+  if (-not $Value -or $Value -notmatch "$([char]0xC3)|$([char]0xC2)|$([char]0xE2)|$([char]0xFFFD)") { return $Value }
+  return [Text.Encoding]::UTF8.GetString([Text.Encoding]::Default.GetBytes($Value))
+}
+
+$FlowName = Repair-Utf8Text $FlowName
+
 if ($TestRecipientEmail -notmatch '^[^@;\s]+@[^@;\s]+$') {
   throw "TestRecipientEmail inválido: use um único endereço de e-mail."
 }
@@ -61,7 +68,7 @@ $definition = @'
     },
     "Compose_Type_Label": {
       "type": "Compose",
-      "inputs": "@if(equals(outputs('Compose_Type'), 'assignment'), 'Nova tarefa atribuída', if(equals(outputs('Compose_Type'), 'mention'), 'Você foi mencionado', if(equals(outputs('Compose_Type'), 'overdue'), 'Cobrança de tarefa atrasada', if(equals(outputs('Compose_Type'), 'deadline'), 'Prazo da tarefa alterado', if(equals(outputs('Compose_Type'), 'status'), 'Status da tarefa alterado', 'Atualização da tarefa')))))",
+      "inputs": "@if(equals(outputs('Compose_Type'), 'assignment'), 'Nova tarefa atribuída', if(equals(outputs('Compose_Type'), 'mention'), 'Você foi mencionado', if(equals(outputs('Compose_Type'), 'overdue'), 'Cobrança de tarefa atrasada', if(equals(outputs('Compose_Type'), 'deadline'), 'Prazo da tarefa alterado', if(equals(outputs('Compose_Type'), 'status'), 'Status da tarefa alterado', if(equals(outputs('Compose_Type'), 'test'), 'Teste de notificação', 'Atualização da tarefa'))))))",
       "runAfter": { "Compose_Type": [ "Succeeded" ] }
     },
     "Compose_Message": {
@@ -209,6 +216,7 @@ $definition = @'
 }
 '@
 
+$definition = Repair-Utf8Text $definition
 $definition = $definition.Replace('__TEST_RECIPIENT__', $TestRecipientEmail)
 $clientData = @{
   properties = @{
@@ -230,8 +238,12 @@ $clientData = @{
 } | ConvertTo-Json -Depth 100 -Compress
 
 $payload = @{ category = 5; name = $FlowName; type = 1; primaryentity = 'none'; clientdata = $clientData } | ConvertTo-Json -Depth 100
-$filter = [uri]::EscapeDataString("name eq '$($FlowName.Replace("'", "''"))'")
-$existingFlows = @((Invoke-RestMethod -Uri "$EnvironmentUrl/api/data/v9.2/workflows?`$select=workflowid,name,statecode,statuscode&`$filter=$filter" -Headers $headers).value)
+$activeWorkflowQueryUri = "$EnvironmentUrl/api/data/v9.2/workflows?`$select=workflowid,name,statecode,statuscode&`$filter=statecode eq 1"
+$inactiveWorkflowQueryUri = "$EnvironmentUrl/api/data/v9.2/workflows?`$select=workflowid,name,statecode,statuscode&`$filter=statecode eq 0"
+$activeFlows = @((Invoke-RestMethod -Uri $activeWorkflowQueryUri -Headers $headers).value)
+$inactiveFlows = @((Invoke-RestMethod -Uri $inactiveWorkflowQueryUri -Headers $headers).value)
+$existingFlows = @($activeFlows | Where-Object { $_.name -eq $FlowName })
+$existingFlows += @($inactiveFlows | Where-Object { $_.name -eq $FlowName })
 if (-not $WorkflowId) {
   $target = $existingFlows | Where-Object { [int]$_.statecode -eq 1 } | Select-Object -First 1
   if (-not $target) { $target = $existingFlows | Select-Object -First 1 }
@@ -250,8 +262,7 @@ if ($WorkflowId) {
 
 Invoke-RestMethod -Uri $targetUri -Headers $headers -Method Patch -Body (@{ statecode = 1; statuscode = 2 } | ConvertTo-Json) | Out-Null
 
-$activeFlows = @((Invoke-RestMethod -Uri "$EnvironmentUrl/api/data/v9.2/workflows?`$select=workflowid,statecode,statuscode&`$filter=$filter" -Headers $headers).value | Where-Object { [int]$_.statecode -eq 1 })
-foreach ($flow in $activeFlows | Where-Object { $_.workflowid -ne $WorkflowId }) {
+foreach ($flow in $activeFlows | Where-Object { $_.name -eq $FlowName -and $_.workflowid -ne $WorkflowId }) {
   Invoke-RestMethod -Uri "$EnvironmentUrl/api/data/v9.2/workflows($($flow.workflowid))" -Headers $headers -Method Patch -Body (@{ statecode = 0; statuscode = 1 } | ConvertTo-Json) | Out-Null
 }
 

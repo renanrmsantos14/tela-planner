@@ -17,6 +17,8 @@ Esta primeira versão é deliberadamente restrita ao receptor `noreply@betinhos.
 
 O teste usa a conexão de solução `new_sharedoffice365_f87d5`, confirmada no DEV. Não há resolução para destinatários reais nesta etapa.
 
+No Planner, `Configurações` exibe o **Módulo de teste de notificações** somente como envio real quando o Dataverse está conectado. O usuário escolhe uma tarefa, o tipo e a mensagem; o clique grava o evento controlado `notification:test`. O evento não leva responsáveis nem destinatários operacionais e, nesta etapa, o Flow envia exclusivamente para `noreply@betinhos.onmicrosoft.com`. No modo local, o botão permanece desabilitado.
+
 ## Flow `Planner | Notificação imediata`
 
 Provisionamento versionado: `powershell -ExecutionPolicy Bypass -File scripts/create-planner-immediate-flow.ps1` (o script atualiza pelo nome, sem duplicar).

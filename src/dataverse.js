@@ -1009,6 +1009,24 @@ async function createEvent(xrm, taskId, type, description, field = "", previous 
   return request(xrm, `/${entitySetName(EVENT_TABLE)}`, { method: "POST", body: JSON.stringify(payload) });
 }
 
+async function sendLiveNotificationTest(xrm, state, input = {}) {
+  const taskId = cleanId(input.taskId);
+  const task = (state.tasks || []).find((item) => cleanId(item.id) === taskId);
+  if (!task) throw new Error("Selecione uma tarefa válida para o teste.");
+  const message = String(input.message || "").trim() || "Teste de notificação do Planner.";
+  const type = ["update", "mention", "deadline", "status"].includes(input.type) ? input.type : "update";
+  await createEvent(
+    xrm,
+    taskId,
+    100000001,
+    `[Teste] ${type}: ${message}`,
+    "notification:test",
+    "",
+    JSON.stringify({ testNotification: true, testType: type }),
+  );
+  return loadLiveState(xrm);
+}
+
 async function createLiveTask(xrm, state, input) {
   if (input.quoteId && !input.parentTaskId) {
   const activeMain = state.tasks.find((task) => task.quoteId === input.quoteId && !task.parentTaskId && !["done", "cancelled"].includes(task.status));
@@ -1535,6 +1553,7 @@ function createMockDataStore() {
     updateTask: async (state, id, patch) => withMode(updateMockTask(state, id, patch)),
     resolveWaitingReturn: async (state, id, input) => withMode(resolveMockWaitingReturn(state, id, input)),
     collectTask: async (state, id, input) => withMode(collectMockTask(state, id, input)),
+    sendNotificationTest: async () => { throw new Error("O envio de teste exige o ambiente Dataverse conectado."); },
     deleteTask: async (state, id) => withMode(deleteMockTask(state, id)),
     addComment: async (state, id, text, context) => withMode(addMockComment(state, id, text, context)),
     addAttachment: async (state, id, file, previewUrl = "") => withMode(addMockAttachment(state, id, { name: file?.name || "Arquivo", mimeType: file?.type || "", size: file?.size || 0, previewUrl })),
@@ -1563,6 +1582,7 @@ export function createDataStore() {
     loadSupplemental: (state) => loadSupplementalState(xrm, state),
     loadNotifications: (employeeId) => loadLiveNotifications(xrm, employeeId),
     collectTask: (state, id, input) => collectLiveTask(xrm, state, id, input),
+    sendNotificationTest: (state, input) => sendLiveNotificationTest(xrm, state, input),
     markNotificationRead: async (state, notificationId) => { const readAt = await markLiveNotificationRead(xrm, notificationId); return { ...state, notifications: (state.notifications || []).map((item) => item.id === notificationId ? { ...item, readAt } : item) }; },
     markAllNotificationsRead: async (state, employeeId) => {
       const unread = (state.notifications || []).filter((item) => item.recipientEmployeeId === employeeId && !item.readAt);
