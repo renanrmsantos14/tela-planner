@@ -2342,14 +2342,16 @@ const FilterBar = memo(function FilterBar({
           placeholder="Minhas tags"
           options={personalTags.filter((tag) => !tag.archived).map((tag) => ({ value: tag.id, label: tag.name }))}
         />
-        <button
-          className="button button-quiet"
-          type="button"
-          onClick={() => setFilters(createDefaultFilters())}
-        >
-          <RotateCcw size={15} />
-          Limpar filtros
-        </button>
+        {activeFilterCount > 0 && (
+          <button
+            className="button button-quiet"
+            type="button"
+            onClick={() => setFilters(createDefaultFilters())}
+          >
+            <RotateCcw size={15} />
+            Limpar filtros
+          </button>
+        )}
         <button
           className="button button-primary"
           type="button"
