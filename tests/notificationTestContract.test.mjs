@@ -9,10 +9,16 @@ test("módulo de teste de notificações usa o evento controlado", async () => {
   assert.match(component, /Módulo de teste de notificações/);
   assert.match(component, /noreply@betinhos\.onmicrosoft\.com/);
   assert.match(component, /Enviar notificação de teste/);
+  assert.match(component, /ainda não confirmou o disparo/);
   assert.match(component, /disabled=\{!live/);
   assert.match(dataverse, /sendLiveNotificationTest/);
   assert.match(dataverse, /"notification:test"/);
   assert.match(dataverse, /testNotification: true/);
+  assert.match(dataverse, /cr40f_plannerdisparo/);
+  assert.match(dataverse, /waitForLiveEmailDispatch/);
+  assert.match(dataverse, /E-mail não enviado/);
+  assert.match(dataverse, /emailDelivery/);
   assert.match(app, /<NotificationTestPanel live=\{live\} tasks=\{tasks\}/);
   assert.match(app, /onSendNotificationTest=\{sendNotificationTest\}/);
+  assert.match(app, /notification-email-delivery/);
 });

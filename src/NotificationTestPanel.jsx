@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, BellRing, CheckCircle2, LoaderCircle, Mail, Send } from "lucide-react";
+import { AlertTriangle, BellRing, CheckCircle2, Clock3, LoaderCircle, Mail, Send } from "lucide-react";
 
 export const NOTIFICATION_TEST_TYPES = [
   { id: "update", label: "Atualização", description: "Alteração geral na tarefa" },
@@ -31,8 +31,10 @@ export default function NotificationTestPanel({ live, tasks = [], onSend }) {
     setSending(true);
     setFeedback(null);
     try {
-      await onSend({ taskId, type: testType, message });
-      setFeedback({ type: "success", text: "Evento criado. O Flow enviará o e-mail de teste em instantes." });
+      const result = await onSend({ taskId, type: testType, message });
+      setFeedback(result?.text
+        ? { type: result.type || "pending", text: result.text }
+        : { type: "pending", text: "Evento criado, mas o Planner ainda não confirmou o disparo." });
     } catch (error) {
       setFeedback({ type: "error", text: error?.message || "Não foi possível enviar o teste." });
     } finally {
@@ -77,8 +79,8 @@ export default function NotificationTestPanel({ live, tasks = [], onSend }) {
           </div>
         </div>
         <div className="notification-test-footer">
-          {feedback && <div className={`notification-test-feedback is-${feedback.type}`} role={feedback.type === "error" ? "alert" : "status"}>
-            {feedback.type === "success" ? <CheckCircle2 size={15} /> : <AlertTriangle size={15} />}
+          {feedback && <div className={`notification-test-feedback is-${feedback.type}`} role={feedback.type === "error" || feedback.type === "warning" ? "alert" : "status"}>
+            {feedback.type === "success" ? <CheckCircle2 size={15} /> : feedback.type === "pending" ? <Clock3 size={15} /> : <AlertTriangle size={15} />}
             {feedback.text}
           </div>}
           <button className="button button-primary" type="button" onClick={submit} disabled={!live || !taskId || sending || !message.trim()}>

@@ -794,6 +794,15 @@ function notificationPresentation(item, task, contact) {
   };
 }
 
+function emailDeliveryPresentation(delivery) {
+  if (!delivery) return null;
+  if (delivery.status === "sent") return { tone: "sent", label: "E-mail enviado", title: `E-mail enviado${delivery.recipientEmail ? ` para ${delivery.recipientEmail}` : ""}.` };
+  if (delivery.status === "failed" || delivery.status === "unknown") return { tone: "failed", label: "E-mail não enviado", title: delivery.error || delivery.statusText || "O Flow registrou uma falha no envio." };
+  if (delivery.status === "noAddress") return { tone: "failed", label: "E-mail não enviado", title: "Destinatário sem endereço operacional configurado." };
+  if (delivery.status === "pending") return { tone: "pending", label: "E-mail pendente", title: "O Flow ainda não confirmou o disparo." };
+  return null;
+}
+
 function contactChannelLabelForNotification(channel) {
   return channel === "email" ? "E-mail" : channel === "phone" ? "Telefone" : "WhatsApp";
 }
@@ -909,6 +918,7 @@ function NotificationsPanel({
               const task = tasks.find((entry) => entry.id === item.taskId);
               const contact = contacts.find((entry) => entry.id === item.contactId);
               const presentation = notificationPresentation(item, task, contact);
+              const emailDelivery = emailDeliveryPresentation(item.emailDelivery);
               const Icon = presentation.icon;
               return (
                 <article
@@ -929,6 +939,16 @@ function NotificationsPanel({
                       </span>
                     </button>
                     <div className="notification-item-footer">
+                      {emailDelivery && (
+                        <span
+                          className={`notification-email-delivery is-${emailDelivery.tone}`}
+                          title={emailDelivery.title}
+                          aria-label={emailDelivery.title}
+                        >
+                          <span aria-hidden="true">✉</span>
+                          {emailDelivery.label}
+                        </span>
+                      )}
                       <button className="notification-action" type="button" onClick={() => item.contactId ? onOpenContact?.(item) : onOpenTask(item)}>
                         <span>{presentation.action}</span>
                         <ChevronRight aria-hidden="true" size={15} strokeWidth={2.4} />
@@ -6771,11 +6791,15 @@ export default function App() {
   const sendNotificationTest = useCallback((input) => {
     if (!store.live || !store.sendNotificationTest) return Promise.reject(new Error("O envio de teste exige o ambiente Dataverse conectado."));
     const actor = resolveCurrentEmployee(state.employees, store.live, state.currentUserEmail);
-    return store.sendNotificationTest(state, { ...input, actorEmployeeId: actor?.id || "", actorUserId: actor?.userId || "" }).then((next) => {
+    return store.sendNotificationTest(state, { ...input, actorEmployeeId: actor?.id || "", actorUserId: actor?.userId || "" }).then((result) => {
+      const next = result?.state || result;
       confirmedStateRef.current = next;
       setState(applyPendingMutations(next));
-      showNotice("Evento de teste criado. Verifique o e-mail em instantes.");
-      return true;
+      const delivery = result?.emailDispatch;
+      if (delivery?.status === "sent") showNotice("E-mail de teste enviado.");
+      else if (delivery?.status === "failed" || delivery?.status === "noAddress" || delivery?.status === "unknown") showNotice(delivery.text || "E-mail de teste não enviado.", 5200);
+      else showNotice("Evento criado. O Flow ainda não confirmou o e-mail.", 4200);
+      return delivery || true;
     });
   }, [applyPendingMutations, showNotice, state, store]);
   const addComment = useCallback(

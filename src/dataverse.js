@@ -86,6 +86,7 @@ const TEAM_ICON_FIELD = "cr40f_icone";
 const TEAM_MEMBER_TABLE = "cr40f_plannerequipemembro";
 const TASK_TEAM_FIELD = "cr40f_equipeplanner";
 const NOTIFICATION_TABLE = "cr40f_plannernotificacao";
+const EMAIL_DISPATCH_TABLE = "cr40f_plannerdisparo";
 const PERSONAL_TAG_TABLE = "cr40f_plannertagpessoal";
 const PERSONAL_TAG_TASK_TABLE = "cr40f_plannertagpessoaltarefa";
 const ENVIRONMENT_VARIABLE_DEFINITION_TABLE = "environmentvariabledefinition";
@@ -138,6 +139,7 @@ const ENTITY_SETS = Object.freeze({
   [TEAM_TABLE]: "cr40f_plannerequipes",
   [TEAM_MEMBER_TABLE]: "cr40f_plannerequipemembros",
   [NOTIFICATION_TABLE]: "cr40f_plannernotificacaos",
+  [EMAIL_DISPATCH_TABLE]: "cr40f_plannerdisparos",
   [PERSONAL_TAG_TABLE]: "cr40f_plannertagpessoals",
   [PERSONAL_TAG_TASK_TABLE]: "cr40f_plannertagpessoaltarefas",
   [ENVIRONMENT_VARIABLE_DEFINITION_TABLE]: "environmentvariabledefinitions",
@@ -935,15 +937,96 @@ async function loadLiveState(xrm) {
   return { quotes: [...quoteById.values()], employees: employeesWithProfiles, teams, currentUserEmail, currentUserId, personalTags: personalTagData.personalTags || [], personalTagsUnavailable: Boolean(personalTagData.personalTagsUnavailable), quality, tasks: tasksWithProfiles, notifications: [], collectionEvents: normalizeCollectionEvents(events), lastUpdated: new Date().toISOString(), live: true };
 }
 
-function normalizeNotification(row) {
-  return { id: row.cr40f_plannernotificacaoid, taskId: row._cr40f_tarefa_value || "", recipientEmployeeId: row._cr40f_destinatario_value || "", type: row.cr40f_tipo || "update", title: row.cr40f_titulo || row.cr40f_name || "Notificação", message: row.cr40f_mensagem || "", occurredAt: row.cr40f_ocorridoem || row.createdon || "", readAt: row.cr40f_lidoem || "", referenceDate: dateOnly(row.cr40f_datareferencia), dedupeKey: row.cr40f_chavededupe || "" };
+const EMAIL_DISPATCH_STATUSES = Object.freeze({
+  pending: 100000000,
+  sent: 100000001,
+  failed: 100000002,
+  noAddress: 100000003,
+});
+
+function normalizeEmailDispatch(row) {
+  const statusValue = Number(row.cr40f_status);
+  const status = Object.entries(EMAIL_DISPATCH_STATUSES).find(([, value]) => value === statusValue)?.[0] || "unknown";
+  const key = String(row.cr40f_chaveidempotente || "");
+  return {
+    id: row.cr40f_plannerdisparoid || "",
+    status,
+    statusValue,
+    statusText: row.cr40f_statustexto || "",
+    recipientEmployeeId: row._cr40f_destinatario_value || "",
+    recipientEmail: row.cr40f_destinatariotexto || "",
+    error: row.cr40f_erro || "",
+    attempt: Number(row.cr40f_tentativa || 0),
+    sentAt: row.cr40f_enviadoem || "",
+    createdAt: row.createdon || "",
+    modifiedAt: row.modifiedon || "",
+    idempotencyKey: key,
+    eventId: cleanId(key.split("|")[0]),
+  };
+}
+
+function notificationEmailDelivery(row, dispatches = []) {
+  const eventId = cleanId(row._cr40f_eventoorigem_value);
+  const recipientId = cleanId(row._cr40f_destinatario_value);
+  const type = String(row.cr40f_tipo || "update");
+  if (!eventId || !recipientId) return null;
+  const expectedKey = `${eventId}|${recipientId}|${type}|Email`.toLowerCase();
+  const dispatch = dispatches.find((item) => item.idempotencyKey.toLowerCase() === expectedKey);
+  if (dispatch) return dispatch;
+
+  const occurredAt = new Date(row.cr40f_ocorridoem || row.createdon || 0).getTime();
+  const isRecent = Number.isFinite(occurredAt) && occurredAt > Date.now() - (15 * 60 * 1000);
+  return isRecent ? {
+    status: "pending",
+    statusText: "Aguardando confirmação do Flow",
+    recipientEmployeeId: recipientId,
+    recipientEmail: "",
+    error: "",
+    attempt: 0,
+    sentAt: "",
+    createdAt: row.cr40f_ocorridoem || row.createdon || "",
+    modifiedAt: "",
+    idempotencyKey: expectedKey,
+    eventId,
+  } : null;
+}
+
+function normalizeNotification(row, dispatches = []) {
+  return {
+    id: row.cr40f_plannernotificacaoid,
+    taskId: row._cr40f_tarefa_value || "",
+    recipientEmployeeId: row._cr40f_destinatario_value || "",
+    eventOriginId: row._cr40f_eventoorigem_value || "",
+    type: row.cr40f_tipo || "update",
+    title: row.cr40f_titulo || row.cr40f_name || "Notificação",
+    message: row.cr40f_mensagem || "",
+    occurredAt: row.cr40f_ocorridoem || row.createdon || "",
+    readAt: row.cr40f_lidoem || "",
+    referenceDate: dateOnly(row.cr40f_datareferencia),
+    dedupeKey: row.cr40f_chavededupe || "",
+    emailDelivery: notificationEmailDelivery(row, dispatches),
+  };
+}
+
+async function loadLiveEmailDispatches(xrm, employeeId) {
+  if (!employeeId) return [];
+  try {
+    const rows = await retrieveMany(xrm, EMAIL_DISPATCH_TABLE, `?$select=cr40f_plannerdisparoid,cr40f_status,cr40f_statustexto,cr40f_destinatariotexto,cr40f_chaveidempotente,cr40f_erro,cr40f_tentativa,cr40f_enviadoem,createdon,modifiedon,_cr40f_destinatario_value&$filter=_cr40f_destinatario_value eq ${cleanId(employeeId)} and cr40f_canal eq 100000001&$orderby=createdon desc&$top=200`);
+    return rows.map(normalizeEmailDispatch);
+  } catch (error) {
+    console.warn("[Planner] status de e-mail indisponível", error);
+    return [];
+  }
 }
 
 async function loadLiveNotifications(xrm, employeeId) {
   if (!employeeId) return [];
   try {
-    const rows = await retrieveMany(xrm, NOTIFICATION_TABLE, `?$select=cr40f_plannernotificacaoid,cr40f_name,cr40f_titulo,cr40f_mensagem,cr40f_tipo,cr40f_ocorridoem,cr40f_lidoem,cr40f_datareferencia,cr40f_chavededupe,_cr40f_tarefa_value,_cr40f_destinatario_value&$filter=_cr40f_destinatario_value eq ${cleanId(employeeId)} and statecode eq 0&$orderby=cr40f_ocorridoem desc&$top=100`);
-    return rows.map(normalizeNotification);
+    const [rows, dispatches] = await Promise.all([
+      retrieveMany(xrm, NOTIFICATION_TABLE, `?$select=cr40f_plannernotificacaoid,cr40f_name,cr40f_titulo,cr40f_mensagem,cr40f_tipo,cr40f_ocorridoem,cr40f_lidoem,cr40f_datareferencia,cr40f_chavededupe,_cr40f_tarefa_value,_cr40f_destinatario_value,_cr40f_eventoorigem_value&$filter=_cr40f_destinatario_value eq ${cleanId(employeeId)} and statecode eq 0&$orderby=cr40f_ocorridoem desc&$top=100`),
+      loadLiveEmailDispatches(xrm, employeeId),
+    ]);
+    return rows.map((row) => normalizeNotification(row, dispatches));
   } catch (error) {
     console.warn("[Planner] notificações indisponíveis", error);
     throw new Error("Notificações indisponíveis no Dataverse. Verifique a tabela e as permissões.", { cause: error });
@@ -1009,13 +1092,44 @@ async function createEvent(xrm, taskId, type, description, field = "", previous 
   return request(xrm, `/${entitySetName(EVENT_TABLE)}`, { method: "POST", body: JSON.stringify(payload) });
 }
 
+function emailDispatchFeedback(dispatch, recipientEmail = "noreply@betinhos.onmicrosoft.com") {
+  if (!dispatch) return { status: "pending", type: "pending", text: "Evento criado, mas o Flow ainda não confirmou o disparo." };
+  if (dispatch.status === "sent") return { status: "sent", type: "success", text: `E-mail enviado para ${dispatch.recipientEmail || recipientEmail}.`, dispatch };
+  if (dispatch.status === "failed") {
+    const detail = String(dispatch.error || "O Flow registrou uma falha sem detalhes.").trim();
+    return { status: "failed", type: "error", text: `E-mail não enviado. ${detail.slice(0, 220)}`, dispatch };
+  }
+  if (dispatch.status === "noAddress") return { status: "noAddress", type: "warning", text: "E-mail não enviado: o destinatário não tem endereço operacional configurado.", dispatch };
+  return { status: "pending", type: "pending", text: "Evento criado, mas o Flow ainda não confirmou o disparo.", dispatch };
+}
+
+async function waitForLiveEmailDispatch(xrm, idempotencyKey, recipientEmail) {
+  const escapedKey = String(idempotencyKey || "").replace(/'/g, "''");
+  const query = `?$select=cr40f_plannerdisparoid,cr40f_status,cr40f_statustexto,cr40f_destinatariotexto,cr40f_chaveidempotente,cr40f_erro,cr40f_tentativa,cr40f_enviadoem,createdon,modifiedon,_cr40f_destinatario_value&$filter=cr40f_chaveidempotente eq '${escapedKey}'&$orderby=createdon desc&$top=1`;
+  const deadline = Date.now() + 10000;
+  let lastError = null;
+  while (Date.now() <= deadline) {
+    try {
+      const rows = await retrieveMany(xrm, EMAIL_DISPATCH_TABLE, query);
+      if (rows[0]) return emailDispatchFeedback(normalizeEmailDispatch(rows[0]), recipientEmail);
+    } catch (error) {
+      lastError = error;
+      break;
+    }
+    if (Date.now() >= deadline) break;
+    await new Promise((resolve) => globalThis.setTimeout(resolve, 1000));
+  }
+  if (lastError) return { status: "unknown", type: "error", text: `Evento criado, mas não foi possível confirmar o envio: ${lastError.message || "consulta indisponível"}` };
+  return emailDispatchFeedback(null, recipientEmail);
+}
+
 async function sendLiveNotificationTest(xrm, state, input = {}) {
   const taskId = cleanId(input.taskId);
   const task = (state.tasks || []).find((item) => cleanId(item.id) === taskId);
   if (!task) throw new Error("Selecione uma tarefa válida para o teste.");
   const message = String(input.message || "").trim() || "Teste de notificação do Planner.";
   const type = ["update", "mention", "deadline", "status"].includes(input.type) ? input.type : "update";
-  await createEvent(
+  const event = await createEvent(
     xrm,
     taskId,
     100000001,
@@ -1024,7 +1138,12 @@ async function sendLiveNotificationTest(xrm, state, input = {}) {
     "",
     JSON.stringify({ testNotification: true, testType: type }),
   );
-  return loadLiveState(xrm);
+  const eventId = cleanId(event?.cr40f_plannertarefaeventoid || event?.[`${EVENT_TABLE}id`]);
+  const recipientEmail = "noreply@betinhos.onmicrosoft.com";
+  const dispatch = eventId
+    ? await waitForLiveEmailDispatch(xrm, `${eventId}|${recipientEmail}|test|Email`, recipientEmail)
+    : { status: "unknown", type: "error", text: "Evento criado, mas a API não devolveu o identificador para confirmar o e-mail." };
+  return { state: await loadLiveState(xrm), emailDispatch: dispatch };
 }
 
 async function createLiveTask(xrm, state, input) {
