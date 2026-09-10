@@ -34,16 +34,38 @@ test("informa progresso de tarefas com contagem real após paginação", async (
   const progress = [];
   global.fetch = async (url) => {
     const target = String(url);
-    if (target.endsWith("/tasks")) return new Response(JSON.stringify({ value: [{ id: "task-1", planId: "plan-1", title: "Tarefa", assignments: {} }] }), { status: 200 });
+    if (target.endsWith("/tasks")) return new Response(JSON.stringify({ value: [{ id: "task-1", planId: "plan-1", title: "Tarefa", appliedCategories: { category1: true }, assignments: {} }] }), { status: 200 });
     if (target.endsWith("/buckets")) return new Response(JSON.stringify({ value: [] }), { status: 200 });
+    if (target.endsWith("/details")) return new Response(JSON.stringify({ categoryDescriptions: { category1: "Urgente" } }), { status: 200 });
     if (target.endsWith("/$batch")) return new Response(JSON.stringify({ responses: [] }), { status: 200 });
     throw new Error(`URL inesperada: ${target}`);
   };
 
   try {
-    await fetchPlannerExport({ token: "token", planId: "plan-1", onProgress: (value) => progress.push(value) });
+    const exported = await fetchPlannerExport({ token: "token", planId: "plan-1", onProgress: (value) => progress.push(value) });
     assert.ok(progress.some((value) => value.label === "Buscando página 1 de tarefas…" && value.total === 0));
     assert.ok(progress.some((value) => value.label === "1 tarefa(s) encontrada(s)." && value.completed === 1 && value.total === 1));
+    assert.deepEqual(exported.categoryDescriptions, { category1: "Urgente" });
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+test("mantém exportação quando detalhes das categorias não estão disponíveis", async () => {
+  const originalFetch = global.fetch;
+  global.fetch = async (url) => {
+    const target = String(url);
+    if (target.endsWith("/tasks")) return new Response(JSON.stringify({ value: [{ id: "task-1", title: "Tarefa", assignments: {} }] }), { status: 200 });
+    if (target.endsWith("/buckets")) return new Response(JSON.stringify({ value: [] }), { status: 200 });
+    if (target.endsWith("/details")) return new Response(JSON.stringify({ error: { message: "Sem permissão" } }), { status: 403 });
+    if (target.endsWith("/$batch")) return new Response(JSON.stringify({ responses: [] }), { status: 200 });
+    throw new Error(`URL inesperada: ${target}`);
+  };
+
+  try {
+    const exported = await fetchPlannerExport({ token: "token", planId: "plan-1" });
+    assert.deepEqual(exported.categoryDescriptions, {});
+    assert.match(exported.userWarning, /nomes das categorias/);
   } finally {
     global.fetch = originalFetch;
   }

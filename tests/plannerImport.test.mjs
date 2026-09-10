@@ -73,3 +73,13 @@ test("avisa detalhes ausentes sem bloquear a importação", () => {
   assert.deepEqual(result.rows[0].checklist, []);
   assert.match(result.warnings.join(" "), /Faltam detalhes de 1 tarefa/);
 });
+
+test("converte categorias aplicadas em tags e ignora categorias sem descrição", () => {
+  const result = analyzePlannerImport({
+    planId: "plan-1",
+    categoryDescriptions: { category1: "  VIP  ", category2: "", category3: "vip" },
+    tasksText: JSON.stringify({ value: [{ id: "task-1", title: "Tarefa", appliedCategories: { category1: true, category2: true, category3: true } }] }),
+  });
+  assert.deepEqual(result.rows[0].tags, ["VIP"]);
+  assert.equal(result.stats.taggedTaskCount, 1);
+});

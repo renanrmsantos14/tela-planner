@@ -9,6 +9,7 @@ import {
   resolveWaitingReturn as resolveMockWaitingReturn,
   createTask as createMockTask,
   createPersonalTag as createMockPersonalTag,
+  importPlannerTasks as importMockPlannerTasks,
   createTeam as createMockTeam,
   deleteTeam as deleteMockTeam,
   deleteAttachment as deleteMockAttachment,
@@ -39,8 +40,10 @@ import {
   applyOptimisticTaskPatch,
   canRegisterWaitingReturn,
   normalizeAssigneeNames,
+  normalizeText,
   normalizePersonalTag,
   normalizePersonalTagIds,
+  PERSONAL_TAG_COLORS,
   normalizeWaitingContext,
   STATUSES,
   validateWaitingContext,
@@ -1693,13 +1696,25 @@ async function adminCleanupLive(xrm, state, action) {
   throw new Error("Ação administrativa inválida.");
 }
 
-async function importLivePlannerTasks(xrm, rows = []) {
+async function importLivePlannerTasks(xrm, state, rows = []) {
   const apiRows = Array.isArray(rows) ? rows : [];
   const taskAssigneeNavigation = await resolveLookupNavigation(xrm, TASK_TABLE, EMPLOYEE_ASSIGNEE_FIELD, EMPLOYEE_TABLE);
   const relationTaskNavigation = await resolveLookupNavigation(xrm, ASSIGNEE_RELATION_TABLE, "cr40f_tarefa", TASK_TABLE);
   const relationEmployeeNavigation = await resolveLookupNavigation(xrm, ASSIGNEE_RELATION_TABLE, "cr40f_funcionario", EMPLOYEE_TABLE);
   const eventTaskNavigation = await resolveLookupNavigation(xrm, EVENT_TABLE, "cr40f_tarefa", TASK_TABLE);
   const results = [];
+  let workingState = state;
+  const ownerUserId = workingState.currentUserId || "";
+  const importedNames = [...new Map(apiRows.flatMap((row) => row.tags || []).map((name) => [normalizeText(name), String(name || "").trim().slice(0, 32)]).filter(([key, name]) => key && name)).values()];
+  for (const [index, name] of importedNames.entries()) {
+    const existing = (workingState.personalTags || []).find((tag) => normalizeText(tag.name) === normalizeText(name));
+    if (existing) {
+      if (existing.archived) workingState = await updateLivePersonalTag(xrm, workingState, existing.id, { archived: false });
+      continue;
+    }
+    workingState = await createLivePersonalTag(xrm, workingState, { name, color: PERSONAL_TAG_COLORS[index % PERSONAL_TAG_COLORS.length], ownerUserId });
+  }
+  const tagIdsByName = new Map((workingState.personalTags || []).map((tag) => [normalizeText(tag.name), tag.id]));
 
   for (const row of apiRows) {
     const sourceCode = row.sourceCode || `MSPLANNER:${row.plannerTaskId}`;
@@ -1725,6 +1740,9 @@ async function importLivePlannerTasks(xrm, rows = []) {
       const created = await request(xrm, `/${entitySetName(TASK_TABLE)}`, { method: "POST", body: JSON.stringify(payload) });
       const taskId = created?.cr40f_plannertarefaid;
       if (!taskId) throw new Error("Dataverse criou a tarefa sem retornar o ID.");
+
+      const tagIds = (row.tags || []).map((name) => tagIdsByName.get(normalizeText(name))).filter(Boolean);
+      if (tagIds.length) workingState = await replaceLiveTaskPersonalTags(xrm, workingState, taskId, tagIds, ownerUserId);
 
       for (const assignment of (row.assignments || []).filter((item) => item.employeeId)) {
         const relationPayload = {
@@ -1788,14 +1806,8 @@ function createMockDataStore() {
     replaceTaskPersonalTags: async (state, taskId, tagIds, ownerUserId) => withMode(replaceMockTaskPersonalTags(state, taskId, tagIds, ownerUserId)),
     createTask: async (state, input) => withMode(createMockTask(state, input)),
     importPlannerTasks: async (state, rows = []) => {
-      let nextState = state;
-      const results = rows.map((row) => {
-        const assigneeIds = (row.assignments || []).map((assignment) => assignment.employeeId).filter(Boolean);
-        const assigneeNames = assigneeIds.map((employeeId) => nextState.employees.find((employee) => employee.id === employeeId)?.name).filter(Boolean);
-        nextState = createMockTask(nextState, { title: row.title, description: row.description, checklist: row.checklist, status: row.status, priority: row.priority, dueDate: row.dueDate, assigneeIds, assigneeNames, sourceType: "manual", sourceCode: row.sourceCode });
-        return { plannerTaskId: row.plannerTaskId, result: "created" };
-      });
-      return { nextState: withMode(nextState), results, createdCount: results.length, existingCount: 0, errorCount: 0, errors: [] };
+      const result = importMockPlannerTasks(state, rows);
+      return { ...result, nextState: withMode(result.nextState) };
     },
     createContact: async (state, input) => withMode(createMockContact(state, input)),
     updateContact: async (state, id, patch) => withMode(updateMockContact(state, id, patch)),
@@ -1865,7 +1877,7 @@ export function createDataStore() {
     reorderPersonalTags: (state, orderedIds) => reorderLivePersonalTags(xrm, state, orderedIds),
     replaceTaskPersonalTags: (state, taskId, tagIds, ownerUserId) => replaceLiveTaskPersonalTags(xrm, state, taskId, tagIds, ownerUserId),
     createTask: (state, input) => createLiveTask(xrm, state, input),
-    importPlannerTasks: (state, rows) => importLivePlannerTasks(xrm, rows),
+    importPlannerTasks: (state, rows) => importLivePlannerTasks(xrm, state, rows),
     createContact: async () => { requireContactSchema(); return null; },
     updateContact: async () => { requireContactSchema(); return null; },
     archiveContact: async () => { requireContactSchema(); return null; },

@@ -151,6 +151,7 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
   const [tasksText, setTasksText] = useState("");
   const [bucketsText, setBucketsText] = useState("");
   const [detailsText, setDetailsText] = useState("");
+  const [categoryDescriptions, setCategoryDescriptions] = useState({});
   const [employeeMapText, setEmployeeMapText] = useState("");
   const [analysis, setAnalysis] = useState(null);
   const [confirmed, setConfirmed] = useState(false);
@@ -225,7 +226,7 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
   }, [open, modalBusy]);
 
   const runValidation = () => {
-    const next = analyzePlannerImport({ planId, tasksText, bucketsText, detailsText, employeeMapText });
+    const next = analyzePlannerImport({ planId, tasksText, bucketsText, detailsText, employeeMapText, categoryDescriptions: mode === "automatic" ? categoryDescriptions : {} });
     setAnalysis(next);
     setConfirmed(false);
     setSubmitError("");
@@ -296,11 +297,12 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
       setTasksText(exported.tasksText);
       setBucketsText(exported.bucketsText);
       setDetailsText(exported.detailsText);
+      setCategoryDescriptions(exported.categoryDescriptions || {});
       setEmployeeMapText(exported.employeeMapText);
       setPlannerUsers(exported.plannerUsers || []);
       setAutoWarning(exported.userWarning || "");
       setAutoProgress({ stage: "ready", label: "Dados prontos para revisão." });
-      const nextAnalysis = analyzePlannerImport({ planId: targetPlanId, tasksText: exported.tasksText, bucketsText: exported.bucketsText, detailsText: exported.detailsText, employeeMapText: exported.employeeMapText });
+      const nextAnalysis = analyzePlannerImport({ planId: targetPlanId, tasksText: exported.tasksText, bucketsText: exported.bucketsText, detailsText: exported.detailsText, employeeMapText: exported.employeeMapText, categoryDescriptions: exported.categoryDescriptions || {} });
       setAnalysis(nextAnalysis);
       setStep(nextAnalysis.unresolvedAssignees.length ? 5 : 6);
     } catch (error) {
@@ -332,15 +334,21 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
   const updateEmployeeMapping = (graphUserId, employeeId) => {
     const nextEmployeeMapText = JSON.stringify({ ...employeeMap, [graphUserId]: employeeId }, null, 2);
     setEmployeeMapText(nextEmployeeMapText);
-    setAnalysis(analyzePlannerImport({ planId, tasksText, bucketsText, detailsText, employeeMapText: nextEmployeeMapText }));
+    setAnalysis(analyzePlannerImport({ planId, tasksText, bucketsText, detailsText, employeeMapText: nextEmployeeMapText, categoryDescriptions: mode === "automatic" ? categoryDescriptions : {} }));
     setConfirmed(false);
   };
 
   const handlePlanChange = (nextPlanId) => {
     setPlanId(nextPlanId);
     setAnalysis(null);
+    setCategoryDescriptions({});
     setConfirmed(false);
     if (nextPlanId) collectAutomatically(nextPlanId);
+  };
+
+  const switchToManual = () => {
+    setCategoryDescriptions({});
+    setMode("manual");
   };
 
   const submit = async () => {
@@ -365,6 +373,7 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
   const resetWizard = () => {
     setResult(null);
     setAnalysis(null);
+    setCategoryDescriptions({});
     setPlannerUsers([]);
     setConfirmed(false);
     setSubmitError("");
@@ -484,7 +493,7 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
                   )}
 
                   {msalConfigured && (
-                    <button className="import-manual-switch" type="button" onClick={() => setMode("manual")}>
+                    <button className="import-manual-switch" type="button" onClick={switchToManual}>
                       Usar importação manual com JSON
                     </button>
                   )}
@@ -534,11 +543,11 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
                   {analysis?.unresolvedAssignees?.length ? <div className="import-assignee-map">{analysis.unresolvedAssignees.map(({ graphUserId, taskCount }) => { const user = plannerUsers.find((item) => item.id === graphUserId); return <label className="import-assignee-map-row" key={graphUserId}><span><strong>{user?.displayName || "Responsável Microsoft"}</strong><small>{user?.email || `${taskCount} tarefa(s) atribuída(s)`}</small></span><SearchableSelect value={employeeMap[graphUserId] || ""} onChange={(value) => updateEmployeeMapping(graphUserId, value)} options={[{ value: "", label: "Selecione o funcionário" }, ...employees.map((employee) => ({ value: employee.id, label: employee.name }))]} placeholder="Selecione o funcionário" clearable={false} aria-label={`Funcionário para ${user?.displayName || "Responsável Microsoft"}`} /></label>; })}</div> : <div className="import-paste-note"><CheckCircle2 size={16} /><span>Todos os responsáveis foram relacionados automaticamente pelo e-mail Microsoft.</span></div>}
                 </>}
                 {mode === "manual" && <div className="import-two-columns"><JsonField label="Mapa de responsáveis" value={employeeMapText} onChange={setEmployeeMapText} rows={10} hint={'Ex.: { "ID_MICROSOFT": "GUID_FUNCIONARIO" }'} /><div className="import-map-help"><strong>Copie este modelo</strong><p>Use o ID Microsoft que aparece em <code>assignments</code> e o GUID do funcionário correspondente no Dataverse.</p><div className="import-map-example"><code>{'{\n  "3389545f-…": "GUID_DO_FUNCIONARIO"\n}'}</code><CopyButton value={'{\n  "ID_MICROSOFT": "GUID_DO_FUNCIONARIO"\n}'} label="Copiar modelo" /></div></div></div>}
-                {analysis && <><div className="import-metrics"><Metric value={analysis.stats.tasks} label="tarefas" /><Metric value={analysis.stats.detailsLoaded} label="detalhes carregados" tone={analysis.stats.detailsLoaded === analysis.stats.detailsRequired ? "is-good" : "is-warning"} /><Metric value={analysis.stats.checklistTaskCount} label="com checklist" /><Metric value={analysis.stats.unresolvedAssignees} label="responsáveis pendentes" tone={analysis.stats.unresolvedAssignees ? "is-warning" : "is-good"} /></div><IssueList title="Corrija antes de continuar" items={analysis.errors} /><IssueList title="Observações" items={analysis.warnings} warning />{mode === "automatic" && missingDetails && <button className="button button-secondary" type="button" onClick={retryAutomaticSearch} disabled={autoBusy}><RefreshCw size={15} className={autoBusy ? "spin" : ""} />{autoBusy ? "Buscando detalhes…" : "Tentar buscar detalhes novamente"}</button>}{mode === "automatic" && autoError && <IssueList title="Não foi possível repetir a busca" items={[autoError]} />}</>}
+                {analysis && <><div className="import-metrics"><Metric value={analysis.stats.tasks} label="tarefas" /><Metric value={analysis.stats.detailsLoaded} label="detalhes carregados" tone={analysis.stats.detailsLoaded === analysis.stats.detailsRequired ? "is-good" : "is-warning"} /><Metric value={analysis.stats.checklistTaskCount} label="com checklist" /><Metric value={analysis.stats.taggedTaskCount} label="com tags" tone={analysis.stats.taggedTaskCount ? "is-good" : ""} /><Metric value={analysis.stats.unresolvedAssignees} label="responsáveis pendentes" tone={analysis.stats.unresolvedAssignees ? "is-warning" : "is-good"} /></div><IssueList title="Corrija antes de continuar" items={analysis.errors} /><IssueList title="Observações" items={analysis.warnings} warning />{mode === "automatic" && missingDetails && <button className="button button-secondary" type="button" onClick={retryAutomaticSearch} disabled={autoBusy}><RefreshCw size={15} className={autoBusy ? "spin" : ""} />{autoBusy ? "Buscando detalhes…" : "Tentar buscar detalhes novamente"}</button>}{mode === "automatic" && autoError && <IssueList title="Não foi possível repetir a busca" items={[autoError]} />}{mode === "automatic" && autoWarning && <IssueList title="Atenção" items={[autoWarning]} warning />}</>}
               </div>}
 
               {step === 6 && <div className="import-step-content">
-                {result ? <div className="import-success"><CheckCircle2 size={29} /><h3>Importação concluída</h3><p>{result.createdCount || 0} tarefa(s) criada(s). {result.existingCount || 0} já existia(m) e não foi(ram) duplicada(s).</p><button className="button button-secondary" type="button" onClick={resetWizard}>Nova importação</button></div> : <><div className="import-step-kicker"><span className="import-step-number">{workflowStepNumber(6)}</span><div><strong>Revise e confirme</strong><span>Confira o resumo. O botão final só libera depois da sua confirmação.</span></div></div>{analysis && <><div className="import-review-banner"><strong>{analysis.stats.tasks} tarefas serão avaliadas</strong><span>{selectedPlanName ? `Plano: ${selectedPlanName} · ` : ""}Origem: {mode === "automatic" ? "Microsoft Planner autenticado" : "manual"} · sem vínculo automático com cotação ou qualidade.</span></div><div className="import-review-grid"><div><small>Status</small><p>{Object.entries(analysis.stats.statusCounts).map(([key, count]) => `${count} ${importStatusLabel(key)}`).join(" · ")}</p></div><div><small>Prioridade</small><p>{Object.entries(analysis.stats.priorityCounts).map(([key, count]) => `${count} ${importPriorityLabel(key)}`).join(" · ")}</p></div><div><small>Checklist</small><p>{analysis.stats.checklistTaskCount} tarefa(s) com itens preservados.</p></div></div><IssueList title="Observações" items={analysis.warnings} warning />{mode === "automatic" && missingDetails && <button className="button button-secondary" type="button" onClick={retryAutomaticSearch} disabled={autoBusy}><RefreshCw size={15} className={autoBusy ? "spin" : ""} />{autoBusy ? "Buscando detalhes…" : "Tentar buscar detalhes novamente"}</button>}{mode === "automatic" && autoError && <IssueList title="Não foi possível repetir a busca" items={[autoError]} />}<IssueList title="Corrija antes de continuar" items={analysis.errors} /><label className="import-confirm"><input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} /><span><strong>Eu conferi os dados e autorizo a gravação {live ? "no Dataverse" : "no mock local"}.</strong><small>{live ? "Esta etapa cria registros e relações de responsáveis. Tarefas já importadas serão ignoradas." : "Os registros ficam neste navegador até você clicar em “Restaurar mock”."}</small></span></label></>}</>}
+                {result ? <div className="import-success"><CheckCircle2 size={29} /><h3>Importação concluída</h3><p>{result.createdCount || 0} tarefa(s) criada(s). {result.existingCount || 0} já existia(m) e não foi(ram) duplicada(s).</p><button className="button button-secondary" type="button" onClick={resetWizard}>Nova importação</button></div> : <><div className="import-step-kicker"><span className="import-step-number">{workflowStepNumber(6)}</span><div><strong>Revise e confirme</strong><span>Confira o resumo. O botão final só libera depois da sua confirmação.</span></div></div>{analysis && <><div className="import-review-banner"><strong>{analysis.stats.tasks} tarefas serão avaliadas</strong><span>{selectedPlanName ? `Plano: ${selectedPlanName} · ` : ""}Origem: {mode === "automatic" ? "Microsoft Planner autenticado" : "manual"} · sem vínculo automático com cotação ou qualidade.</span></div><div className="import-review-grid"><div><small>Status</small><p>{Object.entries(analysis.stats.statusCounts).map(([key, count]) => `${count} ${importStatusLabel(key)}`).join(" · ")}</p></div><div><small>Prioridade</small><p>{Object.entries(analysis.stats.priorityCounts).map(([key, count]) => `${count} ${importPriorityLabel(key)}`).join(" · ")}</p></div><div><small>Checklist</small><p>{analysis.stats.checklistTaskCount} tarefa(s) com itens preservados.</p></div><div><small>Tags</small><p>{analysis.stats.taggedTaskCount} tarefa(s) com tags do Planner.</p></div></div><IssueList title="Observações" items={analysis.warnings} warning />{mode === "automatic" && autoWarning && <IssueList title="Atenção" items={[autoWarning]} warning />}{mode === "automatic" && missingDetails && <button className="button button-secondary" type="button" onClick={retryAutomaticSearch} disabled={autoBusy}><RefreshCw size={15} className={autoBusy ? "spin" : ""} />{autoBusy ? "Buscando detalhes…" : "Tentar buscar detalhes novamente"}</button>}{mode === "automatic" && autoError && <IssueList title="Não foi possível repetir a busca" items={[autoError]} />}<IssueList title="Corrija antes de continuar" items={analysis.errors} /><label className="import-confirm"><input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} /><span><strong>Eu conferi os dados e autorizo a gravação {live ? "no Dataverse" : "no mock local"}.</strong><small>{live ? "Esta etapa cria registros e relações de responsáveis. Tarefas já importadas serão ignoradas." : "Os registros ficam neste navegador até você clicar em “Restaurar mock”."}</small></span></label></>}</>}
                 {submitError && <div className="import-issues is-error"><strong>Não foi possível concluir</strong><ul><li>{submitError}</li></ul></div>}
               </div>}
             </div>

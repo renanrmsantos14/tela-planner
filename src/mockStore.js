@@ -2,9 +2,11 @@ import {
   migrateLegacyTeams,
   canRegisterWaitingReturn,
   normalizeAssigneeNames,
+  normalizeText,
   normalizeWaitingContext,
   normalizePersonalTag,
   normalizePersonalTagIds,
+  PERSONAL_TAG_COLORS,
   resolveTaskAssignment,
   STATUSES,
   validatePersonalTag,
@@ -426,6 +428,38 @@ export function replaceTaskPersonalTags(state, taskId, tagIds = [], ownerUserId 
     ...state,
     tasks: (state.tasks || []).map((taskItem) => taskItem.id === taskId ? { ...taskItem, personalTagIds: nextIds } : taskItem),
   });
+}
+
+function importedTagNames(rows = []) {
+  return [...new Map(rows.flatMap((row) => row.tags || []).map((name) => [normalizeText(name), String(name || "").trim().slice(0, 32)]).filter(([key, name]) => key && name)).values()];
+}
+
+function ensureImportedTags(state, rows = []) {
+  let nextState = state;
+  const ownerUserId = nextState.currentUserId || "";
+  importedTagNames(rows).forEach((name, index) => {
+    const existing = loadPersonalTags(nextState, ownerUserId).find((tag) => normalizeText(tag.name) === normalizeText(name));
+    if (existing) {
+      if (existing.archived) nextState = updatePersonalTag(nextState, existing.id, { archived: false });
+      return;
+    }
+    nextState = createPersonalTag(nextState, { name, color: PERSONAL_TAG_COLORS[index % PERSONAL_TAG_COLORS.length], ownerUserId });
+  });
+  return nextState;
+}
+
+export function importPlannerTasks(state, rows = []) {
+  let nextState = ensureImportedTags(state, rows);
+  const ownerUserId = nextState.currentUserId || "";
+  const tagIdsByName = new Map(loadPersonalTags(nextState, ownerUserId).map((tag) => [normalizeText(tag.name), tag.id]));
+  const results = rows.map((row) => {
+    const assigneeIds = (row.assignments || []).map((assignment) => assignment.employeeId).filter(Boolean);
+    const assigneeNames = assigneeIds.map((employeeId) => nextState.employees.find((employee) => employee.id === employeeId)?.name).filter(Boolean);
+    const personalTagIds = (row.tags || []).map((name) => tagIdsByName.get(normalizeText(name))).filter(Boolean);
+    nextState = createTask(nextState, { title: row.title, description: row.description, checklist: row.checklist, status: row.status, priority: row.priority, dueDate: row.dueDate, assigneeIds, assigneeNames, personalTagIds, sourceType: "manual", sourceCode: row.sourceCode });
+    return { plannerTaskId: row.plannerTaskId, result: "created" };
+  });
+  return { nextState, results, createdCount: results.length, existingCount: 0, errorCount: 0, errors: [] };
 }
 
 function teamRecipients(state, task) {

@@ -13,6 +13,7 @@ export const IMPORT_PRIORITY = Object.freeze({
 
 const STATUS_LABELS = Object.freeze({ todo: "A fazer", doing: "Em andamento", done: "Concluído" });
 const PRIORITY_LABELS = Object.freeze({ low: "Baixa", medium: "Média", high: "Alta", urgent: "Urgente" });
+const MAX_IMPORTED_TAGS = 6;
 
 function asArray(value) {
   return Array.isArray(value) ? value : value ? [value] : [];
@@ -84,6 +85,26 @@ function normalizeChecklist(details) {
     .filter((item) => item.title);
 }
 
+function normalizeCategoryDescriptions(input) {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return {};
+  return Object.fromEntries(Object.entries(input).map(([key, value]) => [key, String(value || "").trim()]).filter(([, value]) => value));
+}
+
+function normalizeTaskTags(task, categoryDescriptions) {
+  const descriptions = normalizeCategoryDescriptions(categoryDescriptions);
+  const names = Object.entries(task?.appliedCategories || {})
+    .filter(([, applied]) => applied === true)
+    .map(([category]) => descriptions[category] || "")
+    .filter(Boolean);
+  const seen = new Set();
+  return names.filter((name) => {
+    const key = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).slice(0, MAX_IMPORTED_TAGS);
+}
+
 function normalizeDetails(input) {
   const entries = [];
   const candidates = Array.isArray(input)
@@ -113,7 +134,7 @@ function hasNextPage(input) {
   return Boolean(input?.["@odata.nextLink"]);
 }
 
-export function analyzePlannerImport({ planId = "", tasksText = "", bucketsText = "", detailsText = "", employeeMapText = "" } = {}) {
+export function analyzePlannerImport({ planId = "", tasksText = "", bucketsText = "", detailsText = "", employeeMapText = "", categoryDescriptions = {} } = {}) {
   const errors = [];
   const warnings = [];
   const parsedTasks = parseJson(tasksText, "Tarefas");
@@ -135,6 +156,7 @@ export function analyzePlannerImport({ planId = "", tasksText = "", bucketsText 
   let detailsRequired = 0;
   let detailsLoaded = 0;
   let checklistTaskCount = 0;
+  let taggedTaskCount = 0;
 
   uniqueTasks.forEach((task) => {
     const taskId = String(task.id);
@@ -144,6 +166,8 @@ export function analyzePlannerImport({ planId = "", tasksText = "", bucketsText 
     if (details) detailsLoaded += 1;
     const checklist = normalizeChecklist(details);
     if (checklist.length) checklistTaskCount += 1;
+    const tags = normalizeTaskTags(task, categoryDescriptions);
+    if (tags.length) taggedTaskCount += 1;
     const assignments = Object.keys(task.assignments || {}).map((graphUserId) => {
       const employeeId = employeeMap.get(graphUserId.toLowerCase()) || "";
       if (!employeeId) unresolvedAssignees.set(graphUserId, (unresolvedAssignees.get(graphUserId) || 0) + 1);
@@ -156,6 +180,7 @@ export function analyzePlannerImport({ planId = "", tasksText = "", bucketsText 
       title: String(task.title || "Sem título").trim(),
       description: String(details?.description || ""),
       checklist,
+      tags,
       status: normalizeStatus(task.percentComplete),
       statusChoice: IMPORT_STATUS[normalizeStatus(task.percentComplete)],
       priority: normalizePriority(task.priority),
@@ -189,6 +214,7 @@ export function analyzePlannerImport({ planId = "", tasksText = "", bucketsText 
       detailsRequired,
       detailsLoaded,
       checklistTaskCount,
+      taggedTaskCount,
       assignedTasks: rows.filter((row) => row.assignments.length).length,
       unresolvedAssignees: unresolvedAssignees.size,
       statusCounts,

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { addAttachment, addComment, archivePersonalTag, createPersonalTag, createTask, createTeam, createQuote, deleteAttachment, deleteTask, deleteTeam, ensureQuoteTask, loadPersonalTags, markQuoteSent, replaceTaskPersonalTags, resolveWaitingReturn, seedState, setQuoteOutcome, updatePersonalTag, updateTask, updateTeam, updateQuote } from "../src/mockStore.js";
+import { addAttachment, addComment, archivePersonalTag, createPersonalTag, createTask, createTeam, createQuote, deleteAttachment, deleteTask, deleteTeam, ensureQuoteTask, importPlannerTasks, loadPersonalTags, markQuoteSent, replaceTaskPersonalTags, resolveWaitingReturn, seedState, setQuoteOutcome, updatePersonalTag, updateTask, updateTeam, updateQuote } from "../src/mockStore.js";
 import { localDateKey } from "../src/management.js";
 
 function withStorage() {
@@ -61,6 +61,25 @@ test("mantém tags pessoais isoladas por usuário e vinculadas à tarefa", () =>
   const archived = archivePersonalTag(renamed, renanTags[0].id);
   assert.equal(loadPersonalTags(archived, "user-renan")[0].archived, true);
   assert.deepEqual(archived.tasks.find((task) => task.id === "task-1").personalTagIds, [renanTags[0].id]);
+});
+
+test("importa tags do Planner, reutiliza existentes e reativa arquivadas", () => {
+  withStorage();
+  const initial = seedState();
+  const withExisting = createPersonalTag(initial, { name: "VIP", color: "#b87900", ownerUserId: "user-renan" });
+  const archived = createPersonalTag(withExisting, { name: "Acompanhar", color: "#2d796f", ownerUserId: "user-renan" });
+  const archivedState = archivePersonalTag(archived, archived.personalTags.find((tag) => tag.name === "Acompanhar").id);
+  const result = importPlannerTasks(archivedState, [
+    { plannerTaskId: "planner-1", title: "Tarefa VIP", tags: ["vip", "Acompanhar"] },
+    { plannerTaskId: "planner-2", title: "Outra VIP", tags: ["VIP"] },
+  ]);
+  const tags = loadPersonalTags(result.nextState, "user-renan");
+  const vip = tags.find((tag) => tag.name === "VIP");
+  const followUp = tags.find((tag) => tag.name === "Acompanhar");
+  assert.equal(tags.length, 2);
+  assert.equal(followUp.archived, false);
+  assert.deepEqual(result.nextState.tasks.at(-2).personalTagIds, [vip.id, followUp.id]);
+  assert.deepEqual(result.nextState.tasks.at(-1).personalTagIds, [vip.id]);
 });
 
 test("mantém subtarefa vinculada à tarefa-pai no mock", () => {

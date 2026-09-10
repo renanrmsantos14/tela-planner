@@ -106,6 +106,13 @@ async function getPlannerUsers(tasks, token, onProgress) {
   }
 }
 
+async function getPlannerCategoryDescriptions(planId, token) {
+  const encodedPlanId = encodeURIComponent(String(planId || "").trim());
+  const details = await graphRequest(`${GRAPH_BASE_URL}/planner/plans/${encodedPlanId}/details`, token);
+  const descriptions = details?.categoryDescriptions;
+  return descriptions && typeof descriptions === "object" ? descriptions : {};
+}
+
 export async function fetchPlannerPlans({ token, onProgress } = {}) {
   if (!token) throw new Error("Token Microsoft ausente. Conecte a conta novamente.");
 
@@ -127,9 +134,10 @@ export async function fetchPlannerExport({ planId, token, employees = [], onProg
 
   const encodedPlanId = encodeURIComponent(cleanPlanId);
   onProgress?.({ stage: "tasks", completed: 0, total: 0, label: "Buscando tarefas e buckets…" });
-  const [taskPages, bucketPages] = await Promise.all([
+  const [taskPages, bucketPages, categoryResult] = await Promise.all([
     getAllPages(`${GRAPH_BASE_URL}/planner/plans/${encodedPlanId}/tasks`, token, (page) => onProgress?.({ stage: "tasks", completed: page, total: 0, label: `Buscando página ${page} de tarefas…` })),
     getAllPages(`${GRAPH_BASE_URL}/planner/plans/${encodedPlanId}/buckets`, token),
+    getPlannerCategoryDescriptions(cleanPlanId, token).then((categoryDescriptions) => ({ categoryDescriptions, warning: "" })).catch(() => ({ categoryDescriptions: {}, warning: "Não foi possível consultar os nomes das categorias do plano. As tarefas serão importadas sem essas tags." })),
   ]);
   const tasks = taskPages.flatMap((page) => page?.value || []);
   const buckets = bucketPages.flatMap((page) => page?.value || []);
@@ -151,11 +159,12 @@ export async function fetchPlannerExport({ planId, token, employees = [], onProg
     bucketsText: JSON.stringify({ value: buckets }),
     detailsText: JSON.stringify(details),
     employeeMapText: JSON.stringify(employeeMap),
+    categoryDescriptions: categoryResult.categoryDescriptions,
     plannerUsers: userData.users.map((user) => ({
       id: String(user.id || ""),
       displayName: String(user.displayName || "Usuário Microsoft").trim() || "Usuário Microsoft",
       email: String(user.mail || user.userPrincipalName || "").trim().toLowerCase(),
     })).filter((user) => user.id),
-    userWarning: userData.warning,
+    userWarning: [userData.warning, categoryResult.warning].filter(Boolean).join(" "),
   };
 }
