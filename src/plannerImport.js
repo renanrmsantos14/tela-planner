@@ -170,7 +170,7 @@ export function analyzePlannerImport({ planId = "", tasksText = "", bucketsText 
   if (!String(planId || "").trim()) errors.push("Informe o ID do plano antes de continuar.");
   if (!uniqueTasks.length) errors.push("Cole um JSON de tarefas contendo o campo value.");
   if (hasNextPage(parsedTasks)) errors.push("A resposta contém @odata.nextLink. Cole também as páginas seguintes antes de importar.");
-  if (detailsRequired > detailsLoaded) errors.push(`Faltam detalhes de ${detailsRequired - detailsLoaded} tarefa(s). Busque descrição e checklist antes de importar.`);
+  if (detailsRequired > detailsLoaded) warnings.push(`Faltam detalhes de ${detailsRequired - detailsLoaded} tarefa(s). A importação continuará com descrição e checklist vazios; tente buscar os detalhes novamente antes de importar.`);
   if (unresolvedAssignees.size) errors.push(`${unresolvedAssignees.size} usuário(s) atribuído(s) não têm correspondência no mapeamento.`);
   if (buckets.length && rows.some((row) => row.bucketId && !bucketIds.has(row.bucketId))) warnings.push("Há tarefas apontando para buckets que não estão no JSON colado.");
   if (!buckets.length) warnings.push("Buckets não informados. O status será definido exclusivamente pelo percentComplete.");

@@ -62,3 +62,14 @@ test("lê também um único JSON de resposta batch colado pelo usuário", () => 
   assert.equal(result.canImport, true);
   assert.equal(result.rows[0].description, "Descrição");
 });
+
+test("avisa detalhes ausentes sem bloquear a importação", () => {
+  const result = analyzePlannerImport({
+    planId: "plan-1",
+    tasksText: JSON.stringify({ value: [{ id: "task-1", title: "Tarefa", hasDescription: true, checklistItemCount: 1 }] }),
+  });
+  assert.equal(result.canImport, true);
+  assert.equal(result.rows[0].description, "");
+  assert.deepEqual(result.rows[0].checklist, []);
+  assert.match(result.warnings.join(" "), /Faltam detalhes de 1 tarefa/);
+});
