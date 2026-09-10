@@ -70,7 +70,7 @@ test("importa tags do Planner, reutiliza existentes e reativa arquivadas", () =>
   const archived = createPersonalTag(withExisting, { name: "Acompanhar", color: "#2d796f", ownerUserId: "user-renan" });
   const archivedState = archivePersonalTag(archived, archived.personalTags.find((tag) => tag.name === "Acompanhar").id);
   const result = importPlannerTasks(archivedState, [
-    { plannerTaskId: "planner-1", title: "Tarefa VIP", tags: ["vip", "Acompanhar"] },
+    { plannerTaskId: "planner-1", title: "Tarefa VIP", checklist: [{ id: "check-1", title: "Conferir", done: true }], tags: ["vip", "Acompanhar"] },
     { plannerTaskId: "planner-2", title: "Outra VIP", tags: ["VIP"] },
   ]);
   const tags = loadPersonalTags(result.nextState, "user-renan");
@@ -78,6 +78,7 @@ test("importa tags do Planner, reutiliza existentes e reativa arquivadas", () =>
   const followUp = tags.find((tag) => tag.name === "Acompanhar");
   assert.equal(tags.length, 2);
   assert.equal(followUp.archived, false);
+  assert.deepEqual(result.nextState.tasks.at(-2).checklist, [{ id: "check-1", title: "Conferir", done: true }]);
   assert.deepEqual(result.nextState.tasks.at(-2).personalTagIds, [vip.id, followUp.id]);
   assert.deepEqual(result.nextState.tasks.at(-1).personalTagIds, [vip.id]);
 });

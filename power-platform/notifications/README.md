@@ -21,24 +21,22 @@ O Flow de teste continua usando o receptor fixo `noreply@betinhos.onmicrosoft.co
 
 O teste usa a conexão de solução `new_sharedoffice365_f87d5`, confirmada no DEV. Não há resolução para destinatários reais nesta etapa.
 
-No Planner, `Configurações` exibe o **Módulo de teste de notificações** somente como envio real quando o Dataverse está conectado. O usuário escolhe uma tarefa, o tipo e a mensagem; o clique grava o evento controlado `notification:test`. O evento não leva responsáveis nem destinatários operacionais e, nesta etapa, o Flow envia exclusivamente para `noreply@betinhos.onmicrosoft.com`. No modo local, o botão permanece desabilitado.
+No Planner, `Configurações` exibe o **Módulo de teste de notificações** somente como envio real quando o Dataverse está conectado. O usuário escolhe uma tarefa, o tipo e a mensagem; o clique grava o evento controlado `notification:test`. O push usa o funcionário vinculado ao usuário Microsoft atual; o Flow de e-mail de teste continua isolado no receptor `noreply@betinhos.onmicrosoft.com`. No modo local, o botão permanece desabilitado.
 
-## Flow `Planner | Notificação imediata`
+## Flow `Planner | Push Power Apps Mobile`
 
-Provisionamento versionado: `powershell -ExecutionPolicy Bypass -File scripts/create-planner-immediate-flow.ps1` (o script atualiza pelo nome, sem duplicar).
+Provisionamento versionado: `powershell -ExecutionPolicy Bypass -File scripts/create-planner-immediate-flow.ps1 -PowerAppsNotificationConnectionReferenceLogicalName <logical-name> -PowerAppsAppId <app-id>` (o script atualiza pelo nome, sem duplicar).
 
 1. Gatilho Dataverse: linha adicionada em `cr40f_plannertarefaevento`, escopo Organização.
-2. Condição: `cr40f_campo` começa com `notification:`.
+2. Piloto: aceita somente `notification:test` e `notification:assignment`.
 3. Interpretar `cr40f_valornovo` como JSON. O produtor grava `actorEmployeeId`, `creatorEmployeeId`, `previousAssigneeIds`, `assigneeIds` e, para menção, `mentionedEmployeeIds`.
-4. Destinatários:
-   - `notification:assignment`: responsáveis novos;
-   - `notification:mention`: mencionados;
-   - `notification:deadline`, `notification:status` e `notification:assignees`: criador, responsáveis anteriores e atuais;
-   - sempre remover o autor e duplicados.
-5. Para cada destinatário, montar chave `<evento>|<destinatario>|<tipo>` e consultar `cr40f_plannernotificacao` por `cr40f_chavededupe`. Criar somente quando ausente.
-6. Resolver `cr40f_funcionarios.cr40f_usuariodataverse` e `systemuser.internalemailaddress`.
-7. Sem identidade: criar `cr40f_plannerdisparo` com status `100000003` (Sem identidade). Com identidade: usar a ação atual **Postar mensagem em chat ou canal** e registrar Enviado (`100000001`) ou Falha (`100000002`), tentativa, erro e ID externo.
-8. Não enviar e-mail neste fluxo; o envio de teste fica isolado no Flow `Planner | Notificação por e-mail - Teste`. Configurar retry por destinatário para que uma falha não encerre o processamento dos demais.
+4. Destinatários: responsáveis novos para `notification:assignment`; `notification:test` usa o funcionário vinculado ao usuário Microsoft atual. O autor é removido e os IDs são deduplicados.
+5. Para cada destinatário, montar chave `<evento>|<destinatario>|<tipo>|PowerAppsPush` e consultar `cr40f_plannernotificacao` por `cr40f_chavededupe`. Criar somente quando ausente.
+6. Resolver `cr40f_funcionarios.cr40f_usuariodataverse` e `systemuser.internalemailaddress` ativo.
+7. Com identidade, executar **Send push notification V2** para o app model-driven `AppBetinhos`, com `openApp=true` e parâmetros `pageType=entityrecord`, `entityName=cr40f_plannertarefa`, `entityId=<taskId>`.
+8. Registrar `PowerAppsPush` em `cr40f_plannerdisparo` com status Enviado (`100000001`), Falha (`100000002`) ou Sem identidade (`100000003`). Teams, e-mail e `SendAppNotification` permanecem canais separados.
+
+O destinatário precisa abrir o AppBetinhos no Power Apps Mobile uma vez, autenticar e permitir notificações no Android/iOS. Push é entregue na lista de notificações do celular; `SendAppNotification` é central/toast in-app e depende do app em execução/sincronização.
 
 ## Flow `Planner | Cobrança diária`
 
@@ -59,15 +57,16 @@ Provisionamento versionado: `powershell -ExecutionPolicy Bypass -File scripts/cr
 
 ## Connection references
 
-Os flows devem usar referências de conexão da solução para Dataverse, Teams e Office 365 Outlook. Não gravar URL de ambiente, token ou credencial nas definições.
+Os flows devem usar referências de conexão da solução para Dataverse, Power Apps Notification V2, Teams e Office 365 Outlook. Não gravar URL de ambiente, token ou credencial nas definições.
 
 ## Validação DEV obrigatória
 
 - Reprocessar o mesmo evento e a mesma recorrência sem duplicar linhas.
-- Confirmar Teams imediato e resumo Teams/e-mail com dois usuários reais.
+- Confirmar push Power Apps Mobile com o app fechado e dois usuários reais.
+- Confirmar toque no push abrindo o AppBetinhos com a tarefa correta.
 - Confirmar `Sem identidade` com funcionário sem `cr40f_usuariodataverse`.
 - Confirmar isolamento de notificações entre criador, responsável e terceiro.
 - Confirmar retry e erro final em `cr40f_plannerdisparo`.
 - Confirmar que uma cobrança manual da mesma tarefa não é aceita duas vezes no mesmo dia.
-- Gerar um evento controlado e confirmar no Outlook o recebimento em `noreply@betinhos.onmicrosoft.com`, além de conferir o registro `Email/Enviado` em `cr40f_plannerdisparo`.
-- Reprocessar o mesmo evento e confirmar que a chave idempotente impede um segundo e-mail.
+- Gerar `notification:test` e conferir `PowerAppsPush/Enviado` em `cr40f_plannerdisparo`.
+- Reprocessar o mesmo evento e confirmar que a chave idempotente impede um segundo push.

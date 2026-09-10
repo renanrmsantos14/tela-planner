@@ -152,6 +152,7 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
   const [bucketsText, setBucketsText] = useState("");
   const [detailsText, setDetailsText] = useState("");
   const [categoryDescriptions, setCategoryDescriptions] = useState({});
+  const [categoryDescriptionsText, setCategoryDescriptionsText] = useState("");
   const [employeeMapText, setEmployeeMapText] = useState("");
   const [analysis, setAnalysis] = useState(null);
   const [confirmed, setConfirmed] = useState(false);
@@ -226,7 +227,7 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
   }, [open, modalBusy]);
 
   const runValidation = () => {
-    const next = analyzePlannerImport({ planId, tasksText, bucketsText, detailsText, employeeMapText, categoryDescriptions: mode === "automatic" ? categoryDescriptions : {} });
+    const next = analyzePlannerImport({ planId, tasksText, bucketsText, detailsText, employeeMapText, categoryDescriptions: mode === "automatic" ? categoryDescriptions : {}, categoryDescriptionsText: mode === "manual" ? categoryDescriptionsText : "" });
     setAnalysis(next);
     setConfirmed(false);
     setSubmitError("");
@@ -298,6 +299,7 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
       setBucketsText(exported.bucketsText);
       setDetailsText(exported.detailsText);
       setCategoryDescriptions(exported.categoryDescriptions || {});
+      setCategoryDescriptionsText("");
       setEmployeeMapText(exported.employeeMapText);
       setPlannerUsers(exported.plannerUsers || []);
       setAutoWarning(exported.userWarning || "");
@@ -334,7 +336,7 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
   const updateEmployeeMapping = (graphUserId, employeeId) => {
     const nextEmployeeMapText = JSON.stringify({ ...employeeMap, [graphUserId]: employeeId }, null, 2);
     setEmployeeMapText(nextEmployeeMapText);
-    setAnalysis(analyzePlannerImport({ planId, tasksText, bucketsText, detailsText, employeeMapText: nextEmployeeMapText, categoryDescriptions: mode === "automatic" ? categoryDescriptions : {} }));
+    setAnalysis(analyzePlannerImport({ planId, tasksText, bucketsText, detailsText, employeeMapText: nextEmployeeMapText, categoryDescriptions: mode === "automatic" ? categoryDescriptions : {}, categoryDescriptionsText: mode === "manual" ? categoryDescriptionsText : "" }));
     setConfirmed(false);
   };
 
@@ -342,12 +344,14 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
     setPlanId(nextPlanId);
     setAnalysis(null);
     setCategoryDescriptions({});
+    setCategoryDescriptionsText("");
     setConfirmed(false);
     if (nextPlanId) collectAutomatically(nextPlanId);
   };
 
   const switchToManual = () => {
     setCategoryDescriptions({});
+    setCategoryDescriptionsText("");
     setMode("manual");
   };
 
@@ -374,6 +378,7 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
     setResult(null);
     setAnalysis(null);
     setCategoryDescriptions({});
+    setCategoryDescriptionsText("");
     setPlannerUsers([]);
     setConfirmed(false);
     setSubmitError("");
@@ -525,6 +530,8 @@ export default function PlannerImportView({ live, onImport, employees = [] }) {
                 <div className="import-step-kicker"><span className="import-step-number">3</span><div><strong>Traga os buckets</strong><span>Copie a resposta de buckets e cole. Esta etapa é opcional.</span></div></div>
                 <div className="import-query-row"><div><small>Consulta desta etapa</small><code>{urls.buckets}</code></div><CopyButton value={urls.buckets} /><a className="import-external-link" href={urls.graphExplorer} target="_blank" rel="noreferrer"><ExternalLink size={14} />Abrir Graph Explorer</a></div>
                 <JsonField label="Resposta de buckets" value={bucketsText} onChange={setBucketsText} rows={15} hint={`Consulta: ${urls.buckets}`} />
+                <div className="import-query-row"><div><small>Consulta das tags do Planner</small><code>{urls.categoryDescriptions}</code></div><CopyButton value={urls.categoryDescriptions} /><a className="import-external-link" href={urls.graphExplorer} target="_blank" rel="noreferrer"><ExternalLink size={14} />Abrir Graph Explorer</a></div>
+                <JsonField label="Descrições das categorias (tags)" value={categoryDescriptionsText} onChange={setCategoryDescriptionsText} rows={8} hint='Cole a resposta completa ou somente o objeto categoryDescriptions, por exemplo: { "category1": "VIP" }.' />
                 <div className="import-paste-note"><ShieldCheck size={16} /><span>Se você não tiver buckets, clique em Continuar. As tarefas ainda serão importadas.</span></div>
               </div>}
 

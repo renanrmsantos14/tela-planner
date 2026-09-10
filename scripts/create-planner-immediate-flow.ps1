@@ -3,11 +3,20 @@ param(
   [string]$ConnectionReferenceLogicalName = 'new_sharedcommondataserviceforapps_25a23',
   [string]$TeamsConnectionReferenceLogicalName = 'new_sharedteams_80676',
   [string]$OutlookConnectionReferenceLogicalName = 'new_sharedoffice365_f87d5',
+  [string]$PowerAppsNotificationConnectionReferenceLogicalName = '',
+  [string]$PowerAppsAppId = '',
   [string]$FlowName = 'Planner | Notificação imediata',
   [string]$WorkflowId = ''
 )
 
 $ErrorActionPreference = 'Stop'
+$requiredParameters = @{
+  PowerAppsNotificationConnectionReferenceLogicalName = $PowerAppsNotificationConnectionReferenceLogicalName
+  PowerAppsAppId = $PowerAppsAppId
+}
+foreach ($requiredParameter in $requiredParameters.GetEnumerator()) {
+  if ([string]::IsNullOrWhiteSpace($requiredParameter.Value)) { throw "Informe -$($requiredParameter.Key) para provisionar o push do Power Apps." }
+}
 $expectedFlowName = 'Planner | Notifica' + [char]0x00E7 + [char]0x00E3 + 'o imediata'
 
 $token = az account get-access-token --resource $EnvironmentUrl --query accessToken -o tsv
@@ -35,7 +44,7 @@ $definition = @'
           "subscriptionRequest/message": 1,
           "subscriptionRequest/entityname": "cr40f_plannertarefaevento",
           "subscriptionRequest/scope": 4,
-          "subscriptionRequest/filterexpression": "startswith(cr40f_campo, 'notification:')"
+          "subscriptionRequest/filterexpression": "cr40f_campo eq 'notification:test' or cr40f_campo eq 'notification:assignment'"
         },
         "host": {
           "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
@@ -161,41 +170,43 @@ $definition = @'
                         "authentication": "@parameters('$authentication')"
                       }
                     },
-                    "Post_Teams_message": {
+                    "Send_PowerApps_push": {
                       "type": "OpenApiConnection",
                       "runAfter": { "Get_system_user": [ "Succeeded" ] },
                       "inputs": {
                         "parameters": {
-                          "poster": "Flow bot",
-                          "location": "Chat with Flow bot",
-                          "body/recipient": "@outputs('Get_system_user')?['body/internalemailaddress']",
-                          "body/messageBody": "<p><strong>@{if(equals(outputs('Compose_Type'), 'overdue'), 'Cobrança de tarefa atrasada', if(equals(outputs('Compose_Type'), 'assignment'), 'Nova tarefa atribuída', 'Atualização da tarefa'))}</strong></p><p>@{triggerOutputs()?['body/cr40f_descricao']}</p><p>@{if(empty(outputs('Compose_Context')?['plannerBaseUrl']), 'Abra a tarefa no Planner', concat('<a href=\"', outputs('Compose_Context')?['plannerBaseUrl'], '/WebResources/new_TelaPlanner.html?data=taskId%3D', triggerOutputs()?['body/_cr40f_tarefa_value'], '\">Revisar tarefa</a>'))}</p>"
+                          "playerType": "Power Apps",
+                          "app": "__POWER_APPS_APP_ID__",
+                          "recipients": "@createArray(outputs('Get_system_user')?['body/internalemailaddress'])",
+                          "message": "@concat(if(equals(outputs('Compose_Type'), 'assignment'), 'Nova tarefa atribuída: ', 'Teste de notificação: '), triggerOutputs()?['body/cr40f_descricao'])",
+                          "openApp": true,
+                          "dynamicParams": "@json(concat('{\"pageType\":\"entityrecord\",\"entityName\":\"cr40f_plannertarefa\",\"entityId\":\"', triggerOutputs()?['body/_cr40f_tarefa_value'], '\"}'))"
                         },
                         "host": {
-                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_teams",
-                          "operationId": "PostMessageToConversation",
-                          "connectionName": "shared_teams"
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_powerappsnotificationv2",
+                          "operationId": "SendPushNotificationV2",
+                          "connectionName": "shared_powerappsnotificationv2"
                         },
                         "authentication": "@parameters('$authentication')"
                       }
                     },
                     "Create_dispatch_sent": {
                       "type": "OpenApiConnection",
-                      "runAfter": { "Post_Teams_message": [ "Succeeded" ] },
+                      "runAfter": { "Send_PowerApps_push": [ "Succeeded" ] },
                       "inputs": {
                         "parameters": {
                           "entityName": "cr40f_plannerdisparos",
-                          "item/cr40f_name": "@concat('Teams | ', coalesce(outputs('Get_system_user')?['body/internalemailaddress'], item()))",
+                          "item/cr40f_name": "@concat('PowerAppsPush | ', coalesce(outputs('Get_system_user')?['body/internalemailaddress'], item()))",
                           "item/cr40f_Destinatario@odata.bind": "@concat('/cr40f_funcionarioses(', item(), ')')",
                           "item/cr40f_destinatariotexto": "@coalesce(outputs('Get_system_user')?['body/internalemailaddress'], item())",
-                          "item/cr40f_canal": 100000000,
-                          "item/cr40f_categoria": 100000000,
-                          "item/cr40f_chaveidempotente": "@concat(triggerOutputs()?['body/cr40f_plannertarefaeventoid'], '|', item(), '|', outputs('Compose_Type'), '|Teams')",
+                          "item/cr40f_canal": "PowerAppsPush",
+                          "item/cr40f_categoria": "Planner",
+                          "item/cr40f_chaveidempotente": "@concat(triggerOutputs()?['body/cr40f_plannertarefaeventoid'], '|', item(), '|', outputs('Compose_Type'), '|PowerAppsPush')",
                           "item/cr40f_status": 100000001,
                           "item/cr40f_statustexto": "Enviado",
                           "item/cr40f_tentativa": 1,
                           "item/cr40f_enviadoem": "@utcNow()",
-                          "item/cr40f_identificadorexterno": "@coalesce(outputs('Post_Teams_message')?['body/id'], outputs('Post_Teams_message')?['body/messageId'], '')"
+                          "item/cr40f_identificadorexterno": "@coalesce(outputs('Send_PowerApps_push')?['body/id'], outputs('Send_PowerApps_push')?['body/notificationId'], '')"
                         },
                         "host": {
                           "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
@@ -207,20 +218,20 @@ $definition = @'
                     },
                     "Create_dispatch_failed": {
                       "type": "OpenApiConnection",
-                      "runAfter": { "Post_Teams_message": [ "Failed", "TimedOut" ] },
+                      "runAfter": { "Send_PowerApps_push": [ "Failed", "TimedOut" ] },
                       "inputs": {
                         "parameters": {
                           "entityName": "cr40f_plannerdisparos",
-                          "item/cr40f_name": "@concat('Teams falhou | ', coalesce(outputs('Get_system_user')?['body/internalemailaddress'], item()))",
+                          "item/cr40f_name": "@concat('PowerAppsPush falhou | ', coalesce(outputs('Get_system_user')?['body/internalemailaddress'], item()))",
                           "item/cr40f_Destinatario@odata.bind": "@concat('/cr40f_funcionarioses(', item(), ')')",
                           "item/cr40f_destinatariotexto": "@coalesce(outputs('Get_system_user')?['body/internalemailaddress'], item())",
-                          "item/cr40f_canal": 100000000,
-                          "item/cr40f_categoria": 100000000,
-                          "item/cr40f_chaveidempotente": "@concat(triggerOutputs()?['body/cr40f_plannertarefaeventoid'], '|', item(), '|', outputs('Compose_Type'), '|Teams')",
+                          "item/cr40f_canal": "PowerAppsPush",
+                          "item/cr40f_categoria": "Planner",
+                          "item/cr40f_chaveidempotente": "@concat(triggerOutputs()?['body/cr40f_plannertarefaeventoid'], '|', item(), '|', outputs('Compose_Type'), '|PowerAppsPush')",
                           "item/cr40f_status": 100000002,
                           "item/cr40f_statustexto": "Falha",
                           "item/cr40f_tentativa": 1,
-                          "item/cr40f_erro": "@string(outputs('Post_Teams_message'))"
+                          "item/cr40f_erro": "@string(outputs('Send_PowerApps_push'))"
                         },
                         "host": {
                           "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
@@ -241,9 +252,9 @@ $definition = @'
                             "item/cr40f_name": "@concat('Sem identidade | ', item())",
                             "item/cr40f_Destinatario@odata.bind": "@concat('/cr40f_funcionarioses(', item(), ')')",
                             "item/cr40f_destinatariotexto": "@item()",
-                            "item/cr40f_canal": 100000000,
-                            "item/cr40f_categoria": 100000000,
-                            "item/cr40f_chaveidempotente": "@concat(triggerOutputs()?['body/cr40f_plannertarefaeventoid'], '|', item(), '|', outputs('Compose_Type'), '|Teams')",
+                            "item/cr40f_canal": "PowerAppsPush",
+                            "item/cr40f_categoria": "Planner",
+                            "item/cr40f_chaveidempotente": "@concat(triggerOutputs()?['body/cr40f_plannertarefaeventoid'], '|', item(), '|', outputs('Compose_Type'), '|PowerAppsPush')",
                             "item/cr40f_status": 100000003,
                             "item/cr40f_statustexto": "Sem identidade",
                             "item/cr40f_tentativa": 0
@@ -271,6 +282,7 @@ $definition = @'
 '@
 
 $definition = $definition.Replace('new_sharedcommondataserviceforapps_25a23', $ConnectionReferenceLogicalName)
+$definition = $definition.Replace('__POWER_APPS_APP_ID__', $PowerAppsAppId)
 $definitionObject = $definition | ConvertFrom-Json
 $mainActions = $definitionObject.actions
 $definitionObject.actions = [ordered]@{
@@ -308,6 +320,7 @@ $clientData = @{ properties = @{ connectionReferences = @{
   shared_commondataserviceforapps = @{ runtimeSource = 'embedded'; connection = @{ connectionReferenceLogicalName = $ConnectionReferenceLogicalName }; api = @{ name = 'shared_commondataserviceforapps' } }
   shared_teams = @{ runtimeSource = 'embedded'; connection = @{ connectionReferenceLogicalName = $TeamsConnectionReferenceLogicalName }; api = @{ name = 'shared_teams' } }
   shared_office365 = @{ runtimeSource = 'embedded'; connection = @{ connectionReferenceLogicalName = $OutlookConnectionReferenceLogicalName }; api = @{ name = 'shared_office365' } }
+  shared_powerappsnotificationv2 = @{ runtimeSource = 'embedded'; connection = @{ connectionReferenceLogicalName = $PowerAppsNotificationConnectionReferenceLogicalName }; api = @{ name = 'shared_powerappsnotificationv2' } }
 }; definition = ($definition | ConvertFrom-Json) }; schemaVersion = '1.0.0.0' } | ConvertTo-Json -Depth 50 -Compress
 $payload = @{ category = 5; name = $FlowName; type = 1; primaryentity = 'none'; clientdata = $clientData } | ConvertTo-Json -Depth 50
 $headers.Prefer = 'return=representation'

@@ -790,10 +790,12 @@ function notificationPresentation(item, task, contact) {
 
 function emailDeliveryPresentation(delivery) {
   if (!delivery) return null;
-  if (delivery.status === "sent") return { tone: "sent", label: "E-mail enviado", title: `E-mail enviado${delivery.recipientEmail ? ` para ${delivery.recipientEmail}` : ""}.` };
-  if (delivery.status === "failed" || delivery.status === "unknown") return { tone: "failed", label: "E-mail não enviado", title: delivery.error || delivery.statusText || "O Flow registrou uma falha no envio." };
-  if (delivery.status === "noAddress") return { tone: "failed", label: "E-mail não enviado", title: "Destinatário sem endereço operacional configurado." };
-  if (delivery.status === "pending") return { tone: "pending", label: "E-mail pendente", title: "O Flow ainda não confirmou o disparo." };
+  const isPush = delivery.channel === "PowerAppsPush" || delivery.idempotencyKey?.endsWith("|PowerAppsPush");
+  const noun = isPush ? "Push" : "E-mail";
+  if (delivery.status === "sent") return { tone: "sent", label: `${noun} enviado`, title: `${noun} enviado${delivery.recipientEmail ? ` para ${delivery.recipientEmail}` : ""}.` };
+  if (delivery.status === "failed" || delivery.status === "unknown") return { tone: "failed", label: `${noun} não enviado`, title: delivery.error || delivery.statusText || "O Flow registrou uma falha no envio." };
+  if (delivery.status === "noAddress") return { tone: "failed", label: `${noun} não enviado`, title: isPush ? "Destinatário sem identidade Microsoft vinculada." : "Destinatário sem endereço operacional configurado." };
+  if (delivery.status === "pending") return { tone: "pending", label: `${noun} pendente`, title: "O Flow ainda não confirmou o disparo." };
   return null;
 }
 
@@ -1001,7 +1003,7 @@ function AppShell({
   onRefresh,
   refreshing = false,
 }) {
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   useMentionController(
     mentionEmployees.length
@@ -1468,10 +1470,19 @@ const TaskCard = memo(function TaskCard({
   const waitingActionRequired = isTaskWaitingForEmployee(taskItem, currentEmployee);
   const canRegisterReturn = canRegisterWaitingReturn(taskItem, currentEmployee, teams);
   const canOpen = !taskItem.id.startsWith("optimistic-");
-  const completedSubtasks = subtasks.filter(
-    (subtask) => subtask.status === "done",
+  const importedChecklist = Array.isArray(taskItem.checklist)
+    ? taskItem.checklist.filter((item) => item?.title).map((item) => ({
+        id: `planner-checklist-${item.id}`,
+        title: item.title,
+        done: Boolean(item.done),
+        imported: true,
+      }))
+    : [];
+  const checklistItems = subtasks.length ? subtasks : importedChecklist;
+  const completedSubtasks = checklistItems.filter(
+    (item) => item.status === "done" || item.done,
   ).length;
-  const visibleSubtasks = subtasks.slice(0, 3);
+  const visibleSubtasks = checklistItems.slice(0, 3);
   const assignedTeam = taskItem.assignmentMode === "team"
     ? teams.find((team) => (taskItem.teamIds || [taskItem.teamId]).some((id) => String(id) === String(team.id)))
     : null;
@@ -1554,10 +1565,10 @@ const TaskCard = memo(function TaskCard({
           <span>{waitingContextSummary(taskItem.waitingContext)}</span>
         </div>
       )}
-      {showChecklistOnCard && subtasks.length > 0 && (
+      {(showChecklistOnCard || importedChecklist.length > 0) && checklistItems.length > 0 && (
         <div
           className="task-checklist"
-          aria-label={`Checklist: ${completedSubtasks} de ${subtasks.length} concluídas`}
+          aria-label={`Checklist: ${completedSubtasks} de ${checklistItems.length} concluídas`}
         >
           <div className="task-checklist-heading">
             <span>
@@ -1565,13 +1576,25 @@ const TaskCard = memo(function TaskCard({
               Checklist
             </span>
             <strong>
-              {completedSubtasks}/{subtasks.length}
+              {completedSubtasks}/{checklistItems.length}
             </strong>
           </div>
           <div className="task-checklist-items">
             {visibleSubtasks.map((subtask) => {
-              const completed = subtask.status === "done";
-              return (
+              const completed = subtask.status === "done" || subtask.done;
+              const content = (
+                <>
+                  <span className="task-checklist-box">
+                    {completed && <Check size={10} strokeWidth={3} />}
+                  </span>
+                  <span>{subtask.title}</span>
+                </>
+              );
+              return subtask.imported ? (
+                <div className={`task-checklist-item ${completed ? "is-complete" : ""}`} key={subtask.id}>
+                  {content}
+                </div>
+              ) : (
                 <button
                   className={`task-checklist-item ${completed ? "is-complete" : ""}`}
                   key={subtask.id}
@@ -1585,17 +1608,14 @@ const TaskCard = memo(function TaskCard({
                     });
                   }}
                 >
-                  <span className="task-checklist-box">
-                    {completed && <Check size={10} strokeWidth={3} />}
-                  </span>
-                  <span>{subtask.title}</span>
+                  {content}
                 </button>
               );
             })}
           </div>
-          {subtasks.length > visibleSubtasks.length && (
+          {checklistItems.length > visibleSubtasks.length && (
             <span className="task-checklist-more">
-              +{subtasks.length - visibleSubtasks.length} itens
+              +{checklistItems.length - visibleSubtasks.length} itens
             </span>
           )}
         </div>
@@ -4645,7 +4665,7 @@ function TaskDrawerContent({
           )}
           <section className="drawer-section">
             <div className="drawer-section-heading">
-              <h3>Subtarefas</h3>
+              <h3>{taskItem.checklist?.length && !subtasks.length ? "Checklist do Planner" : "Subtarefas"}</h3>
               <div className="drawer-heading-actions">
                 <label className="checklist-visibility-toggle">
                   <input
@@ -4696,7 +4716,20 @@ function TaskDrawerContent({
                 </button>
               </div>
             )}
-            {subtasks.length
+            {taskItem.checklist?.length && !subtasks.length
+              ? <div className="subtask-list" aria-label="Checklist importado do Planner">
+                  {taskItem.checklist.filter((item) => item?.title).map((item) => (
+                    <div className={`subtask-row ${item.done ? "is-complete" : ""}`} key={item.id}>
+                      <span className="subtask-toggle" aria-hidden="true">
+                        <span className={`subtask-check ${item.done ? "checked" : ""}`}>
+                          {item.done && <Check size={13} />}
+                        </span>
+                      </span>
+                      <span>{item.title}</span>
+                    </div>
+                  ))}
+                </div>
+              : subtasks.length
               ? subtasks.map((subtask) => (
                   <div className="subtask-row" key={subtask.id}>
                     <button

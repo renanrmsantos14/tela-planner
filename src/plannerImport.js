@@ -44,6 +44,10 @@ function firstNonEmpty(...values) {
   return values.find((value) => String(value ?? "").trim()) || "";
 }
 
+function isTrue(value) {
+  return value === true || value === 1 || String(value ?? "").trim().toLowerCase() === "true";
+}
+
 function normalizeStatus(percentComplete) {
   const percent = Number(percentComplete || 0);
   if (percent >= 100) return "done";
@@ -81,7 +85,7 @@ function normalizeChecklist(details) {
   const checklist = details?.checklist;
   if (!checklist || typeof checklist !== "object") return [];
   return Object.entries(checklist)
-    .map(([id, item]) => ({ id, title: String(item?.title || "").trim(), done: Boolean(item?.isChecked) }))
+    .map(([id, item]) => ({ id, title: String(item?.title || "").trim(), done: isTrue(item?.isChecked) }))
     .filter((item) => item.title);
 }
 
@@ -90,11 +94,16 @@ function normalizeCategoryDescriptions(input) {
   return Object.fromEntries(Object.entries(input).map(([key, value]) => [key, String(value || "").trim()]).filter(([, value]) => value));
 }
 
+function unwrapCategoryDescriptions(input) {
+  if (input?.categoryDescriptions && typeof input.categoryDescriptions === "object") return input.categoryDescriptions;
+  return input;
+}
+
 function normalizeTaskTags(task, categoryDescriptions) {
   const descriptions = normalizeCategoryDescriptions(categoryDescriptions);
   const names = Object.entries(task?.appliedCategories || {})
-    .filter(([, applied]) => applied === true)
-    .map(([category]) => descriptions[category] || "")
+    .filter(([, applied]) => isTrue(applied))
+    .map(([category]) => descriptions[category] || descriptions[category.toLowerCase()] || "")
     .filter(Boolean);
   const seen = new Set();
   return names.filter((name) => {
@@ -134,14 +143,15 @@ function hasNextPage(input) {
   return Boolean(input?.["@odata.nextLink"]);
 }
 
-export function analyzePlannerImport({ planId = "", tasksText = "", bucketsText = "", detailsText = "", employeeMapText = "", categoryDescriptions = {} } = {}) {
+export function analyzePlannerImport({ planId = "", tasksText = "", bucketsText = "", detailsText = "", employeeMapText = "", categoryDescriptions = {}, categoryDescriptionsText = "" } = {}) {
   const errors = [];
   const warnings = [];
   const parsedTasks = parseJson(tasksText, "Tarefas");
   const parsedBuckets = parseJson(bucketsText, "Buckets");
   const parsedDetails = parseJson(detailsText, "Detalhes");
   const parsedEmployeeMap = parseJson(employeeMapText, "Mapeamento de responsáveis");
-  [parsedTasks, parsedBuckets, parsedDetails, parsedEmployeeMap].forEach((value) => {
+  const parsedCategoryDescriptions = parseJson(categoryDescriptionsText, "Descrições das categorias");
+  [parsedTasks, parsedBuckets, parsedDetails, parsedEmployeeMap, parsedCategoryDescriptions].forEach((value) => {
     if (value?.__parseError) errors.push(value.__parseError);
   });
 
@@ -149,6 +159,7 @@ export function analyzePlannerImport({ planId = "", tasksText = "", bucketsText 
   const buckets = flattenPages(parsedBuckets, ["buckets"]);
   const detailsByTaskId = normalizeDetails(parsedDetails);
   const employeeMap = normalizeMapping(parsedEmployeeMap);
+  const importedCategoryDescriptions = unwrapCategoryDescriptions(parsedCategoryDescriptions || categoryDescriptions);
   const bucketIds = new Set(buckets.map((bucket) => String(bucket?.id || "")).filter(Boolean));
   const uniqueTasks = [...new Map(tasks.filter((task) => task?.id).map((task) => [String(task.id), task])).values()];
   const rows = [];
@@ -166,7 +177,7 @@ export function analyzePlannerImport({ planId = "", tasksText = "", bucketsText 
     if (details) detailsLoaded += 1;
     const checklist = normalizeChecklist(details);
     if (checklist.length) checklistTaskCount += 1;
-    const tags = normalizeTaskTags(task, categoryDescriptions);
+    const tags = normalizeTaskTags(task, importedCategoryDescriptions);
     if (tags.length) taggedTaskCount += 1;
     const assignments = Object.keys(task.assignments || {}).map((graphUserId) => {
       const employeeId = employeeMap.get(graphUserId.toLowerCase()) || "";
@@ -237,6 +248,7 @@ export function graphQueryUrls(planId) {
   return {
     tasks: `https://graph.microsoft.com/v1.0/planner/plans/${encoded}/tasks`,
     buckets: `https://graph.microsoft.com/v1.0/planner/plans/${encoded}/buckets`,
+    categoryDescriptions: `https://graph.microsoft.com/v1.0/planner/plans/${encoded}/details`,
     batch: "https://graph.microsoft.com/v1.0/$batch",
     graphExplorer: "https://developer.microsoft.com/en-us/graph/graph-explorer",
   };

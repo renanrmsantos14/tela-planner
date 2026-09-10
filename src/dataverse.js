@@ -89,7 +89,6 @@ const RELATION_TABLE = "cr40f_plannertarearelacao";
 const ASSIGNEE_RELATION_TABLE = "cr40f_plannertarearesponsavel";
 const TASK_TEAM_RELATION_TABLE = "cr40f_plannertarefaequipe";
 const TEAM_TABLE = "cr40f_plannerequipe";
-const TEAM_ICON_FIELD = "cr40f_icone";
 const TEAM_MEMBER_TABLE = "cr40f_plannerequipemembro";
 const TASK_TEAM_FIELD = "cr40f_equipeplanner";
 const NOTIFICATION_TABLE = "cr40f_plannernotificacao";
@@ -605,7 +604,7 @@ function normalizePlannerTeam(row, primaryName = "cr40f_nome") {
   return {
     id: row[`${TEAM_TABLE}id`] || row.cr40f_plannerequipeid || "",
     name: row[primaryName] || row[`${primaryName}@OData.Community.Display.V1.FormattedValue`] || "",
-    iconName: row[TEAM_ICON_FIELD] || "users",
+    iconName: "users",
     memberIds: [],
   };
 }
@@ -614,7 +613,7 @@ async function loadPlannerTeams(xrm) {
   try {
     const primaryName = await primaryNameAttribute(xrm, TEAM_TABLE);
     const [teamRows, memberRows] = await Promise.all([
-      retrieveMany(xrm, TEAM_TABLE, `?$select=${TEAM_TABLE}id,${primaryName},${TEAM_ICON_FIELD}&$filter=statecode eq 0&$orderby=${primaryName} asc`),
+      retrieveMany(xrm, TEAM_TABLE, `?$select=${TEAM_TABLE}id,${primaryName}&$filter=statecode eq 0&$orderby=${primaryName} asc`),
       retrieveMany(xrm, TEAM_MEMBER_TABLE, `?$select=${TEAM_MEMBER_TABLE}id,_cr40f_equipe_value,_cr40f_funcionario_value&$filter=statecode eq 0`),
     ]);
     const teams = teamRows.map((row) => normalizePlannerTeam(row, primaryName));
@@ -649,7 +648,7 @@ async function createLiveTeam(xrm, state, input) {
   if (!name) throw new Error("Informe um nome para a equipe.");
   if ((state.teams || []).some((team) => team.name.localeCompare(name, "pt-BR", { sensitivity: "base" }) === 0)) throw new Error("Já existe uma equipe com esse nome.");
   const primaryName = await primaryNameAttribute(xrm, TEAM_TABLE);
-  const payload = { [primaryName]: name, [TEAM_ICON_FIELD]: input.iconName || "users" };
+  const payload = { [primaryName]: name };
   const created = await request(xrm, `/${entitySetName(TEAM_TABLE)}`, { method: "POST", body: JSON.stringify(payload) });
   const id = created?.[`${TEAM_TABLE}id`] || created?.cr40f_plannerequipeid;
   if (!id) throw new Error("Dataverse criou equipe sem retornar o ID.");
@@ -662,7 +661,7 @@ async function updateLiveTeam(xrm, state, id, patch) {
   if (!name) throw new Error("Informe um nome para a equipe.");
   if ((state.teams || []).some((team) => team.id !== id && team.name.localeCompare(name, "pt-BR", { sensitivity: "base" }) === 0)) throw new Error("Já existe uma equipe com esse nome.");
   const primaryName = await primaryNameAttribute(xrm, TEAM_TABLE);
-  await request(xrm, `/${entitySetName(TEAM_TABLE)}(${cleanId(id)})`, { method: "PATCH", body: JSON.stringify({ [primaryName]: name, [TEAM_ICON_FIELD]: patch.iconName || "users" }) });
+  await request(xrm, `/${entitySetName(TEAM_TABLE)}(${cleanId(id)})`, { method: "PATCH", body: JSON.stringify({ [primaryName]: name }) });
   await replacePlannerTeamMembers(xrm, id, patch.memberIds || []);
   return loadLiveState(xrm);
 }
@@ -1003,6 +1002,7 @@ function normalizeEmailDispatch(row) {
     modifiedAt: row.modifiedon || "",
     idempotencyKey: key,
     eventId: cleanId(key.split("|")[0]),
+    channel: String(row.cr40f_canal || ""),
   };
 }
 
@@ -1011,8 +1011,12 @@ function notificationEmailDelivery(row, dispatches = []) {
   const recipientId = cleanId(row._cr40f_destinatario_value);
   const type = String(row.cr40f_tipo || "update");
   if (!eventId || !recipientId) return null;
-  const expectedKey = `${eventId}|${recipientId}|${type}|Email`.toLowerCase();
-  const dispatch = dispatches.find((item) => item.idempotencyKey.toLowerCase() === expectedKey);
+  const expectedKeys = [
+    `${eventId}|${recipientId}|${type}|PowerAppsPush`.toLowerCase(),
+    `${eventId}|${recipientId}|${type}|Email`.toLowerCase(),
+  ];
+  const expectedKey = expectedKeys[0];
+  const dispatch = dispatches.find((item) => expectedKeys.includes(item.idempotencyKey.toLowerCase()));
   if (dispatch) return dispatch;
 
   const occurredAt = new Date(row.cr40f_ocorridoem || row.createdon || 0).getTime();
@@ -1052,7 +1056,7 @@ function normalizeNotification(row, dispatches = []) {
 async function loadLiveEmailDispatches(xrm, employeeId) {
   if (!employeeId) return [];
   try {
-    const rows = await retrieveMany(xrm, EMAIL_DISPATCH_TABLE, `?$select=cr40f_plannerdisparoid,cr40f_status,cr40f_statustexto,cr40f_destinatariotexto,cr40f_chaveidempotente,cr40f_erro,cr40f_tentativa,cr40f_enviadoem,createdon,modifiedon,_cr40f_destinatario_value&$filter=_cr40f_destinatario_value eq ${cleanId(employeeId)} and cr40f_canal eq 100000001&$orderby=createdon desc&$top=200`);
+    const rows = await retrieveMany(xrm, EMAIL_DISPATCH_TABLE, `?$select=cr40f_plannerdisparoid,cr40f_canal,cr40f_status,cr40f_statustexto,cr40f_destinatariotexto,cr40f_chaveidempotente,cr40f_erro,cr40f_tentativa,cr40f_enviadoem,createdon,modifiedon,_cr40f_destinatario_value&$filter=_cr40f_destinatario_value eq ${cleanId(employeeId)}&$orderby=createdon desc&$top=200`);
     return rows.map(normalizeEmailDispatch);
   } catch (error) {
     console.warn("[Planner] status de e-mail indisponível", error);
@@ -1137,18 +1141,18 @@ async function createEvent(xrm, taskId, type, description, field = "", previous 
 
 function emailDispatchFeedback(dispatch, recipientEmail = "") {
   if (!dispatch) return { status: "pending", type: "pending", text: "Evento criado, mas o Flow ainda não confirmou o disparo." };
-  if (dispatch.status === "sent") return { status: "sent", type: "success", text: `E-mail enviado para ${dispatch.recipientEmail || recipientEmail}.`, dispatch };
+  if (dispatch.status === "sent") return { status: "sent", type: "success", text: `Push enviado${dispatch.recipientEmail || recipientEmail ? ` para ${dispatch.recipientEmail || recipientEmail}` : ""}.`, dispatch };
   if (dispatch.status === "failed") {
     const detail = String(dispatch.error || "O Flow registrou uma falha sem detalhes.").trim();
-    return { status: "failed", type: "error", text: `E-mail não enviado. ${detail.slice(0, 220)}`, dispatch };
+    return { status: "failed", type: "error", text: `Push não enviado. ${detail.slice(0, 220)}`, dispatch };
   }
-  if (dispatch.status === "noAddress") return { status: "noAddress", type: "warning", text: "E-mail não enviado: o destinatário não tem endereço operacional configurado.", dispatch };
+  if (dispatch.status === "noAddress") return { status: "noAddress", type: "warning", text: "Push não enviado: o destinatário não tem identidade Microsoft vinculada.", dispatch };
   return { status: "pending", type: "pending", text: "Evento criado, mas o Flow ainda não confirmou o disparo.", dispatch };
 }
 
 async function waitForLiveEmailDispatch(xrm, eventId) {
   const escapedEventId = cleanId(eventId).replace(/'/g, "''");
-  const query = `?$select=cr40f_plannerdisparoid,cr40f_status,cr40f_statustexto,cr40f_destinatariotexto,cr40f_chaveidempotente,cr40f_erro,cr40f_tentativa,cr40f_enviadoem,createdon,modifiedon,_cr40f_destinatario_value&$filter=startswith(cr40f_chaveidempotente,'${escapedEventId}|') and cr40f_canal eq 100000001&$orderby=createdon desc&$top=1`;
+  const query = `?$select=cr40f_plannerdisparoid,cr40f_canal,cr40f_status,cr40f_statustexto,cr40f_destinatariotexto,cr40f_chaveidempotente,cr40f_erro,cr40f_tentativa,cr40f_enviadoem,createdon,modifiedon,_cr40f_destinatario_value&$filter=startswith(cr40f_chaveidempotente,'${escapedEventId}|') and cr40f_canal eq 'PowerAppsPush'&$orderby=createdon desc&$top=1`;
   const deadline = Date.now() + 10000;
   let lastError = null;
   while (Date.now() <= deadline) {
@@ -1173,6 +1177,9 @@ async function sendLiveNotificationTest(xrm, state, input = {}) {
   const message = String(input.message || "").trim() || "Teste de notificação do Planner.";
   const type = ["digest_daily", "digest_weekly", "update", "mention", "deadline", "status"].includes(input.type) ? input.type : "digest_daily";
   const typeLabel = type === "digest_weekly" ? "Resumo semanal" : type === "digest_daily" ? "Resumo diário" : type;
+  const currentEmail = String(state.currentUserEmail || "").trim().toLowerCase();
+  const testRecipient = (state.employees || []).find((employee) => String(employee.emailMicrosoft || "").trim().toLowerCase() === currentEmail);
+  if (!testRecipient?.id) throw new Error("Seu usuário Microsoft não está vinculado a um funcionário ativo do Planner.");
   const event = await createEvent(
     xrm,
     taskId,
@@ -1180,7 +1187,7 @@ async function sendLiveNotificationTest(xrm, state, input = {}) {
     `[Teste] ${typeLabel}: ${message}`,
     "notification:test",
     "",
-    JSON.stringify({ testNotification: true, testType: type, collectionType: type, actorEmail: String(state.currentUserEmail || "").trim().toLowerCase() }),
+    JSON.stringify({ testNotification: true, testType: type, collectionType: type, actorEmail: currentEmail, notificationRecipientIds: [testRecipient.id] }),
   );
   const eventId = cleanId(event?.cr40f_plannertarefaeventoid || event?.[`${EVENT_TABLE}id`]);
   const dispatch = eventId

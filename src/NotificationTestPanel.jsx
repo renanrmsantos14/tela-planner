@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, BellRing, CheckCircle2, Clock3, LoaderCircle, Mail, Send } from "lucide-react";
+import { AlertTriangle, BellRing, CheckCircle2, Clock3, LoaderCircle, Smartphone, Send } from "lucide-react";
 
 export const NOTIFICATION_TEST_TYPES = [
-  { id: "digest_daily", label: "Resumo diário", description: "Teste do e-mail diário" },
-  { id: "digest_weekly", label: "Resumo semanal", description: "Teste do e-mail de segunda" },
+  { id: "digest_daily", label: "Resumo diário", description: "Teste de push diário" },
+  { id: "digest_weekly", label: "Resumo semanal", description: "Teste de push de segunda" },
   { id: "update", label: "Atualização", description: "Alteração geral na tarefa" },
   { id: "mention", label: "Menção", description: "Teste de aviso de menção" },
   { id: "deadline", label: "Prazo", description: "Teste de mudança de prazo" },
@@ -50,10 +50,10 @@ export default function NotificationTestPanel({ live, tasks = [], onSend }) {
         <div className="notification-test-heading-icon" aria-hidden="true"><BellRing size={18} /></div>
         <div>
           <span className="eyebrow">Operação controlada</span>
-          <h2 id="notification-test-title">Módulo de teste de notificações e e-mails</h2>
-          <p>Dispare um evento real para validar notificações e os resumos diário/semanal usando o e-mail operacional do usuário conectado.</p>
+          <h2 id="notification-test-title">Módulo de teste de notificações mobile</h2>
+          <p>Dispare um evento real para validar o push do Power Apps Mobile usando o usuário Microsoft conectado.</p>
         </div>
-        <span className="notification-test-target"><Mail size={14} /> e-mail operacional do usuário</span>
+        <span className="notification-test-target"><Smartphone size={14} /> Power Apps Mobile</span>
       </div>
       <div className="notification-test-body">
         {!live && <div className="notification-test-local-note"><AlertTriangle size={15} /> Conecte o Planner ao Dataverse para habilitar o envio real.</div>}
@@ -87,7 +87,7 @@ export default function NotificationTestPanel({ live, tasks = [], onSend }) {
           </div>}
           <button className="button button-primary" type="button" onClick={submit} disabled={!live || !taskId || sending || !message.trim()}>
             {sending ? <LoaderCircle size={15} className="spin" /> : <Send size={15} />}
-            {sending ? "Enviando…" : "Enviar e-mail de teste"}
+            {sending ? "Enviando…" : "Enviar push de teste"}
           </button>
         </div>
       </div>

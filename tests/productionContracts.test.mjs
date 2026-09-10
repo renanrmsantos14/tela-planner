@@ -4,21 +4,18 @@ import test from "node:test";
 
 const readSource = (path) => readFile(new URL(path, import.meta.url), "utf8");
 
-test("Flow imediato cobre todos os eventos e usa array vazio válido", async () => {
+test("Flow piloto de push cobre teste e atribuição com array vazio válido", async () => {
   const source = await readSource("../scripts/create-planner-immediate-flow.ps1");
 
-  assert.match(source, /startswith\([^\n]+notification:/i);
-  assert.match(source, /PostMessageToConversation/);
+  assert.match(source, /notification:test.*notification:assignment/);
+  assert.match(source, /SendPushNotificationV2/);
+  assert.match(source, /shared_powerappsnotificationv2/);
   assert.match(source, /json\('\[\]'\)/);
   assert.doesNotMatch(source, /createArray\(\)/);
   assert.match(source, /item\/cr40f_Destinatario@odata\.bind/);
-  assert.match(source, /collectionType.*manual_overdue.*overdue/);
-  assert.match(source, /Cobrança de tarefa atrasada/);
-  assert.match(source, /Revisar tarefa/);
-  assert.match(source, /plannerBaseUrl/);
-  assert.doesNotMatch(source, /__PLANNER_BASE_URL__/);
-  assert.match(source, /\?data=taskId%3D/);
-  assert.doesNotMatch(source, /https:\/\/org23b93544\.crm2\.dynamics\.com\/WebResources/);
+  assert.match(source, /dynamicParams/);
+  assert.match(source, /entityId/);
+  assert.match(source, /\|PowerAppsPush/);
 });
 
 test("eventos de notificação carregam o ambiente atual do WebResource", async () => {
@@ -70,6 +67,6 @@ test("subtarefas simples aparecem na criação, no drawer e opcionalmente no car
   assert.match(source, /className="subtask-remove-confirm"/);
   assert.match(source, /setPendingDeleteIndex\(index\)/);
   assert.match(source, /onDelete\(subtask\.id\)/);
-  assert.match(source, /showChecklistOnCard && subtasks\.length > 0/);
+  assert.match(source, /\(showChecklistOnCard \|\| importedChecklist\.length > 0\) && checklistItems\.length > 0/);
   assert.match(source, /checklistVisibility\[selected\.id\]/);
 });

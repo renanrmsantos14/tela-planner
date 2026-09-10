@@ -83,3 +83,23 @@ test("converte categorias aplicadas em tags e ignora categorias sem descrição"
   assert.deepEqual(result.rows[0].tags, ["VIP"]);
   assert.equal(result.stats.taggedTaskCount, 1);
 });
+
+test("aceita booleanos serializados em tags e checklist", () => {
+  const result = analyzePlannerImport({
+    planId: "plan-1",
+    categoryDescriptions: { category1: "VIP" },
+    tasksText: JSON.stringify({ value: [{ id: "task-1", title: "Tarefa", appliedCategories: { category1: "true" }, hasDescription: true }] }),
+    detailsText: JSON.stringify([{ taskId: "task-1", details: { checklist: { "check-1": { title: "Conferir", isChecked: "false" } } } }]),
+  });
+  assert.deepEqual(result.rows[0].tags, ["VIP"]);
+  assert.deepEqual(result.rows[0].checklist, [{ id: "check-1", title: "Conferir", done: false }]);
+});
+
+test("aceita descrições de categorias coladas no formato do Planner", () => {
+  const result = analyzePlannerImport({
+    planId: "plan-1",
+    categoryDescriptionsText: JSON.stringify({ categoryDescriptions: { category1: "VIP" } }),
+    tasksText: JSON.stringify({ value: [{ id: "task-1", title: "Tarefa", appliedCategories: { category1: true } }] }),
+  });
+  assert.deepEqual(result.rows[0].tags, ["VIP"]);
+});
