@@ -347,7 +347,9 @@ button { cursor: pointer; }
 .task-card { padding: 11px 13px 10px; }
 .task-card-top { min-height: 21px; gap: 6px; }
 .task-card h3 { margin: 6px 0 5px; line-height: 1.35; }
-.task-source-row { margin-top: 6px; gap: 5px; }
+.task-card-tags { display: flex; flex-wrap: wrap; gap: 5px; min-width: 0; margin-top: 7px; }
+.task-card-tag { min-width: 0; max-width: 100%; display: inline-flex; align-items: center; gap: 5px; overflow: hidden; padding: 3px 7px; border: 1px solid color-mix(in srgb, var(--personal-tag-color) 32%, #dfe4ea); border-radius: 999px; color: var(--personal-tag-color); background: color-mix(in srgb, var(--personal-tag-color) 10%, #fff); font-size: 8px; font-weight: 800; line-height: 1.2; white-space: nowrap; text-overflow: ellipsis; }
+.task-card-tag .personal-tag-dot { width: 6px; height: 6px; }
 .task-card-footer { gap: 7px; padding-top: 7px; }
 .task-card .avatar { width: 26px; height: 26px; }
 .task-card .date-chip { gap: 5px; }
@@ -376,8 +378,6 @@ button { cursor: pointer; }
 .task-card-footer > .assignee-display { flex: 1 1 auto; }
 .central-row-meta > .assignee-display { min-width: 0; width: 160px; }
 
-.task-source-row { display: flex; align-items: center; gap: 6px; min-width: 0; margin-top: 7px; color: var(--muted); font-size: 9px; }
-.task-source-row em { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-style: normal; }
 .task-checklist { display: grid; gap: 5px; margin-top: 8px; padding-top: 7px; border-top: 1px solid #eef1f5; }
 .task-checklist-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 9px; line-height: 1.2; }
 .task-checklist-heading span { display: inline-flex; align-items: center; gap: 5px; font-weight: 700; }
@@ -979,6 +979,7 @@ button { cursor: pointer; }
 .task-drawer .drawer-body > .drawer-section:nth-of-type(2) { order: 3; }
 .task-drawer .drawer-body > .drawer-section:nth-of-type(3) { order: 2; }
 .task-drawer .drawer-body > .drawer-section:nth-of-type(4) { order: 4; }
+.task-drawer .drawer-body > .history-section { order: 99; }
 .task-drawer .subtask-toggle { pointer-events: none; }
 .task-drawer .subtask-toggle .subtask-check { pointer-events: auto; cursor: pointer; }
 
@@ -2044,6 +2045,41 @@ button { cursor: pointer; }
 }
 @media (prefers-reduced-motion: reduce) {
   .workload-card, .workload-more { transition: none; }
+}
+
+/* Gestão: painel de decisão com prioridade visual para o atraso. */
+.management-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 2px 0 14px; }
+.management-metric { min-height: 108px; display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto 1fr; gap: 6px 12px; padding: 16px 18px; border: 1px solid rgba(34, 58, 64, .1); border-radius: 10px; color: var(--ink); background: var(--surface); text-align: left; cursor: pointer; transition: border-color 160ms ease, background-color 160ms ease, transform 160ms ease; }
+.management-metric:hover { border-color: rgba(40, 107, 99, .35); background: #fbfdfc; transform: translateY(-1px); }
+.management-metric:focus-visible, .management-return-link:focus-visible, .management-focus-link:focus-visible, .management-back-link:focus-visible { outline: 3px solid rgba(40, 107, 99, .24); outline-offset: 2px; }
+.management-metric-label { grid-column: 1 / -1; color: #718084; font-size: 11px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.management-metric strong { align-self: end; color: #203e45; font-size: 32px; font-weight: 800; line-height: 1; }
+.management-metric-action { align-self: end; display: inline-flex; align-items: center; gap: 3px; color: #286b63; font-size: 11px; font-weight: 800; }
+.management-metric.has-value { border-color: rgba(196, 90, 67, .28); background: #fffaf8; }
+.management-metric.has-value strong, .management-metric.has-value .management-metric-action { color: #a44b39; }
+.management-overview { grid-template-columns: minmax(0, 1.15fr) minmax(360px, .85fr); gap: 12px; }
+.management-focus-panel { border: 1px solid rgba(34, 58, 64, .1); border-radius: 10px; }
+.management-focus-panel .panel-heading { min-height: 78px; padding: 18px 18px 12px; }
+.management-overdue-panel { border-color: rgba(196, 90, 67, .18); }
+.management-overdue-panel .panel-heading { border-bottom: 1px solid rgba(196, 90, 67, .1); }
+.management-overdue-panel .management-focus-list { background: rgba(196, 90, 67, .1); }
+.management-overdue-panel .management-focus-row { padding: 14px 18px; }
+.management-focus-row-copy { gap: 6px; }
+.management-focus-row-copy > div:first-child strong { font-size: 13px; }
+.management-focus-due { font-size: 11px; }
+.management-workload-row { padding: 14px 18px; }
+.management-loadbar { height: 5px; overflow: hidden; border-radius: 4px; background: #edf1f0; }
+.management-loadbar span { display: block; height: 100%; border-radius: inherit; background: #4c8b82; transition: width 240ms ease; }
+.management-workload-row:first-child .management-loadbar span { background: #286b63; }
+.management-return-link { min-height: 42px; margin: 4px 0 12px; }
+@media (max-width: 760px) {
+  .management-metrics { grid-template-columns: 1fr; gap: 8px; }
+  .management-metric { min-height: 78px; grid-template-columns: 1fr auto; }
+  .management-metric strong { font-size: 28px; }
+  .management-overview { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .management-metric, .management-loadbar span { transition: none; }
 }
 
 /* Topbar acompanha borda interna do mesmo container do conteúdo. */

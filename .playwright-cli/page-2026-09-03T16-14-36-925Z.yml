@@ -1,0 +1,185 @@
+- generic [ref=f1e3]:
+  - main [ref=f1e4]:
+    - generic [ref=f1e5]:
+      - generic [ref=f1e6]:
+        - strong [ref=f1e7]: Contatos
+        - generic [ref=f1e8]: Central de Trabalho
+      - generic "Modo local" [ref=f1e9]: Local
+      - button "Abrir notificações, 3 não lidas" [ref=f1e11] [cursor=pointer]:
+        - generic [ref=f1e17]: "3"
+      - button "Atualizar dados" [ref=f1e18] [cursor=pointer]
+      - generic "Renan Martins" [ref=f1e22]: RM
+    - generic [ref=f1e23]:
+      - generic [ref=f1e25]:
+        - generic [ref=f1e26]: Atendimento
+        - heading "Contatos" [level=1] [ref=f1e27]
+        - paragraph [ref=f1e28]: Organize os casos recebidos e mantenha cada retorno no responsável certo.
+      - generic [ref=f1e29]:
+        - article [ref=f1e30]:
+          - generic [ref=f1e34]:
+            - strong [ref=f1e35]: "1"
+            - generic [ref=f1e36]: Novos
+        - article [ref=f1e37]:
+          - generic [ref=f1e42]:
+            - strong [ref=f1e43]: "1"
+            - generic [ref=f1e44]: Em atendimento
+        - article [ref=f1e45]:
+          - generic [ref=f1e50]:
+            - strong [ref=f1e51]: "1"
+            - generic [ref=f1e52]: Aguardando
+        - article [ref=f1e53]:
+          - generic [ref=f1e58]:
+            - strong [ref=f1e59]: "1"
+            - generic [ref=f1e60]: Vencidos
+      - generic [ref=f1e61]:
+        - button "Filtros +" [ref=f1e62] [cursor=pointer]:
+          - generic [ref=f1e63]: Filtros
+          - generic [ref=f1e64]: +
+        - textbox "Buscar contatos" [ref=f1e69]:
+          - /placeholder: Buscar assunto, remetente ou mensagem
+      - generic [ref=f1e70]:
+        - generic [ref=f1e71]:
+          - generic [ref=f1e72]:
+            - generic [ref=f1e73]: Inbox operacional
+            - heading "Casos recebidos" [level=2] [ref=f1e74]
+          - generic [ref=f1e75]: "3"
+        - generic [ref=f1e76]:
+          - button "Confirmação de embarque para diretoria Novo Conseguem confirmar o nome do motorista ainda hoje? Mariana Costa WhatsApp 03 set., 12:50" [ref=f1e77] [cursor=pointer]:
+            - generic [ref=f1e79]:
+              - generic [ref=f1e80]:
+                - strong [ref=f1e81]: Confirmação de embarque para diretoria
+                - generic [ref=f1e82]: Novo
+              - generic [ref=f1e83]: Conseguem confirmar o nome do motorista ainda hoje?
+              - generic [ref=f1e84]:
+                - generic [ref=f1e85]: Mariana Costa
+                - generic [ref=f1e88]: WhatsApp
+            - time [ref=f1e92]: 03 set., 12:50
+          - button "Ajuste de horário do transfer Em atendimento Podemos antecipar o retorno para 18h30? Eduardo Nogueira E-mail 03 set., 10:58" [ref=f1e93] [cursor=pointer]:
+            - generic [ref=f1e95]:
+              - generic [ref=f1e96]:
+                - strong [ref=f1e97]: Ajuste de horário do transfer
+                - generic [ref=f1e98]: Em atendimento
+              - generic [ref=f1e99]: Podemos antecipar o retorno para 18h30?
+              - generic [ref=f1e100]:
+                - generic [ref=f1e101]: Eduardo Nogueira
+                - generic [ref=f1e105]: E-mail
+            - time [ref=f1e110]: 03 set., 10:58
+          - button "Retorno sobre disponibilidade de van Aguardando Ligo novamente amanhã pela manhã para confirmar. Carlos Ribeiro Telefone 02 set., 11:58" [ref=f1e111] [cursor=pointer]:
+            - generic [ref=f1e113]:
+              - generic [ref=f1e114]:
+                - strong [ref=f1e115]: Retorno sobre disponibilidade de van
+                - generic [ref=f1e116]: Aguardando
+              - generic [ref=f1e117]: Ligo novamente amanhã pela manhã para confirmar.
+              - generic [ref=f1e118]:
+                - generic [ref=f1e119]: Carlos Ribeiro
+                - generic [ref=f1e122]: Telefone
+            - time [ref=f1e127]: 02 set., 11:58
+      - complementary "Novo caso de atendimento" [ref=f1e155]:
+        - generic [ref=f1e156]:
+          - generic [ref=f1e157]:
+            - generic [ref=f1e158]: Entrada manual
+            - strong [ref=f1e160]: NOVO CASO
+          - button "Fechar caso" [ref=f1e161] [cursor=pointer]
+        - generic [ref=f1e165]:
+          - generic [ref=f1e170]:
+            - generic [ref=f1e171]: Assunto do caso
+            - textbox "Assunto do caso" [active] [ref=f1e172]:
+              - /placeholder: "Ex.: Solicitação de traslado"
+          - generic [ref=f1e173]:
+            - generic [ref=f1e174]:
+              - text: Remetente
+              - textbox "Remetente" [ref=f1e175]
+            - generic [ref=f1e176]:
+              - text: Canal
+              - generic [ref=f1e177]:
+                - combobox
+                - button "Canal do caso" [ref=f1e178] [cursor=pointer]:
+                  - generic [ref=f1e179]: WhatsApp
+            - generic [ref=f1e181]:
+              - text: Telefone do remetente
+              - textbox "Telefone do remetente" [ref=f1e182]:
+                - /placeholder: (00) 00000-0000
+          - generic [ref=f1e183]:
+            - generic [ref=f1e184]:
+              - generic [ref=f1e185]:
+                - generic [ref=f1e186]: Status
+                - 'group "Status atual: Novo" [ref=f1e187]':
+                  - generic [ref=f1e188]:
+                    - button "Novo" [pressed] [ref=f1e189] [cursor=pointer]
+                    - button "Em atendimento" [ref=f1e192] [cursor=pointer]
+                    - button "Aguardando" [ref=f1e196] [cursor=pointer]
+                    - button "Resolvido" [ref=f1e200] [cursor=pointer]
+                    - button "Arquivado" [ref=f1e204] [cursor=pointer]
+                  - generic [ref=f1e208]: Novo
+              - generic [ref=f1e209]:
+                - generic [ref=f1e210]: Prioridade
+                - 'group "Prioridade atual: Média" [ref=f1e211]':
+                  - generic [ref=f1e212]:
+                    - button "Baixa" [ref=f1e213] [cursor=pointer]
+                    - button "Média" [pressed] [ref=f1e216] [cursor=pointer]
+                    - button "Alta" [ref=f1e219] [cursor=pointer]
+                  - generic [ref=f1e222]: Média
+            - generic [ref=f1e223]:
+              - generic [ref=f1e224]:
+                - generic [ref=f1e225]:
+                  - generic [ref=f1e226]: Responsáveis
+                  - group "Tipo de atribuição" [ref=f1e227]:
+                    - button "Pessoas" [pressed] [ref=f1e228] [cursor=pointer]
+                    - button "Equipe" [ref=f1e232] [cursor=pointer]
+                - generic [ref=f1e238]:
+                  - generic [ref=f1e239]: Responsáveis
+                  - generic [ref=f1e240]:
+                    - listbox:
+                      - option: Camila Torres
+                      - option: Gustavo Neri
+                      - option: João Mendes
+                      - option: Luiza Prado
+                      - option: Marina Alves
+                      - option: Rafael Lima
+                      - option [selected]: Renan Martins
+                    - button "Renan Martins Limpar seleção" [ref=f1e241] [cursor=pointer]:
+                      - generic [ref=f1e242]: Renan Martins
+                      - button "Limpar seleção" [ref=f1e245]
+              - generic [ref=f1e247]:
+                - text: Prazo
+                - textbox "Prazo" [ref=f1e248]
+          - generic [ref=f1e249]:
+            - generic [ref=f1e250]:
+              - heading "Mensagem recebida" [level=3] [ref=f1e251]
+              - generic [ref=f1e252]: 03 set., 13:14
+            - textbox "Mensagem recebida" [ref=f1e253]:
+              - /placeholder: Registre a mensagem ou o pedido recebido...
+            - group [ref=f1e254]:
+              - generic "Adicionar resumo interno" [ref=f1e255] [cursor=pointer]
+          - group [ref=f1e259]:
+            - generic "Cliente, cotação e origem Opcional" [ref=f1e260] [cursor=pointer]:
+              - generic [ref=f1e261]: Cliente, cotação e origem
+              - generic [ref=f1e262]: Opcional
+          - generic [ref=f1e265]:
+            - generic [ref=f1e266]:
+              - generic [ref=f1e267]:
+                - heading "Anexos" [level=3] [ref=f1e268]
+                - generic [ref=f1e269]: "0"
+              - generic [ref=f1e270]: Até 5 MB por arquivo
+            - paragraph [ref=f1e271]: Os arquivos só serão enviados quando você clicar em Criar caso.
+            - generic [ref=f1e272] [cursor=pointer]:
+              - generic [ref=f1e277]:
+                - strong [ref=f1e278]: Adicione arquivos ao caso
+                - generic [ref=f1e279]: Cole com Ctrl+V, clique para escolher ou arraste arquivos para cá
+              - generic [ref=f1e280]: Escolher arquivos
+              - button "Adicione arquivos ao caso Cole com Ctrl+V, clique para escolher ou arraste arquivos para cá Escolher arquivos"
+            - generic [ref=f1e285]:
+              - strong [ref=f1e286]: Nenhum anexo ainda
+              - generic [ref=f1e287]: Inclua briefing, evidência ou qualquer arquivo útil para a execução.
+        - generic [ref=f1e288]:
+          - button "Cancelar" [ref=f1e289] [cursor=pointer]
+          - button "Criar caso" [ref=f1e290] [cursor=pointer]
+  - navigation "Navegação principal" [ref=f1e130]:
+    - button "Hoje 3" [ref=f1e131] [cursor=pointer]:
+      - generic [ref=f1e137]: Hoje
+      - generic [ref=f1e138]: "3"
+    - button "Tarefas 30" [ref=f1e139] [cursor=pointer]:
+      - generic [ref=f1e143]: Tarefas
+      - generic [ref=f1e144]: "30"
+    - button "Cotações" [ref=f1e145] [cursor=pointer]
+    - button "Mais" [ref=f1e150] [cursor=pointer]

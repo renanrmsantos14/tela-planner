@@ -255,6 +255,51 @@
 
 **Principle:** Feedback de uma mutação deve depender do trabalho necessário para confirmar aquela mutação, não de uma atualização global não relacionada.
 
+### Observation 18: Pós-operação não deve depender de título mutável
+
+**Status:** OPEN
+**Date:** 2026-09-03
+**Session context:** Diagnóstico do upload de anexos na criação de task do Tela Planner.
+**Skill:** Debug Issue / antigravity-protocol
+**Type:** open-source
+**Phase/Area:** Encadeamento de criação e operações dependentes
+
+**Issue:** A etapa seguinte à criação procurava o registro por título exato; quando a leitura normalizada divergisse, retornava o estado sem executar o upload do anexo.
+
+**Suggested improvement:** Identificar registros recém-criados por IDs ausentes no snapshot anterior e usar campos textuais somente como fallback; falhar explicitamente quando a dependência não puder ser localizada.
+
+**Principle:** Operações dependentes de uma mutação devem encadear pelo identificador estável produzido pela mutação, não por texto editável ou normalizado.
+
+### Observation 19: Contrato existente pode sobreviver sem superfície de entrada
+
+**Status:** OPEN
+**Date:** 2026-09-03
+**Session context:** Restauração de subtarefas simples no drawer e nos cards do Tela Planner.
+**Skill:** Explore Codebase / antigravity-protocol
+**Type:** open-source
+**Phase/Area:** Auditoria de features históricas e superfícies de entrada
+
+**Issue:** O modelo, a persistência e a renderização de subtarefas ainda existiam, mas a entrada no drawer de criação havia desaparecido; a auditoria apenas do domínio não detectaria a regressão de UX.
+
+**Suggested improvement:** Ao restaurar uma feature histórica, auditar o contrato completo em quatro pontos: entrada, payload, persistência e consumo visual, incluindo CSS órfão e testes de contrato.
+
+**Principle:** Uma capacidade só está disponível quando seu contrato atravessa a superfície de entrada até o consumo observável.
+
+### Observation 20: Confirmação destrutiva deve reutilizar o padrão da mesma superfície
+
+**Status:** OPEN
+**Date:** 2026-09-03
+**Session context:** Ajuste da exclusão de subtarefas no drawer do Tela Planner.
+**Skill:** Review Changes / antigravity-protocol
+**Type:** open-source
+**Phase/Area:** Ações destrutivas em componentes operacionais
+
+**Issue:** A subtarefa em rascunho era removida imediatamente, enquanto o anexo já usava confirmação inline; os dois controles tinham intenções e riscos iguais, mas contratos de interação diferentes.
+
+**Suggested improvement:** Ao receber feedback sobre uma ação destrutiva, localizar o padrão equivalente na mesma tela e reutilizar sua sequência, copy e estados de confirmação nos fluxos persistido e provisório.
+
+**Principle:** Ações destrutivas equivalentes devem compartilhar o mesmo contrato de confirmação, inclusive antes da persistência.
+
 ### Observation 21: Visualizações podem ter políticas de visibilidade diferentes
 
 **Status:** OPEN
@@ -269,3 +314,63 @@
 **Suggested improvement:** Modelar a visibilidade por view e cobrir explicitamente os estados padrão de cada superfície em testes e smoke visual.
 
 **Principle:** Um domínio compartilhado não implica uma política de apresentação compartilhada; cada view deve declarar sua visibilidade operacional.
+
+### Observation 22: Confirmação reutilizável para campos pendentes
+
+**Status:** OPEN
+**Date:** 2026-09-08
+**Session context:** Aviso ao salvar task sem responsável ou prazo no Tela Planner.
+**Skill:** antigravity-protocol / karpathy-coder
+**Type:** open-source
+**Phase/Area:** Validação de formulário e confirmação de salvamento
+
+**Issue:** Já existia um modal de confirmação para salvar sem responsável; criar outro modal para prazo duplicaria o contrato visual e deixaria fluxos de criação e edição inconsistentes.
+
+**Suggested improvement:** Antes de criar novo componente de confirmação, localizar o padrão equivalente na mesma superfície e parametrizar apenas os campos pendentes e a copy necessária.
+
+**Principle:** Confirmações do mesmo risco operacional devem reutilizar componente, estilo e sequência, variando somente o contexto informado ao usuário.
+
+### Observation 23: Callback de clique não deve receber argumento de evento como flag
+
+**Status:** OPEN
+**Date:** 2026-09-08
+**Session context:** Diagnóstico do modal de campos pendentes no salvamento de task.
+**Skill:** Debug Issue / antigravity-protocol
+**Type:** open-source
+**Phase/Area:** Eventos React e flags de confirmação
+
+**Issue:** Um handler com parâmetro booleano opcional foi conectado diretamente a `onClick`; o evento do React ocupou a posição da flag e, por ser truthy, ignorou a confirmação.
+
+**Suggested improvement:** Quando handler de UI possui parâmetros de controle, envolvê-lo em callback explícito (`onClick={() => handler()}`) e testar o fluxo real de clique.
+
+**Principle:** Argumentos implícitos de eventos não podem controlar flags de negócio; chamadas de ação devem explicitar seus argumentos.
+
+### Observation 24: Ordem DOM não garante ordem visual em drawers flex
+
+**Status:** OPEN
+**Date:** 2026-09-09
+**Session context:** Correção da posição final do histórico no drawer de tarefa do Tela Planner.
+**Skill:** task-observer / antigravity-protocol / karpathy-coder
+**Type:** open-source
+**Phase/Area:** Drawer de tarefa e validação visual
+
+**Issue:** O JSX já colocava o histórico depois de comentários e anexos, mas regras CSS de `order` aplicadas a `section:nth-of-type` faziam o histórico aparecer antes no navegador.
+
+**Suggested improvement:** Ao validar ordem de blocos em layouts flex, inspecionar DOM e regras de `order`; cobrir o seletor visual no contrato automatizado e confirmar com screenshot ou navegador quando houver evidência visual divergente.
+
+**Principle:** A ordem declarada no markup só é a ordem efetiva quando o layout não a reordena.
+
+### Observation 25: Portais fixos não devem herdar clipping de ancestrais externos
+
+**Status:** OPEN
+**Date:** 2026-09-09
+**Session context:** Diagnóstico do dropdown de membros no drawer de equipes do Tela Planner.
+**Skill:** systematic-debugging / antigravity-protocol / karpathy-coder
+**Type:** open-source
+**Phase/Area:** Posicionamento de dropdown em portal e drawers
+
+**Issue:** A checagem de visibilidade de um gatilho em portal subia pelos ancestrais até um painel externo com `overflow: hidden`; como o gatilho estava dentro de um drawer `position: fixed`, esse ancestral não era um clipping context válido, mas fechava o dropdown imediatamente.
+
+**Suggested improvement:** Ao percorrer ancestrais para detectar clipping, encerrar a busca no primeiro limite `position: fixed` ou outro containing block que isole o portal; validar abertura, opções e seleção no navegador.
+
+**Principle:** A visibilidade de um elemento posicionado em um contexto fixo deve ser avaliada somente dentro do contexto que realmente o contém, não por wrappers externos do layout.

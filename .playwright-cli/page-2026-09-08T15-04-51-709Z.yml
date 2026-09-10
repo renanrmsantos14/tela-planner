@@ -1,0 +1,127 @@
+- generic [ref=e3]:
+  - main [ref=e79]:
+    - generic [ref=e1064]:
+      - generic [ref=e1065]:
+        - strong [ref=e1066]: Contatos
+        - generic [ref=e1067]: Central de Trabalho
+      - button "Abrir notificações, 4 não lidas" [ref=e1068] [cursor=pointer]:
+        - generic [ref=e1074]: "4"
+      - button "Atualizar dados" [ref=e1075] [cursor=pointer]
+      - generic "Renan Martins" [ref=e1079]: RM
+    - generic [ref=e1829]:
+      - generic [ref=e1830]:
+        - generic [ref=e1831]:
+          - generic [ref=e1832]: Atendimento
+          - heading "Contatos" [level=1] [ref=e1833]
+          - paragraph [ref=e1834]: Organize os casos recebidos e mantenha cada retorno no responsável certo.
+        - generic "Visualização dos contatos" [ref=e1837]:
+          - button "Visualização Inbox" [pressed] [ref=e1838] [cursor=pointer]
+          - button "Visualização Kanban" [ref=e1842] [cursor=pointer]
+      - generic [ref=e1847]:
+        - article [ref=e1848]:
+          - generic [ref=e1852]:
+            - strong [ref=e1853]: "1"
+            - generic [ref=e1854]: Novos
+        - article [ref=e1855]:
+          - generic [ref=e1860]:
+            - strong [ref=e1861]: "1"
+            - generic [ref=e1862]: Em atendimento
+        - article [ref=e1863]:
+          - generic [ref=e1868]:
+            - strong [ref=e1869]: "1"
+            - generic [ref=e1870]: Aguardando
+        - article [ref=e1871]:
+          - generic [ref=e1876]:
+            - strong [ref=e1877]: "1"
+            - generic [ref=e1878]: Vencidos
+      - generic [ref=e1879]:
+        - button "Filtros" [expanded] [active] [ref=e1880] [cursor=pointer]:
+          - generic [ref=e1883]: −
+        - textbox "Buscar contatos" [ref=e1888]:
+          - /placeholder: Buscar assunto, pessoa, telefone ou e-mail
+        - generic [ref=e1889]:
+          - combobox "Filtrar por canal" [ref=e1890]:
+            - option "Todos os canais" [selected]
+            - option "WhatsApp"
+            - option "E-mail"
+            - option "Telefone"
+          - combobox "Filtrar por status" [ref=e1891]:
+            - option "Pendentes e aguardando" [selected]
+            - option "Novo"
+            - option "Em atendimento"
+            - option "Aguardando"
+            - option "Concluído"
+          - combobox "Filtrar por prioridade" [ref=e1892]:
+            - option "Todas as prioridades" [selected]
+            - option "Baixa"
+            - option "Média"
+            - option "Alta"
+          - combobox "Filtrar por responsável" [ref=e1893]:
+            - option "Todos os responsáveis" [selected]
+            - option "Marina Alves"
+            - option "Rafael Lima"
+            - option "Camila Torres"
+            - option "João Mendes"
+            - option "Luiza Prado"
+            - option "Gustavo Neri"
+            - option "Renan Martins"
+          - combobox "Filtrar por equipe" [ref=e1894]:
+            - option "Todas as equipes" [selected]
+            - option "Comercial"
+            - option "Financeiro"
+            - option "Operação"
+            - option "Qualidade"
+          - button "Minhas pendências" [ref=e1895] [cursor=pointer]
+          - button "Vencidos" [ref=e1896] [cursor=pointer]
+          - button "Concluídos" [ref=e1897] [cursor=pointer]
+          - button "Arquivados" [ref=e1898] [cursor=pointer]
+          - button "Limpar filtros" [disabled] [ref=e1899]
+      - generic [ref=e1900]:
+        - generic [ref=e1901]:
+          - generic [ref=e1902]:
+            - generic [ref=e1903]: Inbox operacional
+            - heading "Pendentes" [level=2] [ref=e1904]
+          - generic [ref=e1905]: "3"
+        - generic [ref=e1906]:
+          - article [ref=e1907] [cursor=pointer]:
+            - button "Abrir caso Confirmação de embarque para diretoria" [ref=e1909]:
+              - strong [ref=e1911]: Confirmação de embarque para diretoria
+              - generic [ref=e1912]: Mariana Costa
+              - generic [ref=e1916]: Conseguem confirmar o nome do motorista ainda hoje?
+              - generic [ref=e1917]: WhatsApp
+            - generic "Prazo 08 set." [ref=e1922]:
+              - time [ref=e1923]: Prazo 08 set.
+            - button "Concluir Confirmação de embarque para diretoria" [ref=e1924]
+          - article [ref=e1928] [cursor=pointer]:
+            - button "Abrir caso Ajuste de horário do transfer" [ref=e1930]:
+              - strong [ref=e1932]: Ajuste de horário do transfer
+              - generic [ref=e1933]: Eduardo Nogueira
+              - generic [ref=e1937]: Podemos antecipar o retorno para 18h30?
+              - generic [ref=e1938]: E-mail
+            - generic "Prazo 09 set." [ref=e1944]:
+              - time [ref=e1945]: Prazo 09 set.
+            - button "Concluir Ajuste de horário do transfer" [ref=e1946]
+        - group [ref=e1950]:
+          - generic [ref=e1951] [cursor=pointer]:
+            - generic [ref=e1952]: Aguardando
+            - generic [ref=e1956]: "1"
+          - article [ref=e1960] [cursor=pointer]:
+            - button "Abrir caso Retorno sobre disponibilidade de van" [ref=e1962]:
+              - strong [ref=e1964]: Retorno sobre disponibilidade de van
+              - generic [ref=e1965]: Carlos Ribeiro
+              - generic [ref=e1969]: Ligo novamente amanhã pela manhã para confirmar.
+              - generic [ref=e1970]: Telefone
+            - generic "Prazo 07 set., atrasado" [ref=e1975]:
+              - time [ref=e1976]: Prazo 07 set.
+              - generic [ref=e1977]: Atrasado
+            - button "Concluir Retorno sobre disponibilidade de van" [ref=e1978]
+      - button "Criar novo caso" [ref=e1982] [cursor=pointer]
+  - navigation "Navegação principal" [ref=e1258]:
+    - button "Hoje 3" [ref=e1259] [cursor=pointer]:
+      - generic [ref=e1265]: Hoje
+      - generic [ref=e1266]: "3"
+    - button "Tarefas 30" [ref=e1267] [cursor=pointer]:
+      - generic [ref=e1271]: Tarefas
+      - generic [ref=e1272]: "30"
+    - button "Cotações" [ref=e1273] [cursor=pointer]
+    - button "Mais" [ref=e1278] [cursor=pointer]

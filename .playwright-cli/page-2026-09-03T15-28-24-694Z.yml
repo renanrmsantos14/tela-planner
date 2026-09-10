@@ -1,0 +1,94 @@
+- generic [ref=e1541]:
+  - main [ref=e1542]:
+    - generic [ref=e1543]:
+      - generic [ref=e1544]:
+        - strong [ref=e1545]: Contatos
+        - generic [ref=e1546]: Central de Trabalho
+      - button "Abrir notificações, 4 não lidas" [ref=e1547] [cursor=pointer]:
+        - generic [ref=e1553]: "4"
+      - button "Atualizar dados" [ref=e1554] [cursor=pointer]
+      - generic "Renan Martins" [ref=e1558]: RM
+    - generic [ref=e1632]:
+      - generic [ref=e1634]:
+        - generic [ref=e1635]: Atendimento
+        - heading "Contatos" [level=1] [ref=e1636]
+        - paragraph [ref=e1637]: Organize os casos recebidos e mantenha cada retorno no responsável certo.
+      - generic [ref=e1638]:
+        - article [ref=e1639]:
+          - generic [ref=e1643]:
+            - strong [ref=e1644]: "2"
+            - generic [ref=e1645]: Novos
+        - article [ref=e1646]:
+          - generic [ref=e1651]:
+            - strong [ref=e1652]: "1"
+            - generic [ref=e1653]: Em atendimento
+        - article [ref=e1654]:
+          - generic [ref=e1659]:
+            - strong [ref=e1660]: "1"
+            - generic [ref=e1661]: Aguardando
+        - article [ref=e1662]:
+          - generic [ref=e1667]:
+            - strong [ref=e1668]: "1"
+            - generic [ref=e1669]: Vencidos
+      - generic [ref=e1670]:
+        - button "Filtros +" [ref=e1671] [cursor=pointer]:
+          - generic [ref=e1672]: Filtros
+          - generic [ref=e1673]: +
+        - textbox "Buscar contatos" [ref=e1678]:
+          - /placeholder: Buscar assunto, remetente ou mensagem
+      - generic [ref=e1679]:
+        - generic [ref=e1680]:
+          - generic [ref=e1681]:
+            - generic [ref=e1682]: Inbox operacional
+            - heading "Casos recebidos" [level=2] [ref=e1683]
+          - generic [ref=e1684]: "4"
+        - generic [ref=e1685]:
+          - button "Confirmação de embarque para diretoria Novo Conseguem confirmar o nome do motorista ainda hoje? Mariana Costa WhatsApp 03 set., 12:18" [ref=e1686] [cursor=pointer]:
+            - generic [ref=e1688]:
+              - generic [ref=e1689]:
+                - strong [ref=e1690]: Confirmação de embarque para diretoria
+                - generic [ref=e1691]: Novo
+              - generic [ref=e1692]: Conseguem confirmar o nome do motorista ainda hoje?
+              - generic [ref=e1693]:
+                - generic [ref=e1694]: Mariana Costa
+                - generic [ref=e1697]: WhatsApp
+            - time [ref=e1701]: 03 set., 12:18
+          - button "Ajuste de horário do transfer Em atendimento Podemos antecipar o retorno para 18h30? Eduardo Nogueira E-mail 03 set., 10:26" [ref=e1702] [cursor=pointer]:
+            - generic [ref=e1704]:
+              - generic [ref=e1705]:
+                - strong [ref=e1706]: Ajuste de horário do transfer
+                - generic [ref=e1707]: Em atendimento
+              - generic [ref=e1708]: Podemos antecipar o retorno para 18h30?
+              - generic [ref=e1709]:
+                - generic [ref=e1710]: Eduardo Nogueira
+                - generic [ref=e1714]: E-mail
+            - time [ref=e1719]: 03 set., 10:26
+          - button "Caso criado no smoke Novo Mensagem de teste Pessoa Smoke WhatsApp 03 set., 12:26" [ref=e1720] [cursor=pointer]:
+            - generic [ref=e1722]:
+              - generic [ref=e1723]:
+                - strong [ref=e1724]: Caso criado no smoke
+                - generic [ref=e1725]: Novo
+              - generic [ref=e1726]: Mensagem de teste
+              - generic [ref=e1727]:
+                - generic [ref=e1728]: Pessoa Smoke
+                - generic [ref=e1731]: WhatsApp
+            - time [ref=e1735]: 03 set., 12:26
+          - button "Retorno sobre disponibilidade de van Aguardando Ligo novamente amanhã pela manhã para confirmar. Carlos Ribeiro Telefone 02 set., 11:26" [ref=e1736] [cursor=pointer]:
+            - generic [ref=e1738]:
+              - generic [ref=e1739]:
+                - strong [ref=e1740]: Retorno sobre disponibilidade de van
+                - generic [ref=e1741]: Aguardando
+              - generic [ref=e1742]: Ligo novamente amanhã pela manhã para confirmar.
+              - generic [ref=e1743]:
+                - generic [ref=e1744]: Carlos Ribeiro
+                - generic [ref=e1747]: Telefone
+            - time [ref=e1752]: 02 set., 11:26
+  - navigation "Navegação principal" [ref=e1608]:
+    - button "Hoje 3" [ref=e1609] [cursor=pointer]:
+      - generic [ref=e1615]: Hoje
+      - generic [ref=e1616]: "3"
+    - button "Tarefas 30" [ref=e1617] [cursor=pointer]:
+      - generic [ref=e1621]: Tarefas
+      - generic [ref=e1622]: "30"
+    - button "Cotações" [ref=e1623] [cursor=pointer]
+    - button "Mais" [ref=e1628] [cursor=pointer]

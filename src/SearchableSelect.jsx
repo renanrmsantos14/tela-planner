@@ -100,6 +100,7 @@ function referenceIsHidden(element, rect, viewport) {
       )
         return true;
     }
+    if (style.position === "fixed") break;
     ancestor = ancestor.parentElement;
   }
   return false;

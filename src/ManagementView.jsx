@@ -31,9 +31,10 @@ export default function ManagementView({ state, currentEmployee, onOpenTask, onC
       <div>{detail && <button className="management-back-link" type="button" onClick={() => setView("overview")}><ArrowLeft size={15} />Voltar ao resumo</button>}<span className="eyebrow">GESTÃO OPERACIONAL</span><h1>{detail ? detailTitle : "Acompanhamento"}</h1><p>{detail ? "Consulte os detalhes sem perder o contexto da operação." : "Identifique o que exige atenção e onde a carga está concentrada."}</p></div>
     </div>
     {!detail && <>
+      <ManagementMetrics overdue={collections.length} open={workloadTotal.unique} waiting={waiting.length} onOverdue={() => setView("collection")} onWorkload={() => setView("workload")} onWaiting={() => setView("waiting")} />
       <div className="management-overview">
         <CollectionFocus rows={overviewCollections(collections)} employees={state.employees} today={collectionToday} onOpenTask={onOpenTask} onCollect={onCollect} onViewAll={() => setView("collection")} />
-        <WorkloadFocus groups={overviewWorkload(workload)} onOpenTask={onOpenTask} onViewAll={() => setView("workload")} />
+        <WorkloadFocus groups={overviewWorkload(workload, 5)} onOpenTask={onOpenTask} onViewAll={() => setView("workload")} />
       </div>
       <button className="management-return-link" type="button" onClick={() => setView("waiting")}><RotateCcw size={15} />Ver retornos pendentes <b>{waiting.length}</b><ChevronRight size={15} /></button>
     </>}
@@ -43,8 +44,22 @@ export default function ManagementView({ state, currentEmployee, onOpenTask, onC
   </div>;
 }
 
+function ManagementMetrics({ overdue, open, waiting, onOverdue, onWorkload, onWaiting }) {
+  return <section className="management-metrics" aria-label="Resumo da operação">
+    <button className={`management-metric metric-overdue${overdue ? " has-value" : ""}`} type="button" onClick={onOverdue}>
+      <span className="management-metric-label">Atrasadas</span><strong>{overdue}</strong><span className="management-metric-action">{overdue ? "Ver cobrança" : "Operação em dia"}<ChevronRight size={14} /></span>
+    </button>
+    <button className="management-metric" type="button" onClick={onWorkload}>
+      <span className="management-metric-label">Peso aberto</span><strong>{open}</strong><span className="management-metric-action">Ver distribuição <ChevronRight size={14} /></span>
+    </button>
+    <button className="management-metric" type="button" onClick={onWaiting}>
+      <span className="management-metric-label">Retornos travados</span><strong>{waiting}</strong><span className="management-metric-action">Ver dependências <ChevronRight size={14} /></span>
+    </button>
+  </section>;
+}
+
 function CollectionFocus({ rows, employees, today, onOpenTask, onCollect, onViewAll }) {
-  return <section className="panel management-focus-panel" aria-labelledby="management-focus-collection-title"><div className="panel-heading"><div><span className="eyebrow">AÇÃO IMEDIATA</span><h2 id="management-focus-collection-title">Cobranças prioritárias</h2><p className="panel-subtitle">As três demandas que mais precisam de atenção.</p></div><button className="management-focus-link" type="button" onClick={onViewAll}>Ver cobrança completa <ChevronRight size={15} /></button></div>{rows.length ? <div className="management-focus-list">{rows.map((row) => <CollectionFocusRow key={row.id} row={row} employees={employees} today={today} onOpenTask={onOpenTask} onCollect={onCollect} />)}</div> : <EmptyState icon={CheckCircle2} title="Nada para cobrar" detail="A operação está em dia." />}</section>;
+  return <section className="panel management-focus-panel management-overdue-panel" aria-labelledby="management-focus-collection-title"><div className="panel-heading"><div><span className="eyebrow">PRIORIDADE AGORA</span><h2 id="management-focus-collection-title">O que está atrasado</h2><p className="panel-subtitle">Ordenado pelo maior tempo fora do prazo.</p></div><button className="management-focus-link" type="button" onClick={onViewAll}>Ver todas <ChevronRight size={15} /></button></div>{rows.length ? <div className="management-focus-list">{rows.map((row) => <CollectionFocusRow key={row.id} row={row} employees={employees} today={today} onOpenTask={onOpenTask} onCollect={onCollect} />)}</div> : <EmptyState icon={CheckCircle2} title="Nenhuma tarefa atrasada" detail="A operação está em dia." />}</section>;
 }
 
 function CollectionFocusRow({ row, employees, today, onOpenTask, onCollect }) {
@@ -53,11 +68,12 @@ function CollectionFocusRow({ row, employees, today, onOpenTask, onCollect }) {
 }
 
 function WorkloadFocus({ groups, onOpenTask, onViewAll }) {
-  return <section className="panel management-focus-panel" aria-labelledby="management-focus-workload-title"><div className="panel-heading"><div><span className="eyebrow">DISTRIBUIÇÃO</span><h2 id="management-focus-workload-title">Peso por pessoa/equipe</h2><p className="panel-subtitle">Maior volume aberto primeiro.</p></div><button className="management-focus-link" type="button" onClick={onViewAll}>Ver carga completa <ChevronRight size={15} /></button></div>{groups.length ? <div className="management-workload-list">{groups.map((group) => <WorkloadFocusRow key={group.key} group={group} onOpenTask={onOpenTask} />)}</div> : <EmptyState icon={Users} title="Sem carga ativa" detail="As tarefas abertas aparecerão aqui." />}</section>;
+  const maxTotal = Math.max(...groups.map((group) => group.total), 1);
+  return <section className="panel management-focus-panel" aria-labelledby="management-focus-workload-title"><div className="panel-heading"><div><span className="eyebrow">DISTRIBUIÇÃO</span><h2 id="management-focus-workload-title">Peso por pessoa/equipe</h2><p className="panel-subtitle">Quem concentra mais tarefas abertas.</p></div><button className="management-focus-link" type="button" onClick={onViewAll}>Ver carga completa <ChevronRight size={15} /></button></div>{groups.length ? <div className="management-workload-list">{groups.map((group) => <WorkloadFocusRow key={group.key} group={group} maxTotal={maxTotal} onOpenTask={onOpenTask} />)}</div> : <EmptyState icon={Users} title="Sem carga ativa" detail="As tarefas abertas aparecerão aqui." />}</section>;
 }
 
-function WorkloadFocusRow({ group, onOpenTask }) {
-  return <article className="management-workload-row"><div className="management-workload-heading"><span className="workload-icon" aria-hidden="true">{group.type === "team" ? <Users size={16} /> : <UserRound size={16} />}</span><div><strong>{group.label}</strong><small>{group.type === "team" ? "Equipe" : "Pessoa"}</small></div><b>{group.total}</b></div><div className="management-workload-stats"><span>{group.open} abertas</span><span className={group.today ? "is-today" : ""}>{group.today} hoje</span><span className={group.overdue ? "is-overdue" : ""}>{group.overdue} atrasadas</span></div>{group.tasks[0] && <button className="management-inline-link" type="button" onClick={() => onOpenTask(group.tasks[0].id)}>Abrir mais urgente <ArrowUpRight size={14} /></button>}</article>;
+function WorkloadFocusRow({ group, maxTotal, onOpenTask }) {
+  return <article className="management-workload-row"><div className="management-workload-heading"><span className="workload-icon" aria-hidden="true">{group.type === "team" ? <Users size={16} /> : <UserRound size={16} />}</span><div><strong>{group.label}</strong><small>{group.type === "team" ? "Equipe" : "Pessoa"}</small></div><b>{group.total}</b></div><div className="management-loadbar" aria-label={`${group.total} de ${maxTotal} tarefas abertas`}><span style={{ width: `${Math.max(10, (group.total / maxTotal) * 100)}%` }} /></div><div className="management-workload-stats"><span>{group.open} abertas</span><span className={group.today ? "is-today" : ""}>{group.today} hoje</span><span className={group.overdue ? "is-overdue" : ""}>{group.overdue} atrasadas</span></div>{group.tasks[0] && <button className="management-inline-link" type="button" onClick={() => onOpenTask(group.tasks[0].id)}>Abrir mais urgente <ArrowUpRight size={14} /></button>}</article>;
 }
 
 function CollectionTable({ rows, employees = [], today, onOpenTask, onCollect }) {

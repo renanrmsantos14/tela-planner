@@ -1,0 +1,268 @@
+- generic [ref=e1]:
+  - generic [ref=e3]:
+    - complementary [ref=e4]:
+      - button "Recolher navegação" [ref=e5] [cursor=pointer]
+      - generic [ref=e14]:
+        - strong [ref=e15]: Central de Trabalho
+        - generic [ref=e16]: Operação Betinhos
+      - generic "Hoje, 5 pendências e 0 atrasados" [ref=e17]:
+        - generic [ref=e18]:
+          - generic [ref=e19]: Hoje
+          - strong [ref=e20]: 08 de set
+        - generic [ref=e21]:
+          - generic [ref=e22]:
+            - strong [ref=e23]: "5"
+            - generic [ref=e24]: Pendências
+          - generic [ref=e25]:
+            - strong [ref=e26]: "0"
+            - generic [ref=e27]: Atrasados
+      - navigation [ref=e28]:
+        - button "Início 3" [ref=e29] [cursor=pointer]:
+          - generic [ref=e35]: Início
+          - generic [ref=e36]: "3"
+        - button "Tarefas 30" [ref=e37] [cursor=pointer]:
+          - generic [ref=e41]: Tarefas
+          - generic [ref=e42]: "30"
+        - button "Gestão" [ref=e43] [cursor=pointer]
+        - button "Contatos" [ref=e49] [cursor=pointer]
+        - button "Cotações" [ref=e56] [cursor=pointer]
+        - button "Configurações" [ref=e61] [cursor=pointer]
+      - generic [ref=e66]:
+        - generic [ref=e67]: Modo local · mock
+        - generic "Versão do aplicativo v0.1.360 08/09/2026" [ref=e69]: Versão v0.1.360 08/09/2026
+        - generic [ref=e70]:
+          - generic "Renan Martins" [ref=e71]: RM
+          - generic [ref=e72]:
+            - strong [ref=e73]: Renan Martins
+            - generic [ref=e74]: Administrativo
+          - button "Abrir configurações" [ref=e75] [cursor=pointer]
+    - main [ref=e79]:
+      - generic "Ações do aplicativo" [ref=e80]:
+        - button "Abrir notificações, 4 não lidas" [ref=e96] [cursor=pointer]:
+          - generic [ref=e87]: "4"
+        - button "Atualizar dados" [ref=e88] [cursor=pointer]
+      - generic [ref=e97]:
+        - generic [ref=e99]:
+          - generic [ref=e100]: Execução local
+          - heading "Configurações" [level=1] [ref=e101]
+          - paragraph [ref=e102]: Dados de demonstração mantidos somente neste navegador.
+        - generic [ref=e103]:
+          - generic [ref=e109]:
+            - heading "Restaurar cenário inicial" [level=2] [ref=e110]
+            - paragraph [ref=e111]: Repõe as cotações e tarefas sintéticas do mock local.
+            - button "Restaurar mock" [ref=e112] [cursor=pointer]
+          - generic [ref=e122]:
+            - heading "Fonte de dados" [level=2] [ref=e123]
+            - paragraph [ref=e124]: O Planner usa mock data local e não cria registros no Dataverse.
+            - generic [ref=e125]: Modo local · mock
+          - generic [ref=e127]:
+            - generic [ref=e128]: v
+            - generic [ref=e130]:
+              - heading "Versão do aplicativo" [level=2] [ref=e131]
+              - paragraph [ref=e132]: Identificação da versão publicada neste ambiente.
+              - text: v0.1.360 08/09/2026
+          - button "Importar tarefas Traga tarefas do Microsoft Planner com revisão antes de gravar no app. Começar importação" [active] [ref=e133] [cursor=pointer]:
+            - generic [ref=e138]:
+              - generic [ref=e139]: Importar tarefas
+              - generic [ref=e140]: Traga tarefas do Microsoft Planner com revisão antes de gravar no app.
+              - generic [ref=e141]: Começar importação
+        - region [ref=e145]:
+          - generic [ref=e146]:
+            - generic [ref=e147]:
+              - generic [ref=e148]: Atribuição rápida
+              - heading "Equipes do Planner" [level=2] [ref=e149]
+              - paragraph [ref=e150]: Cadastre grupos de trabalho e use seus membros ao criar uma tarefa.
+            - generic [ref=e151]:
+              - generic "4 equipes cadastradas" [ref=e152]:
+                - strong [ref=e153]: "4"
+                - generic [ref=e154]: equipes
+              - button "Nova equipe" [ref=e155] [cursor=pointer]
+          - generic [ref=e162]:
+            - generic [ref=e163]:
+              - generic [ref=e164]:
+                - strong [ref=e165]: Equipes cadastradas
+                - generic [ref=e166]: Selecione uma equipe para editar seus membros.
+              - generic [ref=e167]: "4"
+            - generic [ref=e168]:
+              - article [ref=e169]:
+                - button "Comercial 3 membros Marina Alves, Camila Torres +1 11 tarefas abertas" [ref=e170] [cursor=pointer]:
+                  - generic [ref=e177]:
+                    - strong [ref=e178]: Comercial
+                    - generic [ref=e179]:
+                      - generic [ref=e180]: 3 membros
+                      - generic [ref=e181]: ·
+                      - generic [ref=e182]: Marina Alves, Camila Torres +1
+                  - generic [ref=e183]: 11 tarefas abertas
+                - generic [ref=e187]:
+                  - generic [ref=e188]: Membros da equipe
+                  - generic [ref=e189]: 11 tarefas abertas
+                - generic [ref=e190]:
+                  - generic [ref=e191]:
+                    - generic [ref=e192]: MA
+                    - generic [ref=e193]:
+                      - strong [ref=e194]: Marina Alves
+                      - generic [ref=e195]: Membro da equipe
+                  - generic [ref=e196]:
+                    - generic [ref=e197]: CT
+                    - generic [ref=e198]:
+                      - strong [ref=e199]: Camila Torres
+                      - generic [ref=e200]: Membro da equipe
+                  - generic [ref=e201]:
+                    - generic [ref=e202]: RM
+                    - generic [ref=e203]:
+                      - strong [ref=e204]: Renan Martins
+                      - generic [ref=e205]: Membro da equipe
+                - generic [ref=e206]:
+                  - generic [ref=e207]: 11 tarefas abertas sob responsabilidade da equipe
+                  - button [ref=e208] [cursor=pointer]: Editar equipe
+              - article [ref=e211]:
+                - button "Financeiro 3 membros Camila Torres, Marina Alves +1 6 tarefas abertas" [ref=e212] [cursor=pointer]:
+                  - generic [ref=e219]:
+                    - strong [ref=e220]: Financeiro
+                    - generic [ref=e221]:
+                      - generic [ref=e222]: 3 membros
+                      - generic [ref=e223]: ·
+                      - generic [ref=e224]: Camila Torres, Marina Alves +1
+                  - generic [ref=e225]: 6 tarefas abertas
+                - generic [ref=e229]:
+                  - generic [ref=e230]: Membros da equipe
+                  - generic [ref=e231]: 6 tarefas abertas
+                - generic [ref=e232]:
+                  - generic [ref=e233]:
+                    - generic [ref=e234]: CT
+                    - generic [ref=e235]:
+                      - strong [ref=e236]: Camila Torres
+                      - generic [ref=e237]: Membro da equipe
+                  - generic [ref=e238]:
+                    - generic [ref=e239]: MA
+                    - generic [ref=e240]:
+                      - strong [ref=e241]: Marina Alves
+                      - generic [ref=e242]: Membro da equipe
+                  - generic [ref=e243]:
+                    - generic [ref=e244]: RM
+                    - generic [ref=e245]:
+                      - strong [ref=e246]: Renan Martins
+                      - generic [ref=e247]: Membro da equipe
+                - generic [ref=e248]:
+                  - generic [ref=e249]: 6 tarefas abertas sob responsabilidade da equipe
+                  - button [ref=e250] [cursor=pointer]: Editar equipe
+              - article [ref=e253]:
+                - button "Operação 5 membros Rafael Lima, João Mendes +3 13 tarefas abertas" [ref=e254] [cursor=pointer]:
+                  - generic [ref=e261]:
+                    - strong [ref=e262]: Operação
+                    - generic [ref=e263]:
+                      - generic [ref=e264]: 5 membros
+                      - generic [ref=e265]: ·
+                      - generic [ref=e266]: Rafael Lima, João Mendes +3
+                  - generic [ref=e267]: 13 tarefas abertas
+                - generic [ref=e271]:
+                  - generic [ref=e272]: Membros da equipe
+                  - generic [ref=e273]: 13 tarefas abertas
+                - generic [ref=e274]:
+                  - generic [ref=e275]:
+                    - generic [ref=e276]: RL
+                    - generic [ref=e277]:
+                      - strong [ref=e278]: Rafael Lima
+                      - generic [ref=e279]: Membro da equipe
+                  - generic [ref=e280]:
+                    - generic [ref=e281]: JM
+                    - generic [ref=e282]:
+                      - strong [ref=e283]: João Mendes
+                      - generic [ref=e284]: Membro da equipe
+                  - generic [ref=e285]:
+                    - generic [ref=e286]: MA
+                    - generic [ref=e287]:
+                      - strong [ref=e288]: Marina Alves
+                      - generic [ref=e289]: Membro da equipe
+                  - generic [ref=e290]:
+                    - generic [ref=e291]: CT
+                    - generic [ref=e292]:
+                      - strong [ref=e293]: Camila Torres
+                      - generic [ref=e294]: Membro da equipe
+                  - generic [ref=e295]:
+                    - generic [ref=e296]: RM
+                    - generic [ref=e297]:
+                      - strong [ref=e298]: Renan Martins
+                      - generic [ref=e299]: Membro da equipe
+                - generic [ref=e300]:
+                  - generic [ref=e301]: 13 tarefas abertas sob responsabilidade da equipe
+                  - button [ref=e302] [cursor=pointer]: Editar equipe
+              - article [ref=e305]:
+                - button "Qualidade 4 membros Rafael Lima, João Mendes +2 6 tarefas abertas" [ref=e306] [cursor=pointer]:
+                  - generic [ref=e313]:
+                    - strong [ref=e314]: Qualidade
+                    - generic [ref=e315]:
+                      - generic [ref=e316]: 4 membros
+                      - generic [ref=e317]: ·
+                      - generic [ref=e318]: Rafael Lima, João Mendes +2
+                  - generic [ref=e319]: 6 tarefas abertas
+                - generic [ref=e323]:
+                  - generic [ref=e324]: Membros da equipe
+                  - generic [ref=e325]: 6 tarefas abertas
+                - generic [ref=e326]:
+                  - generic [ref=e327]:
+                    - generic [ref=e328]: RL
+                    - generic [ref=e329]:
+                      - strong [ref=e330]: Rafael Lima
+                      - generic [ref=e331]: Membro da equipe
+                  - generic [ref=e332]:
+                    - generic [ref=e333]: JM
+                    - generic [ref=e334]:
+                      - strong [ref=e335]: João Mendes
+                      - generic [ref=e336]: Membro da equipe
+                  - generic [ref=e337]:
+                    - generic [ref=e338]: MA
+                    - generic [ref=e339]:
+                      - strong [ref=e340]: Marina Alves
+                      - generic [ref=e341]: Membro da equipe
+                  - generic [ref=e342]:
+                    - generic [ref=e343]: RM
+                    - generic [ref=e344]:
+                      - strong [ref=e345]: Renan Martins
+                      - generic [ref=e346]: Membro da equipe
+                - generic [ref=e347]:
+                  - generic [ref=e348]: 6 tarefas abertas sob responsabilidade da equipe
+                  - button [ref=e349] [cursor=pointer]: Editar equipe
+  - dialog [ref=e352]:
+    - banner [ref=e353]:
+      - generic [ref=e354]:
+        - generic [ref=e355]: Migração controlada
+        - heading "Importar tarefas do Microsoft Planner" [level=2] [ref=e356]
+        - paragraph [ref=e357]: Uma etapa por vez. Nada é gravado antes da sua confirmação final.
+      - button "Fechar importação" [ref=e358] [cursor=pointer]
+    - generic [ref=e362]:
+      - generic "Etapas da importação" [ref=e363]:
+        - button "1 Conta" [ref=e364] [cursor=pointer]:
+          - generic [ref=e365]: "1"
+          - text: Conta
+        - button "2 Ajustes" [disabled] [ref=e366]:
+          - generic [ref=e367]: "2"
+          - text: Ajustes
+        - button "3 Confirmar" [disabled] [ref=e368]:
+          - generic [ref=e369]: "3"
+          - text: Confirmar
+      - generic [ref=e373]:
+        - strong [ref=e374]: Modo de teste local
+        - generic [ref=e375]: A importação fica salva neste navegador. “Restaurar mock” remove essas tarefas e volta ao cenário inicial.
+      - generic [ref=e376]:
+        - generic [ref=e377]:
+          - generic [ref=e378]: "1"
+          - generic [ref=e379]:
+            - strong [ref=e380]: Comece pelo plano
+            - generic [ref=e381]: Conecte a conta Microsoft e o app buscará tudo sozinho.
+        - generic [ref=e382]:
+          - generic [ref=e387]:
+            - strong [ref=e388]: Importação automática
+            - generic [ref=e389]: Sem copiar URLs, sem montar lotes e sem repetir requisições.
+          - button "Conectar Microsoft" [ref=e390] [cursor=pointer]
+          - generic [ref=e394]:
+            - generic [ref=e395]:
+              - strong [ref=e396]: Plano
+              - emphasis [ref=e397]: Obrigatório
+            - combobox "Plano Obrigatório Conecte a conta para carregar os planos disponíveis." [disabled] [ref=e398]:
+              - option "Nenhum plano disponível" [selected]
+            - generic [ref=e399]: Conecte a conta para carregar os planos disponíveis.
+        - button "Usar importação manual com JSON" [ref=e400] [cursor=pointer]
+    - contentinfo [ref=e401]:
+      - button "Voltar" [disabled] [ref=e402]
+      - generic [ref=e405]: Etapa 1 de 3

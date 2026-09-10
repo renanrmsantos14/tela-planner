@@ -1,0 +1,38 @@
+- generic [ref=e3]:
+  - main [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - strong [ref=e7]: Mais
+        - generic [ref=e8]: Central de Trabalho
+      - generic "Modo local" [ref=e9]: Local
+      - button "Abrir notificações, 4 não lidas" [ref=e1200] [cursor=pointer]:
+        - generic [ref=e17]: "4"
+      - button "Atualizar dados" [ref=e18] [cursor=pointer]
+      - generic "Renan Martins" [ref=e22]: RM
+    - generic [ref=e1204]:
+      - generic [ref=e1206]:
+        - generic [ref=e1207]: Atalhos
+        - heading "Mais" [level=1] [ref=e1208]
+        - paragraph [ref=e1209]: Acesse origens e configurações sem tirar o foco das tarefas.
+      - generic [ref=e1210]:
+        - button "Gestão Cobranças, carga e retornos pendentes" [ref=e1211] [cursor=pointer]:
+          - generic [ref=e1217]:
+            - strong [ref=e1218]: Gestão
+            - generic [ref=e1219]: Cobranças, carga e retornos pendentes
+        - button "Contatos Casos recebidos e responsáveis" [ref=e1222] [cursor=pointer]:
+          - generic [ref=e1229]:
+            - strong [ref=e1230]: Contatos
+            - generic [ref=e1231]: Casos recebidos e responsáveis
+        - button "Configurações Dados, recarregamento e versão" [ref=e1234] [cursor=pointer]:
+          - generic [ref=e1239]:
+            - strong [ref=e1240]: Configurações
+            - generic [ref=e1241]: Dados, recarregamento e versão
+  - navigation "Navegação principal" [ref=e1174]:
+    - button "Hoje 15" [ref=e1175] [cursor=pointer]:
+      - generic [ref=e1181]: Hoje
+      - generic [ref=e1182]: "15"
+    - button "Tarefas 30" [ref=e1183] [cursor=pointer]:
+      - generic [ref=e1187]: Tarefas
+      - generic [ref=e1188]: "30"
+    - button "Cotações" [ref=e1189] [cursor=pointer]
+    - button "Mais" [active] [ref=e1194] [cursor=pointer]

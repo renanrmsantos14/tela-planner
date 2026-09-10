@@ -1,0 +1,552 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - main [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e6]:
+          - strong [ref=e7]: Tarefas
+          - generic [ref=e8]: Central de Trabalho
+        - generic "Modo local" [ref=e9]: Local
+        - button "Abrir notificações, 2 não lidas" [ref=e11] [cursor=pointer]:
+          - generic [ref=e17]: "2"
+        - button "Atualizar dados" [ref=e18] [cursor=pointer]
+        - generic "Renan Martins" [ref=e22]: RM
+      - generic [ref=e23]:
+        - generic [ref=e24]:
+          - generic [ref=e25]:
+            - generic [ref=e26]: Tarefas
+            - heading "Operação em movimento" [level=1] [ref=e27]
+            - paragraph [ref=e28]: Escolha a próxima ação e atualize o andamento da tarefa.
+          - generic [ref=e29]:
+            - 'button "Ordenar: Prazo" [ref=e31] [cursor=pointer]'
+            - generic "Escopo das tarefas" [ref=e38]:
+              - button "Todas" [ref=e39] [cursor=pointer]
+              - button "Minhas" [pressed] [ref=e45] [cursor=pointer]
+            - generic "Modo de visualização das tarefas" [ref=e49]:
+              - button "Quadro" [pressed] [ref=e50] [cursor=pointer]
+              - button "Lista" [ref=e56] [cursor=pointer]
+              - button "Agenda" [ref=e58] [cursor=pointer]
+        - generic [ref=e61]:
+          - button "Filtros" [ref=e62] [cursor=pointer]
+          - textbox "Buscar tarefas, cotações, qualidade ou pessoas" [ref=e71]
+        - generic [ref=e72]:
+          - generic [ref=e73]:
+            - generic [ref=e74]:
+              - heading "A fazer" [level=2] [ref=e78]
+              - generic [ref=e79]: "13"
+            - article [ref=e80] [cursor=pointer]:
+              - generic [ref=e81]:
+                - generic [ref=e82]: Alta
+                - button "Abrir tarefa" [ref=e83]
+              - heading "Validar motorista bilíngue" [level=3] [ref=e88]
+              - generic [ref=e89]:
+                - generic [ref=e90]: Cotação
+                - generic [ref=e91]: COT-1001
+                - emphasis [ref=e92]: Pedido de cotação
+              - generic [ref=e93]:
+                - 'generic "Equipe responsável: Operação" [ref=e94]': Operação
+                - generic [ref=e102]: 10 set.
+                - button "Concluir" [ref=e106]
+            - article [ref=e107] [cursor=pointer]:
+              - generic [ref=e108]:
+                - generic [ref=e109]: Alta
+                - button "Abrir tarefa" [ref=e110]
+              - heading "Reabrir negociação de horário" [level=3] [ref=e115]
+              - generic [ref=e116]:
+                - generic [ref=e117]: Cotação
+                - generic [ref=e118]: COT-1007
+                - emphasis [ref=e119]: Pedido de cotação
+              - generic [ref=e120]:
+                - 'generic "Equipe responsável: Comercial" [ref=e121]': Comercial
+                - generic [ref=e129]: 11 set.
+                - button "Concluir" [ref=e133]
+            - article [ref=e134] [cursor=pointer]:
+              - generic [ref=e135]:
+                - generic [ref=e136]: Média
+                - button "Abrir tarefa" [ref=e137]
+              - heading "Revisar comentário da ocorrência QAL-205" [level=3] [ref=e142]
+              - generic [ref=e143]:
+                - generic [ref=e144]: Qualidade
+                - generic [ref=e145]: QAL-205
+                - emphasis [ref=e146]: Erro operacional
+              - generic [ref=e147]:
+                - 'generic "Equipe responsável: Qualidade" [ref=e148]': Qualidade
+                - generic [ref=e156]: 11 set.
+                - button "Concluir" [ref=e160]
+            - article [ref=e161] [cursor=pointer]:
+              - generic [ref=e162]:
+                - generic [ref=e163]: Alta
+                - button "Abrir tarefa" [ref=e164]
+              - heading "Abrir ordem de serviço do roadshow" [level=3] [ref=e169]
+              - generic [ref=e170]:
+                - generic [ref=e171]: Cotação
+                - generic [ref=e172]: COT-1004
+                - emphasis [ref=e173]: Pedido de cotação
+              - generic [ref=e174]:
+                - 'generic "Equipe responsável: Operação" [ref=e175]': Operação
+                - generic [ref=e183]: 12 set.
+                - button "Concluir" [ref=e187]
+            - article [ref=e188] [cursor=pointer]:
+              - generic [ref=e189]:
+                - generic [ref=e190]: Média
+                - button "Abrir tarefa" [ref=e191]
+              - heading "Registrar retorno do cliente" [level=3] [ref=e196]
+              - generic [ref=e197]:
+                - generic [ref=e198]: Manual
+                - generic [ref=e199]: OPS
+                - emphasis [ref=e200]: Tarefa manual
+              - generic [ref=e201]:
+                - 'generic "Equipe responsável: Comercial" [ref=e202]': Comercial
+                - generic [ref=e210]: 12 set.
+                - button "Concluir" [ref=e214]
+            - article [ref=e215] [cursor=pointer]:
+              - generic [ref=e216]:
+                - generic [ref=e217]: Média
+                - button "Abrir tarefa" [ref=e218]
+              - heading "Revisar tabela de parceiros" [level=3] [ref=e223]
+              - generic [ref=e224]:
+                - generic [ref=e225]: Manual
+                - generic [ref=e226]: OPS
+                - emphasis [ref=e227]: Tarefa manual
+              - generic [ref=e228]:
+                - 'generic "Equipe responsável: Financeiro" [ref=e229]': Financeiro
+                - generic [ref=e237]: 13 set.
+                - button "Concluir" [ref=e241]
+            - article [ref=e242] [cursor=pointer]:
+              - generic [ref=e243]:
+                - generic [ref=e244]: Média
+                - button "Abrir tarefa" [ref=e245]
+              - heading "Acompanhar retorno sobre embarque" [level=3] [ref=e250]
+              - generic [ref=e251]:
+                - generic [ref=e252]: Cotação
+                - generic [ref=e253]: COT-0997
+                - emphasis [ref=e254]: Pedido de cotação
+              - generic [ref=e255]:
+                - 'generic "Equipe responsável: Operação" [ref=e256]': Operação
+                - generic [ref=e264]: 14 set.
+                - button "Concluir" [ref=e268]
+            - article [ref=e269] [cursor=pointer]:
+              - generic [ref=e270]:
+                - generic [ref=e271]: Baixa
+                - button "Abrir tarefa" [ref=e272]
+              - heading "Solicitar segunda via do comprovante" [level=3] [ref=e277]
+              - generic [ref=e278]:
+                - generic [ref=e279]: Manual
+                - generic [ref=e280]: OPS
+                - emphasis [ref=e281]: Tarefa manual
+              - generic [ref=e282]:
+                - 'generic "Equipe responsável: Financeiro" [ref=e283]': Financeiro
+                - generic [ref=e291]: 14 set.
+                - button "Concluir" [ref=e295]
+            - article [ref=e296] [cursor=pointer]:
+              - generic [ref=e297]:
+                - generic [ref=e298]: Média
+                - button "Abrir tarefa" [ref=e299]
+              - heading "Conferir janela de chegada no terminal" [level=3] [ref=e304]
+              - generic [ref=e305]:
+                - generic [ref=e306]: Cotação
+                - generic [ref=e307]: COT-0995
+                - emphasis [ref=e308]: Pedido de cotação
+              - generic [ref=e309]:
+                - 'generic "Equipe responsável: Operação" [ref=e310]': Operação
+                - generic [ref=e318]: 16 set.
+                - button "Concluir" [ref=e322]
+            - article [ref=e323] [cursor=pointer]:
+              - generic [ref=e324]:
+                - generic [ref=e325]: Alta
+                - button "Abrir tarefa" [ref=e326]
+              - heading "Definir protocolo de embarque noturno" [level=3] [ref=e331]
+              - generic [ref=e332]:
+                - generic [ref=e333]: Cotação
+                - generic [ref=e334]: COT-0992
+                - emphasis [ref=e335]: Pedido de cotação
+              - generic [ref=e336]:
+                - 'generic "Equipe responsável: Qualidade" [ref=e337]': Qualidade
+                - generic [ref=e345]: 17 set.
+                - button "Concluir" [ref=e349]
+            - article [ref=e350] [cursor=pointer]:
+              - generic [ref=e351]:
+                - generic [ref=e352]: Média
+                - button "Abrir tarefa" [ref=e353]
+              - heading "Revisar contrato de disponibilidade" [level=3] [ref=e358]
+              - generic [ref=e359]:
+                - generic [ref=e360]: Cotação
+                - generic [ref=e361]: COT-0994
+                - emphasis [ref=e362]: Pedido de cotação
+              - generic [ref=e363]:
+                - 'generic "Equipe responsável: Comercial" [ref=e364]': Comercial
+                - generic [ref=e372]: 17 set.
+                - button "Concluir" [ref=e376]
+            - article [ref=e377] [cursor=pointer]:
+              - generic [ref=e378]:
+                - generic [ref=e379]: Baixa
+                - button "Abrir tarefa" [ref=e380]
+              - heading "Validar cobrança de pedágios" [level=3] [ref=e385]
+              - generic [ref=e386]:
+                - generic [ref=e387]: Cotação
+                - generic [ref=e388]: COT-0995
+                - emphasis [ref=e389]: Pedido de cotação
+              - generic [ref=e390]:
+                - 'generic "Equipe responsável: Financeiro" [ref=e391]': Financeiro
+                - generic [ref=e399]: 17 set.
+                - button "Concluir" [ref=e403]
+            - article [ref=e404] [cursor=pointer]:
+              - generic [ref=e405]:
+                - generic [ref=e406]: Média
+                - button "Abrir tarefa" [ref=e407]
+              - heading "Checar adicional de madrugada" [level=3] [ref=e412]
+              - generic [ref=e413]:
+                - generic [ref=e414]: Cotação
+                - generic [ref=e415]: COT-0992
+                - emphasis [ref=e416]: Pedido de cotação
+              - generic [ref=e417]:
+                - 'generic "Equipe responsável: Financeiro" [ref=e418]': Financeiro
+                - generic [ref=e426]: 18 set.
+                - button "Concluir" [ref=e430]
+          - generic [ref=e431]:
+            - generic [ref=e432]:
+              - heading "Aguardando" [level=2] [ref=e436]
+              - generic [ref=e437]: "8"
+            - article [ref=e438] [cursor=pointer]:
+              - generic [ref=e439]:
+                - generic [ref=e440]: Alta
+                - generic [ref=e441]: Vencida
+                - generic "Aguardando sua atuação" [ref=e442]: Pendente
+                - button "Abrir tarefa" [ref=e449]
+              - heading "Tratar divergência de quilometragem" [level=3] [ref=e454]
+              - generic [ref=e455]:
+                - generic [ref=e456]: Manual
+                - generic [ref=e457]: OPS
+                - emphasis [ref=e458]: Tarefa manual
+              - generic [ref=e459]:
+                - 'generic "Equipe responsável: Qualidade" [ref=e460]': Qualidade
+                - generic [ref=e468]: 07 set.
+                - button "Concluir" [ref=e472]
+                - button "Registrar retorno" [ref=e473]
+            - article [ref=e474] [cursor=pointer]:
+              - generic [ref=e475]:
+                - generic [ref=e476]: Alta
+                - generic "Aguardando sua atuação" [ref=e477]: Pendente
+                - button "Abrir tarefa" [ref=e484]
+              - heading "Conferir certificados dos veículos" [level=3] [ref=e489]
+              - generic [ref=e490]:
+                - generic [ref=e491]: Manual
+                - generic [ref=e492]: OPS
+                - emphasis [ref=e493]: Tarefa manual
+              - generic [ref=e494]:
+                - 'generic "Equipe responsável: Qualidade" [ref=e495]': Qualidade
+                - generic [ref=e503]: 10 set.
+                - button "Concluir" [ref=e507]
+                - button "Registrar retorno" [ref=e508]
+            - article [ref=e509] [cursor=pointer]:
+              - generic [ref=e510]:
+                - generic [ref=e511]: Alta
+                - generic "Aguardando sua atuação" [ref=e512]: Pendente
+                - button "Abrir tarefa" [ref=e519]
+              - heading "Validar causa do erro operacional" [level=3] [ref=e524]
+              - generic [ref=e525]:
+                - generic [ref=e526]: Qualidade
+                - generic [ref=e527]: QAL-204
+                - emphasis [ref=e528]: Erro operacional
+              - generic [ref=e529]:
+                - 'generic "Equipe responsável: Qualidade" [ref=e530]': Qualidade
+                - generic [ref=e538]: 10 set.
+                - button "Concluir" [ref=e542]
+                - button "Registrar retorno" [ref=e543]
+            - article [ref=e544] [cursor=pointer]:
+              - generic [ref=e545]:
+                - generic [ref=e546]: Média
+                - generic "Aguardando sua atuação" [ref=e547]: Pendente
+                - button "Abrir tarefa" [ref=e554]
+              - heading "Acompanhar retorno do fornecedor" [level=3] [ref=e559]
+              - generic [ref=e560]:
+                - generic [ref=e561]: Cotação
+                - generic [ref=e562]: COT-1007
+                - emphasis [ref=e563]: Pedido de cotação
+              - generic [ref=e564]: Você foi mencionado
+              - generic "Aguardando disponibilidade da segunda van · Rafael Lima · até 10 set." [ref=e571]
+              - generic [ref=e576]:
+                - 'generic "Equipe responsável: Operação" [ref=e577]': Operação
+                - generic [ref=e585]: 10 set.
+                - button "Concluir" [ref=e589]
+                - button "Registrar retorno" [ref=e590]
+            - article [ref=e591] [cursor=pointer]:
+              - generic [ref=e592]:
+                - generic [ref=e593]: Alta
+                - generic "Aguardando sua atuação" [ref=e594]: Pendente
+                - button "Abrir tarefa" [ref=e601]
+              - heading "Confirmar equipe de aeroporto" [level=3] [ref=e606]
+              - generic [ref=e607]:
+                - generic [ref=e608]: Cotação
+                - generic [ref=e609]: COT-0993
+                - emphasis [ref=e610]: Pedido de cotação
+              - generic [ref=e611]:
+                - 'generic "Equipe responsável: Operação" [ref=e612]': Operação
+                - generic [ref=e620]: 11 set.
+                - button "Concluir" [ref=e624]
+                - button "Registrar retorno" [ref=e625]
+            - article [ref=e626] [cursor=pointer]:
+              - generic [ref=e627]:
+                - generic [ref=e628]: Média
+                - generic "Aguardando sua atuação" [ref=e629]: Pendente
+                - button "Abrir tarefa" [ref=e636]
+              - heading "Confirmar disponibilidade de veículo" [level=3] [ref=e641]
+              - generic [ref=e642]:
+                - generic [ref=e643]: Cotação
+                - generic [ref=e644]: COT-1007
+                - emphasis [ref=e645]: Pedido de cotação
+              - generic "Aguardando confirmação da segunda van · Operação · até 11 set." [ref=e646]
+              - generic [ref=e651]:
+                - 'generic "Equipe responsável: Operação" [ref=e652]': Operação
+                - generic [ref=e660]: 11 set.
+                - button "Concluir" [ref=e664]
+                - button "Registrar retorno" [ref=e665]
+            - article [ref=e666] [cursor=pointer]:
+              - generic [ref=e667]:
+                - generic [ref=e668]: Média
+                - generic "Aguardando sua atuação" [ref=e669]: Pendente
+                - button "Abrir tarefa" [ref=e676]
+              - heading "Revisar diária em Alphaville" [level=3] [ref=e681]
+              - generic [ref=e682]:
+                - generic [ref=e683]: Cotação
+                - generic [ref=e684]: COT-1002
+                - emphasis [ref=e685]: Pedido de cotação
+              - generic [ref=e686]:
+                - 'generic "Equipe responsável: Financeiro" [ref=e687]': Financeiro
+                - generic [ref=e695]: 13 set.
+                - button "Concluir" [ref=e699]
+                - button "Registrar retorno" [ref=e700]
+            - article [ref=e701] [cursor=pointer]:
+              - generic [ref=e702]:
+                - generic [ref=e703]: Alta
+                - generic "Aguardando sua atuação" [ref=e704]: Pendente
+                - button "Abrir tarefa" [ref=e711]
+              - heading "Confirmar quantidade de veículos" [level=3] [ref=e716]
+              - generic [ref=e717]:
+                - generic [ref=e718]: Cotação
+                - generic [ref=e719]: COT-0994
+                - emphasis [ref=e720]: Pedido de cotação
+              - generic [ref=e721]:
+                - 'generic "Equipe responsável: Operação" [ref=e722]': Operação
+                - generic [ref=e730]: 14 set.
+                - button "Concluir" [ref=e734]
+                - button "Registrar retorno" [ref=e735]
+          - generic [ref=e736]:
+            - generic [ref=e737]:
+              - heading "Em andamento" [level=2] [ref=e740]
+              - generic [ref=e741]: "9"
+            - article [ref=e742] [cursor=pointer]:
+              - generic [ref=e743]:
+                - generic [ref=e744]: Alta
+                - button "Abrir tarefa" [ref=e745]
+              - heading "Enviar condições comerciais" [level=3] [ref=e750]
+              - generic [ref=e751]:
+                - generic [ref=e752]: Cotação
+                - generic [ref=e753]: COT-0998
+                - emphasis [ref=e754]: Pedido de cotação
+              - generic [ref=e755]:
+                - 'generic "Equipe responsável: Comercial" [ref=e756]': Comercial
+                - generic [ref=e764]: 09 set.
+                - button "Concluir" [ref=e768]
+            - article [ref=e769] [cursor=pointer]:
+              - generic [ref=e770]:
+                - generic [ref=e771]: Alta
+                - button "Abrir tarefa" [ref=e772]
+              - heading "Preparar proposta comercial" [level=3] [ref=e777]
+              - generic [ref=e778]:
+                - generic [ref=e779]: Cotação
+                - generic [ref=e780]: COT-1008
+                - emphasis [ref=e781]: Pedido de cotação
+              - generic [ref=e782]:
+                - 'generic "Equipe responsável: Comercial" [ref=e783]': Comercial
+                - generic [ref=e791]: 09 set.
+                - button "Concluir" [ref=e795]
+            - article [ref=e796] [cursor=pointer]:
+              - generic [ref=e797]:
+                - generic [ref=e798]: Alta
+                - button "Abrir tarefa" [ref=e799]
+              - heading "Revisar pendências prioritárias do dia" [level=3] [ref=e804]
+              - generic [ref=e805]:
+                - generic [ref=e806]: Manual
+                - generic [ref=e807]: OPS-040
+                - emphasis [ref=e808]: Tarefa manual
+              - generic [ref=e809]:
+                - 'generic "Equipe responsável: Comercial" [ref=e810]': Comercial
+                - generic [ref=e818]: 09 set.
+                - button "Concluir" [ref=e822]
+            - article [ref=e823] [cursor=pointer]:
+              - generic [ref=e824]:
+                - generic [ref=e825]: Média
+                - button "Abrir tarefa" [ref=e826]
+              - heading "Atualizar quadro de disponibilidade" [level=3] [ref=e831]
+              - generic [ref=e832]:
+                - generic [ref=e833]: Manual
+                - generic [ref=e834]: OPS
+                - emphasis [ref=e835]: Tarefa manual
+              - generic [ref=e836]:
+                - 'generic "Equipe responsável: Operação" [ref=e837]': Operação
+                - generic [ref=e845]: 09 set.
+                - button "Concluir" [ref=e849]
+            - article [ref=e850] [cursor=pointer]:
+              - generic [ref=e851]:
+                - generic [ref=e852]: Alta
+                - button "Abrir tarefa" [ref=e853]
+              - heading "Montar cotação do carro blindado" [level=3] [ref=e858]
+              - generic [ref=e859]:
+                - generic [ref=e860]: Cotação
+                - generic [ref=e861]: COT-1006
+                - emphasis [ref=e862]: Pedido de cotação
+              - generic [ref=e863]:
+                - 'generic "Equipe responsável: Comercial" [ref=e864]': Comercial
+                - generic [ref=e872]: 10 set.
+                - button "Concluir" [ref=e876]
+            - article [ref=e877] [cursor=pointer]:
+              - generic [ref=e878]:
+                - generic [ref=e879]: Média
+                - button "Abrir tarefa" [ref=e880]
+              - heading "Enviar briefing para recepção VIP" [level=3] [ref=e885]
+              - generic [ref=e886]:
+                - generic [ref=e887]: Cotação
+                - generic [ref=e888]: COT-0993
+                - emphasis [ref=e889]: Pedido de cotação
+              - generic [ref=e890]:
+                - 'generic "Equipe responsável: Comercial" [ref=e891]': Comercial
+                - generic [ref=e899]: 10 set.
+                - button "Concluir" [ref=e903]
+            - article [ref=e904] [cursor=pointer]:
+              - generic [ref=e905]:
+                - generic [ref=e906]: Alta
+                - button "Abrir tarefa" [ref=e907]
+              - heading "Validar plano de contingência" [level=3] [ref=e912]
+              - generic [ref=e913]:
+                - generic [ref=e914]: Manual
+                - generic [ref=e915]: OPS
+                - emphasis [ref=e916]: Tarefa manual
+              - generic [ref=e917]:
+                - 'generic "Equipe responsável: Qualidade" [ref=e918]': Qualidade
+                - generic [ref=e926]: 11 set.
+                - button "Concluir" [ref=e930]
+            - article [ref=e931] [cursor=pointer]:
+              - generic [ref=e932]:
+                - generic [ref=e933]: Média
+                - button "Abrir tarefa" [ref=e934]
+              - heading "Confirmar credenciamento dos palestrantes" [level=3] [ref=e939]
+              - generic [ref=e940]:
+                - generic [ref=e941]: Cotação
+                - generic [ref=e942]: COT-1003
+                - emphasis [ref=e943]: Pedido de cotação
+              - generic [ref=e944]:
+                - 'generic "Equipe responsável: Comercial" [ref=e945]': Comercial
+                - generic [ref=e953]: 12 set.
+                - button "Concluir" [ref=e957]
+            - article [ref=e958] [cursor=pointer]:
+              - generic [ref=e959]:
+                - generic [ref=e960]: Alta
+                - button "Abrir tarefa" [ref=e961]
+              - heading "Montar escala da convenção" [level=3] [ref=e966]
+              - generic [ref=e967]:
+                - generic [ref=e968]: Cotação
+                - generic [ref=e969]: COT-0994
+                - emphasis [ref=e970]: Pedido de cotação
+              - generic [ref=e971]:
+                - 'generic "Equipe responsável: Operação" [ref=e972]': Operação
+                - generic [ref=e980]: 15 set.
+                - button "Concluir" [ref=e984]
+          - generic [ref=e985]:
+            - generic [ref=e986]:
+              - heading "Concluído" [level=2] [ref=e990]
+              - generic [ref=e991]: "7"
+            - article [ref=e992] [cursor=pointer]:
+              - generic [ref=e993]:
+                - generic [ref=e994]: Baixa
+                - button "Abrir tarefa" [ref=e995]
+              - heading "Arquivar aceite da diretoria" [level=3] [ref=e1000]
+              - generic [ref=e1001]:
+                - generic [ref=e1002]: Cotação
+                - generic [ref=e1003]: COT-0991
+                - emphasis [ref=e1004]: Pedido de cotação
+              - generic [ref=e1005]:
+                - 'generic "Equipe responsável: Comercial" [ref=e1006]': Comercial
+                - generic [ref=e1014]: 03 set.
+            - article [ref=e1018] [cursor=pointer]:
+              - generic [ref=e1019]:
+                - generic [ref=e1020]: Baixa
+                - button "Abrir tarefa" [ref=e1021]
+              - heading "Enviar comprovante de serviço" [level=3] [ref=e1026]
+              - generic [ref=e1027]:
+                - generic [ref=e1028]: Cotação
+                - generic [ref=e1029]: COT-0996
+                - emphasis [ref=e1030]: Pedido de cotação
+              - generic [ref=e1031]:
+                - 'generic "Equipe responsável: Financeiro" [ref=e1032]': Financeiro
+                - generic [ref=e1040]: 05 set.
+            - article [ref=e1044] [cursor=pointer]:
+              - generic [ref=e1045]:
+                - generic [ref=e1046]: Média
+                - button "Abrir tarefa" [ref=e1047]
+              - heading "Confirmar contato de plantão" [level=3] [ref=e1052]
+              - generic [ref=e1053]:
+                - generic [ref=e1054]: Manual
+                - generic [ref=e1055]: OPS
+                - emphasis [ref=e1056]: Tarefa manual
+              - generic [ref=e1057]:
+                - 'generic "Equipe responsável: Operação" [ref=e1058]': Operação
+                - generic [ref=e1066]: 06 set.
+            - article [ref=e1070] [cursor=pointer]:
+              - generic [ref=e1071]:
+                - generic [ref=e1072]: Média
+                - button "Abrir tarefa" [ref=e1073]
+              - heading "Registrar aceite do cliente" [level=3] [ref=e1078]
+              - generic [ref=e1079]:
+                - generic [ref=e1080]: Cotação
+                - generic [ref=e1081]: COT-0999
+                - emphasis [ref=e1082]: Pedido de cotação
+              - generic [ref=e1083]:
+                - 'generic "Equipe responsável: Comercial" [ref=e1084]': Comercial
+                - generic [ref=e1092]: 07 set.
+            - article [ref=e1096] [cursor=pointer]:
+              - generic [ref=e1097]:
+                - generic [ref=e1098]: Baixa
+                - button "Abrir tarefa" [ref=e1099]
+              - heading "Confirmar fechamento semanal" [level=3] [ref=e1104]
+              - generic [ref=e1105]:
+                - generic [ref=e1106]: Manual
+                - generic [ref=e1107]: OPS-044
+                - emphasis [ref=e1108]: Tarefa manual
+              - generic [ref=e1109]:
+                - 'generic "Equipe responsável: Financeiro" [ref=e1110]': Financeiro
+                - generic [ref=e1118]: 08 set.
+            - article [ref=e1122] [cursor=pointer]:
+              - generic [ref=e1123]:
+                - generic [ref=e1124]: Baixa
+                - button "Abrir tarefa" [ref=e1125]
+              - heading "Distribuir escala do fim de semana" [level=3] [ref=e1130]
+              - generic [ref=e1131]:
+                - generic [ref=e1132]: Manual
+                - generic [ref=e1133]: OPS
+                - emphasis [ref=e1134]: Tarefa manual
+              - generic [ref=e1135]:
+                - 'generic "Equipe responsável: Operação" [ref=e1136]': Operação
+                - generic [ref=e1144]: 08 set.
+            - article [ref=e1148] [cursor=pointer]:
+              - generic [ref=e1149]:
+                - generic [ref=e1150]: Baixa
+                - button "Abrir tarefa" [ref=e1151]
+              - heading "Registrar resposta enviada" [level=3] [ref=e1156]
+              - generic [ref=e1157]:
+                - generic [ref=e1158]: Cotação
+                - generic [ref=e1159]: COT-1005
+                - emphasis [ref=e1160]: Pedido de cotação
+              - generic [ref=e1161]:
+                - 'generic "Equipe responsável: Comercial" [ref=e1162]': Comercial
+                - generic [ref=e1170]: 08 set.
+    - navigation "Navegação principal" [ref=e1174]:
+      - button "Hoje 15" [ref=e1175] [cursor=pointer]:
+        - generic [ref=e1181]: Hoje
+        - generic [ref=e1182]: "15"
+      - button "Tarefas 30" [ref=e1183] [cursor=pointer]:
+        - generic [ref=e1187]: Tarefas
+        - generic [ref=e1188]: "30"
+      - button "Cotações" [ref=e1189] [cursor=pointer]
+      - button "Mais" [ref=e1194] [cursor=pointer]
+    - button "Criar nova tarefa" [ref=e1197] [cursor=pointer]
+  - listbox [ref=e1199]

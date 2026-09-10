@@ -17,6 +17,20 @@ test("drawer separa retornos de comentários e anexos gerais", async () => {
   assert.match(styles, /\.return-card\.is-latest/);
 });
 
+test("histórico da tarefa permanece como última seção do corpo do drawer", async () => {
+  const app = await read("src/App.jsx");
+  const styles = await read("src/styles.css");
+  const drawerBody = app.slice(app.indexOf('<div className="drawer-body" ref={drawerBodyRef}'));
+  const historyIndex = drawerBody.indexOf('<section className="drawer-section history-section">');
+  const bodyEndIndex = drawerBody.indexOf('<\/div>\n        <footer className="drawer-footer">');
+
+  assert.ok(historyIndex >= 0, "histórico da tarefa deve existir no drawer");
+  assert.ok(bodyEndIndex >= 0, "corpo do drawer deve terminar antes do rodapé");
+  assert.ok(historyIndex < bodyEndIndex, "histórico deve ser a última seção antes do rodapé");
+  assert.equal(drawerBody.slice(historyIndex).match(/<section className="drawer-section/g)?.length, 1);
+  assert.match(styles, /\.task-drawer \.drawer-body > \.history-section \{ order: 99; \}/);
+});
+
 test("retorno live usa evento tipado e vínculo de evidência", async () => {
   const dataverse = await read("src/dataverse.js");
 

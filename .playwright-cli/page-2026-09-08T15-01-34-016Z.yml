@@ -1,0 +1,157 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - button "Recolher navegação" [ref=e5] [cursor=pointer]
+    - generic [ref=e14]:
+      - strong [ref=e15]: Central de Trabalho
+      - generic [ref=e16]: Operação Betinhos
+    - generic "Hoje, 5 pendências e 0 atrasados" [ref=e17]:
+      - generic [ref=e18]:
+        - generic [ref=e19]: Hoje
+        - strong [ref=e20]: 08 de set
+      - generic [ref=e21]:
+        - generic [ref=e22]:
+          - strong [ref=e23]: "5"
+          - generic [ref=e24]: Pendências
+        - generic [ref=e25]:
+          - strong [ref=e26]: "0"
+          - generic [ref=e27]: Atrasados
+    - navigation [ref=e28]:
+      - button "Início 3" [ref=e29] [cursor=pointer]:
+        - generic [ref=e35]: Início
+        - generic [ref=e36]: "3"
+      - button "Tarefas 30" [ref=e37] [cursor=pointer]:
+        - generic [ref=e41]: Tarefas
+        - generic [ref=e42]: "30"
+      - button "Gestão" [ref=e43] [cursor=pointer]
+      - button "Contatos" [active] [ref=e49] [cursor=pointer]
+      - button "Cotações" [ref=e56] [cursor=pointer]
+      - button "Configurações" [ref=e61] [cursor=pointer]
+    - generic [ref=e66]:
+      - generic [ref=e67]: Modo local · mock
+      - generic "Versão do aplicativo v0.1.320 08/09/2026" [ref=e69]: Versão v0.1.320 08/09/2026
+      - generic [ref=e70]:
+        - generic "Renan Martins" [ref=e71]: RM
+        - generic [ref=e72]:
+          - strong [ref=e73]: Renan Martins
+          - generic [ref=e74]: Administrativo
+        - button "Abrir configurações" [ref=e75] [cursor=pointer]
+  - main [ref=e79]:
+    - generic "Ações do aplicativo" [ref=e80]:
+      - button "Abrir notificações, 4 não lidas" [ref=e1284] [cursor=pointer]:
+        - generic [ref=e87]: "4"
+      - button "Atualizar dados" [ref=e88] [cursor=pointer]
+    - generic [ref=e1829]:
+      - generic [ref=e1830]:
+        - generic [ref=e1831]:
+          - generic [ref=e1832]: Atendimento
+          - heading "Contatos" [level=1] [ref=e1833]
+          - paragraph [ref=e1834]: Organize os casos recebidos e mantenha cada retorno no responsável certo.
+        - generic [ref=e1836]:
+          - generic "Visualização dos contatos" [ref=e1837]:
+            - button "Visualização Inbox" [pressed] [ref=e1838] [cursor=pointer]
+            - button "Visualização Kanban" [ref=e1842] [cursor=pointer]
+          - button "Novo caso" [ref=e1845] [cursor=pointer]
+      - generic [ref=e1847]:
+        - article [ref=e1848]:
+          - generic [ref=e1852]:
+            - strong [ref=e1853]: "1"
+            - generic [ref=e1854]: Novos
+        - article [ref=e1855]:
+          - generic [ref=e1860]:
+            - strong [ref=e1861]: "1"
+            - generic [ref=e1862]: Em atendimento
+        - article [ref=e1863]:
+          - generic [ref=e1868]:
+            - strong [ref=e1869]: "1"
+            - generic [ref=e1870]: Aguardando
+        - article [ref=e1871]:
+          - generic [ref=e1876]:
+            - strong [ref=e1877]: "1"
+            - generic [ref=e1878]: Vencidos
+      - generic [ref=e1879]:
+        - button "Filtros" [ref=e1880] [cursor=pointer]:
+          - generic [ref=e1883]: +
+        - textbox "Buscar contatos" [ref=e1888]:
+          - /placeholder: Buscar assunto, pessoa, telefone ou e-mail
+        - generic [ref=e1889]:
+          - combobox "Filtrar por canal" [ref=e1890]:
+            - option "Todos os canais" [selected]
+            - option "WhatsApp"
+            - option "E-mail"
+            - option "Telefone"
+          - combobox "Filtrar por status" [ref=e1891]:
+            - option "Pendentes e aguardando" [selected]
+            - option "Novo"
+            - option "Em atendimento"
+            - option "Aguardando"
+            - option "Concluído"
+          - combobox "Filtrar por prioridade" [ref=e1892]:
+            - option "Todas as prioridades" [selected]
+            - option "Baixa"
+            - option "Média"
+            - option "Alta"
+          - combobox "Filtrar por responsável" [ref=e1893]:
+            - option "Todos os responsáveis" [selected]
+            - option "Marina Alves"
+            - option "Rafael Lima"
+            - option "Camila Torres"
+            - option "João Mendes"
+            - option "Luiza Prado"
+            - option "Gustavo Neri"
+            - option "Renan Martins"
+          - combobox "Filtrar por equipe" [ref=e1894]:
+            - option "Todas as equipes" [selected]
+            - option "Comercial"
+            - option "Financeiro"
+            - option "Operação"
+            - option "Qualidade"
+          - button "Minhas pendências" [ref=e1895] [cursor=pointer]
+          - button "Vencidos" [ref=e1896] [cursor=pointer]
+          - button "Concluídos" [ref=e1897] [cursor=pointer]
+          - button "Arquivados" [ref=e1898] [cursor=pointer]
+          - button "Limpar filtros" [disabled] [ref=e1899]
+      - generic [ref=e1900]:
+        - generic [ref=e1901]:
+          - generic [ref=e1902]:
+            - generic [ref=e1903]: Inbox operacional
+            - heading "Pendentes" [level=2] [ref=e1904]
+          - generic [ref=e1905]: "3"
+        - generic [ref=e1906]:
+          - article [ref=e1907] [cursor=pointer]:
+            - button "Abrir caso Confirmação de embarque para diretoria" [ref=e1909]:
+              - strong [ref=e1911]: Confirmação de embarque para diretoria
+              - generic [ref=e1912]: Mariana Costa
+              - generic [ref=e1916]: Conseguem confirmar o nome do motorista ainda hoje?
+              - generic [ref=e1917]:
+                - generic [ref=e1918]: WhatsApp
+                - generic [ref=e1921]: Novo
+            - generic "Prazo 08 set." [ref=e1922]:
+              - time [ref=e1923]: Prazo 08 set.
+            - button "Concluir Confirmação de embarque para diretoria" [ref=e1924]
+          - article [ref=e1928] [cursor=pointer]:
+            - button "Abrir caso Ajuste de horário do transfer" [ref=e1930]:
+              - strong [ref=e1932]: Ajuste de horário do transfer
+              - generic [ref=e1933]: Eduardo Nogueira
+              - generic [ref=e1937]: Podemos antecipar o retorno para 18h30?
+              - generic [ref=e1938]:
+                - generic [ref=e1939]: E-mail
+                - generic [ref=e1943]: Em atendimento
+            - generic "Prazo 09 set." [ref=e1944]:
+              - time [ref=e1945]: Prazo 09 set.
+            - button "Concluir Ajuste de horário do transfer" [ref=e1946]
+        - group [ref=e1950]:
+          - generic [ref=e1951] [cursor=pointer]:
+            - generic [ref=e1952]: Aguardando
+            - generic [ref=e1956]: "1"
+          - article [ref=e1960] [cursor=pointer]:
+            - button "Abrir caso Retorno sobre disponibilidade de van" [ref=e1962]:
+              - strong [ref=e1964]: Retorno sobre disponibilidade de van
+              - generic [ref=e1965]: Carlos Ribeiro
+              - generic [ref=e1969]: Ligo novamente amanhã pela manhã para confirmar.
+              - generic [ref=e1970]:
+                - generic [ref=e1971]: Telefone
+                - generic [ref=e1974]: Aguardando
+            - generic "Prazo 07 set., atrasado" [ref=e1975]:
+              - time [ref=e1976]: Prazo 07 set.
+              - generic [ref=e1977]: Atrasado
+            - button "Concluir Retorno sobre disponibilidade de van" [ref=e1978]

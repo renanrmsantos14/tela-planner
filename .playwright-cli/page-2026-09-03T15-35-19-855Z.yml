@@ -1,0 +1,671 @@
+- generic [active] [ref=f1e1]:
+  - generic [ref=f1e3]:
+    - complementary [ref=f1e4]:
+      - button "Recolher navegação" [ref=f1e5] [cursor=pointer]
+      - generic [ref=f1e14]:
+        - strong [ref=f1e15]: Central de Trabalho
+        - generic [ref=f1e16]: Operação Betinhos
+      - generic "Hoje, 5 pendências e 0 atrasados" [ref=f1e17]:
+        - generic [ref=f1e18]:
+          - generic [ref=f1e19]: Hoje
+          - strong [ref=f1e20]: 03 de set
+        - generic [ref=f1e21]:
+          - generic [ref=f1e22]:
+            - strong [ref=f1e23]: "5"
+            - generic [ref=f1e24]: Pendências
+          - generic [ref=f1e25]:
+            - strong [ref=f1e26]: "0"
+            - generic [ref=f1e27]: Atrasados
+      - navigation [ref=f1e28]:
+        - button "Início 3" [ref=f1e29] [cursor=pointer]:
+          - generic [ref=f1e35]: Início
+          - generic [ref=f1e36]: "3"
+        - button "Tarefas 30" [ref=f1e37] [cursor=pointer]:
+          - generic [ref=f1e41]: Tarefas
+          - generic [ref=f1e42]: "30"
+        - button "Gestão" [ref=f1e43] [cursor=pointer]
+        - button "Contatos" [ref=f1e49] [cursor=pointer]
+        - button "Cotações" [ref=f1e56] [cursor=pointer]
+        - button "Qualidade" [ref=f1e61] [cursor=pointer]
+        - button "Configurações" [ref=f1e65] [cursor=pointer]
+      - generic [ref=f1e70]:
+        - generic [ref=f1e71]: Modo local · mock
+        - generic "Versão do aplicativo v0.1.310 03/09/2026" [ref=f1e73]: Versão v0.1.310 03/09/2026
+        - generic [ref=f1e74]:
+          - generic "Renan Martins" [ref=f1e75]: RM
+          - generic [ref=f1e76]:
+            - strong [ref=f1e77]: Renan Martins
+            - generic [ref=f1e78]: Administrativo
+          - button "Abrir configurações" [ref=f1e79] [cursor=pointer]
+    - main [ref=f1e83]:
+      - generic "Ações do aplicativo" [ref=f1e84]:
+        - button "Abrir notificações, 2 não lidas" [ref=f1e85] [cursor=pointer]:
+          - generic [ref=f1e91]: "2"
+        - button "Atualizar dados" [ref=f1e92] [cursor=pointer]
+      - generic [ref=f1e96]:
+        - generic [ref=f1e97]:
+          - generic [ref=f1e98]:
+            - generic [ref=f1e99]: Tarefas
+            - heading "Operação em movimento" [level=1] [ref=f1e100]
+            - paragraph [ref=f1e101]: Arraste os cartões para atualizar o andamento das tarefas.
+          - generic [ref=f1e102]:
+            - generic "Escopo das tarefas" [ref=f1e103]:
+              - button "Todas" [ref=f1e104] [cursor=pointer]
+              - button "Minhas" [pressed] [ref=f1e110] [cursor=pointer]
+            - generic "Modo de visualização das tarefas" [ref=f1e114]:
+              - button "Quadro" [pressed] [ref=f1e115] [cursor=pointer]
+              - button "Lista" [ref=f1e121] [cursor=pointer]
+              - button "Agenda" [ref=f1e123] [cursor=pointer]
+        - generic [ref=f1e126]:
+          - textbox "Buscar tarefas, cotações, qualidade ou pessoas" [ref=f1e131]
+          - generic [ref=f1e132]:
+            - generic [ref=f1e133]:
+              - listbox:
+                - option: Não atribuído
+                - option: Camila Torres
+                - option: Gustavo Neri
+                - option: João Mendes
+                - option: Luiza Prado
+                - option: Marina Alves
+                - option: Rafael Lima
+                - option: Renan Martins
+              - button "Todos os responsáveis" [ref=f1e134] [cursor=pointer]
+            - generic [ref=f1e137]:
+              - listbox:
+                - option: A fazer
+                - option: Aguardando
+                - option: Em andamento
+                - option: Concluído
+                - option: Cancelada
+              - button "Todos os status" [ref=f1e138] [cursor=pointer]
+            - generic [ref=f1e141]:
+              - listbox:
+                - option: Baixa
+                - option: Média
+                - option: Alta
+              - button "Todas as prioridades" [ref=f1e142] [cursor=pointer]
+            - generic [ref=f1e145]:
+              - listbox:
+                - option: Manual
+                - option: Cotação
+                - option: Qualidade
+              - button "Todas as origens" [ref=f1e146] [cursor=pointer]
+            - generic [ref=f1e149]:
+              - listbox:
+                - option: Comercial
+                - option: Financeiro
+                - option: Operação
+                - option: Qualidade
+              - button "Todas as equipes" [ref=f1e150] [cursor=pointer]
+            - button "Limpar filtros" [ref=f1e153] [cursor=pointer]
+            - button "Nova tarefa" [ref=f1e157] [cursor=pointer]
+        - generic [ref=f1e159]:
+          - generic [ref=f1e160]:
+            - generic [ref=f1e161]:
+              - generic [ref=f1e162]:
+                - heading "A fazer" [level=2] [ref=f1e166]
+                - generic [ref=f1e167]: "13"
+              - button "Criar tarefa em A fazer" [ref=f1e168] [cursor=pointer]
+            - generic [ref=f1e170]:
+              - article [ref=f1e171]:
+                - generic [ref=f1e172]:
+                  - generic [ref=f1e173]: Alta
+                  - button "Abrir tarefa" [ref=f1e174] [cursor=pointer]
+                - heading "Validar motorista bilíngue" [level=3] [ref=f1e178]
+                - generic [ref=f1e179]:
+                  - generic [ref=f1e180]: Cotação
+                  - generic [ref=f1e181]: COT-1001
+                  - emphasis [ref=f1e182]: Pedido de cotação
+                - generic [ref=f1e183]:
+                  - 'generic "Responsável: João Mendes" [ref=f1e184]':
+                    - generic [ref=f1e185]: JM
+                    - generic [ref=f1e187]: João Mendes
+                  - generic [ref=f1e188]: 04 set.
+              - article [ref=f1e192]:
+                - generic [ref=f1e193]:
+                  - generic [ref=f1e194]: Alta
+                  - button "Abrir tarefa" [ref=f1e195] [cursor=pointer]
+                - heading "Reabrir negociação de horário" [level=3] [ref=f1e199]
+                - generic [ref=f1e200]:
+                  - generic [ref=f1e201]: Cotação
+                  - generic [ref=f1e202]: COT-1007
+                  - emphasis [ref=f1e203]: Pedido de cotação
+                - generic [ref=f1e204]:
+                  - 'generic "Responsável: Marina Alves" [ref=f1e205]':
+                    - generic [ref=f1e206]: MA
+                    - generic [ref=f1e208]: Marina Alves
+                  - generic [ref=f1e209]: 05 set.
+              - article [ref=f1e213]:
+                - generic [ref=f1e214]:
+                  - generic [ref=f1e215]: Média
+                  - button "Abrir tarefa" [ref=f1e216] [cursor=pointer]
+                - heading "Revisar comentário da ocorrência QAL-205" [level=3] [ref=f1e220]
+                - generic [ref=f1e221]:
+                  - generic [ref=f1e222]: Qualidade
+                  - generic [ref=f1e223]: QAL-205
+                  - emphasis [ref=f1e224]: Erro operacional
+                - generic [ref=f1e225]:
+                  - 'generic "Responsável: Renan Martins" [ref=f1e226]':
+                    - generic [ref=f1e227]: RM
+                    - generic [ref=f1e229]: Renan Martins
+                  - generic [ref=f1e230]: 05 set.
+              - article [ref=f1e234]:
+                - generic [ref=f1e235]:
+                  - generic [ref=f1e236]: Alta
+                  - button "Abrir tarefa" [ref=f1e237] [cursor=pointer]
+                - heading "Abrir ordem de serviço do roadshow" [level=3] [ref=f1e241]
+                - generic [ref=f1e242]:
+                  - generic [ref=f1e243]: Cotação
+                  - generic [ref=f1e244]: COT-1004
+                  - emphasis [ref=f1e245]: Pedido de cotação
+                - generic [ref=f1e246]:
+                  - 'generic "Responsável: Marina Alves" [ref=f1e247]':
+                    - generic [ref=f1e248]: MA
+                    - generic [ref=f1e250]: Marina Alves
+                  - generic [ref=f1e251]: 06 set.
+              - article [ref=f1e255]:
+                - generic [ref=f1e256]:
+                  - generic [ref=f1e257]: Média
+                  - button "Abrir tarefa" [ref=f1e258] [cursor=pointer]
+                - heading "Registrar retorno do cliente" [level=3] [ref=f1e262]
+                - generic [ref=f1e263]:
+                  - generic [ref=f1e264]: Manual
+                  - generic [ref=f1e265]: OPS
+                  - emphasis [ref=f1e266]: Tarefa manual
+                - generic [ref=f1e267]:
+                  - 'generic "Responsável: Não atribuído" [ref=f1e268]':
+                    - generic [ref=f1e269]: NA
+                    - generic [ref=f1e271]: Não atribuído
+                  - generic [ref=f1e272]: 06 set.
+              - article [ref=f1e276]:
+                - generic [ref=f1e277]:
+                  - generic [ref=f1e278]: Média
+                  - button "Abrir tarefa" [ref=f1e279] [cursor=pointer]
+                - heading "Revisar tabela de parceiros" [level=3] [ref=f1e283]
+                - generic [ref=f1e284]:
+                  - generic [ref=f1e285]: Manual
+                  - generic [ref=f1e286]: OPS
+                  - emphasis [ref=f1e287]: Tarefa manual
+                - generic [ref=f1e288]:
+                  - 'generic "Responsável: Marina Alves" [ref=f1e289]':
+                    - generic [ref=f1e290]: MA
+                    - generic [ref=f1e292]: Marina Alves
+                  - generic [ref=f1e293]: 07 set.
+              - article [ref=f1e297]:
+                - generic [ref=f1e298]:
+                  - generic [ref=f1e299]: Média
+                  - button "Abrir tarefa" [ref=f1e300] [cursor=pointer]
+                - heading "Acompanhar retorno sobre embarque" [level=3] [ref=f1e304]
+                - generic [ref=f1e305]:
+                  - generic [ref=f1e306]: Cotação
+                  - generic [ref=f1e307]: COT-0997
+                  - emphasis [ref=f1e308]: Pedido de cotação
+                - generic [ref=f1e309]:
+                  - 'generic "Responsável: Rafael Lima" [ref=f1e310]':
+                    - generic [ref=f1e311]: RL
+                    - generic [ref=f1e313]: Rafael Lima
+                  - generic [ref=f1e314]: 08 set.
+              - article [ref=f1e318]:
+                - generic [ref=f1e319]:
+                  - generic [ref=f1e320]: Baixa
+                  - button "Abrir tarefa" [ref=f1e321] [cursor=pointer]
+                - heading "Solicitar segunda via do comprovante" [level=3] [ref=f1e325]
+                - generic [ref=f1e326]:
+                  - generic [ref=f1e327]: Manual
+                  - generic [ref=f1e328]: OPS
+                  - emphasis [ref=f1e329]: Tarefa manual
+                - generic [ref=f1e330]:
+                  - 'generic "Responsável: Camila Torres" [ref=f1e331]':
+                    - generic [ref=f1e332]: CT
+                    - generic [ref=f1e334]: Camila Torres
+                  - generic [ref=f1e335]: 08 set.
+              - article [ref=f1e339]:
+                - generic [ref=f1e340]:
+                  - generic [ref=f1e341]: Média
+                  - button "Abrir tarefa" [ref=f1e342] [cursor=pointer]
+                - heading "Conferir janela de chegada no terminal" [level=3] [ref=f1e346]
+                - generic [ref=f1e347]:
+                  - generic [ref=f1e348]: Cotação
+                  - generic [ref=f1e349]: COT-0995
+                  - emphasis [ref=f1e350]: Pedido de cotação
+                - generic [ref=f1e351]:
+                  - 'generic "Responsável: Rafael Lima" [ref=f1e352]':
+                    - generic [ref=f1e353]: RL
+                    - generic [ref=f1e355]: Rafael Lima
+                  - generic [ref=f1e356]: 10 set.
+              - article [ref=f1e360]:
+                - generic [ref=f1e361]:
+                  - generic [ref=f1e362]: Baixa
+                  - button "Abrir tarefa" [ref=f1e363] [cursor=pointer]
+                - heading "Validar cobrança de pedágios" [level=3] [ref=f1e367]
+                - generic [ref=f1e368]:
+                  - generic [ref=f1e369]: Cotação
+                  - generic [ref=f1e370]: COT-0995
+                  - emphasis [ref=f1e371]: Pedido de cotação
+                - generic [ref=f1e372]:
+                  - 'generic "Responsável: Camila Torres" [ref=f1e373]':
+                    - generic [ref=f1e374]: CT
+                    - generic [ref=f1e376]: Camila Torres
+                  - generic [ref=f1e377]: 11 set.
+              - article [ref=f1e381]:
+                - generic [ref=f1e382]:
+                  - generic [ref=f1e383]: Média
+                  - button "Abrir tarefa" [ref=f1e384] [cursor=pointer]
+                - heading "Revisar contrato de disponibilidade" [level=3] [ref=f1e388]
+                - generic [ref=f1e389]:
+                  - generic [ref=f1e390]: Cotação
+                  - generic [ref=f1e391]: COT-0994
+                  - emphasis [ref=f1e392]: Pedido de cotação
+                - generic [ref=f1e393]:
+                  - 'generic "Responsável: Marina Alves" [ref=f1e394]':
+                    - generic [ref=f1e395]: MA
+                    - generic [ref=f1e397]: Marina Alves
+                  - generic [ref=f1e398]: 11 set.
+              - article [ref=f1e402]:
+                - generic [ref=f1e403]:
+                  - generic [ref=f1e404]: Alta
+                  - button "Abrir tarefa" [ref=f1e405] [cursor=pointer]
+                - heading "Definir protocolo de embarque noturno" [level=3] [ref=f1e409]
+                - generic [ref=f1e410]:
+                  - generic [ref=f1e411]: Cotação
+                  - generic [ref=f1e412]: COT-0992
+                  - emphasis [ref=f1e413]: Pedido de cotação
+                - generic [ref=f1e414]:
+                  - 'generic "Responsável: Rafael Lima" [ref=f1e415]':
+                    - generic [ref=f1e416]: RL
+                    - generic [ref=f1e418]: Rafael Lima
+                  - generic [ref=f1e419]: 11 set.
+              - article [ref=f1e423]:
+                - generic [ref=f1e424]:
+                  - generic [ref=f1e425]: Média
+                  - button "Abrir tarefa" [ref=f1e426] [cursor=pointer]
+                - heading "Checar adicional de madrugada" [level=3] [ref=f1e430]
+                - generic [ref=f1e431]:
+                  - generic [ref=f1e432]: Cotação
+                  - generic [ref=f1e433]: COT-0992
+                  - emphasis [ref=f1e434]: Pedido de cotação
+                - generic [ref=f1e435]:
+                  - 'generic "Responsável: Marina Alves" [ref=f1e436]':
+                    - generic [ref=f1e437]: MA
+                    - generic [ref=f1e439]: Marina Alves
+                  - generic [ref=f1e440]: 12 set.
+          - generic [ref=f1e444]:
+            - generic [ref=f1e445]:
+              - generic [ref=f1e446]:
+                - heading "Aguardando" [level=2] [ref=f1e450]
+                - generic [ref=f1e451]: "8"
+              - button "Criar tarefa em Aguardando" [ref=f1e452] [cursor=pointer]
+            - generic [ref=f1e454]:
+              - article [ref=f1e455]:
+                - generic [ref=f1e456]:
+                  - generic [ref=f1e457]: Alta
+                  - generic [ref=f1e458]: Vencida
+                  - generic "Aguardando sua atuação" [ref=f1e459]: Pendente
+                  - button "Abrir tarefa" [ref=f1e466] [cursor=pointer]
+                - heading "Tratar divergência de quilometragem" [level=3] [ref=f1e470]
+                - generic [ref=f1e471]:
+                  - generic [ref=f1e472]: Manual
+                  - generic [ref=f1e473]: OPS
+                  - emphasis [ref=f1e474]: Tarefa manual
+                - generic [ref=f1e475]:
+                  - 'generic "Responsável: Marina Alves" [ref=f1e476]':
+                    - generic [ref=f1e477]: MA
+                    - generic [ref=f1e479]: Marina Alves
+                  - generic [ref=f1e480]: 01 set.
+                  - button "Registrar retorno" [ref=f1e483] [cursor=pointer]
+              - article [ref=f1e484]:
+                - generic [ref=f1e485]:
+                  - generic [ref=f1e486]: Alta
+                  - generic "Aguardando sua atuação" [ref=f1e487]: Pendente
+                  - button "Abrir tarefa" [ref=f1e494] [cursor=pointer]
+                - heading "Validar causa do erro operacional" [level=3] [ref=f1e498]
+                - generic [ref=f1e499]:
+                  - generic [ref=f1e500]: Qualidade
+                  - generic [ref=f1e501]: QAL-204
+                  - emphasis [ref=f1e502]: Erro operacional
+                - generic [ref=f1e503]:
+                  - 'generic "Responsável: Rafael Lima" [ref=f1e504]':
+                    - generic [ref=f1e505]: RL
+                    - generic [ref=f1e507]: Rafael Lima
+                  - generic [ref=f1e508]: 04 set.
+                  - button "Registrar retorno" [ref=f1e511] [cursor=pointer]
+              - article [ref=f1e512]:
+                - generic [ref=f1e513]:
+                  - generic [ref=f1e514]: Alta
+                  - generic "Aguardando sua atuação" [ref=f1e515]: Pendente
+                  - button "Abrir tarefa" [ref=f1e522] [cursor=pointer]
+                - heading "Conferir certificados dos veículos" [level=3] [ref=f1e526]
+                - generic [ref=f1e527]:
+                  - generic [ref=f1e528]: Manual
+                  - generic [ref=f1e529]: OPS
+                  - emphasis [ref=f1e530]: Tarefa manual
+                - generic [ref=f1e531]:
+                  - 'generic "Responsável: João Mendes" [ref=f1e532]':
+                    - generic [ref=f1e533]: JM
+                    - generic [ref=f1e535]: João Mendes
+                  - generic [ref=f1e536]: 04 set.
+                  - button "Registrar retorno" [ref=f1e539] [cursor=pointer]
+              - article [ref=f1e540]:
+                - generic [ref=f1e541]:
+                  - generic [ref=f1e542]: Média
+                  - generic "Aguardando sua atuação" [ref=f1e543]: Pendente
+                  - button "Abrir tarefa" [ref=f1e550] [cursor=pointer]
+                - heading "Acompanhar retorno do fornecedor" [level=3] [ref=f1e554]
+                - generic [ref=f1e555]:
+                  - generic [ref=f1e556]: Cotação
+                  - generic [ref=f1e557]: COT-1007
+                  - emphasis [ref=f1e558]: Pedido de cotação
+                - generic [ref=f1e559]: Você foi mencionado
+                - generic "Aguardando disponibilidade da segunda van · Rafael Lima · até 04 set." [ref=f1e566]
+                - generic [ref=f1e571]:
+                  - 'generic "Responsáveis: Renan Martins, Rafael Lima" [ref=f1e572]':
+                    - generic [ref=f1e573]:
+                      - generic [ref=f1e574]: RM
+                      - generic [ref=f1e576]: RL
+                  - generic [ref=f1e578]: 04 set.
+                  - button "Registrar retorno" [ref=f1e582] [cursor=pointer]
+              - article [ref=f1e583]:
+                - generic [ref=f1e584]:
+                  - generic [ref=f1e585]: Média
+                  - generic "Aguardando sua atuação" [ref=f1e586]: Pendente
+                  - button "Abrir tarefa" [ref=f1e593] [cursor=pointer]
+                - heading "Confirmar disponibilidade de veículo" [level=3] [ref=f1e597]
+                - generic [ref=f1e598]:
+                  - generic [ref=f1e599]: Cotação
+                  - generic [ref=f1e600]: COT-1007
+                  - emphasis [ref=f1e601]: Pedido de cotação
+                - generic "Aguardando confirmação da segunda van · Operação · até 05 set." [ref=f1e602]
+                - generic [ref=f1e607]:
+                  - 'generic "Responsável: Rafael Lima" [ref=f1e608]':
+                    - generic [ref=f1e609]: RL
+                    - generic [ref=f1e611]: Rafael Lima
+                  - generic [ref=f1e612]: 05 set.
+                  - button "Registrar retorno" [ref=f1e615] [cursor=pointer]
+              - article [ref=f1e616]:
+                - generic [ref=f1e617]:
+                  - generic [ref=f1e618]: Alta
+                  - generic "Aguardando sua atuação" [ref=f1e619]: Pendente
+                  - button "Abrir tarefa" [ref=f1e626] [cursor=pointer]
+                - heading "Confirmar equipe de aeroporto" [level=3] [ref=f1e630]
+                - generic [ref=f1e631]:
+                  - generic [ref=f1e632]: Cotação
+                  - generic [ref=f1e633]: COT-0993
+                  - emphasis [ref=f1e634]: Pedido de cotação
+                - generic [ref=f1e635]:
+                  - 'generic "Responsável: João Mendes" [ref=f1e636]':
+                    - generic [ref=f1e637]: JM
+                    - generic [ref=f1e639]: João Mendes
+                  - generic [ref=f1e640]: 05 set.
+                  - button "Registrar retorno" [ref=f1e643] [cursor=pointer]
+              - article [ref=f1e644]:
+                - generic [ref=f1e645]:
+                  - generic [ref=f1e646]: Média
+                  - generic "Aguardando sua atuação" [ref=f1e647]: Pendente
+                  - button "Abrir tarefa" [ref=f1e654] [cursor=pointer]
+                - heading "Revisar diária em Alphaville" [level=3] [ref=f1e658]
+                - generic [ref=f1e659]:
+                  - generic [ref=f1e660]: Cotação
+                  - generic [ref=f1e661]: COT-1002
+                  - emphasis [ref=f1e662]: Pedido de cotação
+                - generic [ref=f1e663]:
+                  - 'generic "Responsável: Marina Alves" [ref=f1e664]':
+                    - generic [ref=f1e665]: MA
+                    - generic [ref=f1e667]: Marina Alves
+                  - generic [ref=f1e668]: 07 set.
+                  - button "Registrar retorno" [ref=f1e671] [cursor=pointer]
+              - article [ref=f1e672]:
+                - generic [ref=f1e673]:
+                  - generic [ref=f1e674]: Alta
+                  - generic "Aguardando sua atuação" [ref=f1e675]: Pendente
+                  - button "Abrir tarefa" [ref=f1e682] [cursor=pointer]
+                - heading "Confirmar quantidade de veículos" [level=3] [ref=f1e686]
+                - generic [ref=f1e687]:
+                  - generic [ref=f1e688]: Cotação
+                  - generic [ref=f1e689]: COT-0994
+                  - emphasis [ref=f1e690]: Pedido de cotação
+                - generic [ref=f1e691]:
+                  - 'generic "Responsável: Rafael Lima" [ref=f1e692]':
+                    - generic [ref=f1e693]: RL
+                    - generic [ref=f1e695]: Rafael Lima
+                  - generic [ref=f1e696]: 08 set.
+                  - button "Registrar retorno" [ref=f1e699] [cursor=pointer]
+          - generic [ref=f1e700]:
+            - generic [ref=f1e701]:
+              - generic [ref=f1e702]:
+                - heading "Em andamento" [level=2] [ref=f1e705]
+                - generic [ref=f1e706]: "9"
+              - button "Criar tarefa em Em andamento" [ref=f1e707] [cursor=pointer]
+            - generic [ref=f1e709]:
+              - article [ref=f1e710]:
+                - generic [ref=f1e711]:
+                  - generic [ref=f1e712]: Alta
+                  - button "Abrir tarefa" [ref=f1e713] [cursor=pointer]
+                - heading "Preparar proposta comercial" [level=3] [ref=f1e717]
+                - generic [ref=f1e718]:
+                  - generic [ref=f1e719]: Cotação
+                  - generic [ref=f1e720]: COT-1008
+                  - emphasis [ref=f1e721]: Pedido de cotação
+                - generic [ref=f1e722]:
+                  - 'generic "Responsável: Marina Alves" [ref=f1e723]':
+                    - generic [ref=f1e724]: MA
+                    - generic [ref=f1e726]: Marina Alves
+                  - generic [ref=f1e727]: 03 set.
+              - article [ref=f1e731]:
+                - generic [ref=f1e732]:
+                  - generic [ref=f1e733]: Alta
+                  - button "Abrir tarefa" [ref=f1e734] [cursor=pointer]
+                - heading "Enviar condições comerciais" [level=3] [ref=f1e738]
+                - generic [ref=f1e739]:
+                  - generic [ref=f1e740]: Cotação
+                  - generic [ref=f1e741]: COT-0998
+                  - emphasis [ref=f1e742]: Pedido de cotação
+                - generic [ref=f1e743]:
+                  - 'generic "Responsável: Marina Alves" [ref=f1e744]':
+                    - generic [ref=f1e745]: MA
+                    - generic [ref=f1e747]: Marina Alves
+                  - generic [ref=f1e748]: 03 set.
+              - article [ref=f1e752]:
+                - generic [ref=f1e753]:
+                  - generic [ref=f1e754]: Média
+                  - button "Abrir tarefa" [ref=f1e755] [cursor=pointer]
+                - heading "Atualizar quadro de disponibilidade" [level=3] [ref=f1e759]
+                - generic [ref=f1e760]:
+                  - generic [ref=f1e761]: Manual
+                  - generic [ref=f1e762]: OPS
+                  - emphasis [ref=f1e763]: Tarefa manual
+                - generic [ref=f1e764]:
+                  - 'generic "Responsável: Rafael Lima" [ref=f1e765]':
+                    - generic [ref=f1e766]: RL
+                    - generic [ref=f1e768]: Rafael Lima
+                  - generic [ref=f1e769]: 03 set.
+              - article [ref=f1e773]:
+                - generic [ref=f1e774]:
+                  - generic [ref=f1e775]: Alta
+                  - button "Abrir tarefa" [ref=f1e776] [cursor=pointer]
+                - heading "Revisar pendências prioritárias do dia" [level=3] [ref=f1e780]
+                - generic [ref=f1e781]:
+                  - generic [ref=f1e782]: Manual
+                  - generic [ref=f1e783]: OPS-040
+                  - emphasis [ref=f1e784]: Tarefa manual
+                - generic [ref=f1e785]:
+                  - 'generic "Responsável: Renan Martins" [ref=f1e786]':
+                    - generic [ref=f1e787]: RM
+                    - generic [ref=f1e789]: Renan Martins
+                  - generic [ref=f1e790]: 03 set.
+              - article [ref=f1e794]:
+                - generic [ref=f1e795]:
+                  - generic [ref=f1e796]: Alta
+                  - button "Abrir tarefa" [ref=f1e797] [cursor=pointer]
+                - heading "Montar cotação do carro blindado" [level=3] [ref=f1e801]
+                - generic [ref=f1e802]:
+                  - generic [ref=f1e803]: Cotação
+                  - generic [ref=f1e804]: COT-1006
+                  - emphasis [ref=f1e805]: Pedido de cotação
+                - generic [ref=f1e806]:
+                  - 'generic "Responsável: Marina Alves" [ref=f1e807]':
+                    - generic [ref=f1e808]: MA
+                    - generic [ref=f1e810]: Marina Alves
+                  - generic [ref=f1e811]: 04 set.
+              - article [ref=f1e815]:
+                - generic [ref=f1e816]:
+                  - generic [ref=f1e817]: Média
+                  - button "Abrir tarefa" [ref=f1e818] [cursor=pointer]
+                - heading "Enviar briefing para recepção VIP" [level=3] [ref=f1e822]
+                - generic [ref=f1e823]:
+                  - generic [ref=f1e824]: Cotação
+                  - generic [ref=f1e825]: COT-0993
+                  - emphasis [ref=f1e826]: Pedido de cotação
+                - generic [ref=f1e827]:
+                  - 'generic "Responsável: Camila Torres" [ref=f1e828]':
+                    - generic [ref=f1e829]: CT
+                    - generic [ref=f1e831]: Camila Torres
+                  - generic [ref=f1e832]: 04 set.
+              - article [ref=f1e836]:
+                - generic [ref=f1e837]:
+                  - generic [ref=f1e838]: Alta
+                  - button "Abrir tarefa" [ref=f1e839] [cursor=pointer]
+                - heading "Validar plano de contingência" [level=3] [ref=f1e843]
+                - generic [ref=f1e844]:
+                  - generic [ref=f1e845]: Manual
+                  - generic [ref=f1e846]: OPS
+                  - emphasis [ref=f1e847]: Tarefa manual
+                - generic [ref=f1e848]:
+                  - 'generic "Responsáveis: João Mendes, Rafael Lima" [ref=f1e849]':
+                    - generic [ref=f1e850]:
+                      - generic [ref=f1e851]: JM
+                      - generic [ref=f1e853]: RL
+                  - generic [ref=f1e855]: 05 set.
+              - article [ref=f1e859]:
+                - generic [ref=f1e860]:
+                  - generic [ref=f1e861]: Média
+                  - button "Abrir tarefa" [ref=f1e862] [cursor=pointer]
+                - heading "Confirmar credenciamento dos palestrantes" [level=3] [ref=f1e866]
+                - generic [ref=f1e867]:
+                  - generic [ref=f1e868]: Cotação
+                  - generic [ref=f1e869]: COT-1003
+                  - emphasis [ref=f1e870]: Pedido de cotação
+                - generic [ref=f1e871]:
+                  - 'generic "Responsável: Camila Torres" [ref=f1e872]':
+                    - generic [ref=f1e873]: CT
+                    - generic [ref=f1e875]: Camila Torres
+                  - generic [ref=f1e876]: 06 set.
+              - article [ref=f1e880]:
+                - generic [ref=f1e881]:
+                  - generic [ref=f1e882]: Alta
+                  - button "Abrir tarefa" [ref=f1e883] [cursor=pointer]
+                - heading "Montar escala da convenção" [level=3] [ref=f1e887]
+                - generic [ref=f1e888]:
+                  - generic [ref=f1e889]: Cotação
+                  - generic [ref=f1e890]: COT-0994
+                  - emphasis [ref=f1e891]: Pedido de cotação
+                - generic [ref=f1e892]:
+                  - 'generic "Responsável: João Mendes" [ref=f1e893]':
+                    - generic [ref=f1e894]: JM
+                    - generic [ref=f1e896]: João Mendes
+                  - generic [ref=f1e897]: 09 set.
+          - generic [ref=f1e901]:
+            - generic [ref=f1e902]:
+              - generic [ref=f1e903]:
+                - heading "Concluído" [level=2] [ref=f1e907]
+                - generic [ref=f1e908]: "7"
+              - button "Criar tarefa em Concluído" [ref=f1e909] [cursor=pointer]
+            - generic [ref=f1e911]:
+              - article [ref=f1e912]:
+                - generic [ref=f1e913]:
+                  - generic [ref=f1e914]: Baixa
+                  - button "Abrir tarefa" [ref=f1e915] [cursor=pointer]
+                - heading "Arquivar aceite da diretoria" [level=3] [ref=f1e919]
+                - generic [ref=f1e920]:
+                  - generic [ref=f1e921]: Cotação
+                  - generic [ref=f1e922]: COT-0991
+                  - emphasis [ref=f1e923]: Pedido de cotação
+                - generic [ref=f1e924]:
+                  - 'generic "Responsável: Camila Torres" [ref=f1e925]':
+                    - generic [ref=f1e926]: CT
+                    - generic [ref=f1e928]: Camila Torres
+                  - generic [ref=f1e929]: 28 ago.
+              - article [ref=f1e933]:
+                - generic [ref=f1e934]:
+                  - generic [ref=f1e935]: Baixa
+                  - button "Abrir tarefa" [ref=f1e936] [cursor=pointer]
+                - heading "Enviar comprovante de serviço" [level=3] [ref=f1e940]
+                - generic [ref=f1e941]:
+                  - generic [ref=f1e942]: Cotação
+                  - generic [ref=f1e943]: COT-0996
+                  - emphasis [ref=f1e944]: Pedido de cotação
+                - generic [ref=f1e945]:
+                  - 'generic "Responsável: Camila Torres" [ref=f1e946]':
+                    - generic [ref=f1e947]: CT
+                    - generic [ref=f1e949]: Camila Torres
+                  - generic [ref=f1e950]: 30 ago.
+              - article [ref=f1e954]:
+                - generic [ref=f1e955]:
+                  - generic [ref=f1e956]: Média
+                  - button "Abrir tarefa" [ref=f1e957] [cursor=pointer]
+                - heading "Confirmar contato de plantão" [level=3] [ref=f1e961]
+                - generic [ref=f1e962]:
+                  - generic [ref=f1e963]: Manual
+                  - generic [ref=f1e964]: OPS
+                  - emphasis [ref=f1e965]: Tarefa manual
+                - generic [ref=f1e966]:
+                  - 'generic "Responsável: Rafael Lima" [ref=f1e967]':
+                    - generic [ref=f1e968]: RL
+                    - generic [ref=f1e970]: Rafael Lima
+                  - generic [ref=f1e971]: 31 ago.
+              - article [ref=f1e975]:
+                - generic [ref=f1e976]:
+                  - generic [ref=f1e977]: Média
+                  - button "Abrir tarefa" [ref=f1e978] [cursor=pointer]
+                - heading "Registrar aceite do cliente" [level=3] [ref=f1e982]
+                - generic [ref=f1e983]:
+                  - generic [ref=f1e984]: Cotação
+                  - generic [ref=f1e985]: COT-0999
+                  - emphasis [ref=f1e986]: Pedido de cotação
+                - generic [ref=f1e987]:
+                  - 'generic "Responsável: Camila Torres" [ref=f1e988]':
+                    - generic [ref=f1e989]: CT
+                    - generic [ref=f1e991]: Camila Torres
+                  - generic [ref=f1e992]: 01 set.
+              - article [ref=f1e996]:
+                - generic [ref=f1e997]:
+                  - generic [ref=f1e998]: Baixa
+                  - button "Abrir tarefa" [ref=f1e999] [cursor=pointer]
+                - heading "Registrar resposta enviada" [level=3] [ref=f1e1003]
+                - generic [ref=f1e1004]:
+                  - generic [ref=f1e1005]: Cotação
+                  - generic [ref=f1e1006]: COT-1005
+                  - emphasis [ref=f1e1007]: Pedido de cotação
+                - generic [ref=f1e1008]:
+                  - 'generic "Responsável: Camila Torres" [ref=f1e1009]':
+                    - generic [ref=f1e1010]: CT
+                    - generic [ref=f1e1012]: Camila Torres
+                  - generic [ref=f1e1013]: 02 set.
+              - article [ref=f1e1017]:
+                - generic [ref=f1e1018]:
+                  - generic [ref=f1e1019]: Baixa
+                  - button "Abrir tarefa" [ref=f1e1020] [cursor=pointer]
+                - heading "Distribuir escala do fim de semana" [level=3] [ref=f1e1024]
+                - generic [ref=f1e1025]:
+                  - generic [ref=f1e1026]: Manual
+                  - generic [ref=f1e1027]: OPS
+                  - emphasis [ref=f1e1028]: Tarefa manual
+                - generic [ref=f1e1029]:
+                  - 'generic "Responsável: Camila Torres" [ref=f1e1030]':
+                    - generic [ref=f1e1031]: CT
+                    - generic [ref=f1e1033]: Camila Torres
+                  - generic [ref=f1e1034]: 02 set.
+              - article [ref=f1e1038]:
+                - generic [ref=f1e1039]:
+                  - generic [ref=f1e1040]: Baixa
+                  - button "Abrir tarefa" [ref=f1e1041] [cursor=pointer]
+                - heading "Confirmar fechamento semanal" [level=3] [ref=f1e1045]
+                - generic [ref=f1e1046]:
+                  - generic [ref=f1e1047]: Manual
+                  - generic [ref=f1e1048]: OPS-044
+                  - emphasis [ref=f1e1049]: Tarefa manual
+                - generic [ref=f1e1050]:
+                  - 'generic "Responsável: Renan Martins" [ref=f1e1051]':
+                    - generic [ref=f1e1052]: RM
+                    - generic [ref=f1e1054]: Renan Martins
+                  - generic [ref=f1e1055]: 02 set.
+  - listbox [ref=f1e1059]

@@ -1,0 +1,163 @@
+- generic [ref=e3]:
+  - main [ref=e83]:
+    - generic [ref=e346]:
+      - generic [ref=e347]:
+        - strong [ref=e348]: Contatos
+        - generic [ref=e349]: Central de Trabalho
+      - button "Abrir notificações, 2 não lidas" [ref=e350] [cursor=pointer]:
+        - generic [ref=e356]: "2"
+      - button "Atualizar dados" [ref=e357] [cursor=pointer]
+      - generic "Renan Martins" [ref=e361]: RM
+    - generic [ref=e96]:
+      - generic [ref=e98]:
+        - generic [ref=e99]: Atendimento
+        - heading "Contatos" [level=1] [ref=e100]
+        - paragraph [ref=e101]: Organize os casos recebidos e mantenha cada retorno no responsável certo.
+      - generic [ref=e105]:
+        - article [ref=e106]:
+          - generic [ref=e110]:
+            - strong [ref=e111]: "1"
+            - generic [ref=e112]: Novos
+        - article [ref=e113]:
+          - generic [ref=e118]:
+            - strong [ref=e119]: "1"
+            - generic [ref=e120]: Em atendimento
+        - article [ref=e121]:
+          - generic [ref=e126]:
+            - strong [ref=e127]: "1"
+            - generic [ref=e128]: Aguardando
+        - article [ref=e129]:
+          - generic [ref=e134]:
+            - strong [ref=e135]: "1"
+            - generic [ref=e136]: Vencidos
+      - generic [ref=e137]:
+        - button "Filtros +" [ref=e362] [cursor=pointer]:
+          - generic [ref=e363]: Filtros
+          - generic [ref=e364]: +
+        - textbox "Buscar contatos" [ref=e142]:
+          - /placeholder: Buscar assunto, remetente ou mensagem
+      - generic [ref=e149]:
+        - generic [ref=e150]:
+          - generic [ref=e151]:
+            - generic [ref=e152]: Inbox operacional
+            - heading "Casos recebidos" [level=2] [ref=e153]
+          - generic [ref=e154]: "3"
+        - generic [ref=e155]:
+          - button "Confirmação de embarque para diretoria Novo Conseguem confirmar o nome do motorista ainda hoje? Mariana Costa WhatsApp 03 set., 12:49" [ref=e411] [cursor=pointer]:
+            - generic [ref=e158]:
+              - generic [ref=e159]:
+                - strong [ref=e160]: Confirmação de embarque para diretoria
+                - generic [ref=e161]: Novo
+              - generic [ref=e162]: Conseguem confirmar o nome do motorista ainda hoje?
+              - generic [ref=e163]:
+                - generic [ref=e164]: Mariana Costa
+                - generic [ref=e171]: WhatsApp
+            - time [ref=e175]: 03 set., 12:49
+          - button "Ajuste de horário do transfer Em atendimento Podemos antecipar o retorno para 18h30? Eduardo Nogueira E-mail 03 set., 10:57" [ref=e412] [cursor=pointer]:
+            - generic [ref=e179]:
+              - generic [ref=e180]:
+                - strong [ref=e181]: Ajuste de horário do transfer
+                - generic [ref=e182]: Em atendimento
+              - generic [ref=e183]: Podemos antecipar o retorno para 18h30?
+              - generic [ref=e184]:
+                - generic [ref=e185]: Eduardo Nogueira
+                - generic [ref=e193]: E-mail
+            - time [ref=e198]: 03 set., 10:57
+          - button "Retorno sobre disponibilidade de van Aguardando Ligo novamente amanhã pela manhã para confirmar. Carlos Ribeiro Telefone 02 set., 11:57" [ref=e413] [cursor=pointer]:
+            - generic [ref=e202]:
+              - generic [ref=e203]:
+                - strong [ref=e204]: Retorno sobre disponibilidade de van
+                - generic [ref=e205]: Aguardando
+              - generic [ref=e206]: Ligo novamente amanhã pela manhã para confirmar.
+              - generic [ref=e207]:
+                - generic [ref=e208]: Carlos Ribeiro
+                - generic [ref=e215]: Telefone
+            - time [ref=e220]: 02 set., 11:57
+      - complementary "Novo caso de atendimento" [ref=e226]:
+        - generic [ref=e227]:
+          - generic [ref=e228]:
+            - generic [ref=e229]: Entrada manual
+            - strong [ref=e231]: NOVO CASO
+          - button "Fechar caso" [ref=e232] [cursor=pointer]
+        - generic [ref=e236]:
+          - generic [ref=e241]:
+            - generic [ref=e242]: Assunto do caso
+            - textbox "Assunto do caso" [ref=e243]:
+              - /placeholder: "Ex.: Solicitação de traslado"
+          - generic [ref=e244]:
+            - generic [ref=e245]:
+              - text: Remetente
+              - textbox "Remetente" [ref=e246]
+            - generic [ref=e247]:
+              - text: Canal
+              - generic [ref=e248]:
+                - combobox
+                - button "Canal do caso" [ref=e249] [cursor=pointer]:
+                  - generic [ref=e250]: WhatsApp
+            - generic [ref=e252]:
+              - text: Telefone do remetente
+              - textbox "Telefone do remetente" [ref=e253]:
+                - /placeholder: (00) 00000-0000
+          - generic [ref=e254]:
+            - generic [ref=e255]:
+              - generic [ref=e256]:
+                - generic [ref=e257]: Status
+                - 'group "Status atual: Novo" [ref=e258]':
+                  - generic [ref=e259]:
+                    - button "Novo" [pressed] [ref=e260] [cursor=pointer]
+                    - button "Em atendimento" [ref=e263] [cursor=pointer]
+                    - button "Aguardando" [ref=e267] [cursor=pointer]
+                    - button "Resolvido" [ref=e271] [cursor=pointer]
+                    - button "Arquivado" [ref=e275] [cursor=pointer]
+                  - generic [ref=e279]: Novo
+              - generic [ref=e280]:
+                - generic [ref=e281]: Prioridade
+                - 'group "Prioridade atual: Média" [ref=e282]':
+                  - generic [ref=e283]:
+                    - button "Baixa" [ref=e284] [cursor=pointer]
+                    - button "Média" [pressed] [ref=e287] [cursor=pointer]
+                    - button "Alta" [ref=e290] [cursor=pointer]
+                  - generic [ref=e293]: Média
+            - generic [ref=e294]:
+              - generic [ref=e295]:
+                - generic [ref=e296]:
+                  - generic [ref=e297]: Equipe
+                  - group "Tipo de atribuição" [ref=e298]:
+                    - button "Pessoas" [ref=e299] [cursor=pointer]
+                    - button "Equipe" [active] [pressed] [ref=e303] [cursor=pointer]
+                - generic [ref=e417]:
+                  - generic [ref=e418]: Equipe
+                  - generic [ref=e419]:
+                    - listbox:
+                      - option: Comercial
+                      - option: Financeiro
+                      - option: Operação
+                      - option: Qualidade
+                    - button "Selecione uma ou mais equipes" [ref=e420] [cursor=pointer]
+              - generic [ref=e318]:
+                - text: Prazo
+                - textbox "Prazo" [ref=e319]
+          - generic [ref=e320]:
+            - generic [ref=e321]:
+              - heading "Mensagem recebida" [level=3] [ref=e322]
+              - generic [ref=e323]: 03 set., 12:55
+            - textbox "Mensagem recebida" [ref=e324]:
+              - /placeholder: Registre a mensagem ou o pedido recebido...
+            - group [ref=e325]:
+              - generic "Adicionar resumo interno" [ref=e326] [cursor=pointer]
+          - group [ref=e330]:
+            - generic "Cliente, cotação e origem Opcional" [ref=e331] [cursor=pointer]:
+              - generic [ref=e332]: Cliente, cotação e origem
+              - generic [ref=e333]: Opcional
+        - generic [ref=e336]:
+          - button "Cancelar" [ref=e337] [cursor=pointer]
+          - button "Criar caso" [ref=e338] [cursor=pointer]
+  - navigation "Navegação principal" [ref=e368]:
+    - button "Hoje 3" [ref=e369] [cursor=pointer]:
+      - generic [ref=e375]: Hoje
+      - generic [ref=e376]: "3"
+    - button "Tarefas 30" [ref=e377] [cursor=pointer]:
+      - generic [ref=e381]: Tarefas
+      - generic [ref=e382]: "30"
+    - button "Cotações" [ref=e383] [cursor=pointer]
+    - button "Mais" [ref=e388] [cursor=pointer]

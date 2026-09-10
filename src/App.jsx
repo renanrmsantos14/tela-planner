@@ -87,7 +87,6 @@ import {
   resolveTaskAssignment,
   sortTasks,
   sortBoardTasks,
-  sourceById,
   STATUSES,
   statusById,
   taskDisplayDueDate,
@@ -324,13 +323,6 @@ function PriorityBadge({ priority }) {
   const item =
     PRIORITIES.find((entry) => entry.id === priority) || PRIORITIES[1];
   return <span className={`priority priority-${item.tone}`}>{item.label}</span>;
-}
-
-function SourceBadge({ sourceType }) {
-  const item = sourceById(sourceType);
-  return (
-    <span className={`source-badge source-${item.tone}`}>{item.label}</span>
-  );
 }
 
 function RestrictedVisibilityMark({ className = "" }) {
@@ -1457,6 +1449,7 @@ const TaskCard = memo(function TaskCard({
   subtasks = [],
   currentEmployee,
   teams = [],
+  personalTags = [],
   hasUnreadMention = false,
   showChecklistOnCard = false,
   onOpen,
@@ -1482,6 +1475,10 @@ const TaskCard = memo(function TaskCard({
   const assignedTeam = taskItem.assignmentMode === "team"
     ? teams.find((team) => (taskItem.teamIds || [taskItem.teamId]).some((id) => String(id) === String(team.id)))
     : null;
+  const taskPersonalTagIds = new Set(normalizePersonalTagIds(taskItem.personalTagIds));
+  const visiblePersonalTags = personalTags.filter(
+    (tag) => !tag.archived && taskPersonalTagIds.has(tag.id),
+  );
   return (
     <article
       className={`task-card ${compact ? "task-card-compact" : ""} ${overdue ? "task-overdue" : ""} ${taskItem.syncStatus === "syncing" ? "task-syncing" : ""} ${isDragging ? "task-card-dragging" : ""}`}
@@ -1530,15 +1527,19 @@ const TaskCard = memo(function TaskCard({
         <h3>{taskItem.title}</h3>
         {taskItem.restrictedVisibility && <RestrictedVisibilityMark />}
       </div>
-      {(taskItem.sourceType || taskItem.quoteId) && (
-        <div className="task-source-row">
-          <SourceBadge
-            sourceType={
-              taskItem.sourceType || (taskItem.quoteId ? "quote" : "manual")
-            }
-          />
-          <span>{taskItem.sourceCode || taskItem.quoteCode}</span>
-          <em>{taskItem.sourceLabel || taskItem.quoteTitle}</em>
+      {visiblePersonalTags.length > 0 && (
+        <div className="task-card-tags" aria-label="Tags da tarefa">
+          {visiblePersonalTags.map((tag) => (
+            <span
+              className="task-card-tag"
+              key={tag.id}
+              style={{ "--personal-tag-color": tag.color }}
+              title={tag.name}
+            >
+              <span className="personal-tag-dot" aria-hidden="true" />
+              {tag.name}
+            </span>
+          ))}
         </div>
       )}
       {hasUnreadMention && (
@@ -1680,6 +1681,7 @@ const Board = memo(function Board({
   currentEmployee,
   checklistVisibility,
   teams = [],
+  personalTags = [],
   unreadMentionTaskIds,
   onOpen,
   onToggleSubtask,
@@ -1975,6 +1977,7 @@ const Board = memo(function Board({
                     subtasks={subtasksByParent.get(taskItem.id) || []}
                     currentEmployee={currentEmployee}
                     teams={teams}
+                    personalTags={personalTags}
                     hasUnreadMention={unreadMentionTaskIds.has(taskItem.id)}
                     showChecklistOnCard={checklistVisibility[taskItem.id]}
                     onOpen={onOpen}
@@ -2048,11 +2051,11 @@ function PersonalTagPicker({ tags = [], tasks = [], value = [], onChange, onCrea
     const picker = pickerRef.current;
     const inline = inlineRef.current;
     if (!picker || !inline || !activeTags.length) return undefined;
-    if (showAllTags) {
-      setSelectedOverflow(false);
-      setVisibleCount(activeTags.length);
-      return undefined;
-    }
+          if (showAllTags) {
+            updateSelectedOverflow(false);
+            updateVisibleCount(activeTags.length);
+            return undefined;
+          }
 
     const measure = () => {
       const pickerWidth = picker.getBoundingClientRect().width;
@@ -2429,6 +2432,7 @@ function MobileBoardList({
   currentEmployee,
   checklistVisibility,
   teams = [],
+  personalTags = [],
   unreadMentionTaskIds,
   onOpen,
   onToggleSubtask,
@@ -2459,6 +2463,7 @@ function MobileBoardList({
               subtasks={subtasksByParent.get(taskItem.id) || []}
               currentEmployee={currentEmployee}
               teams={teams}
+              personalTags={personalTags}
               hasUnreadMention={unreadMentionTaskIds.has(taskItem.id)}
               showChecklistOnCard={checklistVisibility[taskItem.id]}
               onOpen={onOpen}
@@ -2552,13 +2557,13 @@ function BoardView({
             : "Arraste os cartões para atualizar o andamento das tarefas."
         }
       >
+        <BoardSortSelector sort={sort} onChange={setSort} />
         <TaskScopeSelector
           active={taskScope}
           onSelect={onScopeChange}
           disabled={!currentEmployee?.name}
         />
         <TaskViewSelector active="board" onSelect={onNavigate} />
-        <BoardSortSelector sort={sort} onChange={setSort} />
       </PageHeader>
       <FilterBar
         filters={filters}
@@ -2579,6 +2584,7 @@ function BoardView({
           currentEmployee={currentEmployee}
           checklistVisibility={checklistVisibility}
           teams={state.teams}
+          personalTags={personalTags}
           unreadMentionTaskIds={unreadMentionTaskIds}
           onOpen={onOpen}
           onToggleSubtask={onToggleSubtask}
@@ -2593,6 +2599,7 @@ function BoardView({
           currentEmployee={currentEmployee}
           checklistVisibility={checklistVisibility}
           teams={state.teams}
+          personalTags={personalTags}
           unreadMentionTaskIds={unreadMentionTaskIds}
           onOpen={onOpen}
           onToggleSubtask={onToggleSubtask}

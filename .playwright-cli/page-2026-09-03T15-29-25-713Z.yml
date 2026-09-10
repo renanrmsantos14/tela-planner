@@ -1,0 +1,299 @@
+- generic [ref=e1541]:
+  - main [ref=e1542]:
+    - generic [ref=e1543]:
+      - generic [ref=e1544]:
+        - strong [ref=e1545]: Contatos
+        - generic [ref=e1546]: Central de Trabalho
+      - button "Abrir notificações, 2 não lidas" [ref=e2001] [cursor=pointer]:
+        - generic [ref=e1553]: "2"
+      - button "Atualizar dados" [ref=e1554] [cursor=pointer]
+      - generic "Renan Martins" [ref=e1558]: RM
+    - generic [ref=e1632]:
+      - generic [ref=e1634]:
+        - generic [ref=e1635]: Atendimento
+        - heading "Contatos" [level=1] [ref=e1636]
+        - paragraph [ref=e1637]: Organize os casos recebidos e mantenha cada retorno no responsável certo.
+      - generic [ref=e1638]:
+        - article [ref=e1639]:
+          - generic [ref=e1643]:
+            - strong [ref=e1644]: "2"
+            - generic [ref=e1645]: Novos
+        - article [ref=e1646]:
+          - generic [ref=e1651]:
+            - strong [ref=e1652]: "1"
+            - generic [ref=e1653]: Em atendimento
+        - article [ref=e1654]:
+          - generic [ref=e1659]:
+            - strong [ref=e1660]: "1"
+            - generic [ref=e1661]: Aguardando
+        - article [ref=e1662]:
+          - generic [ref=e1667]:
+            - strong [ref=e1668]: "1"
+            - generic [ref=e1669]: Vencidos
+      - generic [ref=e1670]:
+        - button "Filtros +" [ref=e1671] [cursor=pointer]:
+          - generic [ref=e1672]: Filtros
+          - generic [ref=e1673]: +
+        - textbox "Buscar contatos" [ref=e1678]:
+          - /placeholder: Buscar assunto, remetente ou mensagem
+      - generic [ref=e1679]:
+        - generic [ref=e1680]:
+          - generic [ref=e1681]:
+            - generic [ref=e1682]: Inbox operacional
+            - heading "Casos recebidos" [level=2] [ref=e1683]
+          - generic [ref=e1684]: "4"
+        - generic [ref=e1685]:
+          - button "Confirmação de embarque para diretoria Novo Conseguem confirmar o nome do motorista ainda hoje? Mariana Costa WhatsApp 03 set., 12:18" [ref=e1686] [cursor=pointer]:
+            - generic [ref=e1688]:
+              - generic [ref=e1689]:
+                - strong [ref=e1690]: Confirmação de embarque para diretoria
+                - generic [ref=e1691]: Novo
+              - generic [ref=e1692]: Conseguem confirmar o nome do motorista ainda hoje?
+              - generic [ref=e1693]:
+                - generic [ref=e1694]: Mariana Costa
+                - generic [ref=e1697]: WhatsApp
+            - time [ref=e1701]: 03 set., 12:18
+          - button "Ajuste de horário do transfer Em atendimento Podemos antecipar o retorno para 18h30? Eduardo Nogueira E-mail 03 set., 10:26" [ref=e1702] [cursor=pointer]:
+            - generic [ref=e1704]:
+              - generic [ref=e1705]:
+                - strong [ref=e1706]: Ajuste de horário do transfer
+                - generic [ref=e1707]: Em atendimento
+              - generic [ref=e1708]: Podemos antecipar o retorno para 18h30?
+              - generic [ref=e1709]:
+                - generic [ref=e1710]: Eduardo Nogueira
+                - generic [ref=e1714]: E-mail
+            - time [ref=e1719]: 03 set., 10:26
+          - button "Caso criado no smoke Novo Mensagem de teste Pessoa Smoke WhatsApp 03 set., 12:26" [ref=e1720] [cursor=pointer]:
+            - generic [ref=e1722]:
+              - generic [ref=e1723]:
+                - strong [ref=e1724]: Caso criado no smoke
+                - generic [ref=e1725]: Novo
+              - generic [ref=e1726]: Mensagem de teste
+              - generic [ref=e1727]:
+                - generic [ref=e1728]: Pessoa Smoke
+                - generic [ref=e1731]: WhatsApp
+            - time [ref=e1735]: 03 set., 12:26
+          - button "Retorno sobre disponibilidade de van Aguardando Ligo novamente amanhã pela manhã para confirmar. Carlos Ribeiro Telefone 02 set., 11:26" [ref=e1736] [cursor=pointer]:
+            - generic [ref=e1738]:
+              - generic [ref=e1739]:
+                - strong [ref=e1740]: Retorno sobre disponibilidade de van
+                - generic [ref=e1741]: Aguardando
+              - generic [ref=e1742]: Ligo novamente amanhã pela manhã para confirmar.
+              - generic [ref=e1743]:
+                - generic [ref=e1744]: Carlos Ribeiro
+                - generic [ref=e1747]: Telefone
+            - time [ref=e1752]: 02 set., 11:26
+      - complementary "Caso Confirmação de embarque para diretoria" [ref=e1754]:
+        - generic [ref=e1755]:
+          - generic [ref=e1756]:
+            - generic [ref=e1757]: Caso de atendimento
+            - strong [ref=e1758]: contact-001
+          - button "Fechar caso" [ref=e1759] [cursor=pointer]
+        - generic [ref=e1763]:
+          - textbox "Assunto do caso" [ref=e1767]: Confirmação de embarque para diretoria
+          - generic [ref=e1768]:
+            - generic [ref=e1769]:
+              - text: Remetente
+              - textbox "Remetente" [ref=e1770]: Mariana Costa
+            - generic [ref=e1771]:
+              - text: Canal
+              - combobox "Canal" [ref=e1772]:
+                - option "WhatsApp" [selected]
+                - option "E-mail"
+                - option "Telefone"
+            - generic [ref=e1773]:
+              - text: Telefone
+              - textbox "Telefone" [ref=e1774]: +55 11 98888-1200
+            - generic [ref=e1775]:
+              - text: E-mail
+              - textbox "E-mail" [ref=e1776]
+            - generic [ref=e1777]:
+              - text: Prazo
+              - textbox "Prazo" [ref=e1778]: 2026-09-03
+            - generic [ref=e1779]:
+              - text: Responsável
+              - generic [ref=e1780]:
+                - combobox
+                - button "Responsável pelo caso" [ref=e1781] [cursor=pointer]:
+                  - generic [ref=e1782]: Renan Martins
+          - generic [ref=e1784]:
+            - heading "Prioridade" [level=3] [ref=e1786]
+            - generic [ref=e1787]:
+              - button "Baixa" [ref=e1788] [cursor=pointer]
+              - button "Média" [ref=e1789] [cursor=pointer]
+              - button "Alta" [ref=e1790] [cursor=pointer]
+          - generic [ref=e1791]:
+            - heading "Status" [level=3] [ref=e1793]
+            - 'group "Status atual: Novo" [ref=e1794]':
+              - generic [ref=e1795]:
+                - button "Novo" [pressed] [ref=e1796] [cursor=pointer]
+                - button "Em atendimento" [ref=e1799] [cursor=pointer]
+                - button "Aguardando" [ref=e1803] [cursor=pointer]
+                - button "Resolvido" [ref=e1807] [cursor=pointer]
+                - button "Arquivado" [ref=e1811] [cursor=pointer]
+              - generic [ref=e1815]: Novo
+          - generic [ref=e1816]:
+            - heading "Contexto recebido" [level=3] [ref=e1818]
+            - generic [ref=e1819]:
+              - text: Resumo
+              - textbox "Resumo" [ref=e1820]: Cliente solicita confirmação do motorista e da janela de embarque.
+            - generic [ref=e1821]:
+              - text: Última mensagem
+              - textbox "Última mensagem" [ref=e1822]: Conseguem confirmar o nome do motorista ainda hoje?
+          - generic [ref=e1823]:
+            - heading "Vínculos opcionais" [level=3] [ref=e1825]
+            - generic [ref=e1826]:
+              - generic [ref=e1827]:
+                - text: Cliente
+                - textbox "Cliente" [ref=e1828]:
+                  - /placeholder: ID do cliente
+              - generic [ref=e1829]:
+                - text: Cotação
+                - generic [ref=e1830]:
+                  - combobox
+                  - button "Cotação vinculada" [ref=e1831] [cursor=pointer]:
+                    - generic [ref=e1832]: COT-1008 · Transfer executivo · Aeroporto GRU
+                    - button "Limpar seleção" [ref=e1833]
+          - generic [ref=e1835]:
+            - generic [ref=e1836]:
+              - heading "Notas internas" [level=3] [ref=e1837]
+              - generic [ref=e1838]: "1"
+            - generic [ref=e1839]:
+              - strong [ref=e1840]: Você
+              - paragraph [ref=e1841]: Priorizar antes da reunião das 16h.
+              - generic [ref=e1842]: 03 set., 12:06
+            - generic [ref=e1843]:
+              - textbox "Registrar uma nota interna" [ref=e1844]
+              - button "Adicionar nota" [disabled] [ref=e1845]
+          - generic [ref=e1847]:
+            - generic [ref=e1848]:
+              - generic [ref=e1849]:
+                - heading "Anexos" [level=3] [ref=e1850]
+                - generic [ref=e1851]: "0"
+              - generic [ref=e1852]: Até 5 MB por arquivo
+            - paragraph [ref=e1853]: Arquivos recebidos ou usados na tratativa deste caso.
+            - generic [ref=e1854] [cursor=pointer]:
+              - generic [ref=e1859]:
+                - strong [ref=e1860]: Adicione arquivos ao caso
+                - generic [ref=e1861]: Cole com Ctrl+V, clique para escolher ou arraste arquivos para cá
+              - generic [ref=e1862]: Escolher arquivos
+              - button "Adicione arquivos ao caso Cole com Ctrl+V, clique para escolher ou arraste arquivos para cá Escolher arquivos"
+            - generic [ref=e1867]:
+              - strong [ref=e1868]: Nenhum anexo ainda
+              - generic [ref=e1869]: Inclua briefing, evidência ou qualquer arquivo útil para a execução.
+          - generic [ref=e1870]:
+            - generic [ref=e1871]:
+              - heading "Tasks vinculadas" [level=3] [ref=e1872]
+              - generic [ref=e1873]: "1"
+            - generic [ref=e2002]:
+              - generic [ref=e2003]: Confirmação de embarque para diretoria
+              - generic [ref=e2004]: Em acompanhamento
+            - button "Criar task" [ref=e1875] [cursor=pointer]
+          - generic [ref=e1877]:
+            - generic [ref=e1878]:
+              - heading "Histórico" [level=3] [ref=e1879]
+              - generic [ref=e1880]: "2"
+            - generic [ref=e2007]:
+              - strong [ref=e2008]: Task vinculada ao caso.
+              - generic [ref=e2009]: Você · 03 set., 12:29
+            - generic [ref=e1883]:
+              - strong [ref=e1884]: Caso recebido via WhatsApp.
+              - generic [ref=e1885]: Sistema · 03 set., 12:26
+        - generic [ref=e1886]:
+          - button "Cancelar" [ref=e1887] [cursor=pointer]
+          - button "Salvar alterações" [ref=e1888] [cursor=pointer]
+    - status [ref=e2010]:
+      - generic [ref=e2014]: Tarefa salva localmente.
+      - button "Fechar notificação" [ref=e2015] [cursor=pointer]
+    - complementary [ref=e1892]:
+      - generic [ref=e1893]:
+        - generic [ref=e1894]:
+          - generic [ref=e1895]: Nova tarefa
+          - generic [ref=e1896]: CRIAÇÃO MANUAL
+        - button "Fechar criação" [disabled] [ref=e1897] [cursor=pointer]
+      - generic [ref=e1901]:
+        - generic [ref=e1903]:
+          - generic [ref=e1904]: Título da tarefa
+          - textbox "Título da tarefa" [ref=e1905]:
+            - /placeholder: "Ex.: Confirmar motorista"
+            - text: Confirmação de embarque para diretoria
+        - generic [ref=e1906]:
+          - generic [ref=e1907]:
+            - generic [ref=e1908]:
+              - generic [ref=e1909]: Status
+              - 'group "Status atual: A fazer" [ref=e1910]':
+                - generic [ref=e1911]:
+                  - button "A fazer" [pressed] [ref=e1912] [cursor=pointer]
+                  - button "Aguardando" [ref=e1916] [cursor=pointer]
+                  - button "Em andamento" [ref=e1920] [cursor=pointer]
+                  - button "Concluído" [ref=e1923] [cursor=pointer]
+                - generic [ref=e1927]: A fazer
+            - generic [ref=e1928]:
+              - generic [ref=e1929]: Prioridade
+              - 'group "Prioridade atual: Alta" [ref=e1930]':
+                - generic [ref=e1931]:
+                  - button "Baixa" [ref=e1932] [cursor=pointer]
+                  - button "Média" [ref=e1935] [cursor=pointer]
+                  - button "Alta" [pressed] [ref=e1938] [cursor=pointer]
+                - generic [ref=e1941]: Alta
+          - generic [ref=e1942]:
+            - generic [ref=e1943]:
+              - generic [ref=e1944]:
+                - generic [ref=e1945]: Responsáveis
+                - group "Tipo de atribuição" [ref=e1946]:
+                  - button "Pessoas" [pressed] [ref=e1947] [cursor=pointer]
+                  - button "Equipe" [ref=e1951] [cursor=pointer]
+              - generic [ref=e1957]:
+                - generic [ref=e1958]: Responsáveis
+                - generic [ref=e1959]:
+                  - listbox:
+                    - option: Camila Torres
+                    - option: Gustavo Neri
+                    - option: João Mendes
+                    - option: Luiza Prado
+                    - option: Marina Alves
+                    - option: Rafael Lima
+                    - option [selected]: Renan Martins
+                  - button "Renan Martins Limpar seleção" [ref=e1960] [cursor=pointer]:
+                    - generic [ref=e1961]: Renan Martins
+                    - button "Limpar seleção" [ref=e1964]
+            - generic [ref=e1966]:
+              - text: Prazo
+              - textbox "Prazo" [ref=e1967]: 2026-09-03
+        - generic [ref=e1968]:
+          - text: Descrição
+          - textbox "Descrição" [ref=e1969]:
+            - /placeholder: Adicione contexto para quem vai executar...
+            - text: Cliente solicita confirmação do motorista e da janela de embarque. Conseguem confirmar o nome do motorista ainda hoje?
+        - generic [ref=e1970]:
+          - generic [ref=e1971]:
+            - generic [ref=e1972]:
+              - heading "Anexos" [level=3] [ref=e1973]
+              - generic [ref=e1974]: "0"
+            - generic [ref=e1975]: Até 5 MB por arquivo
+          - paragraph [ref=e1976]: Os arquivos só serão enviados quando você clicar em Criar tarefa.
+          - generic [ref=e1977] [cursor=pointer]:
+            - generic [ref=e1982]:
+              - strong [ref=e1983]: Adicione arquivos à tarefa
+              - generic [ref=e1984]: Cole com Ctrl+V, clique para escolher ou arraste arquivos para cá
+            - generic [ref=e1985]: Escolher arquivos
+            - button "Adicione arquivos à tarefa Cole com Ctrl+V, clique para escolher ou arraste arquivos para cá Escolher arquivos"
+          - generic [ref=e1990]:
+            - strong [ref=e1991]: Nenhum anexo ainda
+            - generic [ref=e1992]: Inclua briefing, evidência ou qualquer arquivo útil para a execução.
+        - generic [ref=e1993]: Preencha os dados e confirme em Criar tarefa para salvar tudo de uma vez.
+      - generic [ref=e1997]:
+        - button "Cancelar" [disabled] [ref=e1998]
+        - button "Criar tarefa" [disabled] [ref=e1999]
+      - status [ref=e2020]:
+        - strong [ref=e2024]: Tarefa criada
+        - generic [ref=e2025]: Fechando…
+  - navigation "Navegação principal" [ref=e1608]:
+    - button "Hoje 4" [ref=e2026] [cursor=pointer]:
+      - generic [ref=e1615]: Hoje
+      - generic [ref=e1616]: "4"
+    - button "Tarefas 31" [ref=e2027] [cursor=pointer]:
+      - generic [ref=e1621]: Tarefas
+      - generic [ref=e1622]: "31"
+    - button "Cotações" [ref=e1623] [cursor=pointer]
+    - button "Mais" [ref=e1628] [cursor=pointer]

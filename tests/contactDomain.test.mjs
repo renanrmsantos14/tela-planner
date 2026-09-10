@@ -58,7 +58,7 @@ test("ordena por prioridade, prazo e mensagem mais recente", () => {
     contact({ id: "medium-late", priority: "medium", dueDate: "2026-09-06", lastMessageAt: "2026-09-03T13:00:00Z" }),
     contact({ id: "medium-early", priority: "medium", dueDate: "2026-09-04", lastMessageAt: "2026-09-03T08:00:00Z" }),
   ];
-  assert.deepEqual(sortContacts(contacts).map((item) => item.id), ["high", "medium-early", "medium-late", "low"]);
+  assert.deepEqual(sortContacts(contacts, "2026-09-01").map((item) => item.id), ["high", "medium-early", "medium-late", "low"]);
 });
 
 test("calcula indicadores, permissões e task vinculada", () => {

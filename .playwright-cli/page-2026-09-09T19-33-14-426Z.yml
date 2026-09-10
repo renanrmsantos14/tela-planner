@@ -1,0 +1,23 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - main [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e6]:
+          - strong [ref=e7]: Mais
+          - generic [ref=e8]: Central de Trabalho
+        - generic "Modo local" [ref=e9]: Local
+        - button "Abrir notificações, 2 não lidas" [ref=e11] [cursor=pointer]:
+          - generic [ref=e17]: "2"
+        - button "Atualizar dados" [ref=e18] [cursor=pointer]
+        - generic "Renan Martins" [ref=e22]: RM
+      - generic [ref=e23]: Carregando…
+    - navigation "Navegação principal" [ref=e26]:
+      - button "Hoje 15" [ref=e27] [cursor=pointer]:
+        - generic [ref=e33]: Hoje
+        - generic [ref=e34]: "15"
+      - button "Tarefas 30" [ref=e35] [cursor=pointer]:
+        - generic [ref=e39]: Tarefas
+        - generic [ref=e40]: "30"
+      - button "Cotações" [ref=e41] [cursor=pointer]
+      - button "Mais" [ref=e46] [cursor=pointer]
+  - listbox [ref=e49]

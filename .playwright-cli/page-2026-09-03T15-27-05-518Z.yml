@@ -1,0 +1,41 @@
+- generic [ref=e3]:
+  - main [ref=e83]:
+    - generic [ref=e1446]:
+      - generic [ref=e1447]:
+        - strong [ref=e1448]: Mais
+        - generic [ref=e1449]: Central de Trabalho
+      - button "Abrir notificações, 2 não lidas" [ref=e1450] [cursor=pointer]:
+        - generic [ref=e1456]: "2"
+      - button "Atualizar dados" [ref=e1457] [cursor=pointer]
+      - generic "Renan Martins" [ref=e1461]: RM
+    - generic [ref=e1492]:
+      - generic [ref=e1494]:
+        - generic [ref=e1495]: Atalhos
+        - heading "Mais" [level=1] [ref=e1496]
+        - paragraph [ref=e1497]: Acesse origens e configurações sem tirar o foco das tarefas.
+      - generic [ref=e1498]:
+        - button "Gestão Cobranças, carga e retornos pendentes" [ref=e1499] [cursor=pointer]:
+          - generic [ref=e1505]:
+            - strong [ref=e1506]: Gestão
+            - generic [ref=e1507]: Cobranças, carga e retornos pendentes
+        - button "Contatos Casos recebidos e responsáveis" [ref=e1510] [cursor=pointer]:
+          - generic [ref=e1517]:
+            - strong [ref=e1518]: Contatos
+            - generic [ref=e1519]: Casos recebidos e responsáveis
+        - button "Qualidade Transforme erros e ações em tarefas" [ref=e1522] [cursor=pointer]:
+          - generic [ref=e1526]:
+            - strong [ref=e1527]: Qualidade
+            - generic [ref=e1528]: Transforme erros e ações em tarefas
+        - button "Configurações Dados, recarregamento e versão" [ref=e1531] [cursor=pointer]:
+          - generic [ref=e1536]:
+            - strong [ref=e1537]: Configurações
+            - generic [ref=e1538]: Dados, recarregamento e versão
+  - navigation "Navegação principal" [ref=e1469]:
+    - button "Hoje 3" [ref=e1470] [cursor=pointer]:
+      - generic [ref=e1476]: Hoje
+      - generic [ref=e1477]: "3"
+    - button "Tarefas 30" [ref=e1478] [cursor=pointer]:
+      - generic [ref=e1482]: Tarefas
+      - generic [ref=e1483]: "30"
+    - button "Cotações" [ref=e1484] [cursor=pointer]
+    - button "Mais" [active] [ref=e1489] [cursor=pointer]

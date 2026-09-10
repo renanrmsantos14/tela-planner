@@ -1,0 +1,88 @@
+- generic [active] [ref=f1e1]:
+  - generic [ref=f1e3]:
+    - main [ref=f1e4]:
+      - generic [ref=f1e5]:
+        - generic [ref=f1e6]:
+          - strong [ref=f1e7]: Contatos
+          - generic [ref=f1e8]: Central de Trabalho
+        - generic "Modo local" [ref=f1e9]: Local
+        - button "Abrir notificações, 3 não lidas" [ref=f1e11] [cursor=pointer]:
+          - generic [ref=f1e17]: "3"
+        - button "Atualizar dados" [ref=f1e18] [cursor=pointer]
+        - generic "Renan Martins" [ref=f1e22]: RM
+      - generic [ref=f1e23]:
+        - generic [ref=f1e25]:
+          - generic [ref=f1e26]: Atendimento
+          - heading "Contatos" [level=1] [ref=f1e27]
+          - paragraph [ref=f1e28]: Organize os casos recebidos e mantenha cada retorno no responsável certo.
+        - generic [ref=f1e29]:
+          - article [ref=f1e30]:
+            - generic [ref=f1e34]:
+              - strong [ref=f1e35]: "1"
+              - generic [ref=f1e36]: Novos
+          - article [ref=f1e37]:
+            - generic [ref=f1e42]:
+              - strong [ref=f1e43]: "1"
+              - generic [ref=f1e44]: Em atendimento
+          - article [ref=f1e45]:
+            - generic [ref=f1e50]:
+              - strong [ref=f1e51]: "1"
+              - generic [ref=f1e52]: Aguardando
+          - article [ref=f1e53]:
+            - generic [ref=f1e58]:
+              - strong [ref=f1e59]: "1"
+              - generic [ref=f1e60]: Vencidos
+        - generic [ref=f1e61]:
+          - button "Filtros +" [ref=f1e62] [cursor=pointer]:
+            - generic [ref=f1e63]: Filtros
+            - generic [ref=f1e64]: +
+          - textbox "Buscar contatos" [ref=f1e69]:
+            - /placeholder: Buscar assunto, remetente ou mensagem
+        - generic [ref=f1e70]:
+          - generic [ref=f1e71]:
+            - generic [ref=f1e72]:
+              - generic [ref=f1e73]: Inbox operacional
+              - heading "Casos recebidos" [level=2] [ref=f1e74]
+            - generic [ref=f1e75]: "3"
+          - generic [ref=f1e76]:
+            - button "Confirmação de embarque para diretoria Novo Conseguem confirmar o nome do motorista ainda hoje? Mariana Costa WhatsApp 03 set., 12:50" [ref=f1e77] [cursor=pointer]:
+              - generic [ref=f1e79]:
+                - generic [ref=f1e80]:
+                  - strong [ref=f1e81]: Confirmação de embarque para diretoria
+                  - generic [ref=f1e82]: Novo
+                - generic [ref=f1e83]: Conseguem confirmar o nome do motorista ainda hoje?
+                - generic [ref=f1e84]:
+                  - generic [ref=f1e85]: Mariana Costa
+                  - generic [ref=f1e88]: WhatsApp
+              - time [ref=f1e92]: 03 set., 12:50
+            - button "Ajuste de horário do transfer Em atendimento Podemos antecipar o retorno para 18h30? Eduardo Nogueira E-mail 03 set., 10:58" [ref=f1e93] [cursor=pointer]:
+              - generic [ref=f1e95]:
+                - generic [ref=f1e96]:
+                  - strong [ref=f1e97]: Ajuste de horário do transfer
+                  - generic [ref=f1e98]: Em atendimento
+                - generic [ref=f1e99]: Podemos antecipar o retorno para 18h30?
+                - generic [ref=f1e100]:
+                  - generic [ref=f1e101]: Eduardo Nogueira
+                  - generic [ref=f1e105]: E-mail
+              - time [ref=f1e110]: 03 set., 10:58
+            - button "Retorno sobre disponibilidade de van Aguardando Ligo novamente amanhã pela manhã para confirmar. Carlos Ribeiro Telefone 02 set., 11:58" [ref=f1e111] [cursor=pointer]:
+              - generic [ref=f1e113]:
+                - generic [ref=f1e114]:
+                  - strong [ref=f1e115]: Retorno sobre disponibilidade de van
+                  - generic [ref=f1e116]: Aguardando
+                - generic [ref=f1e117]: Ligo novamente amanhã pela manhã para confirmar.
+                - generic [ref=f1e118]:
+                  - generic [ref=f1e119]: Carlos Ribeiro
+                  - generic [ref=f1e122]: Telefone
+              - time [ref=f1e127]: 02 set., 11:58
+        - button "Criar novo caso" [ref=f1e128] [cursor=pointer]
+    - navigation "Navegação principal" [ref=f1e130]:
+      - button "Hoje 3" [ref=f1e131] [cursor=pointer]:
+        - generic [ref=f1e137]: Hoje
+        - generic [ref=f1e138]: "3"
+      - button "Tarefas 30" [ref=f1e139] [cursor=pointer]:
+        - generic [ref=f1e143]: Tarefas
+        - generic [ref=f1e144]: "30"
+      - button "Cotações" [ref=f1e145] [cursor=pointer]
+      - button "Mais" [ref=f1e150] [cursor=pointer]
+  - listbox [ref=f1e153]

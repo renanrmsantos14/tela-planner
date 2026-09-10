@@ -1,0 +1,366 @@
+- generic [ref=e3]:
+  - main [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - strong [ref=e7]: Mais
+        - generic [ref=e8]: Central de Trabalho
+      - generic "Modo local" [ref=e9]: Local
+      - button "Abrir notificações, 4 não lidas" [ref=e1200] [cursor=pointer]:
+        - generic [ref=e17]: "4"
+      - button "Atualizar dados" [ref=e18] [cursor=pointer]
+      - generic "Renan Martins" [ref=e22]: RM
+    - generic [ref=e1244]:
+      - generic [ref=e1246]:
+        - generic [ref=e1247]: Execução local
+        - heading "Configurações" [level=1] [ref=e1248]
+        - paragraph [ref=e1249]: Dados de demonstração mantidos somente neste navegador.
+      - generic [ref=e1250]:
+        - generic [ref=e1256]:
+          - heading "Restaurar cenário inicial" [level=2] [ref=e1257]
+          - paragraph [ref=e1258]: Repõe as cotações e tarefas sintéticas do mock local.
+          - button "Restaurar mock" [ref=e1259] [cursor=pointer]
+        - generic [ref=e1269]:
+          - heading "Fonte de dados" [level=2] [ref=e1270]
+          - paragraph [ref=e1271]: O Planner usa mock data local e não cria registros no Dataverse.
+          - generic [ref=e1272]: Modo local · mock
+        - generic [ref=e1274]:
+          - generic [ref=e1275]: v
+          - generic [ref=e1277]:
+            - heading "Versão do aplicativo" [level=2] [ref=e1278]
+            - paragraph [ref=e1279]: Identificação da versão publicada neste ambiente.
+            - text: v0.1.435 09/09/2026
+        - button "Importar tarefas Traga tarefas do Microsoft Planner com revisão antes de gravar no app. Começar importação" [ref=e1280] [cursor=pointer]:
+          - generic [ref=e1285]:
+            - generic [ref=e1286]: Importar tarefas
+            - generic [ref=e1287]: Traga tarefas do Microsoft Planner com revisão antes de gravar no app.
+            - generic [ref=e1288]: Começar importação
+      - region [ref=e1292]:
+        - generic [ref=e1293]:
+          - generic [ref=e1300]:
+            - generic [ref=e1301]: Operação controlada
+            - heading "Módulo de teste de notificações" [level=2] [ref=e1302]
+            - paragraph [ref=e1303]: Dispare um evento real para validar o fluxo usando o e-mail operacional do usuário conectado.
+          - generic [ref=e1304]: e-mail operacional do usuário
+        - generic [ref=e1308]:
+          - generic [ref=e1309]: Conecte o Planner ao Dataverse para habilitar o envio real.
+          - generic [ref=e1312]:
+            - generic [ref=e1313]:
+              - generic [ref=e1314]: Tarefa de referência
+              - combobox "Tarefa de referência" [disabled] [ref=e1315]:
+                - option "Preparar proposta comercial" [selected]
+                - option "Confirmar disponibilidade de veículo"
+                - option "Validar margem da proposta"
+                - option "Selecionar motorista de apoio"
+                - option "Montar cotação do carro blindado"
+                - option "Registrar resposta enviada"
+                - option "Validar causa do erro operacional"
+                - option "Abrir ordem de serviço do roadshow"
+                - option "Conferir rota São Paulo–Campinas"
+                - option "Solicitar dados dos passageiros"
+                - option "Confirmar credenciamento dos palestrantes"
+                - option "Reservar van de 15 lugares"
+                - option "Revisar diária em Alphaville"
+                - option "Validar motorista bilíngue"
+                - option "Enviar condições comerciais"
+                - option "Registrar aceite do cliente"
+                - option "Conferir placa e documentação"
+                - option "Acompanhar retorno sobre embarque"
+                - option "Enviar comprovante de serviço"
+                - option "Conferir janela de chegada no terminal"
+                - option "Validar cobrança de pedágios"
+                - option "Montar escala da convenção"
+                - option "Confirmar quantidade de veículos"
+                - option "Revisar contrato de disponibilidade"
+                - option "Enviar briefing para recepção VIP"
+                - option "Confirmar equipe de aeroporto"
+                - option "Definir protocolo de embarque noturno"
+                - option "Checar adicional de madrugada"
+                - option "Arquivar aceite da diretoria"
+                - option "Atualizar quadro de disponibilidade"
+                - option "Conferir certificados dos veículos"
+                - option "Revisar tabela de parceiros"
+                - option "Distribuir escala do fim de semana"
+                - option "Registrar retorno do cliente"
+                - option "Tratar divergência de quilometragem"
+                - option "Solicitar segunda via do comprovante"
+                - option "Validar plano de contingência"
+                - option "Confirmar contato de plantão"
+                - option "Reabrir negociação de horário"
+                - option "Revisar pendências prioritárias do dia"
+                - option "Aprovar mensagem para cliente estratégico"
+                - option "Acompanhar retorno do fornecedor"
+                - option "Revisar comentário da ocorrência QAL-205"
+                - option "Confirmar fechamento semanal"
+            - generic [ref=e1316]:
+              - generic [ref=e1317]: Mensagem do teste
+              - textbox "Mensagem do teste" [disabled] [ref=e1318]: Teste de notificação do Planner.
+          - generic [ref=e1319]:
+            - generic [ref=e1320]: Tipo de notificação
+            - radiogroup "Tipo de notificação" [ref=e1321]:
+              - radio "Atualização Alteração geral na tarefa" [checked] [disabled] [ref=e1322] [cursor=pointer]:
+                - strong [ref=e1323]: Atualização
+                - generic [ref=e1324]: Alteração geral na tarefa
+              - radio "Menção Teste de aviso de menção" [disabled] [ref=e1325] [cursor=pointer]:
+                - strong [ref=e1326]: Menção
+                - generic [ref=e1327]: Teste de aviso de menção
+              - radio "Prazo Teste de mudança de prazo" [disabled] [ref=e1328] [cursor=pointer]:
+                - strong [ref=e1329]: Prazo
+                - generic [ref=e1330]: Teste de mudança de prazo
+              - radio "Status Teste de mudança de status" [disabled] [ref=e1331] [cursor=pointer]:
+                - strong [ref=e1332]: Status
+                - generic [ref=e1333]: Teste de mudança de status
+          - button "Enviar notificação de teste" [disabled] [ref=e1335]
+      - region [ref=e1339]:
+        - button "Ferramentas administrativas Limpeza controlada de dados do Planner +" [ref=e1340] [cursor=pointer]:
+          - generic [ref=e1344]:
+            - strong [ref=e1345]: Ferramentas administrativas
+            - generic [ref=e1346]: Limpeza controlada de dados do Planner
+          - generic [ref=e1347]: +
+      - generic [ref=e1348]:
+        - region [ref=e1349]:
+          - generic [ref=e1351]:
+            - generic [ref=e1352]: Personalização
+            - heading "Minhas tags" [level=2] [ref=e1353]
+            - paragraph [ref=e1354]: Crie e organize etiquetas privadas para encontrar suas tarefas mais rápido.
+          - generic "Gerenciar tags pessoais" [ref=e1358]:
+            - generic [ref=e1359]:
+              - textbox "Nome da nova tag" [ref=e1360]:
+                - /placeholder: Nova tag
+              - group "Cor da nova tag" [ref=e1361]:
+                - 'button "Usar cor #1d5ce8" [pressed] [ref=e1362] [cursor=pointer]'
+                - 'button "Usar cor #2d796f" [ref=e1363] [cursor=pointer]'
+                - 'button "Usar cor #b87900" [ref=e1364] [cursor=pointer]'
+                - 'button "Usar cor #b84b5b" [ref=e1365] [cursor=pointer]'
+                - 'button "Usar cor #7052a3" [ref=e1366] [cursor=pointer]'
+                - 'button "Usar cor #4f6b82" [ref=e1367] [cursor=pointer]'
+              - button "Criar" [disabled] [ref=e1368]
+            - generic [ref=e1370]: Nenhuma tag pessoal criada.
+        - region [ref=e1371]:
+          - generic [ref=e1372]:
+            - heading "Equipes do Planner" [level=2] [ref=e1374]
+            - generic [ref=e1375]:
+              - generic "4 equipes cadastradas" [ref=e1376]:
+                - strong [ref=e1377]: "4"
+                - generic [ref=e1378]: equipes
+              - button "Nova equipe" [active] [ref=e1379] [cursor=pointer]
+          - generic [ref=e1385]:
+            - generic [ref=e1387]:
+              - article [ref=e1388]:
+                - button "Comercial 3 membros Marina Alves, Camila Torres +1 11 tarefas abertas" [ref=e1389] [cursor=pointer]:
+                  - generic [ref=e1396]:
+                    - strong [ref=e1397]: Comercial
+                    - generic [ref=e1398]:
+                      - generic [ref=e1399]: 3 membros
+                      - generic [ref=e1400]: ·
+                      - generic [ref=e1401]: Marina Alves, Camila Torres +1
+                  - generic [ref=e1402]: 11 tarefas abertas
+                - generic [ref=e1406]:
+                  - generic [ref=e1407]: Membros da equipe
+                  - generic [ref=e1408]: 11 tarefas abertas
+                - generic [ref=e1409]:
+                  - generic [ref=e1410]:
+                    - generic [ref=e1411]: MA
+                    - generic [ref=e1412]:
+                      - strong [ref=e1413]: Marina Alves
+                      - generic [ref=e1414]: Membro da equipe
+                  - generic [ref=e1415]:
+                    - generic [ref=e1416]: CT
+                    - generic [ref=e1417]:
+                      - strong [ref=e1418]: Camila Torres
+                      - generic [ref=e1419]: Membro da equipe
+                  - generic [ref=e1420]:
+                    - generic [ref=e1421]: RM
+                    - generic [ref=e1422]:
+                      - strong [ref=e1423]: Renan Martins
+                      - generic [ref=e1424]: Membro da equipe
+                - generic [ref=e1425]:
+                  - generic [ref=e1426]: 11 tarefas abertas sob responsabilidade da equipe
+                  - button [ref=e1427] [cursor=pointer]: Editar equipe
+              - article [ref=e1430]:
+                - button "Financeiro 3 membros Camila Torres, Marina Alves +1 6 tarefas abertas" [ref=e1431] [cursor=pointer]:
+                  - generic [ref=e1438]:
+                    - strong [ref=e1439]: Financeiro
+                    - generic [ref=e1440]:
+                      - generic [ref=e1441]: 3 membros
+                      - generic [ref=e1442]: ·
+                      - generic [ref=e1443]: Camila Torres, Marina Alves +1
+                  - generic [ref=e1444]: 6 tarefas abertas
+                - generic [ref=e1448]:
+                  - generic [ref=e1449]: Membros da equipe
+                  - generic [ref=e1450]: 6 tarefas abertas
+                - generic [ref=e1451]:
+                  - generic [ref=e1452]:
+                    - generic [ref=e1453]: CT
+                    - generic [ref=e1454]:
+                      - strong [ref=e1455]: Camila Torres
+                      - generic [ref=e1456]: Membro da equipe
+                  - generic [ref=e1457]:
+                    - generic [ref=e1458]: MA
+                    - generic [ref=e1459]:
+                      - strong [ref=e1460]: Marina Alves
+                      - generic [ref=e1461]: Membro da equipe
+                  - generic [ref=e1462]:
+                    - generic [ref=e1463]: RM
+                    - generic [ref=e1464]:
+                      - strong [ref=e1465]: Renan Martins
+                      - generic [ref=e1466]: Membro da equipe
+                - generic [ref=e1467]:
+                  - generic [ref=e1468]: 6 tarefas abertas sob responsabilidade da equipe
+                  - button [ref=e1469] [cursor=pointer]: Editar equipe
+              - article [ref=e1472]:
+                - button "Operação 5 membros Rafael Lima, João Mendes +3 13 tarefas abertas" [ref=e1473] [cursor=pointer]:
+                  - generic [ref=e1480]:
+                    - strong [ref=e1481]: Operação
+                    - generic [ref=e1482]:
+                      - generic [ref=e1483]: 5 membros
+                      - generic [ref=e1484]: ·
+                      - generic [ref=e1485]: Rafael Lima, João Mendes +3
+                  - generic [ref=e1486]: 13 tarefas abertas
+                - generic [ref=e1490]:
+                  - generic [ref=e1491]: Membros da equipe
+                  - generic [ref=e1492]: 13 tarefas abertas
+                - generic [ref=e1493]:
+                  - generic [ref=e1494]:
+                    - generic [ref=e1495]: RL
+                    - generic [ref=e1496]:
+                      - strong [ref=e1497]: Rafael Lima
+                      - generic [ref=e1498]: Membro da equipe
+                  - generic [ref=e1499]:
+                    - generic [ref=e1500]: JM
+                    - generic [ref=e1501]:
+                      - strong [ref=e1502]: João Mendes
+                      - generic [ref=e1503]: Membro da equipe
+                  - generic [ref=e1504]:
+                    - generic [ref=e1505]: MA
+                    - generic [ref=e1506]:
+                      - strong [ref=e1507]: Marina Alves
+                      - generic [ref=e1508]: Membro da equipe
+                  - generic [ref=e1509]:
+                    - generic [ref=e1510]: CT
+                    - generic [ref=e1511]:
+                      - strong [ref=e1512]: Camila Torres
+                      - generic [ref=e1513]: Membro da equipe
+                  - generic [ref=e1514]:
+                    - generic [ref=e1515]: RM
+                    - generic [ref=e1516]:
+                      - strong [ref=e1517]: Renan Martins
+                      - generic [ref=e1518]: Membro da equipe
+                - generic [ref=e1519]:
+                  - generic [ref=e1520]: 13 tarefas abertas sob responsabilidade da equipe
+                  - button [ref=e1521] [cursor=pointer]: Editar equipe
+              - article [ref=e1524]:
+                - button "Qualidade 4 membros Rafael Lima, João Mendes +2 6 tarefas abertas" [ref=e1525] [cursor=pointer]:
+                  - generic [ref=e1532]:
+                    - strong [ref=e1533]: Qualidade
+                    - generic [ref=e1534]:
+                      - generic [ref=e1535]: 4 membros
+                      - generic [ref=e1536]: ·
+                      - generic [ref=e1537]: Rafael Lima, João Mendes +2
+                  - generic [ref=e1538]: 6 tarefas abertas
+                - generic [ref=e1542]:
+                  - generic [ref=e1543]: Membros da equipe
+                  - generic [ref=e1544]: 6 tarefas abertas
+                - generic [ref=e1545]:
+                  - generic [ref=e1546]:
+                    - generic [ref=e1547]: RL
+                    - generic [ref=e1548]:
+                      - strong [ref=e1549]: Rafael Lima
+                      - generic [ref=e1550]: Membro da equipe
+                  - generic [ref=e1551]:
+                    - generic [ref=e1552]: JM
+                    - generic [ref=e1553]:
+                      - strong [ref=e1554]: João Mendes
+                      - generic [ref=e1555]: Membro da equipe
+                  - generic [ref=e1556]:
+                    - generic [ref=e1557]: MA
+                    - generic [ref=e1558]:
+                      - strong [ref=e1559]: Marina Alves
+                      - generic [ref=e1560]: Membro da equipe
+                  - generic [ref=e1561]:
+                    - generic [ref=e1562]: RM
+                    - generic [ref=e1563]:
+                      - strong [ref=e1564]: Renan Martins
+                      - generic [ref=e1565]: Membro da equipe
+                - generic [ref=e1566]:
+                  - generic [ref=e1567]: 6 tarefas abertas sob responsabilidade da equipe
+                  - button [ref=e1568] [cursor=pointer]: Editar equipe
+            - dialog [ref=e1571]:
+              - generic [ref=e1572]:
+                - generic [ref=e1573]:
+                  - generic [ref=e1574]: Atribuição rápida
+                  - heading "Nova equipe" [level=2] [ref=e1575]
+                - button "Fechar formulário" [ref=e1576] [cursor=pointer]
+              - generic [ref=e1581]:
+                - generic [ref=e1582]:
+                  - generic [ref=e1583]:
+                    - generic [ref=e1584]:
+                      - generic [ref=e1585]: Nome da equipe
+                      - generic [ref=e1586]: Obrigatório
+                    - textbox "Nome da equipe Obrigatório" [ref=e1587]:
+                      - /placeholder: "Ex.: Operação"
+                  - generic [ref=e1588]:
+                    - generic [ref=e1589]:
+                      - generic [ref=e1590]: Quem faz parte?
+                      - generic [ref=e1591]: 0 membros
+                    - generic [ref=e1592]:
+                      - listbox:
+                        - option: Marina Alves
+                        - option: Rafael Lima
+                        - option: Camila Torres
+                        - option: João Mendes
+                        - option: Luiza Prado
+                        - option: Gustavo Neri
+                        - option: Renan Martins
+                      - button "Buscar e adicionar membros" [ref=e1593] [cursor=pointer]
+                    - generic [ref=e1596]: A mesma pessoa pode estar em mais de uma equipe.
+                  - generic [ref=e1597]:
+                    - generic [ref=e1598]:
+                      - generic [ref=e1599]: Ícone da equipe
+                      - generic [ref=e1600]: Exibido nos cards
+                    - radiogroup "Ícone da equipe" [ref=e1601]:
+                      - radio "Pessoas" [checked] [ref=e1602] [cursor=pointer]
+                      - radio "Comercial" [ref=e1609] [cursor=pointer]
+                      - radio "Operação" [ref=e1615] [cursor=pointer]
+                      - radio "Qualidade" [ref=e1620] [cursor=pointer]
+                      - radio "Atendimento" [ref=e1625] [cursor=pointer]
+                      - radio "Empresa" [ref=e1629] [cursor=pointer]
+                      - radio "Financeiro" [ref=e1635] [cursor=pointer]
+                      - radio "Indicadores" [ref=e1639] [cursor=pointer]
+                      - radio "Processos" [ref=e1643] [cursor=pointer]
+                      - radio "Concierge" [ref=e1648] [cursor=pointer]
+                      - radio "Executivo" [ref=e1653] [cursor=pointer]
+                      - radio "Produção" [ref=e1657] [cursor=pointer]
+                      - radio "Documentos" [ref=e1661] [cursor=pointer]
+                      - radio "Internacional" [ref=e1666] [cursor=pointer]
+                      - radio "Parcerias" [ref=e1673] [cursor=pointer]
+                      - radio "Cuidado" [ref=e1680] [cursor=pointer]
+                      - radio "Institucional" [ref=e1687] [cursor=pointer]
+                      - radio "Suporte" [ref=e1691] [cursor=pointer]
+                      - radio "Marketing" [ref=e1700] [cursor=pointer]
+                      - radio "Logística" [ref=e1705] [cursor=pointer]
+                      - radio "Aeroporto" [ref=e1711] [cursor=pointer]
+                      - radio "Comunicação" [ref=e1715] [cursor=pointer]
+                      - radio "Cobrança" [ref=e1723] [cursor=pointer]
+                      - radio "Rotas" [ref=e1727] [cursor=pointer]
+                      - radio "Configuração" [ref=e1733] [cursor=pointer]
+                      - radio "Compras" [ref=e1738] [cursor=pointer]
+                      - radio "Destaque" [ref=e1743] [cursor=pointer]
+                      - radio "Frota" [ref=e1747] [cursor=pointer]
+                      - radio "Confiável" [ref=e1754] [cursor=pointer]
+                      - radio "Pagamentos" [ref=e1760] [cursor=pointer]
+                      - radio "Manutenção" [ref=e1766] [cursor=pointer]
+                      - radio "Certificado" [ref=e1770] [cursor=pointer]
+                      - radio "Valores" [ref=e1775] [cursor=pointer]
+                      - radio "Prioridade" [ref=e1780] [cursor=pointer]
+                - generic [ref=e1784]:
+                  - generic [ref=e1785]: Você poderá editar membros depois.
+                  - button "Criar equipe" [disabled] [ref=e1786]
+  - navigation "Navegação principal" [ref=e1174]:
+    - button "Hoje 15" [ref=e1175] [cursor=pointer]:
+      - generic [ref=e1181]: Hoje
+      - generic [ref=e1182]: "15"
+    - button "Tarefas 30" [ref=e1183] [cursor=pointer]:
+      - generic [ref=e1187]: Tarefas
+      - generic [ref=e1188]: "30"
+    - button "Cotações" [ref=e1189] [cursor=pointer]
+    - button "Mais" [ref=e1194] [cursor=pointer]
