@@ -1168,15 +1168,16 @@ async function sendLiveNotificationTest(xrm, state, input = {}) {
   const task = (state.tasks || []).find((item) => cleanId(item.id) === taskId);
   if (!task) throw new Error("Selecione uma tarefa válida para o teste.");
   const message = String(input.message || "").trim() || "Teste de notificação do Planner.";
-  const type = ["update", "mention", "deadline", "status"].includes(input.type) ? input.type : "update";
+  const type = ["digest_daily", "digest_weekly", "update", "mention", "deadline", "status"].includes(input.type) ? input.type : "digest_daily";
+  const typeLabel = type === "digest_weekly" ? "Resumo semanal" : type === "digest_daily" ? "Resumo diário" : type;
   const event = await createEvent(
     xrm,
     taskId,
     100000001,
-    `[Teste] ${type}: ${message}`,
+    `[Teste] ${typeLabel}: ${message}`,
     "notification:test",
     "",
-    JSON.stringify({ testNotification: true, testType: type, actorEmail: String(state.currentUserEmail || "").trim().toLowerCase() }),
+    JSON.stringify({ testNotification: true, testType: type, collectionType: type, actorEmail: String(state.currentUserEmail || "").trim().toLowerCase() }),
   );
   const eventId = cleanId(event?.cr40f_plannertarefaeventoid || event?.[`${EVENT_TABLE}id`]);
   const dispatch = eventId

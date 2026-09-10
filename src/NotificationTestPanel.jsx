@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, BellRing, CheckCircle2, Clock3, LoaderCircle, Mail, Send } from "lucide-react";
 
 export const NOTIFICATION_TEST_TYPES = [
+  { id: "digest_daily", label: "Resumo diário", description: "Teste do e-mail diário" },
+  { id: "digest_weekly", label: "Resumo semanal", description: "Teste do e-mail de segunda" },
   { id: "update", label: "Atualização", description: "Alteração geral na tarefa" },
   { id: "mention", label: "Menção", description: "Teste de aviso de menção" },
   { id: "deadline", label: "Prazo", description: "Teste de mudança de prazo" },
@@ -16,7 +18,7 @@ function firstTestableTask(tasks) {
 
 export default function NotificationTestPanel({ live, tasks = [], onSend }) {
   const [taskId, setTaskId] = useState("");
-  const [testType, setTestType] = useState("update");
+  const [testType, setTestType] = useState("digest_daily");
   const [message, setMessage] = useState(DEFAULT_MESSAGE);
   const [sending, setSending] = useState(false);
   const [feedback, setFeedback] = useState(null);
@@ -48,8 +50,8 @@ export default function NotificationTestPanel({ live, tasks = [], onSend }) {
         <div className="notification-test-heading-icon" aria-hidden="true"><BellRing size={18} /></div>
         <div>
           <span className="eyebrow">Operação controlada</span>
-          <h2 id="notification-test-title">Módulo de teste de notificações</h2>
-          <p>Dispare um evento real para validar o fluxo usando o e-mail operacional do usuário conectado.</p>
+          <h2 id="notification-test-title">Módulo de teste de notificações e e-mails</h2>
+          <p>Dispare um evento real para validar notificações e os resumos diário/semanal usando o e-mail operacional do usuário conectado.</p>
         </div>
         <span className="notification-test-target"><Mail size={14} /> e-mail operacional do usuário</span>
       </div>
@@ -85,7 +87,7 @@ export default function NotificationTestPanel({ live, tasks = [], onSend }) {
           </div>}
           <button className="button button-primary" type="button" onClick={submit} disabled={!live || !taskId || sending || !message.trim()}>
             {sending ? <LoaderCircle size={15} className="spin" /> : <Send size={15} />}
-            {sending ? "Enviando…" : "Enviar notificação de teste"}
+            {sending ? "Enviando…" : "Enviar e-mail de teste"}
           </button>
         </div>
       </div>
