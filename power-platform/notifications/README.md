@@ -52,9 +52,10 @@ Provisionamento versionado: `powershell -ExecutionPolicy Bypass -File scripts/cr
    - cobrança começa no vencimento e repete em cada dia útil enquanto a tarefa estiver aberta;
    - no primeiro dia útil após o vencimento, incluir também o criador.
 4. Criar uma notificação interna por tarefa/destinatário/tipo/data. Chave: `<destinatario>|<tarefa>|<tipo>|<yyyy-MM-dd>`.
-5. Agrupar por destinatário e enviar exatamente um resumo no Teams, com seções vencem hoje e atrasadas. O e-mail diário ainda não faz parte desta primeira etapa.
-6. Link de cada tarefa: `new_TelaPlanner.html?data=taskId=<guid>`.
-7. Registrar um disparo por canal com chave `<destinatario>|<yyyy-MM-dd>|ResumoDiario|<canal>` e os mesmos estados do fluxo imediato.
+5. Agrupar por funcionário e enviar no máximo um resumo por e-mail operacional (`cr40f_emailbetinhos`). Terça a sexta: atrasadas e vencem hoje. Segunda: atrasadas e tarefas da semana atual, com indicadores de status e prioridade.
+6. Tarefas atribuídas a equipe são expandidas para membros ativos; atribuição direta e de equipe são deduplicadas. Sem tarefas, nenhum e-mail é enviado.
+7. Link de cada tarefa: `new_TelaPlanner.html?data=taskId=<guid>`; o CTA geral abre o Planner.
+8. Registrar um disparo por funcionário com chave diária `<funcionário>|<yyyy-MM-dd>||ResumoDiario|Email` ou semanal `<funcionário>|<yyyy-MM-dd>|ResumoSemanal|Email` e os mesmos estados do fluxo imediato.
 
 ## Connection references
 

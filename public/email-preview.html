@@ -180,6 +180,8 @@
                 <option value="due_today">Tarefa vence hoje</option>
                 <option value="due_soon">Prazo se aproximando</option>
                 <option value="overdue">Tarefa atrasada</option>
+                <option value="digest_daily">Resumo diário · atrasadas e vencem hoje</option>
+                <option value="digest_weekly">Resumo de segunda · semana e indicadores</option>
               </optgroup>
               <optgroup label="Atendimento">
                 <option value="contact_assignment">Novo caso atribuído</option>
@@ -330,6 +332,8 @@
         due_today: { subject: "[Planner] Tarefa vence hoje", title: "Tarefa vence hoje", copy: "Uma tarefa sob sua responsabilidade vence hoje. Confira os detalhes e avance antes do prazo.", detail: "<strong>Tarefa:</strong> Revisar confirmação do passageiro<br /><strong>Prazo:</strong> Hoje, 17:00", tone: "warning", destination: "task" },
         due_soon: { subject: "[Planner] Prazo se aproximando", title: "Prazo se aproximando", copy: "O prazo de uma tarefa está se aproximando. Organize o próximo passo com antecedência.", detail: "<strong>Tarefa:</strong> Confirmar disponibilidade do veículo<br /><strong>Prazo:</strong> Amanhã, 08:30", tone: "warning", destination: "task" },
         overdue: { subject: "[Planner] Tarefa atrasada", title: "Tarefa atrasada", copy: "Uma tarefa ultrapassou o prazo previsto. Abra o Planner para regularizar a pendência.", detail: "<strong>Tarefa:</strong> Enviar confirmação do passageiro<br /><strong>Vencida em:</strong> 08/09/2026", tone: "critical", destination: "task" },
+        digest_daily: { subject: "[Planner] Suas tarefas de hoje — 10/09", title: "Suas tarefas de hoje", copy: "Resumo das suas pendências operacionais.", detail: "<strong>Contadores:</strong> 2 atrasadas · 1 vence hoje<br /><strong>Seções:</strong> Atrasadas · Vencem hoje", cta: "Abrir meu Planner →", tone: "warning", destination: "task" },
+        digest_weekly: { subject: "[Planner] Sua semana — 14/09 a 18/09", title: "Sua semana", copy: "Relatório semanal com prioridades e indicadores.", detail: "<strong>Indicadores:</strong> 8 tarefas · 2 atrasadas · 3 em andamento · 1 aguardando<br /><strong>Seções:</strong> Atrasadas · Prioridades da semana · Demais tarefas da semana", cta: "Abrir meu Planner →", tone: "info", destination: "task" },
         contact_assignment: { subject: "[Planner] Novo caso atribuído", title: "Novo caso atribuído", copy: "Um novo caso de atendimento foi atribuído a você. Abra o Planner para iniciar a tratativa.", detail: "<strong>Caso:</strong> Passageiro aguardando confirmação<br /><strong>Canal:</strong> E-mail", cta: "Abrir caso no Planner →", tone: "action", destination: "contact" },
         contact_transfer: { subject: "[Planner] Caso transferido para você", title: "Caso transferido para você", copy: "Um caso de atendimento foi transferido para sua fila. Revise o histórico antes de responder.", detail: "<strong>Caso:</strong> Ajuste de embarque corporativo<br /><strong>Transferido por:</strong> Marina Alves", cta: "Abrir caso no Planner →", tone: "action", destination: "contact" },
         test: { subject: "[Planner | teste] Teste de notificação", title: "Teste de notificação", copy: "Esta é uma mensagem de teste para validar o conteúdo e a entrega do e-mail do Planner.", detail: "<strong>Campo:</strong> notification:test<br /><strong>Evento:</strong> 2576b355-75ac-f111-aaac-7ced8da8c473", cta: "Abrir tarefa no Planner →", tone: "info", destination: "task" },
