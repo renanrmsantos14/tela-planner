@@ -1,6 +1,6 @@
 services:
   waha:
-    image: devlikeapro/waha:2026.8.1
+    image: devlikeapro/waha
     container_name: betinhos-waha
     restart: unless-stopped
     ports:
