@@ -5452,7 +5452,7 @@ function NewTaskDrawer({ employees = [], teams = [], personalTags = [], tasks = 
     title: "",
     status: initialStatus,
     priority: "medium",
-    assignmentMode: "people",
+    assignmentMode: "team",
     teamIds: [],
     teamNames: [],
     teamId: "",
