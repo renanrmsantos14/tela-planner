@@ -1,9 +1,17 @@
 const SETTINGS_KEY = "betinhos.triage.settings.v1";
+const DEBUG_KEY = "betinhos.triage.debug.v1";
 const DEFAULT_TRIAGE_ENDPOINT = "http://127.0.0.1:8765";
 const endpoint = document.querySelector("#endpoint");
 const sessionToken = document.querySelector("#sessionToken");
 const queue = document.querySelector("#queue");
 const status = document.querySelector("#status");
+const debugLog = document.querySelector("#debugLog");
+
+async function renderDebug() {
+  const stored = await chrome.storage.local.get(DEBUG_KEY);
+  const entries = stored[DEBUG_KEY] || [];
+  debugLog.textContent = entries.length ? entries.map((entry) => `${new Date(entry.at).toLocaleTimeString()}  ${entry.event}${entry.details && Object.keys(entry.details).length ? `  ${JSON.stringify(entry.details)}` : ""}`).join("\n") : "Nenhum evento ainda.";
+}
 
 async function render() {
   const stored = await chrome.storage.local.get([SETTINGS_KEY, "betinhos.triage.queue.v1"]);
@@ -37,7 +45,10 @@ document.querySelector("#scan").addEventListener("click", async () => {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     const result = await chrome.runtime.sendMessage({ type: "scan-active", tabId: tab?.id });
     await render();
+    await renderDebug();
     status.textContent = result?.ok ? "Triagem adicionada." : result?.error || "Não foi possível classificar.";
-  } catch (error) { status.textContent = error?.message || "Não foi possível classificar."; }
+  } catch (error) { status.textContent = error?.message || "Não foi possível classificar."; await renderDebug(); }
 });
+document.querySelector("#refreshDebug").addEventListener("click", renderDebug);
 render();
+renderDebug();

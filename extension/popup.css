@@ -6,3 +6,6 @@ input, button { box-sizing: border-box; width: 100%; padding: 9px; border: 1px s
 button { cursor: pointer; background: #073b73; color: white; font-weight: 700; }
 ul { margin: 0; padding-left: 18px; }
 li { margin-bottom: 7px; }
+details { border-top: 1px solid #c8d3e1; padding-top: 8px; }
+summary { cursor: pointer; font-weight: 700; }
+pre { max-height: 180px; overflow: auto; white-space: pre-wrap; font: 11px Consolas, monospace; background: #eaf0f7; padding: 8px; border-radius: 6px; }
