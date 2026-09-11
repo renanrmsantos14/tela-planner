@@ -42,7 +42,10 @@ test("Flow piloto usa Power Apps Notification V2 com destinatário Microsoft e t
   assert.match(push.inputs.parameters["payload/dynamicParams"], /entityId/);
   assert.equal(push.inputs.parameters.playerType, undefined);
   assert.equal(push.inputs.parameters.app, undefined);
-  assert.match(source, /notification:test.*notification:assignment/);
+  assert.match(source, /notification:test.*notification:assignment.*notification:mention.*notification:waiting.*notification:status.*notification:assignees.*notification:overdue_manual.*notification:deadline/);
+  assert.match(source, /addedAssigneeIds/);
+  assert.match(source, /collectionType.*due_today/);
+  assert.match(source, /collectionType.*overdue/);
   assert.match(source, /\|PowerAppsPush/);
   assert.match(source, /PowerAppsNotificationConnectionReferenceLogicalName/);
   assert.match(source, /shared_powerappsnotificationv2/);

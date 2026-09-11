@@ -14,13 +14,13 @@ Registrar a classe `Betinhos.Planner.Notifications.PlannerTaskEventNotificationP
 
 O registro assíncrono deve ser feito na solução não gerenciada `AppBetinhos`, em sandbox, com `AsyncAutoDelete = false`. O usuário/conta do passo precisa ler `cr40f_funcionarios`, `cr40f_plannertarefa`, `cr40f_plannertarefaevento` e possuir o privilégio **Send In-App Notification**. O vínculo `cr40f_funcionarios.cr40f_usuariodataverse` precisa apontar para um `systemuser` ativo. Use uma conta técnica dedicada no campo **Run in User's Context** (`-TechnicalUserEmail` no script).
 
-O web resource continua apenas gravando o evento no Dataverse. O plugin seleciona destinatários pelo JSON de `cr40f_valornovo`, remove o ator e executa `SendAppNotification` para cada usuário resolvido.
+O web resource continua apenas gravando o evento no Dataverse. O plugin seleciona destinatários pelo JSON de `cr40f_valornovo`, remove o ator quando há ator e executa `SendAppNotification` para cada usuário resolvido. Eventos agendados de cobrança diária e `notification:test` podem ser gerados sem ator.
 
 ## Segurança e tolerância a falhas
 
 - O registro é relido com o usuário iniciador; o `Target` não é tratado como fonte confiável.
-- Só são aceitos os sete campos `notification:*` usados pelo Planner.
-- `actorEmployeeId` é obrigatório e deve corresponder ao usuário que criou o evento.
+- Só são aceitos os oito campos `notification:*` usados pelo Planner.
+- `actorEmployeeId` deve corresponder ao usuário que criou o evento quando presente; cobrança diária e teste controlado são exceções sem ator.
 - Tarefa, funcionário e usuário precisam ser registros ativos; há limite de 50 destinatários e 4.000 caracteres no corpo.
 - Cada envio é isolado em `try/catch`; falha de uma notificação não desfaz o evento nem quebra a operação da tarefa. O job assíncrono fica disponível para diagnóstico/reprocessamento.
 

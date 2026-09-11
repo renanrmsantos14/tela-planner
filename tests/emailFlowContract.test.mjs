@@ -103,7 +103,8 @@ test("Flow automático de e-mail replica destinatários das notificações e nã
   const source = await readFile(new URL("../scripts/create-planner-automatic-email-flow.ps1", import.meta.url), "utf8");
   assert.match(source, /Planner \| Notifica.*autom.*tica por e-mail/);
   assert.match(source, /ConvertTo-Utf8JsonBytes/);
-  assert.match(source, /startswith\(cr40f_campo, 'notification:'\)/);
+  assert.match(source, /cr40f_campo eq 'notification:overdue_manual'/);
+  assert.doesNotMatch(source, /startswith\(cr40f_campo, 'notification:'\)/);
   assert.match(source, /Compose_Recipients/);
   assert.match(source, /notificationRecipientIds/);
   assert.match(source, /cr40f_emailbetinhos/);
@@ -139,6 +140,9 @@ test("Flow diário monta resumo individual e semanal com idempotência", async (
   assert.match(source, /cr40f_plannerequipemembro/);
   assert.match(source, /ResumoSemanal/);
   assert.match(source, /ResumoDiario/);
+  assert.match(source, /Create_deadline_event/);
+  assert.match(source, /notification:deadline/);
+  assert.match(source, /equals.*dayOfWeek\(variables\('Today'\)\).*1/);
   assert.match(source, /Atrasadas/);
   assert.match(source, /Vencem hoje/);
   assert.match(source, /Indicadores/);

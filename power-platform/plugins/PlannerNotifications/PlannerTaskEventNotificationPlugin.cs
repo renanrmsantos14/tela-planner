@@ -46,10 +46,14 @@ namespace Betinhos.Planner.Notifications
             if (!IsSupportedField(field) || !HasValidEventShape(eventRow, contextJson)) return;
 
             var actorEmployeeId = ReadGuid(contextJson, "actorEmployeeId");
-            if (!actorEmployeeId.HasValue || !ActorMatchesInitiatingUser(initiatingService, actorEmployeeId.Value, context.InitiatingUserId)) return;
+            if (actorEmployeeId.HasValue)
+            {
+                if (!ActorMatchesInitiatingUser(initiatingService, actorEmployeeId.Value, context.InitiatingUserId)) return;
+            }
+            else if (!IsSystemGenerated(field, contextJson)) return;
 
             var recipientEmployeeIds = RecipientEmployeeIds(field, contextJson);
-            recipientEmployeeIds.Remove(actorEmployeeId.Value);
+            if (actorEmployeeId.HasValue) recipientEmployeeIds.Remove(actorEmployeeId.Value);
             if (recipientEmployeeIds.Count == 0) return;
 
             var users = ResolveUsers(service, recipientEmployeeIds);
@@ -80,7 +84,16 @@ namespace Betinhos.Planner.Notifications
                 || field.Equals("notification:status", StringComparison.OrdinalIgnoreCase)
                 || field.Equals("notification:waiting", StringComparison.OrdinalIgnoreCase)
                 || field.Equals("notification:assignees", StringComparison.OrdinalIgnoreCase)
-                || field.Equals("notification:overdue_manual", StringComparison.OrdinalIgnoreCase);
+                || field.Equals("notification:overdue_manual", StringComparison.OrdinalIgnoreCase)
+                || field.Equals("notification:test", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsSystemGenerated(string field, JObject context)
+        {
+            return field.Equals("notification:test", StringComparison.OrdinalIgnoreCase)
+                || (field.Equals("notification:deadline", StringComparison.OrdinalIgnoreCase)
+                    && (string.Equals(context["collectionType"]?.ToString(), "due_today", StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(context["collectionType"]?.ToString(), "overdue", StringComparison.OrdinalIgnoreCase)));
         }
 
         private static bool HasValidEventShape(Entity target, JObject context)
@@ -114,7 +127,14 @@ namespace Betinhos.Planner.Notifications
         private static HashSet<Guid> RecipientEmployeeIds(string field, JObject context)
         {
             var result = new HashSet<Guid>();
-            if (field.EndsWith(":assignment", StringComparison.OrdinalIgnoreCase))
+            if (field.EndsWith(":test", StringComparison.OrdinalIgnoreCase)
+                || (field.EndsWith(":deadline", StringComparison.OrdinalIgnoreCase)
+                    && (string.Equals(context["collectionType"]?.ToString(), "due_today", StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(context["collectionType"]?.ToString(), "overdue", StringComparison.OrdinalIgnoreCase))))
+            {
+                AddIds(result, context, "notificationRecipientIds");
+            }
+            else if (field.EndsWith(":assignment", StringComparison.OrdinalIgnoreCase))
             {
                 AddIds(result, context, "assigneeIds");
             }
@@ -125,6 +145,10 @@ namespace Betinhos.Planner.Notifications
             else if (field.EndsWith(":overdue_manual", StringComparison.OrdinalIgnoreCase))
             {
                 AddIds(result, context, "notificationRecipientIds");
+            }
+            else if (field.EndsWith(":assignees", StringComparison.OrdinalIgnoreCase))
+            {
+                AddIds(result, context, "removedAssigneeIds");
             }
             else
             {
@@ -226,9 +250,10 @@ namespace Betinhos.Planner.Notifications
 
         private static string NotificationTitle(string field)
         {
+            if (field.EndsWith(":test", StringComparison.OrdinalIgnoreCase)) return "Teste de notificação";
+            if (field.EndsWith(":deadline", StringComparison.OrdinalIgnoreCase)) return "Prazo alterado";
             if (field.EndsWith(":assignment", StringComparison.OrdinalIgnoreCase)) return "Nova tarefa atribuída";
             if (field.EndsWith(":mention", StringComparison.OrdinalIgnoreCase)) return "Você foi mencionado";
-            if (field.EndsWith(":deadline", StringComparison.OrdinalIgnoreCase)) return "Prazo alterado";
             if (field.EndsWith(":status", StringComparison.OrdinalIgnoreCase)) return "Status alterado";
             if (field.EndsWith(":waiting", StringComparison.OrdinalIgnoreCase)) return "Retorno aguardado";
             if (field.EndsWith(":overdue_manual", StringComparison.OrdinalIgnoreCase)) return "Cobrança de tarefa atrasada";

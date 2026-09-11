@@ -11,6 +11,9 @@ test("plugin de notificação é server-side e executa SendAppNotification", asy
   assert.match(source, /new EntityReference\("systemuser", userId\)/);
   assert.match(source, /cr40f_usuariodataverse/);
   assert.match(source, /ActorMatchesInitiatingUser/);
+  assert.match(source, /notification:test/);
+  assert.match(source, /IsSystemGenerated/);
+  assert.match(source, /removedAssigneeIds/);
   assert.match(source, /LoadAuthorizedEvent/);
   assert.match(source, /MaxRecipients = 50/);
   assert.match(source, /async/i);
