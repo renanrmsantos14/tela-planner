@@ -13,8 +13,8 @@ $headers = @{ Authorization = "Bearer $token"; Accept = 'application/json'; 'Con
 
 # Fluxo idempotente: D0 notifica o responsável principal; cada dia útil atrasado repete a cobrança
 # e inclui o criador no primeiro dia útil após o vencimento. Consultores recebem eventos de
-# atribuição/status/prazo, mas não entram na cobrança diária. O Teams usa o mesmo
-# registro interno como origem e deve ser configurado na ação de resumo da solução.
+# atribuição/status/prazo, mas não entram na cobrança diária. A cobrança diária cria a linha
+# da caixa e um evento de prazo para push/Toast; o resumo por e-mail existe somente na segunda.
 $definition = @'
 {
   "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
@@ -58,6 +58,11 @@ $definition = @'
                     "Create_notification": {
                       "type": "OpenApiConnection",
                       "inputs": { "parameters": { "entityName": "cr40f_plannernotificacaos", "item/cr40f_titulo": "@if(equals(formatDateTime(items('For_each_task')?['cr40f_prazo'],'yyyy-MM-dd'),variables('Today')),'Tarefa vence hoje','Tarefa atrasada')", "item/cr40f_mensagem": "@items('For_each_task')?['cr40f_titulo']", "item/cr40f_tipo": "@if(equals(formatDateTime(items('For_each_task')?['cr40f_prazo'],'yyyy-MM-dd'),variables('Today')),'due_today','overdue')", "item/cr40f_ocorridoem": "@utcNow()", "item/cr40f_datareferencia": "@variables('Today')", "item/cr40f_chavededupe": "@concat(items('For_each_assignee')?['_cr40f_funcionario_value'],'|',items('For_each_task')?['cr40f_plannertarefaid'],'|',if(equals(formatDateTime(items('For_each_task')?['cr40f_prazo'],'yyyy-MM-dd'),variables('Today')),'due_today','overdue'),'|',variables('Today'))", "item/cr40f_tarefa@odata.bind": "@concat('/cr40f_plannertarefas(',items('For_each_task')?['cr40f_plannertarefaid'],')')", "item/cr40f_destinatario@odata.bind": "@concat('/cr40f_funcionarioses(',items('For_each_assignee')?['_cr40f_funcionario_value'],')')" }, "host": { "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps", "operationId": "CreateRecord", "connectionName": "shared_commondataserviceforapps" }, "authentication": "@parameters('$authentication')" }
+                    },
+                    "Create_deadline_event": {
+                      "type": "OpenApiConnection",
+                      "runAfter": { "Create_notification": [ "Succeeded" ] },
+                      "inputs": { "parameters": { "entityName": "cr40f_plannertarefaeventos", "item/cr40f_tipo": 100000002, "item/cr40f_descricao": "@if(equals(formatDateTime(items('For_each_task')?['cr40f_prazo'],'yyyy-MM-dd'),variables('Today')),'Tarefa vence hoje','Tarefa atrasada')", "item/cr40f_campo": "notification:deadline", "item/cr40f_valornovo": "@concat('{\"notificationRecipientIds\":[\"',items('For_each_assignee')?['_cr40f_funcionario_value'],'\"],\"collectionType\":\"',if(equals(formatDateTime(items('For_each_task')?['cr40f_prazo'],'yyyy-MM-dd'),variables('Today')),'due_today','overdue'),'\"}')", "item/cr40f_ocorridoem": "@utcNow()", "item/cr40f_tarefa@odata.bind": "@concat('/cr40f_plannertarefas(',items('For_each_task')?['cr40f_plannertarefaid'],')')" }, "host": { "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps", "operationId": "CreateRecord", "connectionName": "shared_commondataserviceforapps" }, "authentication": "@parameters('$authentication')" }
                     }
                   }
                 },
@@ -140,7 +145,7 @@ $digestActions = @'
       "Condition_has_tasks": {
         "type": "If",
         "runAfter": { "Compose_report_tasks": [ "Succeeded" ] },
-        "expression": { "and": [{ "greater": [ "@length(outputs('Compose_report_tasks'))", 0 ] }, { "not": { "equals": [ "@empty(items('For_each_employee')?['cr40f_emailbetinhos'])", true ] } }] },
+        "expression": { "and": [{ "greater": [ "@length(outputs('Compose_report_tasks'))", 0 ] }, { "equals": [ "@dayOfWeek(variables('Today'))", 1 ] }, { "not": { "equals": [ "@empty(items('For_each_employee')?['cr40f_emailbetinhos'])", true ] } }] },
         "actions": {
           "Compose_report_kind": { "type": "Compose", "inputs": "@if(equals(dayOfWeek(variables('Today')),1),'ResumoSemanal','ResumoDiario')" },
           "List_existing_digest": { "type": "OpenApiConnection", "runAfter": { "Compose_report_kind": [ "Succeeded" ] }, "inputs": { "parameters": { "entityName": "cr40f_plannerdisparos", "$filter": "cr40f_chaveidempotente eq '@{concat(outputs('Compose_employee_id'),'|',variables('Today'),'|',if(equals(outputs('Compose_report_kind'),'ResumoSemanal'),'ResumoSemanal',''),'|Email')}'", "$top": 1 }, "host": { "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps", "operationId": "ListRecords", "connectionName": "shared_commondataserviceforapps" }, "authentication": "@parameters('$authentication')" } },

@@ -108,7 +108,7 @@ $definition = @'
           "subscriptionRequest/message": 1,
           "subscriptionRequest/entityname": "cr40f_plannertarefaevento",
           "subscriptionRequest/scope": 4,
-          "subscriptionRequest/filterexpression": "cr40f_campo eq 'notification:test' or cr40f_campo eq 'notification:assignment'"
+          "subscriptionRequest/filterexpression": "cr40f_campo eq 'notification:test' or cr40f_campo eq 'notification:assignment' or cr40f_campo eq 'notification:mention' or cr40f_campo eq 'notification:waiting' or cr40f_campo eq 'notification:status' or cr40f_campo eq 'notification:assignees' or cr40f_campo eq 'notification:overdue_manual' or cr40f_campo eq 'notification:deadline'"
         },
         "host": {
           "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
@@ -131,12 +131,12 @@ $definition = @'
     },
     "Compose_Recipients": {
       "type": "Compose",
-      "inputs": "@union(coalesce(outputs('Compose_Context')?['notificationRecipientIds'], json('[]')), coalesce(outputs('Compose_Context')?['mentionedEmployeeIds'], json('[]')), coalesce(outputs('Compose_Context')?['waitingTargetIds'], json('[]')), coalesce(outputs('Compose_Context')?['previousAssigneeIds'], json('[]')), coalesce(outputs('Compose_Context')?['assigneeIds'], json('[]')), if(empty(outputs('Compose_Context')?['creatorEmployeeId']), json('[]'), createArray(outputs('Compose_Context')?['creatorEmployeeId'])))",
+      "inputs": "@if(equals(triggerOutputs()?['body/cr40f_campo'], 'notification:assignees'), coalesce(outputs('Compose_Context')?['addedAssigneeIds'], json('[]')), union(coalesce(outputs('Compose_Context')?['notificationRecipientIds'], json('[]')), coalesce(outputs('Compose_Context')?['mentionedEmployeeIds'], json('[]')), coalesce(outputs('Compose_Context')?['waitingTargetIds'], json('[]')), coalesce(outputs('Compose_Context')?['previousAssigneeIds'], json('[]')), coalesce(outputs('Compose_Context')?['assigneeIds'], json('[]')), if(empty(outputs('Compose_Context')?['creatorEmployeeId']), json('[]'), createArray(outputs('Compose_Context')?['creatorEmployeeId']))))",
       "runAfter": { "Compose_Type": [ "Succeeded" ] }
     },
     "For_each_recipient": {
       "type": "Foreach",
-      "foreach": "@outputs('Compose_Recipients')",
+      "foreach": "@if(or(equals(triggerOutputs()?['body/cr40f_campo'], 'notification:test'), equals(triggerOutputs()?['body/cr40f_campo'], 'notification:assignment'), equals(triggerOutputs()?['body/cr40f_campo'], 'notification:mention'), equals(triggerOutputs()?['body/cr40f_campo'], 'notification:waiting'), equals(triggerOutputs()?['body/cr40f_campo'], 'notification:overdue_manual'), and(equals(triggerOutputs()?['body/cr40f_campo'], 'notification:assignees'), greater(length(coalesce(outputs('Compose_Context')?['addedAssigneeIds'], json('[]'))), 0)), and(equals(triggerOutputs()?['body/cr40f_campo'], 'notification:deadline'), or(equals(outputs('Compose_Context')?['collectionType'], 'due_today'), equals(outputs('Compose_Context')?['collectionType'], 'overdue')))), outputs('Compose_Recipients'), json('[]'))",
       "runAfter": { "Compose_Recipients": [ "Succeeded" ] },
       "actions": {
         "Condition_NotAuthor": {
@@ -168,7 +168,13 @@ $definition = @'
             "Condition_New": {
               "type": "If",
               "expression": {
-                "and": [ { "equals": [ "@length(outputs('List_existing')?['body/value'])", 0 ] } ]
+                "and": [
+                  { "equals": [ "@length(outputs('List_existing')?['body/value'])", 0 ] },
+                  { "not": { "or": [
+                    { "equals": [ "@outputs('Compose_Context')?['collectionType']", "due_today" ] },
+                    { "equals": [ "@outputs('Compose_Context')?['collectionType']", "overdue" ] }
+                  ] } }
+                ]
               },
               "actions": {
                 "Create_notification": {
