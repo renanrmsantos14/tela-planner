@@ -320,6 +320,7 @@ export function createTask(state, input) {
     creatorEmployeeId: input.actorEmployeeId || "", creatorUserId: input.actorUserId || "", restrictedVisibility: Boolean(input.restrictedVisibility), contactId: input.contactId || "",
     teamName: assignment.teamName || input.teamName || "", dueDate: input.dueDate || "", description: input.description || "", waitingContext,
     checklist: input.checklist || [], labels: input.quoteCode ? [input.quoteCode] : [], personalTagIds: normalizePersonalTagIds(input.personalTagIds), sourceType, sourceId: input.sourceId || input.quoteId || null, sourceLabel: input.sourceLabel || (sourceType === "quality" ? "Ação de qualidade" : sourceType === "quote" ? "Pedido de cotação" : "Tarefa manual"), sourceCode: input.sourceCode || input.quoteCode || "", comments: [], attachments: [],
+    whatsappIntakeKey: input.whatsappIntakeKey || "",
     history: [{ id: uid("history"), text: "Tarefa criada no mock.", createdAt: new Date().toISOString(), author: "Você" }],
   };
   const notifications = [...(state.notifications || [])];
@@ -790,6 +791,60 @@ export function createContact(state, input = {}) {
   const creationEvent = created.history[0];
   (created.assigneeIds || [created.ownerEmployeeId]).filter((employeeId) => employeeId && employeeId !== input.actorEmployeeId).forEach((recipientEmployeeId) => pushContactNotification(notifications, created.id, recipientEmployeeId, "contact_assignment", "Novo caso atribuído", created.subject, creationEvent.id));
   return saveState({ ...state, contacts: [created, ...(state.contacts || [])], notifications });
+}
+
+function intakePriority(priority) {
+  return priority === "urgent" ? "high" : ["low", "medium", "high"].includes(priority) ? priority : "medium";
+}
+
+function phoneKey(value = "") {
+  return String(value).replace(/\D/g, "");
+}
+
+export function createContactFromWhatsAppIntake(state, input = {}) {
+  const sourceKey = String(input.requestId || "").trim();
+  const existingTask = (state.tasks || []).find((task) => task.whatsappIntakeKey === sourceKey);
+  if (existingTask) return { state, status: "duplicate", contactId: existingTask.contactId || "", taskId: existingTask.id };
+  const phone = phoneKey(input.senderPhone);
+  const existing = (state.contacts || []).find((contact) => phoneKey(contact.senderPhone) === phone && phone);
+  const classification = input.classification || {};
+  const lastMessage = input.messages?.at(-1)?.text || "";
+  const contactInput = {
+    ...(existing || {}),
+    subject: existing?.subject || classification.summary || `Atendimento WhatsApp · ${input.senderName}`,
+    senderName: input.senderName,
+    senderPhone: input.senderPhone,
+    channel: "whatsapp",
+    priority: intakePriority(classification.priority),
+    status: existing?.status || "new",
+    summary: classification.summary || existing?.summary || "",
+    message: lastMessage,
+    lastMessage,
+    lastMessageAt: input.messages?.at(-1)?.sentAt || new Date().toISOString(),
+    externalConversationId: input.conversationKey,
+    sourceUrl: "whatsapp-web",
+    dueDate: classification.dueDate || existing?.dueDate || "",
+    actorEmployeeId: input.actorEmployeeId || state.currentUserId || "",
+    actorName: input.actorName || "WhatsApp Web",
+  };
+  const nextContactState = existing ? updateContact(state, existing.id, contactInput) : createContact(state, contactInput);
+  const contact = nextContactState.contacts.find((item) => phoneKey(item.senderPhone) === phone);
+  if (!contact) throw new Error("Contato criado, mas não localizado para vincular a task.");
+  const nextState = createTask(nextContactState, {
+    title: classification.nextAction || `Acompanhar ${classification.category || "atendimento"} · ${input.senderName}`,
+    description: [classification.summary, lastMessage].filter(Boolean).join("\n\n"),
+    priority: intakePriority(classification.priority),
+    dueDate: classification.dueDate || "",
+    contactId: contact.id,
+    sourceType: "contact",
+    sourceId: contact.id,
+    sourceLabel: "WhatsApp Web",
+    sourceCode: `WA:${sourceKey}`,
+    whatsappIntakeKey: sourceKey,
+    actorEmployeeId: input.actorEmployeeId || state.currentUserId || "",
+  });
+  const task = nextState.tasks.at(-1);
+  return { state: nextState, status: existing ? "updated" : "created", contactId: contact.id, taskId: task.id };
 }
 
 export function updateContact(state, id, patch = {}) {
