@@ -1,5 +1,27 @@
 export const DEFAULT_TRIAGE_ENDPOINT = "http://127.0.0.1:8765";
 
+function maskSensitiveTextLegacy(value = "") {
+  return String(value)
+    .replace(/\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b/g, "[CPF]")
+    .replace(/\b\d{13,19}\b/g, "[DADO_FINANCEIRO]")
+    .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, "[EMAIL]");
+}
+
+function normalizeWhatsAppPhoneLegacy(value = "") {
+  const digits = String(value).replace(/\D/g, "");
+  return digits ? `+${digits}` : "";
+}
+
+function messageFingerprintLegacy({ senderPhone = "", text = "", sentAt = "" } = {}) {
+  const input = `${normalizeWhatsAppPhoneLegacy(senderPhone)}|${String(sentAt).trim()}|${String(text).trim().toLocaleLowerCase("pt-BR")}`;
+  let hash = 2166136261;
+  for (let index = 0; index < input.length; index += 1) {
+    hash ^= input.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return `wa-${(hash >>> 0).toString(16).padStart(8, "0")}`;
+}
+
 function maskSensitiveText(value = "") {
   return String(value)
     .replace(/\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b/g, "[CPF]")

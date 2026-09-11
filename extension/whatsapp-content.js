@@ -1,3 +1,4 @@
+const SCAN_DEBOUNCE_MS = 1200;
 let lastUnreadCount = 0;
 let scheduled = null;
 
@@ -16,8 +17,11 @@ function parseActiveConversation(documentRef = document) {
   const senderName = cleanText(header?.getAttribute("title") || header?.textContent || "");
   const messageNodes = [...documentRef.querySelectorAll("[data-testid='msg-container'], .message-in, .message-out")];
   const messages = messageNodes.slice(-8).map((node) => ({ text: cleanText(node.querySelector("span[dir='ltr'], .copyable-text span")?.textContent || node.textContent || ""), sentAt: node.querySelector("[data-pre-plain-text]")?.getAttribute("data-pre-plain-text") || new Date().toISOString(), direction: node.classList.contains("message-out") ? "outbound" : "inbound" })).filter((message) => message.text);
-  const phone = phoneFromDom(documentRef);
-  return { senderName, senderPhone: phone.replace(/@.*$/, ""), messages };
+  const values = [...documentRef.querySelectorAll("header [data-id], [data-testid='msg-container'][data-id], .message-in[data-id], .message-out[data-id]")]
+    .map((node) => node.getAttribute("data-id") || "");
+  const chatId = values.map((value) => value.match(/(\d+@(?:c\.us|lid))/i)?.[1] || "").find(Boolean) || "";
+  const phone = phoneFromDom(documentRef) || chatId.replace(/@.*$/, "");
+  return { senderName, senderPhone: phone, chatId, messages };
 }
 function findUnreadConversationRows(documentRef = document) {
   return [...documentRef.querySelectorAll("[aria-label*='unread' i], [data-testid='icon-unread-count'], span[aria-label*='mensagem não lida' i]")].map((node) => node.closest("[data-testid='cell-frame-container'], [role='listitem'], div[tabindex='-1']")).filter(Boolean);
@@ -37,11 +41,12 @@ function notifyScan() {
     const unreadCount = findUnreadConversationRows(document).length;
     if (unreadCount > lastUnreadCount) sendRuntimeMessage({ type: "scan-active" });
     lastUnreadCount = unreadCount;
-  }, 700);
+  }, SCAN_DEBOUNCE_MS);
 }
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === "triage-active") sendResponse(parseActiveConversation(document));
 });
 
+lastUnreadCount = findUnreadConversationRows(document).length;
 new MutationObserver(notifyScan).observe(document.body, { childList: true, subtree: true });

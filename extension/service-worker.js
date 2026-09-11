@@ -1,5 +1,6 @@
 import { parseActiveConversation } from "./whatsapp-parser.js";
 import { DEFAULT_TRIAGE_ENDPOINT, requestTriage } from "./triage.js";
+import { resolveWahaPhone } from "./waha.js";
 
 const QUEUE_KEY = "betinhos.triage.queue.v1";
 const SETTINGS_KEY = "betinhos.triage.settings.v1";
@@ -33,6 +34,15 @@ async function triageActiveTab(tabId) {
   try { response = await chrome.tabs.sendMessage(tabId, { type: "triage-active" }); }
   catch (error) { await debug("scan.conversation_failed", { message: error?.message || "unknown" }); throw new Error("Não consegui falar com o WhatsApp. Recarregue a aba do WhatsApp e tente novamente."); }
   await debug("scan.conversation_received", { messageCount: response?.messages?.length || 0, hasName: Boolean(response?.senderName), hasPhone: Boolean(response?.senderPhone) });
+  if (!response.senderPhone && settings.wahaEnabled) {
+    const senderPhone = await resolveWahaPhone({ endpoint: settings.wahaEndpoint, apiKey: settings.wahaApiKey, session: settings.wahaSession, chatId: response.chatId });
+    if (senderPhone) {
+      response = { ...response, senderPhone, phoneSource: "waha" };
+      await debug("waha.phone_resolved", { chatId: response.chatId });
+    } else {
+      await debug("waha.phone_not_resolved", { chatId: response.chatId || "" });
+    }
+  }
   await debug("triage.requesting", { endpoint: settings.endpoint || DEFAULT_TRIAGE_ENDPOINT });
   let triage;
   try { triage = await requestTriage(settings.endpoint || DEFAULT_TRIAGE_ENDPOINT, response, settings.sessionToken || ""); }

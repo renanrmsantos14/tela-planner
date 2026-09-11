@@ -4,4 +4,6 @@ dist/
 *.log
 .env.local
 .env.*.local
+.env.waha.local
+.waha-sessions/
 dist-redirect/

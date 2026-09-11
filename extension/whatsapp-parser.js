@@ -11,8 +11,11 @@ export function parseActiveConversation(documentRef = document) {
     sentAt: node.querySelector("[data-pre-plain-text]")?.getAttribute("data-pre-plain-text") || new Date().toISOString(),
     direction: node.classList.contains("message-out") || node.querySelector("[data-testid='msg-meta']") ? "outbound" : "inbound",
   })).filter((message) => message.text);
-  const phone = cleanText(documentRef.querySelector("header [data-id], header [data-testid='conversation-info-header']")?.getAttribute("data-id") || "");
-  return { senderName, senderPhone: phone.replace(/@.*$/, ""), messages };
+  const values = [...documentRef.querySelectorAll("header [data-id], [data-testid='msg-container'][data-id], .message-in[data-id], .message-out[data-id]")]
+    .map((node) => node.getAttribute("data-id") || "");
+  const chatId = values.map((value) => value.match(/(\d+@(?:c\.us|lid))/i)?.[1] || "").find(Boolean) || "";
+  const phone = chatId.replace(/@.*$/, "");
+  return { senderName, senderPhone: phone, chatId, messages };
 }
 
 export function findUnreadConversationRows(documentRef = document) {

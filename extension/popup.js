@@ -3,6 +3,10 @@ const DEBUG_KEY = "betinhos.triage.debug.v1";
 const DEFAULT_TRIAGE_ENDPOINT = "http://127.0.0.1:8765";
 const endpoint = document.querySelector("#endpoint");
 const sessionToken = document.querySelector("#sessionToken");
+const wahaEnabled = document.querySelector("#wahaEnabled");
+const wahaEndpoint = document.querySelector("#wahaEndpoint");
+const wahaSession = document.querySelector("#wahaSession");
+const wahaApiKey = document.querySelector("#wahaApiKey");
 const queue = document.querySelector("#queue");
 const status = document.querySelector("#status");
 const debugLog = document.querySelector("#debugLog");
@@ -17,6 +21,10 @@ async function render() {
   const stored = await chrome.storage.local.get([SETTINGS_KEY, "betinhos.triage.queue.v1"]);
   endpoint.value = stored[SETTINGS_KEY]?.endpoint || DEFAULT_TRIAGE_ENDPOINT;
   sessionToken.value = stored[SETTINGS_KEY]?.sessionToken || "";
+  wahaEnabled.checked = Boolean(stored[SETTINGS_KEY]?.wahaEnabled);
+  wahaEndpoint.value = stored[SETTINGS_KEY]?.wahaEndpoint || "http://127.0.0.1:3000";
+  wahaSession.value = stored[SETTINGS_KEY]?.wahaSession || "default";
+  wahaApiKey.value = stored[SETTINGS_KEY]?.wahaApiKey || "";
   queue.replaceChildren(...(stored["betinhos.triage.queue.v1"] || []).map((item) => {
     const row = document.createElement("li");
     row.append(`${item.classification?.priority || "medium"} · ${item.classification?.summary || item.senderName} `);
@@ -37,7 +45,14 @@ async function render() {
 }
 
 document.querySelector("#save").addEventListener("click", async () => {
-  await chrome.storage.local.set({ [SETTINGS_KEY]: { endpoint: endpoint.value.trim(), sessionToken: sessionToken.value.trim() } });
+  await chrome.storage.local.set({ [SETTINGS_KEY]: {
+    endpoint: endpoint.value.trim(),
+    sessionToken: sessionToken.value.trim(),
+    wahaEnabled: wahaEnabled.checked,
+    wahaEndpoint: wahaEndpoint.value.trim(),
+    wahaSession: wahaSession.value.trim(),
+    wahaApiKey: wahaApiKey.value.trim(),
+  } });
   status.textContent = "Configuração salva.";
 });
 document.querySelector("#scan").addEventListener("click", async () => {

@@ -23,6 +23,12 @@ window.addEventListener("message", (event) => {
   sendRuntimeMessage({ type: "planner-response", response: event.data });
 });
 
-const sendHello = () => window.postMessage({ type: WHATSAPP_BRIDGE.hello, clientNonce: crypto.randomUUID() }, window.location.origin);
+let helloTimer = null;
+const sendHello = () => {
+  window.postMessage({ type: WHATSAPP_BRIDGE.hello, clientNonce: crypto.randomUUID() }, window.location.origin);
+  clearTimeout(helloTimer);
+  helloTimer = setTimeout(sendHello, 30000);
+};
 sendHello();
-setInterval(sendHello, 2000);
+window.addEventListener("focus", sendHello, { passive: true });
+window.addEventListener("pageshow", sendHello, { passive: true });
