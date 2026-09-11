@@ -32,12 +32,14 @@ function teamById(teams = []) {
 }
 
 function collectionRecipients(task, teams = []) {
+  const primaryId = task?.primaryAssigneeId || task?.assigneeId || task?.assigneeIds?.[0];
+  if (primaryId) return [String(primaryId)];
   if (task?.assignmentMode === "team") {
     const byId = teamById(teams);
     return [...new Set((task.teamIds || (task.teamId ? [task.teamId] : []))
-      .flatMap((id) => byId.get(String(id))?.memberIds || []))];
+      .flatMap((id) => byId.get(String(id))?.memberIds || []))].slice(0, 1);
   }
-  return [...new Set((task?.assigneeIds || []).filter(Boolean).map(String))];
+  return [];
 }
 
 export function collectionRows(tasks = [], employees = [], teams = [], collectionEvents = [], today = new Date()) {
@@ -87,8 +89,8 @@ export function workloadGroups(tasks = [], teams = [], today = new Date()) {
       else add("team:unassigned", "Equipe não definida", "team", task);
       return;
     }
-    const ids = task.assigneeIds || [];
-    const names = task.assigneeNames || normalizeAssigneeNames(task.assigneeName);
+    const ids = task.primaryAssigneeId ? [task.primaryAssigneeId] : task.assigneeIds?.slice(0, 1) || [];
+    const names = task.primaryAssigneeName ? [task.primaryAssigneeName] : (task.assigneeNames || normalizeAssigneeNames(task.assigneeName)).slice(0, 1);
     if (!ids.length && (!names.length || names.includes("Não atribuído"))) {
       add("employee:unassigned", "Sem responsável", "employee", task);
       return;

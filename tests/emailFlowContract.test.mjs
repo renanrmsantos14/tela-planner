@@ -145,5 +145,6 @@ test("Flow diário monta resumo individual e semanal com idempotência", async (
   assert.match(source, /Condition_No_Operational_Email/);
   assert.match(source, /cr40f_chaveidempotente/);
   assert.match(source, /SendEmailV2/);
-  assert.match(source, /union\(body\('Filter_direct_tasks'\),body\('Filter_team_tasks'\)\)/);
+  assert.match(source, /_cr40f_cr40f_funcionarioresponsavel_value/);
+  assert.match(source, /createArray\(items\('For_each_task'\)\?\['_cr40f_cr40f_funcionarioresponsavel_value'\]\)/);
 });

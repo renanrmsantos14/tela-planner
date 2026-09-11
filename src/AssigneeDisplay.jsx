@@ -27,20 +27,24 @@ function AvatarStack({ profiles, small }) {
   </span>;
 }
 
-export default function AssigneeDisplay({ value, small = false, team = null, teamName = "" }) {
+export default function AssigneeDisplay({ value, small = false, team = null, teamName = "", primaryName = "", consultantNames = [] }) {
+  const responsibilityLabel = primaryName
+    ? `Principal: ${primaryName}${consultantNames.length ? ` · Consultores: ${consultantNames.join(", ")}` : ""}`
+    : "";
   if (team || teamName) {
     const label = team?.name || teamName || "Equipe responsável";
-    return <span className="assignee-display assignee-display-team" title={`Equipe responsável: ${label}`} aria-label={`Equipe responsável: ${label}`}>
+    const visibleLabel = primaryName || label;
+    return <span className="assignee-display assignee-display-team" title={`${label}${responsibilityLabel ? ` — ${responsibilityLabel}` : ""}`} aria-label={`Principal: ${visibleLabel}. Equipe: ${label}${responsibilityLabel ? `. ${responsibilityLabel}` : ""}`}>
       <span className={`team-assignee-icon ${small ? "team-assignee-icon-small" : ""}`} aria-hidden="true"><TeamIcon name={team?.iconName} size={small ? 14 : 16} /></span>
-      <span className="assignee-name">{label}</span>
+      <span className="assignee-name">{visibleLabel}</span>
     </span>;
   }
   const profiles = normalizeProfiles(value);
   const names = profiles.map((profile) => profile.name);
-  const label = names.join(", ") || "Não atribuído";
+  const label = responsibilityLabel || names.join(", ") || "Não atribuído";
   const isUnassigned = profiles.length === 1 && /^não atribuído$/i.test(profiles[0].name);
 
-  if (names.length === 1) return <span className="assignee-display" title={label} aria-label={`Responsável: ${label}`}>
+  if (names.length === 1 || primaryName) return <span className="assignee-display" title={label} aria-label={`Responsável principal: ${label}`}>
     <Avatar profile={profiles[0]} small={small} />
     <span className="assignee-name">{label}</span>
   </span>;

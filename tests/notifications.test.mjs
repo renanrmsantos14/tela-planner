@@ -48,14 +48,14 @@ test("chave idempotente e badge de não lidas são determinísticos", () => {
   assert.equal(unreadCount([{ readAt: "" }, { readAt: "2026-08-24T10:00:00Z" }, {}]), 2);
 });
 
-test("resumo diário expande múltiplos responsáveis uma vez e sinaliza identidade ausente", () => {
+test("resumo diário cobra o principal e sinaliza identidade ausente", () => {
   const tasks = [{ id: "t1", dueDate: "2026-08-24", status: "doing", assigneeIds: ["a", "a", "b"] }];
   const employees = [{ id: "a", externalNotificationsAvailable: true }, { id: "b", externalNotificationsAvailable: false }];
   const rows = dailyReminderRows(tasks, employees, "2026-08-24");
-  assert.equal(rows.length, 2);
-  assert.equal(rows.find((row) => row.recipientEmployeeId === "b").externalDeliveryAvailable, false);
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].recipientEmployeeId, "a");
   const groups = groupDailyDigest(rows);
-  assert.deepEqual(Object.keys(groups).sort(), ["a", "b"]);
+  assert.deepEqual(Object.keys(groups).sort(), ["a"]);
   assert.equal(groups.a.due_today.length, 1);
 });
 

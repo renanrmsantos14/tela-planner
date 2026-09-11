@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { addOptimisticAttachment, addOptimisticComment, addOptimisticReturn, applyOptimisticTaskPatch, buildAssigneeOptions, buildOptimisticTask, buildTaskCreationInput, canRegisterWaitingReturn, filterTasks, findCreatedMainTask, formatDate, formatLongDate, getDueBucket, getDueBucketForEmployee, hasTaskResponsible, isOverdue, isTaskVisibleToEmployee, mentionedEmployees, migrateLegacyTeams, normalizeAssigneeNames, normalizePersonalTag, normalizePersonalTagIds, normalizeTeam, normalizeWaitingContext, quoteTaskTitle, resolveTaskAssignment, sortBoardTasks, sortTasks, STATUSES, taskDisplayDueDate, taskStats, teamResponsibilitySummary, validatePersonalTag, validateWaitingContext, waitingContextSummary } from "../src/domain.js";
+import { addOptimisticAttachment, addOptimisticComment, addOptimisticReturn, applyOptimisticTaskPatch, buildAssigneeOptions, buildOptimisticTask, buildTaskCreationInput, canRegisterWaitingReturn, filterTasks, findCreatedMainTask, formatDate, formatLongDate, getDueBucket, getDueBucketForEmployee, hasTaskResponsible, isOverdue, isTaskVisibleToEmployee, mentionedEmployees, migrateLegacyTeams, normalizeAssigneeNames, normalizePersonalTag, normalizePersonalTagIds, normalizeTeam, normalizeWaitingContext, quoteTaskTitle, resolveTaskAssignment, responsibilityFromIds, sortBoardTasks, sortTasks, STATUSES, taskDisplayDueDate, taskStats, teamResponsibilitySummary, validatePersonalTag, validateTeamComposition, validateWaitingContext, waitingContextSummary } from "../src/domain.js";
 
 const tasks = [
   { id: "1", title: "Atrasada", quoteTitle: "Cotação A", assigneeName: "Marina", status: "todo", priority: "high", dueDate: "2026-08-01" },
@@ -149,20 +149,41 @@ test("normaliza múltiplos responsáveis", () => {
   assert.deepEqual(normalizeAssigneeNames([]), ["Não atribuído"]);
 });
 
+test("separa responsável principal e consultores sem perder a ordem operacional", () => {
+  assert.deepEqual(responsibilityFromIds(["e1", "e2", "e3"], "e2"), {
+    assigneeIds: ["e2", "e1", "e3"],
+    primaryAssigneeId: "e2",
+    consultantIds: ["e1", "e3"],
+  });
+  assert.deepEqual(responsibilityFromIds(["e1", "e2"]), {
+    assigneeIds: ["e1", "e2"],
+    primaryAssigneeId: "e1",
+    consultantIds: ["e2"],
+  });
+});
+
+test("valida composição de equipe e promove único membro", () => {
+  assert.equal(validateTeamComposition([]).valid, false);
+  assert.deepEqual(validateTeamComposition(["e1"]), { valid: true, error: "", primaryMemberId: "e1" });
+  assert.equal(validateTeamComposition(["e1", "e2"]).valid, false);
+  assert.equal(validateTeamComposition(["e1", "e2"], "e2").primaryMemberId, "e2");
+});
+
 test("identifica quando a tarefa tem ou não tem responsável", () => {
   assert.equal(hasTaskResponsible({ assigneeIds: ["e1"], assigneeNames: ["Marina"] }), true);
-  assert.equal(hasTaskResponsible({ assignmentMode: "team", teamIds: ["team-op"] }), true);
+  assert.equal(hasTaskResponsible({ assignmentMode: "team", teamIds: ["team-op"] }), false);
+  assert.equal(hasTaskResponsible({ assignmentMode: "team", teamIds: ["team-op"], primaryAssigneeId: "e1" }), true);
   assert.equal(hasTaskResponsible({ assigneeIds: [], assigneeNames: ["Não atribuído"] }), false);
   assert.equal(hasTaskResponsible({ assigneeIds: [], assigneeNames: [] }), false);
 });
 
 test("normaliza equipe, preserva seu ícone e expande seus membros no snapshot da tarefa", () => {
-  const team = normalizeTeam({ id: "team-op", name: "Operação", iconName: "car", memberIds: ["e1", "e1", "e2"] });
+  const team = normalizeTeam({ id: "team-op", name: "Operação", iconName: "car", memberIds: ["e1", "e1", "e2"], primaryMemberId: "e2" });
   const assignment = resolveTaskAssignment({ assignmentMode: "team", teamId: team.id }, [team], [{ id: "e1", name: "Marina" }, { id: "e2", name: "Rafael" }]);
 
   assert.deepEqual(team.memberIds, ["e1", "e2"]);
   assert.equal(team.iconName, "car");
-  assert.deepEqual(assignment, { assignmentMode: "team", teamIds: ["team-op"], teamNames: ["Operação"], teamId: "team-op", teamName: "Operação", assigneeIds: ["e1", "e2"], assigneeNames: ["Marina", "Rafael"] });
+  assert.deepEqual(assignment, { assignmentMode: "team", teamIds: ["team-op"], teamNames: ["Operação"], teamId: "team-op", teamName: "Operação", assigneeIds: ["e2", "e1"], primaryAssigneeId: "e2", consultantIds: ["e1"], assigneeNames: ["Rafael", "Marina"], primaryAssigneeName: "Rafael", consultantNames: ["Marina"] });
 });
 
 test("resume somente tarefas abertas cuja responsabilidade é da equipe", () => {
@@ -183,14 +204,18 @@ test("resume somente tarefas abertas cuja responsabilidade é da equipe", () => 
 
 test("expande múltiplas equipes e deduplica membros compartilhados", () => {
   const teams = [
-    { id: "team-a", name: "Operação", memberIds: ["e1", "e2"] },
-    { id: "team-b", name: "Comercial", memberIds: ["e2", "e3"] },
+    { id: "team-a", name: "Operação", memberIds: ["e1", "e2"], primaryMemberId: "e2" },
+    { id: "team-b", name: "Comercial", memberIds: ["e2", "e3"], primaryMemberId: "e3" },
   ];
   const assignment = resolveTaskAssignment({ assignmentMode: "team", teamIds: ["team-a", "team-b"] }, teams, [{ id: "e1", name: "Marina" }, { id: "e2", name: "Rafael" }, { id: "e3", name: "Camila" }]);
 
   assert.deepEqual(assignment.teamIds, ["team-a", "team-b"]);
-  assert.deepEqual(assignment.assigneeIds, ["e1", "e2", "e3"]);
-  assert.deepEqual(assignment.assigneeNames, ["Marina", "Rafael", "Camila"]);
+  assert.deepEqual(assignment.assigneeIds, ["e2", "e1", "e3"]);
+  assert.equal(assignment.primaryAssigneeId, "e2");
+  assert.deepEqual(assignment.consultantIds, ["e1", "e3"]);
+  assert.deepEqual(assignment.assigneeNames, ["Rafael", "Marina", "Camila"]);
+  const reordered = resolveTaskAssignment({ assignmentMode: "team", teamIds: ["team-b", "team-a"] }, teams, [{ id: "e1", name: "Marina" }, { id: "e2", name: "Rafael" }, { id: "e3", name: "Camila" }]);
+  assert.equal(reordered.primaryAssigneeId, "e3");
 });
 
 test("migra equipes legadas sem alterar tarefas fora de equipe", () => {

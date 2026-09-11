@@ -11,8 +11,9 @@ $token = az account get-access-token --resource $EnvironmentUrl --query accessTo
 if (-not $token) { throw 'Azure CLI não retornou token para o ambiente Dataverse.' }
 $headers = @{ Authorization = "Bearer $token"; Accept = 'application/json'; 'Content-Type' = 'application/json; charset=utf-8'; Prefer = 'return=representation' }
 
-# Fluxo idempotente: D0 notifica responsáveis; cada dia útil atrasado repete a cobrança
-# e inclui o criador no primeiro dia útil após o vencimento. O Teams usa o mesmo
+# Fluxo idempotente: D0 notifica o responsável principal; cada dia útil atrasado repete a cobrança
+# e inclui o criador no primeiro dia útil após o vencimento. Consultores recebem eventos de
+# atribuição/status/prazo, mas não entram na cobrança diária. O Teams usa o mesmo
 # registro interno como origem e deve ser configurado na ação de resumo da solução.
 $definition = @'
 {
@@ -46,7 +47,7 @@ $definition = @'
             },
             "For_each_assignee": {
               "type": "Foreach",
-              "foreach": "@outputs('List_assignees')?['body/value']",
+              "foreach": "@if(empty(items('For_each_task')?['_cr40f_cr40f_funcionarioresponsavel_value']),json('[]'),createArray(items('For_each_task')?['_cr40f_cr40f_funcionarioresponsavel_value']))",
               "runAfter": { "List_assignees": ["Succeeded"] },
               "actions": {
                 "Create_notification_if_missing": {
@@ -134,7 +135,7 @@ $digestActions = @'
       "Compose_employee_id": { "type": "Compose", "inputs": "@items('For_each_employee')?['cr40f_funcionariosid']" },
       "Filter_direct_tasks": { "type": "Query", "runAfter": { "Compose_employee_id": [ "Succeeded" ] }, "inputs": { "from": "@outputs('List_open_tasks')?['body/value']", "where": "@and(equals(item()?['_cr40f_cr40f_funcionarioresponsavel_value'],outputs('Compose_employee_id')),or(less(formatDateTime(item()?['cr40f_prazo'],'yyyy-MM-dd'),variables('Today')),and(greaterOrEquals(formatDateTime(item()?['cr40f_prazo'],'yyyy-MM-dd'),variables('Today')),lessOrEquals(formatDateTime(item()?['cr40f_prazo'],'yyyy-MM-dd'),addDays(variables('Today'),if(equals(dayOfWeek(variables('Today')),1),4,0))))))" } },
       "Select_employee_teams": { "type": "Select", "runAfter": { "Compose_employee_id": [ "Succeeded" ] }, "inputs": { "from": "@filter(outputs('List_team_members')?['body/value'],equals(item()?['_cr40f_funcionario_value'],outputs('Compose_employee_id')))", "select": "@item()?['_cr40f_equipe_value']" } },
-      "Filter_team_tasks": { "type": "Query", "runAfter": { "Select_employee_teams": [ "Succeeded" ] }, "inputs": { "from": "@outputs('List_open_tasks')?['body/value']", "where": "@and(not(empty(item()?['_cr40f_equipeplanner_value'])),contains(string(outputs('Select_employee_teams')),string(item()?['_cr40f_equipeplanner_value'])),or(less(formatDateTime(item()?['cr40f_prazo'],'yyyy-MM-dd'),variables('Today')),and(greaterOrEquals(formatDateTime(item()?['cr40f_prazo'],'yyyy-MM-dd'),variables('Today')),lessOrEquals(formatDateTime(item()?['cr40f_prazo'],'yyyy-MM-dd'),addDays(variables('Today'),if(equals(dayOfWeek(variables('Today')),1),4,0))))))" } },
+      "Filter_team_tasks": { "type": "Query", "runAfter": { "Select_employee_teams": [ "Succeeded" ] }, "inputs": { "from": "@outputs('List_open_tasks')?['body/value']", "where": "@and(equals(item()?['_cr40f_cr40f_funcionarioresponsavel_value'],outputs('Compose_employee_id')),or(less(formatDateTime(item()?['cr40f_prazo'],'yyyy-MM-dd'),variables('Today')),and(greaterOrEquals(formatDateTime(item()?['cr40f_prazo'],'yyyy-MM-dd'),variables('Today')),lessOrEquals(formatDateTime(item()?['cr40f_prazo'],'yyyy-MM-dd'),addDays(variables('Today'),if(equals(dayOfWeek(variables('Today')),1),4,0))))))" } },
       "Compose_report_tasks": { "type": "Compose", "runAfter": { "Filter_direct_tasks": [ "Succeeded" ], "Filter_team_tasks": [ "Succeeded" ] }, "inputs": "@union(body('Filter_direct_tasks'),body('Filter_team_tasks'))" },
       "Condition_has_tasks": {
         "type": "If",

@@ -92,6 +92,7 @@ import {
   taskDisplayDueDate,
   taskStats,
   teamResponsibilitySummary,
+  validateTeamComposition,
   validateWaitingContext,
   waitingContextSummary,
 } from "./domain";
@@ -1630,6 +1631,8 @@ const TaskCard = memo(function TaskCard({
           small
           team={assignedTeam}
           teamName={taskItem.assignmentMode === "team" ? taskItem.teamName : ""}
+          primaryName={taskItem.primaryAssigneeName}
+          consultantNames={taskItem.consultantNames || []}
         />
         {taskItem.syncStatus === "syncing" ? (
           <span className="sync-chip" role="status">
@@ -2749,6 +2752,8 @@ function ListView({
                   : taskItem.assigneeNames || taskItem.assigneeName
               }
               small
+              primaryName={taskItem.primaryAssigneeName}
+              consultantNames={taskItem.consultantNames || []}
             />
             <span className={getDueBucketForEmployee(taskItem, currentEmployee, state.teams) === "overdue" ? "danger-text" : ""}>
               {formatDate(taskDisplayDueDate(taskItem, currentEmployee, state.teams))}
@@ -3108,7 +3113,7 @@ function QualityView({ state, currentEmployee, onCreate, onCreateTask, filters, 
 }
 
 function TeamManager({ teams = [], tasks = [], employees = [], onSave, onDelete }) {
-  const emptyDraft = { id: "", name: "", iconName: "users", memberIds: [] };
+  const emptyDraft = { id: "", name: "", iconName: "users", memberIds: [], primaryMemberId: "" };
   const [draft, setDraft] = useState(emptyDraft);
   const [teamDrawerOpen, setTeamDrawerOpen] = useState(false);
   const [expandedTeamId, setExpandedTeamId] = useState("");
@@ -3128,7 +3133,7 @@ function TeamManager({ teams = [], tasks = [], employees = [], onSave, onDelete 
     return `${names.slice(0, 2).join(", ")} +${names.length - 2}`;
   };
   const startEdit = (team) => {
-    setDraft({ id: team.id, name: team.name, iconName: team.iconName || "users", memberIds: [...(team.memberIds || [])] });
+    setDraft({ id: team.id, name: team.name, iconName: team.iconName || "users", memberIds: [...(team.memberIds || [])], primaryMemberId: team.primaryMemberId || "" });
     setExpandedTeamId(team.id);
     setTeamDrawerOpen(true);
     setValidationError("");
@@ -3139,8 +3144,13 @@ function TeamManager({ teams = [], tasks = [], employees = [], onSave, onDelete 
       setValidationError("Informe um nome para a equipe.");
       return;
     }
+    const composition = validateTeamComposition(draft.memberIds, draft.primaryMemberId);
+    if (!composition.valid) {
+      setValidationError(composition.error);
+      return;
+    }
     setSaving(true);
-    Promise.resolve(onSave({ ...draft, name }))
+    Promise.resolve(onSave({ ...draft, name, primaryMemberId: composition.primaryMemberId }))
       .then((success) => {
         if (success) {
           setDraft(emptyDraft);
@@ -3191,7 +3201,7 @@ function TeamManager({ teams = [], tasks = [], employees = [], onSave, onDelete 
                     <span className="team-list-meta">
                       <span>{(team.memberIds || []).length} {(team.memberIds || []).length === 1 ? "membro" : "membros"}</span>
                       <span aria-hidden="true">·</span>
-                      <span>{memberSummary(team)}</span>
+                      <span>Principal: {employeeNameById.get(String(team.primaryMemberId)) || memberSummary(team)}</span>
                     </span>
                   </span>
                   <span className="team-list-action"><span>{summary.totalTaskCount} {summary.totalTaskCount === 1 ? "tarefa aberta" : "tarefas abertas"}</span><ChevronDown size={15} aria-hidden="true" /></span>
@@ -3202,7 +3212,7 @@ function TeamManager({ teams = [], tasks = [], employees = [], onSave, onDelete 
                     {summary.members.length ? <div className="team-member-list">{summary.members.map((member) => (
                       <div className="team-member-row" key={member.id}>
                         <span className="team-member-avatar" aria-hidden="true">{(member.apelido || member.name).split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()}</span>
-                        <span className="team-member-copy"><strong>{member.name}</strong><span>Membro da equipe</span></span>
+                        <span className="team-member-copy"><strong>{member.name}</strong><span>{String(member.id) === String(team.primaryMemberId) ? "Responsável principal" : "Consultor"}</span></span>
                       </div>
                     ))}</div> : <p className="team-members-empty">Inclua membros para identificar quem compõe esta equipe.</p>}
                     <div className="team-expansion-footer"><span>{summary.totalTaskCount === 1 ? "1 tarefa aberta sob responsabilidade da equipe" : `${summary.totalTaskCount} tarefas abertas sob responsabilidade da equipe`}</span><button className="text-button" type="button" onClick={() => startEdit(team)}>Editar equipe <ChevronRight size={14} aria-hidden="true" /></button></div>
@@ -3225,8 +3235,19 @@ function TeamManager({ teams = [], tasks = [], employees = [], onSave, onDelete 
             </label>
             <div className="team-form-field">
               <span className="team-form-label"><span>Quem faz parte?</span><span className="team-form-selection">{draft.memberIds.length} {draft.memberIds.length === 1 ? "membro" : "membros"}</span></span>
-              <SearchableMultiSelect value={draft.memberIds} onChange={(memberIds) => setDraft((current) => ({ ...current, memberIds }))} options={employeeOptions} placeholder="Buscar e adicionar membros" />
+              <SearchableMultiSelect value={draft.memberIds} onChange={(memberIds) => setDraft((current) => ({ ...current, memberIds, primaryMemberId: memberIds.length === 1 ? memberIds[0] : memberIds.includes(current.primaryMemberId) ? current.primaryMemberId : "" }))} options={employeeOptions} placeholder="Buscar e adicionar membros" />
               <span className="team-form-hint">A mesma pessoa pode estar em mais de uma equipe.</span>
+            </div>
+            <div className="team-form-field">
+              <span className="team-form-label"><span>Responsável principal</span><span className="team-form-selection">{draft.memberIds.length > 1 ? "Obrigatório" : "Automático com 1 membro"}</span></span>
+              <InputSelect
+                value={draft.primaryMemberId}
+                onChange={(primaryMemberId) => setDraft((current) => ({ ...current, primaryMemberId }))}
+                options={employeeOptions.filter((option) => draft.memberIds.includes(option.value))}
+                placeholder={draft.memberIds.length ? "Escolha quem responde pela equipe" : "Adicione membros primeiro"}
+                disabled={!draft.memberIds.length || draft.memberIds.length === 1}
+              />
+              <span className="team-form-hint">Os demais membros serão consultores derivados nas tarefas abertas.</span>
             </div>
             <div className="team-form-field">
               <span className="team-form-label"><span>Ícone da equipe</span><span className="team-form-selection">Exibido nos cards</span></span>
@@ -4111,6 +4132,8 @@ function TaskDrawerContent({
             teamNames: taskItem.teamNames || [],
             teamId: taskItem.teamId || "",
             assigneeIds: taskItem.assigneeIds || [],
+            primaryAssigneeId: taskItem.primaryAssigneeId || taskItem.assigneeIds?.[0] || "",
+            consultantIds: taskItem.consultantIds || taskItem.assigneeIds?.slice(1) || [],
             restrictedVisibility: Boolean(taskItem.restrictedVisibility),
             personalTagIds: normalizePersonalTagIds(taskItem.personalTagIds),
             assigneeName: normalizeAssigneeNames(
@@ -4223,7 +4246,7 @@ function TaskDrawerContent({
     ...draftAttachments,
   ];
   const isDirty =
-    ["title", "status", "priority", "assignmentMode", "teamIds", "teamNames", "teamId", "teamName", "dueDate", "description", "waitingContext", "personalTagIds", "restrictedVisibility"].some(
+    ["title", "status", "priority", "assignmentMode", "teamIds", "teamNames", "teamId", "teamName", "primaryAssigneeId", "consultantIds", "dueDate", "description", "waitingContext", "personalTagIds", "restrictedVisibility"].some(
       (key) =>
         JSON.stringify(key === "personalTagIds" ? normalizePersonalTagIds(form[key]) : form[key] || "") !== JSON.stringify(key === "personalTagIds" ? normalizePersonalTagIds(taskItem[key]) : taskItem[key] || ""),
     ) ||
@@ -4350,6 +4373,8 @@ function TaskDrawerContent({
         teamNames: form.teamNames || [],
         teamId: form.teamId || "",
         assigneeIds: form.assigneeIds || [],
+        primaryAssigneeId: form.primaryAssigneeId || "",
+        consultantIds: form.consultantIds || [],
         assigneeNames: normalizeAssigneeNames(form.assigneeName),
         teamName: form.teamName,
         restrictedVisibility: Boolean(form.restrictedVisibility),
@@ -5433,6 +5458,8 @@ function NewTaskDrawer({ employees = [], teams = [], personalTags = [], tasks = 
     teamId: "",
     assigneeName: [],
     assigneeIds: [],
+    primaryAssigneeId: "",
+    consultantIds: [],
     teamName: "",
     restrictedVisibility: false,
     dueDate: "",
@@ -6287,7 +6314,7 @@ export default function App() {
       ].filter((value) => typeof value === "string").join(" ");
       const nextPatch = {
         ...patch,
-        ...(patch.assignmentMode !== undefined || patch.teamIds !== undefined || patch.teamId !== undefined || patch.assigneeIds !== undefined || patch.assigneeNames !== undefined
+        ...(patch.assignmentMode !== undefined || patch.teamIds !== undefined || patch.teamId !== undefined || patch.assigneeIds !== undefined || patch.assigneeNames !== undefined || patch.primaryAssigneeId !== undefined || patch.consultantIds !== undefined
           ? (() => {
               const assignment = resolveTaskAssignment(patch, state.teams || [], state.employees || []);
               return { ...assignment, assigneeName: assignment.assigneeNames.join(", ") };

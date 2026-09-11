@@ -5,15 +5,16 @@ import { analyzePlannerImport, graphQueryUrls, plannerDetailBatches } from "../s
 test("analisa tarefas do Graph, converte choices e exige detalhes e responsáveis", () => {
   const result = analyzePlannerImport({
     planId: "plan-1",
-    tasksText: JSON.stringify({ value: [{ id: "task-1", title: "Tarefa", percentComplete: 50, priority: 1, hasDescription: true, checklistItemCount: 1, assignments: { "graph-1": {} } }] }),
+    tasksText: JSON.stringify({ value: [{ id: "task-1", title: "Tarefa", percentComplete: 50, priority: 1, hasDescription: true, checklistItemCount: 1, assignments: { "graph-1": {}, "graph-2": {} } }] }),
     detailsText: JSON.stringify([{ taskId: "task-1", details: { description: "Descrição", checklist: { "check-1": { title: "Conferir", isChecked: true } } } }]),
-    employeeMapText: JSON.stringify({ "graph-1": "employee-1" }),
+    employeeMapText: JSON.stringify({ "graph-1": "employee-1", "graph-2": "employee-2" }),
   });
   assert.equal(result.canImport, true);
   assert.equal(result.rows[0].status, "doing");
   assert.equal(result.rows[0].priority, "urgent");
   assert.deepEqual(result.rows[0].checklist, [{ id: "check-1", title: "Conferir", done: true }]);
   assert.equal(result.rows[0].sourceType, "manual");
+  assert.deepEqual(result.rows[0].assignments.map((item) => item.employeeId), ["employee-1", "employee-2"]);
 });
 
 test("bloqueia paginação pendente e responsável sem mapeamento", () => {

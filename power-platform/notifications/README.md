@@ -43,7 +43,7 @@ O destinatário precisa abrir o AppBetinhos no Power Apps Mobile uma vez, autent
 Provisionamento versionado: `powershell -ExecutionPolicy Bypass -File scripts/create-planner-daily-flow.ps1` (o script atualiza pelo nome, sem duplicar).
 
 1. Recorrência semanal: segunda a sexta, 08:00, fuso `America/Sao_Paulo`.
-2. Buscar tarefas não concluídas/canceladas e seus vínculos em `cr40f_plannertarearesponsavel`.
+2. Buscar tarefas não concluídas/canceladas e o lookup de responsável principal em `cr40f_cr40f_funcionarioresponsavel_value`.
 3. Classificar usando a data local:
    - `due_today`: prazo igual a hoje;
    - `overdue`: prazo menor que hoje;
@@ -51,7 +51,7 @@ Provisionamento versionado: `powershell -ExecutionPolicy Bypass -File scripts/cr
    - no primeiro dia útil após o vencimento, incluir também o criador.
 4. Criar uma notificação interna por tarefa/destinatário/tipo/data. Chave: `<destinatario>|<tarefa>|<tipo>|<yyyy-MM-dd>`.
 5. Agrupar por funcionário e enviar no máximo um resumo por e-mail operacional (`cr40f_emailbetinhos`). Terça a sexta: atrasadas e vencem hoje. Segunda: atrasadas e tarefas da semana atual, com indicadores de status e prioridade.
-6. Tarefas atribuídas a equipe são expandidas para membros ativos; atribuição direta e de equipe são deduplicadas. Sem tarefas, nenhum e-mail é enviado.
+6. A cobrança e o resumo diário são enviados somente ao responsável principal materializado na task. Consultores continuam recebendo eventos de atribuição, status, prazo, menção e atualizações. Sem tarefas, nenhum e-mail é enviado.
 7. Link de cada tarefa: `new_TelaPlanner.html?data=taskId=<guid>`; o CTA geral abre o Planner.
 8. Registrar um disparo por funcionário com chave diária `<funcionário>|<yyyy-MM-dd>||ResumoDiario|Email` ou semanal `<funcionário>|<yyyy-MM-dd>|ResumoSemanal|Email` e os mesmos estados do fluxo imediato.
 

@@ -45,7 +45,10 @@ import {
   normalizePersonalTagIds,
   PERSONAL_TAG_COLORS,
   normalizeWaitingContext,
+  responsibilityFromIds,
+  resolveTaskAssignment,
   STATUSES,
+  validateTeamComposition,
   validateWaitingContext,
   waitingContextSummary,
 } from "./domain.js";
@@ -90,6 +93,7 @@ const ASSIGNEE_RELATION_TABLE = "cr40f_plannertarearesponsavel";
 const TASK_TEAM_RELATION_TABLE = "cr40f_plannertarefaequipe";
 const TEAM_TABLE = "cr40f_plannerequipe";
 const TEAM_MEMBER_TABLE = "cr40f_plannerequipemembro";
+const TEAM_PRIMARY_FIELD = "cr40f_responsavelprincipal";
 const TASK_TEAM_FIELD = "cr40f_equipeplanner";
 const NOTIFICATION_TABLE = "cr40f_plannernotificacao";
 const EMAIL_DISPATCH_TABLE = "cr40f_plannerdisparo";
@@ -606,16 +610,21 @@ function normalizePlannerTeam(row, primaryName = "cr40f_nome") {
     name: row[primaryName] || row[`${primaryName}@OData.Community.Display.V1.FormattedValue`] || "",
     iconName: "users",
     memberIds: [],
+    primaryMemberId: row[`_${TEAM_PRIMARY_FIELD}_value`] || "",
   };
 }
 
 async function loadPlannerTeams(xrm) {
   try {
     const primaryName = await primaryNameAttribute(xrm, TEAM_TABLE);
-    const [teamRows, memberRows] = await Promise.all([
-      retrieveMany(xrm, TEAM_TABLE, `?$select=${TEAM_TABLE}id,${primaryName}&$filter=statecode eq 0&$orderby=${primaryName} asc`),
-      retrieveMany(xrm, TEAM_MEMBER_TABLE, `?$select=${TEAM_MEMBER_TABLE}id,_cr40f_equipe_value,_cr40f_funcionario_value&$filter=statecode eq 0`),
-    ]);
+    let teamRows;
+    try {
+      teamRows = await retrieveMany(xrm, TEAM_TABLE, `?$select=${TEAM_TABLE}id,${primaryName},_${TEAM_PRIMARY_FIELD}_value&$filter=statecode eq 0&$orderby=${primaryName} asc`);
+    } catch (error) {
+      console.warn("[Planner] lookup de principal da equipe indisponível; usando fallback legado", error);
+      teamRows = await retrieveMany(xrm, TEAM_TABLE, `?$select=${TEAM_TABLE}id,${primaryName}&$filter=statecode eq 0&$orderby=${primaryName} asc`);
+    }
+    const memberRows = await retrieveMany(xrm, TEAM_MEMBER_TABLE, `?$select=${TEAM_MEMBER_TABLE}id,_cr40f_equipe_value,_cr40f_funcionario_value&$filter=statecode eq 0`);
     const teams = teamRows.map((row) => normalizePlannerTeam(row, primaryName));
     const membersByTeam = new Map();
     memberRows.forEach((row) => {
@@ -625,7 +634,10 @@ async function loadPlannerTeams(xrm) {
       ids.push(row._cr40f_funcionario_value);
       membersByTeam.set(teamId, ids);
     });
-    return teams.map((team) => ({ ...team, memberIds: [...new Set((membersByTeam.get(team.id) || []).filter(Boolean))] }));
+    return teams.map((team) => {
+      const memberIds = [...new Set((membersByTeam.get(team.id) || []).filter(Boolean))];
+      return { ...team, memberIds, primaryMemberId: memberIds.includes(team.primaryMemberId) ? team.primaryMemberId : memberIds.length === 1 ? memberIds[0] : "" };
+    });
   } catch (error) {
     console.warn("[Planner] equipes indisponíveis; metadata ainda não provisionada", error);
     return [];
@@ -647,8 +659,11 @@ async function createLiveTeam(xrm, state, input) {
   const name = String(input.name || "").trim();
   if (!name) throw new Error("Informe um nome para a equipe.");
   if ((state.teams || []).some((team) => team.name.localeCompare(name, "pt-BR", { sensitivity: "base" }) === 0)) throw new Error("Já existe uma equipe com esse nome.");
+  const composition = validateTeamComposition(input.memberIds || [], input.primaryMemberId);
+  if (!composition.valid) throw new Error(composition.error);
   const primaryName = await primaryNameAttribute(xrm, TEAM_TABLE);
   const payload = { [primaryName]: name };
+  await bindLookup(xrm, payload, TEAM_TABLE, TEAM_PRIMARY_FIELD, EMPLOYEE_TABLE, composition.primaryMemberId);
   const created = await request(xrm, `/${entitySetName(TEAM_TABLE)}`, { method: "POST", body: JSON.stringify(payload) });
   const id = created?.[`${TEAM_TABLE}id`] || created?.cr40f_plannerequipeid;
   if (!id) throw new Error("Dataverse criou equipe sem retornar o ID.");
@@ -660,9 +675,15 @@ async function updateLiveTeam(xrm, state, id, patch) {
   const name = String(patch.name || "").trim();
   if (!name) throw new Error("Informe um nome para a equipe.");
   if ((state.teams || []).some((team) => team.id !== id && team.name.localeCompare(name, "pt-BR", { sensitivity: "base" }) === 0)) throw new Error("Já existe uma equipe com esse nome.");
+  const composition = validateTeamComposition(patch.memberIds || [], patch.primaryMemberId || state.teams?.find((team) => team.id === id)?.primaryMemberId);
+  if (!composition.valid) throw new Error(composition.error);
   const primaryName = await primaryNameAttribute(xrm, TEAM_TABLE);
-  await request(xrm, `/${entitySetName(TEAM_TABLE)}(${cleanId(id)})`, { method: "PATCH", body: JSON.stringify({ [primaryName]: name }) });
+  const payload = { [primaryName]: name };
+  await bindLookup(xrm, payload, TEAM_TABLE, TEAM_PRIMARY_FIELD, EMPLOYEE_TABLE, composition.primaryMemberId);
+  await request(xrm, `/${entitySetName(TEAM_TABLE)}(${cleanId(id)})`, { method: "PATCH", body: JSON.stringify(payload) });
   await replacePlannerTeamMembers(xrm, id, patch.memberIds || []);
+  const refreshedTeams = await loadPlannerTeams(xrm);
+  await syncLiveTeamTasks(xrm, { ...state, teams: refreshedTeams }, id);
   return loadLiveState(xrm);
 }
 
@@ -718,6 +739,22 @@ async function replaceTaskTeams(xrm, taskId, input) {
     await bindLookup(xrm, payload, TASK_TEAM_RELATION_TABLE, "cr40f_equipe", TEAM_TABLE, teamId);
     await request(xrm, `/${entitySetName(TASK_TEAM_RELATION_TABLE)}`, { method: "POST", body: JSON.stringify(payload) });
   }));
+}
+
+async function syncLiveTeamTasks(xrm, state, teamId) {
+  let nextState = state;
+  const openTasks = (state.tasks || []).filter((task) => !["done", "cancelled"].includes(task.status)
+    && task.assignmentMode === "team"
+    && (task.teamIds || (task.teamId ? [task.teamId] : [])).some((id) => cleanId(id).toLowerCase() === cleanId(teamId).toLowerCase()));
+  for (const task of openTasks) {
+    nextState = await updateLiveTask(xrm, nextState, task.id, {
+      assignmentMode: "team",
+      teamIds: task.teamIds || [task.teamId],
+      teamNames: task.teamNames || [],
+      teamId: task.teamId || teamId,
+    });
+  }
+  return nextState;
 }
 
 function normalizeQuality(row, type) {
@@ -787,6 +824,12 @@ function normalizeTask(row, events = [], assignees = [], teamRelations = []) {
   const plannerTeamNames = relationTeams.length ? relationTeams.map((item) => item.teamName).filter(Boolean) : (row[`_${TASK_TEAM_FIELD}_value@OData.Community.Display.V1.FormattedValue`] ? [row[`_${TASK_TEAM_FIELD}_value@OData.Community.Display.V1.FormattedValue`] ] : []);
   const plannerTeamId = plannerTeamIds[0] || "";
   const plannerTeamName = plannerTeamNames.join(", ");
+  const relationAssigneeIds = assignees.map((item) => item.id).filter(Boolean);
+  const primaryAssigneeId = row[`_${EMPLOYEE_ASSIGNEE_FIELD}_value`] || relationAssigneeIds[0] || "";
+  const responsibility = responsibilityFromIds(relationAssigneeIds, primaryAssigneeId);
+  const profileById = new Map(assignees.map((item) => [cleanId(item.id).toLowerCase(), item]));
+  const orderedAssignees = responsibility.assigneeIds.map((id) => profileById.get(cleanId(id).toLowerCase())).filter(Boolean);
+  const fallbackName = formatLookup(row, EMPLOYEE_ASSIGNEE_FIELD);
   return {
     id: row.cr40f_plannertarefaid,
     title: row.cr40f_titulo || row.cr40f_name || "Sem título",
@@ -797,11 +840,15 @@ function normalizeTask(row, events = [], assignees = [], teamRelations = []) {
     restrictedVisibility: Boolean(row[TASK_RESTRICTED_VISIBILITY_FIELD]),
     dueDate: dateOnly(row.cr40f_prazo),
     waitingContext: parseWaitingContext(row),
-    assigneeNames: assignees.length ? assignees.map((item) => item.name) : normalizeAssigneeNames(formatLookup(row, EMPLOYEE_ASSIGNEE_FIELD)),
-    assigneeProfiles: assignees.length ? assignees.map((item) => ({ id: item.id, name: item.name, userId: item.userId || "" })) : [],
-    assigneeName: assignees.length ? assignees.map((item) => item.name).join(", ") : formatLookup(row, EMPLOYEE_ASSIGNEE_FIELD),
-    assigneeIds: assignees.length ? assignees.map((item) => item.id) : [row[`_${EMPLOYEE_ASSIGNEE_FIELD}_value`] || ""].filter(Boolean),
-    assigneeId: assignees[0]?.id || row[`_${EMPLOYEE_ASSIGNEE_FIELD}_value`] || "",
+    assigneeNames: orderedAssignees.length ? orderedAssignees.map((item) => item.name) : normalizeAssigneeNames(fallbackName),
+    assigneeProfiles: orderedAssignees.map((item) => ({ id: item.id, name: item.name, userId: item.userId || "" })),
+    assigneeName: orderedAssignees.length ? orderedAssignees.map((item) => item.name).join(", ") : fallbackName,
+    assigneeIds: responsibility.assigneeIds,
+    assigneeId: responsibility.primaryAssigneeId,
+    primaryAssigneeId: responsibility.primaryAssigneeId,
+    consultantIds: responsibility.consultantIds,
+    primaryAssigneeName: orderedAssignees.find((item) => cleanId(item.id).toLowerCase() === cleanId(responsibility.primaryAssigneeId).toLowerCase())?.name || (responsibility.primaryAssigneeId === row[`_${EMPLOYEE_ASSIGNEE_FIELD}_value`] ? fallbackName : ""),
+    consultantNames: responsibility.consultantIds.map((id) => profileById.get(cleanId(id).toLowerCase())?.name).filter(Boolean),
     creatorUserId: row._createdby_value || "",
     assignmentMode: plannerTeamIds.length ? "team" : "people",
     teamIds: plannerTeamIds,
@@ -838,15 +885,21 @@ function normalizeTaskTeamRelation(row) {
 function applyDynamicTeamAssignment(task, teams = [], employees = []) {
   if (task?.assignmentMode !== "team") return task;
   const teamIds = task.teamIds || (task.teamId ? [task.teamId] : []);
-  const memberIds = [...new Set(teams.filter((team) => teamIds.some((id) => cleanId(id).toLowerCase() === cleanId(team.id).toLowerCase())).flatMap((team) => team.memberIds || []))];
+  const selectedTeams = teams.filter((team) => teamIds.some((id) => cleanId(id).toLowerCase() === cleanId(team.id).toLowerCase()));
+  const memberIds = [...new Set(selectedTeams.flatMap((team) => team.memberIds || []))];
+  const responsibility = responsibilityFromIds(memberIds, selectedTeams[0]?.primaryMemberId || memberIds[0]);
   const employeeById = new Map(employees.map((employee) => [cleanId(employee.id).toLowerCase(), employee]));
-  const memberProfiles = memberIds.map((id) => employeeById.get(cleanId(id).toLowerCase())).filter(Boolean);
+  const memberProfiles = responsibility.assigneeIds.map((id) => employeeById.get(cleanId(id).toLowerCase())).filter(Boolean);
   return {
     ...task,
-    assigneeIds: memberIds,
+    assigneeIds: responsibility.assigneeIds,
     assigneeProfiles: memberProfiles,
     assigneeNames: memberProfiles.map((employee) => employee.name),
     assigneeName: memberProfiles.map((employee) => employee.name).join(", ") || "Não atribuído",
+    primaryAssigneeId: responsibility.primaryAssigneeId,
+    consultantIds: responsibility.consultantIds,
+    primaryAssigneeName: memberProfiles[0]?.name || "",
+    consultantNames: memberProfiles.slice(1).map((employee) => employee.name),
   };
 }
 
@@ -1213,15 +1266,16 @@ async function createLiveTask(xrm, state, input) {
   await bindLookup(xrm, payload, TASK_TABLE, "cr40f_pedidocotacao", QUOTE_TABLE, input.quoteId);
   await bindLookup(xrm, payload, TASK_TABLE, "cr40f_errooperacional", QUALITY_ERROR_TABLE, input.qualityType === "error" ? input.qualityId : "");
   await bindLookup(xrm, payload, TASK_TABLE, "cr40f_acaooperacional", QUALITY_ACTION_TABLE, input.qualityType === "action" ? input.qualityId : "");
-  const assigneeIds = input.assignmentMode === "team"
-    ? []
+  const assignment = resolveTaskAssignment(input, state.teams || [], state.employees || []);
+  const assigneeIds = assignment.assigneeIds.length
+    ? assignment.assigneeIds
     : [...new Set(await resolveAssigneeIds(xrm, input))];
   await bindLookup(xrm, payload, TASK_TABLE, EMPLOYEE_ASSIGNEE_FIELD, EMPLOYEE_TABLE, assigneeIds[0]);
   await bindLookup(xrm, payload, TASK_TABLE, TASK_TEAM_FIELD, TEAM_TABLE, input.assignmentMode === "team" ? (input.teamIds?.[0] || input.teamId) : "");
   const created = await request(xrm, `/${entitySetName(TASK_TABLE)}`, { method: "POST", body: JSON.stringify(payload) });
   const id = created?.cr40f_plannertarefaid;
   if (!id) throw new Error("Dataverse criou tarefa sem retornar o ID.");
-  await replaceTaskAssignees(xrm, id, { ...input, assigneeIds });
+  await replaceTaskAssignees(xrm, id, { ...input, ...assignment, assigneeIds });
   await replaceTaskTeams(xrm, id, input);
   await markQuoteOrigin(xrm, input.quoteId, id);
   await createEvent(xrm, id, 100000000, "Tarefa criada.");
@@ -1239,6 +1293,7 @@ async function updateLiveTask(xrm, state, id, patch) {
   const previousStatus = existing?.status || "";
   const previousDueDate = existing?.dueDate || "";
   const previousAssigneeIds = existing?.assigneeIds || [];
+  const previousPrimaryAssigneeId = existing?.primaryAssigneeId || previousAssigneeIds[0] || "";
   const nextStatus = patch.status ?? previousStatus;
   const effectiveAssignmentMode = patch.assignmentMode ?? existing?.assignmentMode ?? "people";
   const waitingContext = patch.waitingContext === undefined
@@ -1257,15 +1312,20 @@ async function updateLiveTask(xrm, state, id, patch) {
   if (patch.restrictedVisibility !== undefined) payload[TASK_RESTRICTED_VISIBILITY_FIELD] = Boolean(patch.restrictedVisibility);
   if (patch.waitingContext !== undefined || (patch.status !== undefined && nextStatus === "waiting")) Object.assign(payload, waitingContextPayload(waitingContext));
   const relationUpdates = [];
-  if (patch.assigneeId !== undefined || patch.assigneeName !== undefined || patch.assigneeNames !== undefined || patch.assigneeIds !== undefined || patch.teamIds !== undefined || patch.teamId !== undefined) {
+  let resolvedAssigneeIds = previousAssigneeIds;
+  let resolvedPrimaryAssigneeId = previousPrimaryAssigneeId;
+  if (patch.assigneeId !== undefined || patch.assigneeName !== undefined || patch.assigneeNames !== undefined || patch.assigneeIds !== undefined || patch.primaryAssigneeId !== undefined || patch.consultantIds !== undefined || patch.assignmentMode !== undefined || patch.teamIds !== undefined || patch.teamId !== undefined) {
     relationUpdates.push((async () => {
       const navigation = await resolveLookupNavigation(xrm, TASK_TABLE, EMPLOYEE_ASSIGNEE_FIELD, EMPLOYEE_TABLE);
-      const assigneeIds = effectiveAssignmentMode === "team"
-        ? []
-        : [...new Set(await resolveAssigneeIds(xrm, patch))];
+      const assignment = resolveTaskAssignment({ ...existing, ...patch, assignmentMode: effectiveAssignmentMode }, state.teams || [], state.employees || []);
+      const assigneeIds = assignment.assigneeIds.length
+        ? assignment.assigneeIds
+        : [...new Set(await resolveAssigneeIds(xrm, { ...existing, ...patch }))];
+      resolvedAssigneeIds = assigneeIds;
+      resolvedPrimaryAssigneeId = assignment.primaryAssigneeId || assigneeIds[0] || "";
       const employeeId = assigneeIds[0] || "";
       payload[`${navigation}@odata.bind`] = employeeId ? `/${entitySetName(EMPLOYEE_TABLE)}(${cleanId(employeeId)})` : null;
-      await replaceTaskAssignees(xrm, id, { ...patch, assigneeIds });
+      await replaceTaskAssignees(xrm, id, { ...patch, ...assignment, assigneeIds });
     })());
   }
   if (patch.assignmentMode !== undefined || patch.teamIds !== undefined || patch.teamId !== undefined) {
@@ -1284,10 +1344,8 @@ async function updateLiveTask(xrm, state, id, patch) {
   const statusChanged = patch.status !== undefined && nextStatus !== previousStatus;
   const dueDateChanged = patch.dueDate !== undefined && patch.dueDate !== previousDueDate;
   const waitingChanged = patch.waitingContext !== undefined && JSON.stringify(waitingContext) !== JSON.stringify(normalizeWaitingContext(existing?.waitingContext));
-  const nextAssigneeIds = effectiveAssignmentMode === "team"
-    ? teamMemberIds(state, { ...existing, ...patch })
-    : [...new Set(patch.assigneeIds || await resolveAssigneeIds(xrm, patch))];
-  const assigneesChanged = (patch.assigneeNames !== undefined || patch.assigneeIds !== undefined || patch.assignmentMode !== undefined || patch.teamIds !== undefined || patch.teamId !== undefined) && JSON.stringify([...previousAssigneeIds].sort()) !== JSON.stringify([...nextAssigneeIds].sort());
+  const nextAssigneeIds = resolvedAssigneeIds;
+  const assigneesChanged = (patch.assigneeNames !== undefined || patch.assigneeIds !== undefined || patch.primaryAssigneeId !== undefined || patch.consultantIds !== undefined || patch.assignmentMode !== undefined || patch.teamIds !== undefined || patch.teamId !== undefined) && (JSON.stringify([...previousAssigneeIds].sort()) !== JSON.stringify([...nextAssigneeIds].sort()) || resolvedPrimaryAssigneeId !== previousPrimaryAssigneeId);
   const eventContext = { actorEmployeeId: patch.actorEmployeeId || "", actorUserId: patch.actorUserId || "", creatorEmployeeId: existing?.creatorEmployeeId || "", assigneeIds: nextAssigneeIds, previousAssigneeIds };
   const eventWrites = [];
   if (patch.mentionedEmployeeIds?.length) eventWrites.push(createEvent(xrm, id, 100000001, "Menção na tarefa.", "notification:mention", "", JSON.stringify({ ...eventContext, mentionedEmployeeIds: patch.mentionedEmployeeIds })));

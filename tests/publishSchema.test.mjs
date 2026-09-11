@@ -11,6 +11,9 @@ test("npm run push provisiona lookup direto de equipe do Planner", () => {
   assert.match(script, /-ReferencingEntity "cr40f_plannertarefa"/);
   assert.match(script, /-ReferencingAttribute "cr40f_EquipePlanner"/);
   assert.match(script, /-ReferencedEntity "cr40f_plannerequipe"/);
+  assert.match(script, /cr40f_PlannerEquipe_ResponsavelPrincipal/);
+  assert.match(script, /-ReferencingAttribute "cr40f_ResponsavelPrincipal"/);
+  assert.match(script, /-ReferencedEntity "cr40f_funcionarios"/);
 });
 
 test("npm run push aborta conflito de lookup sem apagar metadata", () => {

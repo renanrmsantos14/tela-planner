@@ -89,6 +89,29 @@ function uniqueStrings(value) {
   return [...new Set(values.flatMap((item) => String(item || "").split(",")).map((item) => item.trim()).filter(Boolean))];
 }
 
+export function responsibilityFromIds(ids = [], primaryId = "") {
+  const uniqueIds = uniqueStrings(ids);
+  const requestedPrimary = String(primaryId || "").trim();
+  const primaryAssigneeId = uniqueIds.find((id) => sameIdentifier(id, requestedPrimary)) || uniqueIds[0] || "";
+  const orderedIds = primaryAssigneeId
+    ? [primaryAssigneeId, ...uniqueIds.filter((id) => !sameIdentifier(id, primaryAssigneeId))]
+    : uniqueIds;
+  return {
+    assigneeIds: orderedIds,
+    primaryAssigneeId,
+    consultantIds: orderedIds.filter((id) => !sameIdentifier(id, primaryAssigneeId)),
+  };
+}
+
+export function validateTeamComposition(memberIds = [], primaryMemberId = "") {
+  const members = uniqueStrings(memberIds);
+  if (!members.length) return { valid: false, error: "Inclua pelo menos um membro na equipe." };
+  if (members.length > 1 && !members.some((id) => sameIdentifier(id, primaryMemberId))) {
+    return { valid: false, error: "Escolha o responsável principal da equipe." };
+  }
+  return { valid: true, error: "", primaryMemberId: members.length === 1 ? members[0] : String(primaryMemberId).trim() };
+}
+
 export function normalizeWaitingContext(value = {}) {
   const source = value && typeof value === "object" ? value : {};
   const onType = ["employee", "team", "external"].includes(source.onType) ? source.onType : "employee";
@@ -209,6 +232,10 @@ export function buildOptimisticTask(input, parentTaskId = null) {
     ? normalizeAssigneeNames(input.assigneeNames || input.assigneeName)
     : assigneeNames;
   const optimisticTeamNames = assignmentMode === "team" ? uniqueStrings(input.teamNames ?? input.teamName) : [];
+  const responsibility = responsibilityFromIds(
+    input.assigneeIds || [...(input.primaryAssigneeId ? [input.primaryAssigneeId] : []), ...(input.consultantIds || [])],
+    input.primaryAssigneeId || input.assigneeId,
+  );
   return {
     id: `optimistic-${globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`}`,
     title: String(input.title || "Nova tarefa").trim(),
@@ -221,7 +248,11 @@ export function buildOptimisticTask(input, parentTaskId = null) {
     teamNames: optimisticTeamNames,
     teamId: teamIds[0] || "",
     assigneeNames: optimisticAssigneeNames,
-    assigneeIds: [...new Set((input.assigneeIds || []).filter(Boolean).map(String))],
+    assigneeIds: responsibility.assigneeIds,
+    primaryAssigneeId: responsibility.primaryAssigneeId,
+    consultantIds: responsibility.consultantIds,
+    primaryAssigneeName: optimisticAssigneeNames[0] || "",
+    consultantNames: optimisticAssigneeNames.slice(1),
     assigneeName: optimisticAssigneeNames.join(", "),
     creatorEmployeeId: input.actorEmployeeId || "",
     creatorUserId: input.actorUserId || "",
@@ -253,8 +284,9 @@ export function normalizeAssigneeNames(value) {
 
 export function hasTaskResponsible(task = {}) {
   const teamIds = uniqueStrings(task.teamIds ?? task.teamId);
-  if (task.assignmentMode === "team" && teamIds.length) return true;
-  if (uniqueStrings(task.assigneeIds).length) return true;
+  const assigneeIds = uniqueStrings(task.assigneeIds);
+  if (task.assignmentMode === "team" && teamIds.length) return Boolean(task.primaryAssigneeId || assigneeIds.length);
+  if (assigneeIds.length) return true;
   return normalizeAssigneeNames(task.assigneeNames ?? task.assigneeName)
     .some((name) => name !== "Não atribuído");
 }
@@ -278,6 +310,7 @@ export function normalizeTeam(team = {}) {
     name: String(team.name || "").trim(),
     iconName: String(team.iconName || team.icon || "users").trim() || "users",
     memberIds: [...new Set((team.memberIds || team.members || []).map((id) => String(id || "").trim()).filter(Boolean))],
+    primaryMemberId: String(team.primaryMemberId || team.primaryAssigneeId || "").trim(),
   };
 }
 
@@ -306,8 +339,11 @@ export function resolveTaskAssignment(input = {}, teams = [], employees = []) {
   const employeeByName = new Map(employees.map((employee) => [String(employee.name), employee]));
   const teamIds = uniqueStrings(input.teamIds ?? input.teamId);
   if (requestedMode === "team" && teamIds.length) {
-    const selectedTeams = teams.map(normalizeTeam).filter((team) => teamIds.includes(team.id));
+    const normalizedTeams = teams.map(normalizeTeam);
+    const selectedTeams = teamIds.map((id) => normalizedTeams.find((team) => sameIdentifier(team.id, id))).filter(Boolean);
     const memberIds = [...new Set(selectedTeams.flatMap((team) => team.memberIds).concat((selectedTeams.length ? [] : input.assigneeIds || []).map((id) => String(id || "")).filter(Boolean)))];
+    const primaryTeam = selectedTeams[0];
+    const responsibility = responsibilityFromIds(memberIds, primaryTeam?.primaryMemberId || memberIds[0]);
     const memberNames = memberIds.map((id) => employeeById.get(id)?.name).filter(Boolean);
     const teamNames = selectedTeams.map((team) => team.name).filter(Boolean);
     return {
@@ -316,20 +352,39 @@ export function resolveTaskAssignment(input = {}, teams = [], employees = []) {
       teamNames: teamNames.length ? teamNames : uniqueStrings(input.teamNames ?? input.teamName),
       teamId: teamIds[0] || "",
       teamName: teamNames.length ? teamNames.join(", ") : String(input.teamName || "").trim(),
-      assigneeIds: memberIds,
-      assigneeNames: memberNames.length ? memberNames : normalizeAssigneeNames(input.assigneeNames || input.assigneeName),
+      assigneeIds: responsibility.assigneeIds,
+      primaryAssigneeId: responsibility.primaryAssigneeId,
+      consultantIds: responsibility.consultantIds,
+      assigneeNames: memberNames.length ? [
+        ...new Set([
+          employeeById.get(responsibility.primaryAssigneeId)?.name,
+          ...responsibility.consultantIds.map((id) => employeeById.get(id)?.name),
+        ].filter(Boolean)),
+      ] : normalizeAssigneeNames(input.assigneeNames || input.assigneeName),
+      primaryAssigneeName: employeeById.get(responsibility.primaryAssigneeId)?.name || "",
+      consultantNames: responsibility.consultantIds.map((id) => employeeById.get(id)?.name).filter(Boolean),
     };
   }
   const assigneeNames = normalizeAssigneeNames(input.assigneeNames || input.assigneeName).filter((name) => name !== "Não atribuído");
-  const assigneeIds = [...new Set((input.assigneeIds || assigneeNames.map((name) => employeeByName.get(name)?.id)).filter(Boolean).map(String))];
+  const requestedIds = input.assigneeIds?.length
+    ? input.assigneeIds
+    : [...(input.primaryAssigneeId ? [input.primaryAssigneeId] : []), ...(input.consultantIds || [])].length
+      ? [...(input.primaryAssigneeId ? [input.primaryAssigneeId] : []), ...(input.consultantIds || [])]
+      : assigneeNames.map((name) => employeeByName.get(name)?.id);
+  const responsibility = responsibilityFromIds(requestedIds, input.primaryAssigneeId || input.assigneeId);
+  const resolvedNames = responsibility.assigneeIds.map((id) => employeeById.get(id)?.name).filter(Boolean);
   return {
     assignmentMode: "people",
     teamIds: [],
     teamNames: [],
     teamId: "",
     teamName: input.assignmentMode === "people" ? "" : String(input.teamName || "").trim(),
-    assigneeIds,
-    assigneeNames: assigneeNames.length ? assigneeNames : ["Não atribuído"],
+    assigneeIds: responsibility.assigneeIds,
+    primaryAssigneeId: responsibility.primaryAssigneeId,
+    consultantIds: responsibility.consultantIds,
+    assigneeNames: resolvedNames.length ? resolvedNames : assigneeNames.length ? assigneeNames : ["Não atribuído"],
+    primaryAssigneeName: employeeById.get(responsibility.primaryAssigneeId)?.name || "",
+    consultantNames: responsibility.consultantIds.map((id) => employeeById.get(id)?.name).filter(Boolean),
   };
 }
 
@@ -343,6 +398,7 @@ export function migrateLegacyTeams(tasks = [], employees = [], teamNames = []) {
     name,
     memberIds: [...new Set(tasks.filter((task) => task.teamName === name).flatMap((task) => task.assigneeIds || employees.filter((employee) => (task.assigneeNames || []).includes(employee.name)).map((employee) => employee.id)))],
   }));
+  teams.forEach((team) => { team.primaryMemberId = team.memberIds[0] || ""; });
   const teamByName = new Map(teams.map((team) => [team.name, team]));
   return {
     teams,
@@ -355,7 +411,12 @@ export function migrateLegacyTeams(tasks = [], employees = [], teamNames = []) {
       const next = waitingTeams.length
         ? { waitingContext: { ...waitingContext, onIds: waitingTeams.map((item) => item.id), onNames: waitingTeams.map((item) => item.name), onId: waitingTeams[0]?.id || "", onName: waitingTeams.map((item) => item.name).join(", ") } }
         : { waitingContext };
-      return team ? { ...task, ...next, assignmentMode: "team", teamIds: [team.id], teamNames: [team.name], teamId: team.id } : { ...task, ...next, assignmentMode: "people", teamIds: [], teamNames: [], teamId: "", teamName: "" };
+      if (!team) {
+        const responsibility = responsibilityFromIds(task.assigneeIds, task.primaryAssigneeId || task.assigneeId);
+        return { ...task, ...next, ...responsibility, assignmentMode: "people", teamIds: [], teamNames: [], teamId: "", teamName: "" };
+      }
+      const responsibility = responsibilityFromIds(task.assigneeIds, task.primaryAssigneeId || team.primaryMemberId);
+      return { ...task, ...next, ...responsibility, assignmentMode: "team", teamIds: [team.id], teamNames: [team.name], teamId: team.id };
     }),
   };
 }

@@ -8,6 +8,7 @@ import {
   normalizePersonalTagIds,
   PERSONAL_TAG_COLORS,
   resolveTaskAssignment,
+  validateTeamComposition,
   STATUSES,
   validatePersonalTag,
   validateWaitingContext,
@@ -315,7 +316,7 @@ export function createTask(state, input) {
   const nextTask = {
     id: uid("task"), parentTaskId: input.parentTaskId || null, quoteId: input.quoteId || null,
     quoteCode: input.quoteCode || "", quoteTitle: input.quoteTitle || "Sem vínculo", title: input.title.trim(),
-    status, priority: input.priority || "medium", assignmentMode: assignment.assignmentMode, teamIds: assignment.teamIds, teamNames: assignment.teamNames, teamId: assignment.teamId, assigneeNames, assigneeName: assigneeNames.join(", "), assigneeIds,
+    status, priority: input.priority || "medium", assignmentMode: assignment.assignmentMode, teamIds: assignment.teamIds, teamNames: assignment.teamNames, teamId: assignment.teamId, assigneeNames, assigneeName: assigneeNames.join(", "), assigneeIds, primaryAssigneeId: assignment.primaryAssigneeId || assigneeIds[0] || "", consultantIds: assignment.consultantIds || assigneeIds.slice(1), primaryAssigneeName: assignment.primaryAssigneeName || assigneeNames[0] || "", consultantNames: assignment.consultantNames || assigneeNames.slice(1),
     creatorEmployeeId: input.actorEmployeeId || "", creatorUserId: input.actorUserId || "", restrictedVisibility: Boolean(input.restrictedVisibility), contactId: input.contactId || "",
     teamName: assignment.teamName || input.teamName || "", dueDate: input.dueDate || "", description: input.description || "", waitingContext,
     checklist: input.checklist || [], labels: input.quoteCode ? [input.quoteCode] : [], personalTagIds: normalizePersonalTagIds(input.personalTagIds), sourceType, sourceId: input.sourceId || input.quoteId || null, sourceLabel: input.sourceLabel || (sourceType === "quality" ? "Ação de qualidade" : sourceType === "quote" ? "Pedido de cotação" : "Tarefa manual"), sourceCode: input.sourceCode || input.quoteCode || "", comments: [], attachments: [],
@@ -353,7 +354,7 @@ export function updateTask(state, id, patch) {
     if (statusChanged) history.push({ id: uid("history"), text: nextStatus === "done" ? "Tarefa concluída." : `Status alterado para ${STATUSES.find((item) => item.id === nextStatus)?.label || nextStatus}.`, createdAt: new Date().toISOString(), author: "Você" });
     if (statusChanged && nextStatus === "waiting") history.push({ id: uid("history"), text: waitingContextSummary(waitingContext), createdAt: new Date().toISOString(), author: "Você" });
     if (waitingChanged && !statusChanged) history.push({ id: uid("history"), text: `Contexto de Aguardando atualizado: ${waitingContextSummary(waitingContext)}.`, createdAt: new Date().toISOString(), author: "Você" });
-    const assignment = patch.assignmentMode !== undefined || patch.teamIds !== undefined || patch.teamId !== undefined || patch.assigneeIds !== undefined || patch.assigneeNames !== undefined || patch.assigneeName !== undefined
+    const assignment = patch.assignmentMode !== undefined || patch.teamIds !== undefined || patch.teamId !== undefined || patch.assigneeIds !== undefined || patch.assigneeNames !== undefined || patch.assigneeName !== undefined || patch.primaryAssigneeId !== undefined || patch.consultantIds !== undefined
       ? resolveTaskAssignment({ ...taskItem, ...patch }, state.teams || [], state.employees || [])
       : null;
     return { ...taskItem, ...patch, ...(assignment || {}), assigneeName: assignment ? assignment.assigneeNames.join(", ") : taskItem.assigneeName, status: nextStatus, waitingContext, history };
@@ -364,7 +365,7 @@ export function updateTask(state, id, patch) {
     patch.status !== undefined && patch.status !== existing.status ? (next.status === "waiting" ? "waiting" : "status") : "",
     patch.dueDate !== undefined && patch.dueDate !== existing.dueDate ? "deadline" : "",
     waitingChanged && !statusChanged ? "waiting" : "",
-    (patch.assigneeNames !== undefined || patch.assigneeIds !== undefined || patch.assignmentMode !== undefined || patch.teamIds !== undefined || patch.teamId !== undefined) && JSON.stringify(next.assigneeIds || []) !== JSON.stringify(existing.assigneeIds || []) ? "assignees" : "",
+    (patch.assigneeNames !== undefined || patch.assigneeIds !== undefined || patch.primaryAssigneeId !== undefined || patch.consultantIds !== undefined || patch.assignmentMode !== undefined || patch.teamIds !== undefined || patch.teamId !== undefined) && (JSON.stringify(next.assigneeIds || []) !== JSON.stringify(existing.assigneeIds || []) || next.primaryAssigneeId !== existing.primaryAssigneeId) ? "assignees" : "",
   ].filter(Boolean);
   const notifications = [...(state.notifications || [])];
   changes.forEach((type) => notificationRecipients({ type, creatorEmployeeId: existing.creatorEmployeeId, assigneeIds: next.assigneeIds || employeeIdsByNames(state.employees, next.assigneeNames), mentionedEmployeeIds: type === "waiting" ? waitingTargetIds(state, next.waitingContext) : [], previousAssigneeIds: existing.assigneeIds || employeeIdsByNames(state.employees, existing.assigneeNames), nextStatus: next.status, actorEmployeeId: patch.actorEmployeeId }).forEach((recipientEmployeeId) => {
@@ -463,11 +464,12 @@ export function importPlannerTasks(state, rows = []) {
 }
 
 function teamRecipients(state, task) {
-  if (task?.assignmentMode !== "team") return [...new Set((task?.assigneeIds || []).filter(Boolean).map(String))];
+  const primaryId = task?.primaryAssigneeId || task?.assigneeId || task?.assigneeIds?.[0];
+  if (primaryId) return [String(primaryId)];
+  if (task?.assignmentMode !== "team") return [];
   const teamIds = task.teamIds || (task.teamId ? [task.teamId] : []);
-  return [...new Set((state.teams || [])
-    .filter((team) => teamIds.some((id) => String(id) === String(team.id)))
-    .flatMap((team) => team.memberIds || []))];
+  const team = (state.teams || []).find((item) => teamIds.some((id) => String(id) === String(item.id)));
+  return team?.primaryMemberId ? [team.primaryMemberId] : team?.memberIds?.slice(0, 1) || [];
 }
 
 export function collectTask(state, id, input = {}) {
@@ -522,16 +524,24 @@ export function collectTask(state, id, input = {}) {
 export function refreshTeamTaskAssignments(state, teamId) {
   const team = (state.teams || []).find((item) => String(item.id) === String(teamId));
   if (!team) return state;
-  return saveState({
-    ...state,
-    tasks: state.tasks.map((taskItem) => {
-      if (taskItem.assignmentMode !== "team") return taskItem;
-      const ids = taskItem.teamIds || (taskItem.teamId ? [taskItem.teamId] : []);
-      if (!ids.some((id) => String(id) === String(teamId))) return taskItem;
-      const assignment = resolveTaskAssignment({ ...taskItem, teamIds: ids, assignmentMode: "team" }, state.teams || [], state.employees || []);
-      return { ...taskItem, ...assignment, assigneeName: assignment.assigneeNames.join(", ") };
-    }),
+  const notifications = [...(state.notifications || [])];
+  const tasks = state.tasks.map((taskItem) => {
+    if (taskItem.assignmentMode !== "team" || ["done", "cancelled"].includes(taskItem.status)) return taskItem;
+    const ids = taskItem.teamIds || (taskItem.teamId ? [taskItem.teamId] : []);
+    if (!ids.some((id) => String(id) === String(teamId))) return taskItem;
+    const assignment = resolveTaskAssignment({ ...taskItem, teamIds: ids, assignmentMode: "team" }, state.teams || [], state.employees || []);
+    const changed = JSON.stringify(assignment.assigneeIds || []) !== JSON.stringify(taskItem.assigneeIds || [])
+      || assignment.primaryAssigneeId !== taskItem.primaryAssigneeId;
+    if (changed) {
+      const history = [...(taskItem.history || []), { id: uid("history"), text: "Responsáveis sincronizados pela equipe.", createdAt: new Date().toISOString(), author: "Sistema" }];
+      notificationRecipients({ type: "assignees", assigneeIds: assignment.assigneeIds, previousAssigneeIds: taskItem.assigneeIds || [] }).forEach((recipientEmployeeId) => {
+        notifications.unshift({ id: uid("notification"), taskId: taskItem.id, recipientEmployeeId, type: "assignees", title: "Responsáveis atualizados", message: taskItem.title, occurredAt: new Date().toISOString(), readAt: "", dedupeKey: notificationDedupeKey({ recipientId: recipientEmployeeId, taskId: taskItem.id, type: "assignees", eventId: history.at(-1).id }) });
+      });
+      return { ...taskItem, ...assignment, assigneeName: assignment.assigneeNames.join(", "), history };
+    }
+    return taskItem;
   });
+  return saveState({ ...state, tasks, notifications });
 }
 
 export function resolveWaitingReturn(state, id, input = {}) {
@@ -623,7 +633,10 @@ export function createTeam(state, input) {
   if ((state.teams || []).some((team) => team.name.localeCompare(name, "pt-BR", { sensitivity: "base" }) === 0)) {
     throw new Error("Já existe uma equipe com esse nome.");
   }
-  const team = { id: uid("team"), name, iconName: input.iconName || "users", memberIds: [...new Set((input.memberIds || []).filter(Boolean).map(String))] };
+  const memberIds = [...new Set((input.memberIds || []).filter(Boolean).map(String))];
+  const composition = validateTeamComposition(memberIds, input.primaryMemberId);
+  if (!composition.valid) throw new Error(composition.error);
+  const team = { id: uid("team"), name, iconName: input.iconName || "users", memberIds, primaryMemberId: composition.primaryMemberId };
   return saveState({ ...state, teams: [...(state.teams || []), team] });
 }
 
@@ -633,9 +646,14 @@ export function updateTeam(state, id, patch) {
   if ((state.teams || []).some((team) => team.id !== id && team.name.localeCompare(name, "pt-BR", { sensitivity: "base" }) === 0)) {
     throw new Error("Já existe uma equipe com esse nome.");
   }
+  const existing = (state.teams || []).find((team) => team.id === id);
+  if (!existing) throw new Error("Equipe não encontrada.");
+  const memberIds = [...new Set((patch.memberIds || []).filter(Boolean).map(String))];
+  const composition = validateTeamComposition(memberIds, patch.primaryMemberId ?? existing.primaryMemberId);
+  if (!composition.valid) throw new Error(composition.error);
   const next = saveState({
     ...state,
-    teams: (state.teams || []).map((team) => team.id === id ? { ...team, name, iconName: patch.iconName || "users", memberIds: [...new Set((patch.memberIds || []).filter(Boolean).map(String))] } : team),
+    teams: (state.teams || []).map((team) => team.id === id ? { ...team, name, iconName: patch.iconName || "users", memberIds, primaryMemberId: composition.primaryMemberId } : team),
   });
   return refreshTeamTaskAssignments(next, id);
 }

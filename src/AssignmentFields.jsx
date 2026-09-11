@@ -1,7 +1,8 @@
 import React, { useMemo } from "react";
 import { UserRound, Users } from "lucide-react";
 import {
-  buildEmployeeAssigneeOptions,
+  responsibilityFromIds,
+  resolveTaskAssignment,
 } from "./domain.js";
 import SearchableSelect, {
   SearchableMultiSelect,
@@ -55,11 +56,10 @@ export default function AssignmentFields({
   const employeeById = new Map(
     employees.map((employee) => [String(employee.id), employee]),
   );
-  const employeeOptions = buildEmployeeAssigneeOptions(employees).map((name) => ({
-    value: name,
-    label: name,
-  }));
-  const teamOptions = teams.map((team) => ({
+  const employeeOptions = employees
+    .filter((employee) => employee?.id && employee?.name)
+    .map((employee) => ({ value: employee.id, label: employee.name }));
+  const teamOptions = teams.filter((team) => (team.memberIds || []).length > 0).map((team) => ({
     value: team.id,
     label: team.name,
     subtitle: String((team.memberIds || []).length) +
@@ -73,16 +73,13 @@ export default function AssignmentFields({
   const selectedTeams = teams.filter((team) =>
     selectedTeamIds.some((id) => String(id) === String(team.id)),
   );
-  const selectedMemberNames = [
-    ...new Set(
-      (form.assigneeIds || [])
-        .map((id) => employeeById.get(String(id))?.name)
-        .filter(Boolean),
-    ),
-  ];
-  const selectedMemberLabels = selectedMemberNames.map((name) =>
-    employees.find((employee) => employee.name === name)?.apelido || name,
-  );
+  const primaryAssigneeId = form.primaryAssigneeId || form.assigneeId || form.assigneeIds?.[0] || "";
+  const selectedConsultantIds = (form.consultantIds || (form.assigneeIds || []).filter((id) => String(id) !== String(primaryAssigneeId)))
+    .filter((id) => String(id) !== String(primaryAssigneeId));
+  const primaryName = employeeById.get(String(primaryAssigneeId))?.name || "Não definido";
+  const consultantNames = selectedConsultantIds
+    .map((id) => employeeById.get(String(id))?.name)
+    .filter(Boolean);
   const selectMode = (mode) => {
     setForm((current) => ({
       ...current,
@@ -93,6 +90,8 @@ export default function AssignmentFields({
       teamName: "",
       assigneeName: [],
       assigneeIds: [],
+      primaryAssigneeId: "",
+      consultantIds: [],
     }));
   };
   const selectTeam = (teamIds) => {
@@ -104,9 +103,7 @@ export default function AssignmentFields({
     const selected = teams.filter((team) =>
       selectedIds.some((id) => String(id) === String(team.id)),
     );
-    const memberIds = [
-      ...new Set(selected.flatMap((team) => team.memberIds || [])),
-    ];
+    const assignment = resolveTaskAssignment({ assignmentMode: "team", teamIds: selectedIds }, teams, employees);
     setForm((current) => ({
       ...current,
       assignmentMode: "team",
@@ -114,14 +111,15 @@ export default function AssignmentFields({
       teamNames: selected.map((team) => team.name),
       teamId: selectedIds[0] || "",
       teamName: selected.map((team) => team.name).join(", "),
-      assigneeIds: memberIds,
-      assigneeName: memberIds
-        .map((id) => employeeById.get(String(id))?.name)
-        .filter(Boolean),
+      assigneeIds: assignment.assigneeIds,
+      assigneeName: assignment.assigneeNames,
+      primaryAssigneeId: assignment.primaryAssigneeId,
+      consultantIds: assignment.consultantIds,
     }));
   };
-  const selectPeople = (names) => {
-    const selectedNames = Array.isArray(names) ? names : [];
+  const commitPeople = (primaryId, consultantIds) => {
+    const responsibility = responsibilityFromIds([primaryId, ...(consultantIds || [])], primaryId);
+    const selectedNames = responsibility.assigneeIds.map((id) => employeeById.get(String(id))?.name).filter(Boolean);
     setForm((current) => ({
       ...current,
       assignmentMode: "people",
@@ -130,11 +128,13 @@ export default function AssignmentFields({
       teamId: "",
       teamName: "",
       assigneeName: selectedNames,
-      assigneeIds: selectedNames
-        .map((name) => employees.find((employee) => employee.name === name)?.id)
-        .filter(Boolean),
+      assigneeIds: responsibility.assigneeIds,
+      primaryAssigneeId: responsibility.primaryAssigneeId,
+      consultantIds: responsibility.consultantIds,
     }));
   };
+  const selectPrimary = (id) => commitPeople(id, selectedConsultantIds);
+  const selectConsultants = (ids) => commitPeople(primaryAssigneeId, Array.isArray(ids) ? ids : []);
   return (
     <div className="assignment-field">
       <div className="assignment-field-header">
@@ -190,41 +190,55 @@ export default function AssignmentFields({
                 "Membros de " + selectedTeams.map((team) => team.name).join(", ")
               }
             >
-              <span className="assignment-members-label">
-                Responsáveis destas equipes
-              </span>
+              <span className="assignment-members-label">Composição herdada da equipe</span>
               <div className="assignment-members-list">
-                {selectedMemberLabels.map((member, index) => (
+                {primaryName !== "Não definido" && (
                   <span
-                    className="assignment-member-chip"
-                    key={String(member) + "-" + index}
+                    className="assignment-member-chip assignment-member-primary"
                   >
                     <span className="avatar avatar-small">
-                      {String(member)
+                      {String(primaryName)
                         .split(" ")
                         .map((part) => part[0])
                         .join("")
                         .slice(0, 2)
                         .toUpperCase()}
                     </span>
-                    {member}
+                    Principal: {primaryName}
                   </span>
-                ))}
+                )}
+                {consultantNames.length > 0 && (
+                  <span className="assignment-member-chip">
+                    Consultores: {consultantNames.join(", ")}
+                  </span>
+                )}
               </div>
             </div>
           )}
         </>
       ) : (
-        <label className="assignment-control">
-          <span className="sr-only">Responsáveis</span>
-          <InputSelect
-            value={form.assigneeName || []}
-            onChange={selectPeople}
+        <>
+          <label className="assignment-control">
+            <span>Responsável principal</span>
+            <InputSelect
+            value={primaryAssigneeId}
+            onChange={selectPrimary}
             options={employeeOptions}
-            placeholder="Selecione uma ou mais pessoas"
-            multiple
+            placeholder="Escolha quem responde pela task"
           />
-        </label>
+          </label>
+          <label className="assignment-control">
+            <span>Consultores</span>
+            <InputSelect
+              value={selectedConsultantIds}
+              onChange={selectConsultants}
+              options={employeeOptions.filter((option) => String(option.value) !== String(primaryAssigneeId))}
+              placeholder={primaryAssigneeId ? "Adicione consultores" : "Escolha o principal primeiro"}
+              disabled={!primaryAssigneeId}
+              multiple
+            />
+          </label>
+        </>
       )}
     </div>
   );

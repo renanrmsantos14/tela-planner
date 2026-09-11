@@ -100,10 +100,10 @@ export function dailyReminderRows(tasks = [], employees = [], todayKey) {
   return tasks.flatMap((task) => {
     const type = deadlineReminderType(task, todayKey);
     if (!type || type === "due_soon") return [];
-    const uniqueAssigneeIds = [...new Set((task.assigneeIds || []).map(cleanId).filter(Boolean))];
+    const primaryAssigneeId = cleanId(task.primaryAssigneeId || task.assigneeId || task.assigneeIds?.[0]);
     const recipientIds = type === "overdue" && task.creatorEmployeeId && businessDaysSince(task.dueDate, todayKey) >= 1
-      ? [...new Set([...uniqueAssigneeIds, cleanId(task.creatorEmployeeId)].filter(Boolean))]
-      : uniqueAssigneeIds;
+      ? [...new Set([primaryAssigneeId, cleanId(task.creatorEmployeeId)].filter(Boolean))]
+      : primaryAssigneeId ? [primaryAssigneeId] : [];
     return recipientIds.map((employeeId) => {
       const employee = employeeById.get(employeeId);
       return {

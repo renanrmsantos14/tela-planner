@@ -83,6 +83,21 @@ test("importa tags do Planner, reutiliza existentes e reativa arquivadas", () =>
   assert.deepEqual(result.nextState.tasks.at(-1).personalTagIds, [vip.id]);
 });
 
+test("importação do Planner preserva o primeiro participante como principal", () => {
+  withStorage();
+  const result = importPlannerTasks(seedState(), [{
+    plannerTaskId: "planner-accountability",
+    title: "Tarefa compartilhada importada",
+    assignments: [
+      { employeeId: "employee-rafael" },
+      { employeeId: "employee-marina" },
+    ],
+  }]);
+  const task = result.nextState.tasks.at(-1);
+  assert.equal(task.primaryAssigneeId, "employee-rafael");
+  assert.deepEqual(task.consultantIds, ["employee-marina"]);
+});
+
 test("mantém subtarefa vinculada à tarefa-pai no mock", () => {
   withStorage();
   const initial = seedState();
@@ -192,19 +207,37 @@ test("preserva origem na tarefa criada", () => {
 test("salva equipe e acompanha membros atuais nas tarefas da equipe", () => {
   withStorage();
   const initial = seedState();
-  const teamState = createTeam(initial, { name: "Equipe teste", memberIds: ["employee-marina", "employee-rafael"] });
+  const teamState = createTeam(initial, { name: "Equipe teste", memberIds: ["employee-marina", "employee-rafael"], primaryMemberId: "employee-rafael" });
   const team = teamState.teams.at(-1);
   const created = createTask(teamState, { title: "Revisar escala", assignmentMode: "team", teamId: team.id });
   const task = created.tasks.at(-1);
 
   assert.equal(task.assignmentMode, "team");
   assert.equal(task.teamId, team.id);
-  assert.deepEqual(task.assigneeIds, team.memberIds);
+  assert.deepEqual(task.assigneeIds, ["employee-rafael", "employee-marina"]);
+  assert.equal(task.primaryAssigneeId, "employee-rafael");
+  assert.deepEqual(task.consultantIds, ["employee-marina"]);
 
   const editedTeam = updateTeam(created, team.id, { name: team.name, memberIds: ["employee-marina"] });
   const savedTask = editedTeam.tasks.find((item) => item.id === task.id);
   assert.deepEqual(editedTeam.teams.at(-1).memberIds, ["employee-marina"]);
   assert.deepEqual(savedTask.assigneeIds, ["employee-marina"]);
+});
+
+test("bloqueia equipe vazia e sincroniza somente tarefas abertas", () => {
+  withStorage();
+  const initial = seedState();
+  assert.throws(() => createTeam(initial, { name: "Equipe vazia", memberIds: [] }), /pelo menos um membro/);
+  const teamState = createTeam(initial, { name: "Equipe histórica", memberIds: ["employee-marina", "employee-rafael"], primaryMemberId: "employee-rafael" });
+  const openState = createTask(teamState, { title: "Aberta", assignmentMode: "team", teamId: teamState.teams.at(-1).id });
+  const withDoneCandidate = createTask(openState, { title: "Histórica", assignmentMode: "team", teamId: teamState.teams.at(-1).id });
+  const doneState = updateTask(withDoneCandidate, withDoneCandidate.tasks.at(-1).id, { status: "done" });
+  const edited = updateTeam(doneState, teamState.teams.at(-1).id, { name: "Equipe histórica", memberIds: ["employee-marina"], primaryMemberId: "employee-marina" });
+  const openTask = edited.tasks.find((task) => task.title === "Aberta");
+  assert.deepEqual(openTask.assigneeIds, ["employee-marina"]);
+  assert.deepEqual(openTask.consultantIds, []);
+  assert.equal(openTask.status, "todo");
+  assert.deepEqual(edited.tasks.find((task) => task.title === "Histórica").assigneeIds, ["employee-rafael", "employee-marina"]);
 });
 
 test("apaga equipe sem alterar tarefas existentes", () => {
@@ -240,8 +273,8 @@ test("registra aguardando e conclusão no histórico mock", () => {
 test("notifica uma vez cada membro de múltiplas equipes aguardando", () => {
   withStorage();
   const initial = seedState();
-  const first = createTeam(initial, { name: "Equipe A", memberIds: ["employee-marina", "employee-rafael"] });
-  const second = createTeam(first, { name: "Equipe B", memberIds: ["employee-rafael", "employee-camila"] });
+  const first = createTeam(initial, { name: "Equipe A", memberIds: ["employee-marina", "employee-rafael"], primaryMemberId: "employee-rafael" });
+  const second = createTeam(first, { name: "Equipe B", memberIds: ["employee-rafael", "employee-camila"], primaryMemberId: "employee-camila" });
   const task = second.tasks.find((item) => item.status === "todo");
   const teamA = second.teams.at(-2);
   const teamB = second.teams.at(-1);
