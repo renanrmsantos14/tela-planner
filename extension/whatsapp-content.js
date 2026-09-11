@@ -14,12 +14,19 @@ function findUnreadConversationRows(documentRef = document) {
   return [...documentRef.querySelectorAll("[aria-label*='unread' i], [data-testid='icon-unread-count'], span[aria-label*='mensagem não lida' i]")].map((node) => node.closest("[data-testid='cell-frame-container'], [role='listitem'], div[tabindex='-1']")).filter(Boolean);
 }
 
+function sendRuntimeMessage(message) {
+  try {
+    const pending = chrome.runtime.sendMessage(message);
+    pending?.catch?.(() => {});
+  } catch (_) {}
+}
+
 function notifyScan() {
   if (scheduled) return;
   scheduled = setTimeout(() => {
     scheduled = null;
     const unreadCount = findUnreadConversationRows(document).length;
-    if (unreadCount > lastUnreadCount) chrome.runtime.sendMessage({ type: "scan-active" }).catch(() => {});
+    if (unreadCount > lastUnreadCount) sendRuntimeMessage({ type: "scan-active" });
     lastUnreadCount = unreadCount;
   }, 700);
 }
