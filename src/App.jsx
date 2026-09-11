@@ -5540,7 +5540,7 @@ function NewTaskDrawer({ employees = [], teams = [], personalTags = [], tasks = 
     primaryAssigneeId: "",
     consultantIds: [],
     teamName: "",
-    restrictedVisibility: false,
+    restrictedVisibility: true,
     dueDate: "",
     description: "",
     waitingContext: { ...EMPTY_WAITING_CONTEXT },
