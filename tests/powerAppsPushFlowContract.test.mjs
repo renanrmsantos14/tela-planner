@@ -5,7 +5,12 @@ import { readFile } from "node:fs/promises";
 function compileFlowDefinition(source) {
   const block = source.match(/\$definition = @'\r?\n([\s\S]*?)\r?\n'@/);
   assert.ok(block, "bloco JSON da definição não encontrado");
-  return JSON.parse(block[1].replaceAll("__POWER_APPS_APP_ID__", "app-test-id"));
+  return JSON.parse(
+    block[1]
+      .replaceAll("__POWER_APPS_APP_UNIQUE_NAME__", "cr40f_ModelDrivenBetinhos")
+      .replaceAll("__POWER_APPS_APP_DISPLAY_NAME__", "App Betinhos Interno")
+      .replaceAll("__POWER_APPS_PUSH_CHANNEL_VALUE__", "100000002"),
+  );
 }
 
 function findAction(node, actionName) {
@@ -25,15 +30,29 @@ test("Flow piloto usa Power Apps Notification V2 com destinatário Microsoft e t
   assert.ok(push, "ação Send_PowerApps_push não encontrada");
   assert.equal(push.inputs.host.operationId, "SendPushNotificationV2");
   assert.equal(push.inputs.host.apiId, "/providers/Microsoft.PowerApps/apis/shared_powerappsnotificationv2");
-  assert.equal(push.inputs.parameters.playerType, "Power Apps");
-  assert.equal(push.inputs.parameters.openApp, true);
-  assert.match(push.inputs.parameters.recipients, /Get_system_user/);
-  assert.match(push.inputs.parameters.dynamicParams, /entityName/);
-  assert.match(push.inputs.parameters.dynamicParams, /entityId/);
+  assert.equal(push.inputs.parameters["payload/playerType"], "PowerApps");
+  assert.deepEqual(JSON.parse(push.inputs.parameters["payload/app"]), {
+    appIdentifier: "cr40f_ModelDrivenBetinhos",
+    displayName: "App Betinhos Interno",
+    type: "AppModule",
+  });
+  assert.equal(push.inputs.parameters["payload/openApp"], true);
+  assert.match(push.inputs.parameters["payload/recipients"], /Get_system_user/);
+  assert.match(push.inputs.parameters["payload/dynamicParams"], /entityName/);
+  assert.match(push.inputs.parameters["payload/dynamicParams"], /entityId/);
+  assert.equal(push.inputs.parameters.playerType, undefined);
+  assert.equal(push.inputs.parameters.app, undefined);
   assert.match(source, /notification:test.*notification:assignment/);
   assert.match(source, /\|PowerAppsPush/);
   assert.match(source, /PowerAppsNotificationConnectionReferenceLogicalName/);
   assert.match(source, /shared_powerappsnotificationv2/);
+  assert.match(source, /new_sharedpowerappsnotificationv2_e540f/);
+  assert.match(source, /PowerAppsAppUniqueName = 'cr40f_ModelDrivenBetinhos'/);
+  assert.doesNotMatch(source, /appmoduleidunique/);
+  assert.match(source, /uniquename eq '\$escapedAppUniqueName'/);
+  assert.doesNotMatch(source, /PowerAppsAppId = '7c7c8fda-53d0-f011-8543-6045bd3a51ea'/);
+  assert.match(source, /authentication = '@parameters\(''\$authentication''\)'/);
+  assert.doesNotMatch(source, /authentication = "@parameters\('\$authentication'\)"/);
 });
 
 test("teste live informa destinatário e equipes não consultam cr40f_icone", async () => {
@@ -41,15 +60,54 @@ test("teste live informa destinatário e equipes não consultam cr40f_icone", as
   assert.match(dataverse, /notificationRecipientIds: \[testRecipient\.id\]/);
   assert.match(dataverse, /TEAM_TABLE}id,\$\{primaryName\}/);
   assert.doesNotMatch(dataverse, /TEAM_ICON_FIELD/);
+  assert.match(dataverse, /cr40f_canal eq 100000002/);
+  assert.doesNotMatch(dataverse, /cr40f_canal eq 'PowerAppsPush'/);
+  assert.match(dataverse, /100000002: "PowerAppsPush"/);
 });
 
 test("disparos do piloto distinguem sucesso, falha e identidade ausente", async () => {
   const source = await readFile(new URL("../scripts/create-planner-immediate-flow.ps1", import.meta.url), "utf8");
-  assert.match(source, /item\/cr40f_canal.*PowerAppsPush/);
+  const definition = compileFlowDefinition(source);
+  const sent = findAction(definition, "Create_dispatch_sent");
+  const failed = findAction(definition, "Create_dispatch_failed");
+  const withoutIdentity = findAction(definition, "Create_dispatch_without_identity");
+  for (const action of [sent, failed, withoutIdentity]) {
+    assert.equal(action.inputs.parameters["item/cr40f_canal"], 100000002);
+    assert.equal(action.inputs.parameters["item/cr40f_categoria"], 100000000);
+  }
+  assert.match(source, /InsertOptionValue/);
+  assert.match(source, /SolutionUniqueName = 'AppBetinhos'/);
+  assert.match(source, /PowerAppsPush.*LanguageCode = 1046/);
   assert.match(source, /item\/cr40f_status.*100000001/);
   assert.match(source, /item\/cr40f_status.*100000002/);
   assert.match(source, /item\/cr40f_status.*100000003/);
   assert.match(source, /Create_dispatch_sent/);
   assert.match(source, /Create_dispatch_failed/);
   assert.match(source, /Create_dispatch_without_identity/);
+});
+
+test("Flow termina como Failed depois de enviar o e-mail de erro", async () => {
+  const source = await readFile(new URL("../scripts/create-planner-immediate-flow.ps1", import.meta.url), "utf8");
+  assert.match(source, /Terminate_Failed/);
+  assert.match(source, /runAfter = \[ordered\]@\{ Send_Error_Email = @\('Succeeded'\) \}/);
+  assert.match(source, /runStatus = 'Failed'/);
+  assert.match(source, /code = 'PlannerPushFlowFailed'/);
+});
+
+test("filtro de autor tolera destinatário e actorEmployeeId nulos", async () => {
+  const source = await readFile(new URL("../scripts/create-planner-immediate-flow.ps1", import.meta.url), "utf8");
+  const definition = compileFlowDefinition(source);
+  const condition = findAction(definition, "Condition_NotAuthor");
+  const serialized = JSON.stringify(condition.expression);
+  assert.match(serialized, /empty\(item\(\)\)/);
+  assert.match(serialized, /toLower\(coalesce\(item\(\), ''\)\)/);
+  assert.match(serialized, /toLower\(coalesce\(outputs\('Compose_Context'\)\?\['actorEmployeeId'\], ''\)\)/);
+  assert.doesNotMatch(serialized, /toLower\(item\(\)\)/);
+});
+
+test("provisionamento repete chamadas transitórias do Dataverse com limite", async () => {
+  const source = await readFile(new URL("../scripts/create-planner-immediate-flow.ps1", import.meta.url), "utf8");
+  assert.match(source, /function Invoke-DataverseRequest/);
+  assert.match(source, /\$attempt -le 3/);
+  assert.match(source, /if \(\$attempt -eq 3\) \{ throw \}/);
 });

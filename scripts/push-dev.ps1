@@ -54,4 +54,9 @@ else {
 }
 Assert-ExitCode "registro do plugin"
 
-Write-Step "push concluido: WebResource e plugin atualizados"
+Write-Step "provisionamento do Flow de push Power Apps Mobile"
+$flowScript = Join-Path $PSScriptRoot "create-planner-immediate-flow.ps1"
+& $flowScript -EnvironmentUrl $EnvironmentUrl.TrimEnd('/')
+Assert-ExitCode "provisionamento do Flow de push"
+
+Write-Step "push concluido: WebResource, plugin e Flow de push atualizados"

@@ -25,7 +25,7 @@ No Planner, `Configurações` exibe o **Módulo de teste de notificações** som
 
 ## Flow `Planner | Push Power Apps Mobile`
 
-Provisionamento versionado: `powershell -ExecutionPolicy Bypass -File scripts/create-planner-immediate-flow.ps1 -PowerAppsNotificationConnectionReferenceLogicalName <logical-name> -PowerAppsAppId <app-id>` (o script atualiza pelo nome, sem duplicar).
+Provisionamento versionado: `powershell -ExecutionPolicy Bypass -File scripts/create-planner-immediate-flow.ps1 -PowerAppsNotificationConnectionReferenceLogicalName <logical-name> -PowerAppsAppUniqueName cr40f_ModelDrivenBetinhos` (o script valida o app no ambiente atual e envia ao conector o `uniquename` com tipo `AppModule`, sem GUID fixo).
 
 1. Gatilho Dataverse: linha adicionada em `cr40f_plannertarefaevento`, escopo Organização.
 2. Piloto: aceita somente `notification:test` e `notification:assignment`.

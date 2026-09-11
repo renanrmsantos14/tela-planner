@@ -23,7 +23,7 @@ Publicação no Dataverse DEV (WebResource + plugin nativo de notificações):
 npm run push
 ```
 
-Além de publicar o WebResource e verificar/criar as tabelas próprias de equipes do Planner, o comando compila e cria/atualiza o plugin `PlannerTaskEventNotificationPlugin` na solução `AppBetinhos`.
+Além de publicar o WebResource e verificar/criar as tabelas próprias de equipes do Planner, o comando compila e cria/atualiza o plugin `PlannerTaskEventNotificationPlugin` e provisiona o Flow de push Power Apps Mobile na solução `AppBetinhos`.
 
 O usuário autenticado precisa ter permissão para atualizar a solução. Para executar o plugin com uma conta técnica dedicada, defina `DV_PLUGIN_USER` e use o script diretamente:
 

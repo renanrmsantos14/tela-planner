@@ -3,8 +3,9 @@ param(
   [string]$ConnectionReferenceLogicalName = 'new_sharedcommondataserviceforapps_25a23',
   [string]$TeamsConnectionReferenceLogicalName = 'new_sharedteams_80676',
   [string]$OutlookConnectionReferenceLogicalName = 'new_sharedoffice365_f87d5',
-  [string]$PowerAppsNotificationConnectionReferenceLogicalName = '',
-  [string]$PowerAppsAppId = '',
+  [string]$PowerAppsNotificationConnectionReferenceLogicalName = 'new_sharedpowerappsnotificationv2_e540f',
+  [string]$PowerAppsAppUniqueName = 'cr40f_ModelDrivenBetinhos',
+  [string]$SolutionUniqueName = 'AppBetinhos',
   [string]$FlowName = 'Planner | Notificação imediata',
   [string]$WorkflowId = ''
 )
@@ -12,7 +13,8 @@ param(
 $ErrorActionPreference = 'Stop'
 $requiredParameters = @{
   PowerAppsNotificationConnectionReferenceLogicalName = $PowerAppsNotificationConnectionReferenceLogicalName
-  PowerAppsAppId = $PowerAppsAppId
+  PowerAppsAppUniqueName = $PowerAppsAppUniqueName
+  SolutionUniqueName = $SolutionUniqueName
 }
 foreach ($requiredParameter in $requiredParameters.GetEnumerator()) {
   if ([string]::IsNullOrWhiteSpace($requiredParameter.Value)) { throw "Informe -$($requiredParameter.Key) para provisionar o push do Power Apps." }
@@ -26,6 +28,68 @@ $headers = @{
   Accept = 'application/json'
   'Content-Type' = 'application/json; charset=utf-8'
   Prefer = 'return=representation'
+}
+
+function Invoke-DataverseRequest {
+  param(
+    [Parameter(Mandatory = $true)][string]$Uri,
+    [string]$Method = 'Get',
+    [AllowNull()][string]$Body
+  )
+  for ($attempt = 1; $attempt -le 3; $attempt++) {
+    try {
+      $request = @{ Uri = $Uri; Headers = $headers; Method = $Method }
+      if ($PSBoundParameters.ContainsKey('Body')) { $request.Body = $Body }
+      return Invoke-RestMethod @request
+    } catch {
+      if ($attempt -eq 3) { throw }
+      Start-Sleep -Seconds (2 * $attempt)
+    }
+  }
+}
+
+$escapedAppUniqueName = $PowerAppsAppUniqueName.Replace("'", "''")
+$appModulesUri = "$EnvironmentUrl/api/data/v9.2/appmodules?`$select=name,uniquename&`$filter=uniquename eq '$escapedAppUniqueName'"
+$appModules = @((Invoke-DataverseRequest -Uri $appModulesUri -Method Get).value)
+if ($appModules.Count -ne 1) { throw "Esperado exatamente um app model-driven com uniquename '$PowerAppsAppUniqueName'; encontrados: $($appModules.Count)." }
+$powerAppsAppIdentifier = [string]$appModules[0].uniquename
+$powerAppsAppDisplayName = [string]$appModules[0].name
+if ([string]::IsNullOrWhiteSpace($powerAppsAppIdentifier)) { throw "O app '$PowerAppsAppUniqueName' não retornou uniquename." }
+if ([string]::IsNullOrWhiteSpace($powerAppsAppDisplayName)) { throw "O app '$PowerAppsAppUniqueName' não retornou name." }
+if ($powerAppsAppDisplayName -match '[\\\"]') { throw "O nome do app contém caractere não suportado no descriptor do push: '$powerAppsAppDisplayName'." }
+
+$powerAppsPushChannelValue = 100000002
+$channelMetadataUri = "$EnvironmentUrl/api/data/v9.2/EntityDefinitions(LogicalName='cr40f_plannerdisparo')/Attributes(LogicalName='cr40f_canal')/Microsoft.Dynamics.CRM.PicklistAttributeMetadata?`$select=LogicalName&`$expand=OptionSet"
+$channelMetadata = Invoke-DataverseRequest -Uri $channelMetadataUri -Method Get
+$pushChannelOption = $channelMetadata.OptionSet.Options | Where-Object {
+  $labels = @($_.Label.LocalizedLabels | ForEach-Object { $_.Label })
+  @($labels | Where-Object { ($_ -replace '\s', '').Equals('PowerAppsPush', [System.StringComparison]::OrdinalIgnoreCase) }).Count -gt 0
+} | Select-Object -First 1
+
+if ($pushChannelOption) {
+  $powerAppsPushChannelValue = [int]$pushChannelOption.Value
+} else {
+  $valueCollision = $channelMetadata.OptionSet.Options | Where-Object { [int]$_.Value -eq $powerAppsPushChannelValue } | Select-Object -First 1
+  if ($valueCollision) { throw "O valor $powerAppsPushChannelValue de cr40f_canal já está ocupado por outra opção." }
+
+  $optionLabel = @{
+    '@odata.type' = 'Microsoft.Dynamics.CRM.Label'
+    LocalizedLabels = @(@{ '@odata.type' = 'Microsoft.Dynamics.CRM.LocalizedLabel'; Label = 'PowerAppsPush'; LanguageCode = 1046; IsManaged = $false })
+    UserLocalizedLabel = @{ '@odata.type' = 'Microsoft.Dynamics.CRM.LocalizedLabel'; Label = 'PowerAppsPush'; LanguageCode = 1046; IsManaged = $false }
+  }
+  $insertOptionPayload = @{
+    EntityLogicalName = 'cr40f_plannerdisparo'
+    AttributeLogicalName = 'cr40f_canal'
+    Value = $powerAppsPushChannelValue
+    Label = $optionLabel
+    SolutionUniqueName = $SolutionUniqueName
+  } | ConvertTo-Json -Depth 10
+  Invoke-DataverseRequest -Uri "$EnvironmentUrl/api/data/v9.2/InsertOptionValue" -Method Post -Body $insertOptionPayload | Out-Null
+
+  $publishPayload = @{
+    ParameterXml = '<importexportxml><entities><entity>cr40f_plannerdisparo</entity></entities></importexportxml>'
+  } | ConvertTo-Json -Compress
+  Invoke-DataverseRequest -Uri "$EnvironmentUrl/api/data/v9.2/PublishXml" -Method Post -Body $publishPayload | Out-Null
 }
 
 $definition = @'
@@ -79,7 +143,8 @@ $definition = @'
           "type": "If",
           "expression": {
             "and": [
-              { "not": { "equals": [ "@toLower(item())", "@toLower(outputs('Compose_Context')?['actorEmployeeId'])" ] } }
+              { "not": { "equals": [ "@empty(item())", true ] } },
+              { "not": { "equals": [ "@toLower(coalesce(item(), ''))", "@toLower(coalesce(outputs('Compose_Context')?['actorEmployeeId'], ''))" ] } }
             ]
           },
           "actions": {
@@ -175,12 +240,12 @@ $definition = @'
                       "runAfter": { "Get_system_user": [ "Succeeded" ] },
                       "inputs": {
                         "parameters": {
-                          "playerType": "Power Apps",
-                          "app": "__POWER_APPS_APP_ID__",
-                          "recipients": "@createArray(outputs('Get_system_user')?['body/internalemailaddress'])",
-                          "message": "@concat(if(equals(outputs('Compose_Type'), 'assignment'), 'Nova tarefa atribuída: ', 'Teste de notificação: '), triggerOutputs()?['body/cr40f_descricao'])",
-                          "openApp": true,
-                          "dynamicParams": "@json(concat('{\"pageType\":\"entityrecord\",\"entityName\":\"cr40f_plannertarefa\",\"entityId\":\"', triggerOutputs()?['body/_cr40f_tarefa_value'], '\"}'))"
+                          "payload/playerType": "PowerApps",
+                          "payload/app": "{\"appIdentifier\":\"__POWER_APPS_APP_UNIQUE_NAME__\",\"displayName\":\"__POWER_APPS_APP_DISPLAY_NAME__\",\"type\":\"AppModule\"}",
+                          "payload/recipients": "@createArray(outputs('Get_system_user')?['body/internalemailaddress'])",
+                          "payload/message": "@concat(if(equals(outputs('Compose_Type'), 'assignment'), 'Nova tarefa atribuída: ', 'Teste de notificação: '), triggerOutputs()?['body/cr40f_descricao'])",
+                          "payload/openApp": true,
+                          "payload/dynamicParams": "@json(concat('{\"pageType\":\"entityrecord\",\"entityName\":\"cr40f_plannertarefa\",\"entityId\":\"', triggerOutputs()?['body/_cr40f_tarefa_value'], '\"}'))"
                         },
                         "host": {
                           "apiId": "/providers/Microsoft.PowerApps/apis/shared_powerappsnotificationv2",
@@ -199,8 +264,8 @@ $definition = @'
                           "item/cr40f_name": "@concat('PowerAppsPush | ', coalesce(outputs('Get_system_user')?['body/internalemailaddress'], item()))",
                           "item/cr40f_Destinatario@odata.bind": "@concat('/cr40f_funcionarioses(', item(), ')')",
                           "item/cr40f_destinatariotexto": "@coalesce(outputs('Get_system_user')?['body/internalemailaddress'], item())",
-                          "item/cr40f_canal": "PowerAppsPush",
-                          "item/cr40f_categoria": "Planner",
+                          "item/cr40f_canal": __POWER_APPS_PUSH_CHANNEL_VALUE__,
+                          "item/cr40f_categoria": 100000000,
                           "item/cr40f_chaveidempotente": "@concat(triggerOutputs()?['body/cr40f_plannertarefaeventoid'], '|', item(), '|', outputs('Compose_Type'), '|PowerAppsPush')",
                           "item/cr40f_status": 100000001,
                           "item/cr40f_statustexto": "Enviado",
@@ -225,8 +290,8 @@ $definition = @'
                           "item/cr40f_name": "@concat('PowerAppsPush falhou | ', coalesce(outputs('Get_system_user')?['body/internalemailaddress'], item()))",
                           "item/cr40f_Destinatario@odata.bind": "@concat('/cr40f_funcionarioses(', item(), ')')",
                           "item/cr40f_destinatariotexto": "@coalesce(outputs('Get_system_user')?['body/internalemailaddress'], item())",
-                          "item/cr40f_canal": "PowerAppsPush",
-                          "item/cr40f_categoria": "Planner",
+                          "item/cr40f_canal": __POWER_APPS_PUSH_CHANNEL_VALUE__,
+                          "item/cr40f_categoria": 100000000,
                           "item/cr40f_chaveidempotente": "@concat(triggerOutputs()?['body/cr40f_plannertarefaeventoid'], '|', item(), '|', outputs('Compose_Type'), '|PowerAppsPush')",
                           "item/cr40f_status": 100000002,
                           "item/cr40f_statustexto": "Falha",
@@ -252,8 +317,8 @@ $definition = @'
                             "item/cr40f_name": "@concat('Sem identidade | ', item())",
                             "item/cr40f_Destinatario@odata.bind": "@concat('/cr40f_funcionarioses(', item(), ')')",
                             "item/cr40f_destinatariotexto": "@item()",
-                            "item/cr40f_canal": "PowerAppsPush",
-                            "item/cr40f_categoria": "Planner",
+                            "item/cr40f_canal": __POWER_APPS_PUSH_CHANNEL_VALUE__,
+                            "item/cr40f_categoria": 100000000,
                             "item/cr40f_chaveidempotente": "@concat(triggerOutputs()?['body/cr40f_plannertarefaeventoid'], '|', item(), '|', outputs('Compose_Type'), '|PowerAppsPush')",
                             "item/cr40f_status": 100000003,
                             "item/cr40f_statustexto": "Sem identidade",
@@ -282,7 +347,9 @@ $definition = @'
 '@
 
 $definition = $definition.Replace('new_sharedcommondataserviceforapps_25a23', $ConnectionReferenceLogicalName)
-$definition = $definition.Replace('__POWER_APPS_APP_ID__', $PowerAppsAppId)
+$definition = $definition.Replace('__POWER_APPS_APP_UNIQUE_NAME__', $powerAppsAppIdentifier)
+$definition = $definition.Replace('__POWER_APPS_APP_DISPLAY_NAME__', $powerAppsAppDisplayName)
+$definition = $definition.Replace('__POWER_APPS_PUSH_CHANNEL_VALUE__', [string]$powerAppsPushChannelValue)
 $definitionObject = $definition | ConvertFrom-Json
 $mainActions = $definitionObject.actions
 $definitionObject.actions = [ordered]@{
@@ -309,7 +376,18 @@ $definitionObject.actions = [ordered]@{
             operationId = 'SendEmailV2'
             connectionName = 'shared_office365'
           }
-          authentication = "@parameters('$authentication')"
+          authentication = '@parameters(''$authentication'')'
+        }
+      }
+      Terminate_Failed = [ordered]@{
+        type = 'Terminate'
+        runAfter = [ordered]@{ Send_Error_Email = @('Succeeded') }
+        inputs = [ordered]@{
+          runStatus = 'Failed'
+          runError = [ordered]@{
+            code = 'PlannerPushFlowFailed'
+            message = 'O fluxo de push falhou. O e-mail de erro foi enviado.'
+          }
         }
       }
     }
@@ -325,32 +403,32 @@ $clientData = @{ properties = @{ connectionReferences = @{
 $payload = @{ category = 5; name = $FlowName; type = 1; primaryentity = 'none'; clientdata = $clientData } | ConvertTo-Json -Depth 50
 $headers.Prefer = 'return=representation'
 if (-not $WorkflowId) {
-  $existingFlows = @((Invoke-RestMethod -Uri "$EnvironmentUrl/api/data/v9.2/workflows?`$select=workflowid,name,statecode,statuscode,modifiedon&`$orderby=modifiedon desc&`$top=500" -Headers $headers).value | Where-Object { $_.name -eq $expectedFlowName })
+  $existingFlows = @((Invoke-DataverseRequest -Uri "$EnvironmentUrl/api/data/v9.2/workflows?`$select=workflowid,name,statecode,statuscode,modifiedon&`$orderby=modifiedon desc&`$top=500").value | Where-Object { $_.name -eq $expectedFlowName })
   $target = $existingFlows | Where-Object { [int]$_.statecode -eq 1 } | Select-Object -First 1
   if (-not $target) { $target = $existingFlows | Select-Object -First 1 }
   if ($target) { $WorkflowId = $target.workflowid }
 }
 if ($WorkflowId) {
   $targetUri = "$EnvironmentUrl/api/data/v9.2/workflows($WorkflowId)"
-  Invoke-RestMethod -Uri $targetUri -Headers $headers -Method Patch -Body (@{ statecode = 0; statuscode = 1 } | ConvertTo-Json) | Out-Null
-  Invoke-RestMethod -Uri $targetUri -Headers $headers -Method Patch -Body (@{ clientdata = $clientData } | ConvertTo-Json -Depth 50) | Out-Null
+  Invoke-DataverseRequest -Uri $targetUri -Method Patch -Body (@{ statecode = 0; statuscode = 1 } | ConvertTo-Json) | Out-Null
+  Invoke-DataverseRequest -Uri $targetUri -Method Patch -Body (@{ clientdata = $clientData } | ConvertTo-Json -Depth 50) | Out-Null
 } else {
-  $created = Invoke-RestMethod -Uri "$EnvironmentUrl/api/data/v9.2/workflows" -Headers $headers -Method Post -Body $payload
+  $created = Invoke-DataverseRequest -Uri "$EnvironmentUrl/api/data/v9.2/workflows" -Method Post -Body $payload
   $WorkflowId = $created.workflowid
   $targetUri = "$EnvironmentUrl/api/data/v9.2/workflows($WorkflowId)"
 }
 
 if (-not $existingFlows) {
-  $existingFlows = @((Invoke-RestMethod -Uri "$EnvironmentUrl/api/data/v9.2/workflows?`$select=workflowid,name,statecode,statuscode&`$top=500" -Headers $headers).value | Where-Object { $_.name -eq $expectedFlowName })
+  $existingFlows = @((Invoke-DataverseRequest -Uri "$EnvironmentUrl/api/data/v9.2/workflows?`$select=workflowid,name,statecode,statuscode&`$top=500").value | Where-Object { $_.name -eq $expectedFlowName })
 }
 foreach ($flow in $existingFlows | Where-Object { $_.workflowid -ne $WorkflowId -and [int]$_.statecode -eq 1 }) {
-  Invoke-RestMethod -Uri "$EnvironmentUrl/api/data/v9.2/workflows($($flow.workflowid))" -Headers $headers -Method Patch -Body (@{ statecode = 0; statuscode = 1 } | ConvertTo-Json) | Out-Null
+  Invoke-DataverseRequest -Uri "$EnvironmentUrl/api/data/v9.2/workflows($($flow.workflowid))" -Method Patch -Body (@{ statecode = 0; statuscode = 1 } | ConvertTo-Json) | Out-Null
 }
-Invoke-RestMethod -Uri $targetUri -Headers $headers -Method Patch -Body (@{ statecode = 1; statuscode = 2 } | ConvertTo-Json) | Out-Null
+Invoke-DataverseRequest -Uri $targetUri -Method Patch -Body (@{ statecode = 1; statuscode = 2 } | ConvertTo-Json) | Out-Null
 
 $activeVersions = @()
 for ($attempt = 1; $attempt -le 10 -and $activeVersions.Count -eq 0; $attempt++) {
-  $versions = @((Invoke-RestMethod -Uri "$EnvironmentUrl/api/data/v9.2/workflows?`$select=workflowid,name,statecode,statuscode,modifiedon&`$orderby=modifiedon desc&`$top=500" -Headers $headers).value | Where-Object { $_.name -eq $expectedFlowName })
+  $versions = @((Invoke-DataverseRequest -Uri "$EnvironmentUrl/api/data/v9.2/workflows?`$select=workflowid,name,statecode,statuscode,modifiedon&`$orderby=modifiedon desc&`$top=500").value | Where-Object { $_.name -eq $expectedFlowName })
   foreach ($candidate in $versions) {
     if ([string]$candidate.statuscode -eq '2') { $activeVersions += $candidate }
   }
@@ -359,7 +437,7 @@ for ($attempt = 1; $attempt -le 10 -and $activeVersions.Count -eq 0; $attempt++)
 $activeVersion = $activeVersions | Select-Object -First 1
 if (-not $activeVersion) { throw 'O Flow foi salvo, mas nenhuma versão ativa foi encontrada.' }
 foreach ($flow in $activeVersions | Where-Object { $_.workflowid -ne $activeVersion.workflowid }) {
-  Invoke-RestMethod -Uri "$EnvironmentUrl/api/data/v9.2/workflows($($flow.workflowid))" -Headers $headers -Method Patch -Body (@{ statecode = 0; statuscode = 1 } | ConvertTo-Json) | Out-Null
+  Invoke-DataverseRequest -Uri "$EnvironmentUrl/api/data/v9.2/workflows($($flow.workflowid))" -Method Patch -Body (@{ statecode = 0; statuscode = 1 } | ConvertTo-Json) | Out-Null
 }
 
 Write-Output "Flow ativo: $($activeVersion.workflowid)"

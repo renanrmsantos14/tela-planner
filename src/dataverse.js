@@ -1055,7 +1055,7 @@ function normalizeEmailDispatch(row) {
     modifiedAt: row.modifiedon || "",
     idempotencyKey: key,
     eventId: cleanId(key.split("|")[0]),
-    channel: String(row.cr40f_canal || ""),
+    channel: ({ 100000000: "Teams", 100000001: "Email", 100000002: "PowerAppsPush" })[Number(row.cr40f_canal)] || String(row.cr40f_canal || ""),
   };
 }
 
@@ -1205,7 +1205,7 @@ function emailDispatchFeedback(dispatch, recipientEmail = "") {
 
 async function waitForLiveEmailDispatch(xrm, eventId) {
   const escapedEventId = cleanId(eventId).replace(/'/g, "''");
-  const query = `?$select=cr40f_plannerdisparoid,cr40f_canal,cr40f_status,cr40f_statustexto,cr40f_destinatariotexto,cr40f_chaveidempotente,cr40f_erro,cr40f_tentativa,cr40f_enviadoem,createdon,modifiedon,_cr40f_destinatario_value&$filter=startswith(cr40f_chaveidempotente,'${escapedEventId}|') and cr40f_canal eq 'PowerAppsPush'&$orderby=createdon desc&$top=1`;
+  const query = `?$select=cr40f_plannerdisparoid,cr40f_canal,cr40f_status,cr40f_statustexto,cr40f_destinatariotexto,cr40f_chaveidempotente,cr40f_erro,cr40f_tentativa,cr40f_enviadoem,createdon,modifiedon,_cr40f_destinatario_value&$filter=startswith(cr40f_chaveidempotente,'${escapedEventId}|') and cr40f_canal eq 100000002&$orderby=createdon desc&$top=1`;
   const deadline = Date.now() + 10000;
   let lastError = null;
   while (Date.now() <= deadline) {
