@@ -2,12 +2,21 @@ let lastUnreadCount = 0;
 let scheduled = null;
 
 function cleanText(value = "") { return String(value).replace(/\s+/g, " ").trim(); }
+function phoneFromDom(documentRef) {
+  const values = [...documentRef.querySelectorAll("header [data-id], [data-testid='msg-container'][data-id], .message-in[data-id], .message-out[data-id]")]
+    .map((node) => node.getAttribute("data-id") || "");
+  for (const value of values) {
+    const match = value.match(/(?:^|_)(\d{10,15})@c\.us(?:_|$)/i) || value.match(/^(\d{10,15})@c\.us$/i);
+    if (match) return match[1];
+  }
+  return "";
+}
 function parseActiveConversation(documentRef = document) {
   const header = documentRef.querySelector("header [title], header span[dir='auto'], [data-testid='conversation-info-header-chat-title']");
   const senderName = cleanText(header?.getAttribute("title") || header?.textContent || "");
   const messageNodes = [...documentRef.querySelectorAll("[data-testid='msg-container'], .message-in, .message-out")];
   const messages = messageNodes.slice(-8).map((node) => ({ text: cleanText(node.querySelector("span[dir='ltr'], .copyable-text span")?.textContent || node.textContent || ""), sentAt: node.querySelector("[data-pre-plain-text]")?.getAttribute("data-pre-plain-text") || new Date().toISOString(), direction: node.classList.contains("message-out") ? "outbound" : "inbound" })).filter((message) => message.text);
-  const phone = cleanText(documentRef.querySelector("header [data-id], header [data-testid='conversation-info-header']")?.getAttribute("data-id") || "");
+  const phone = phoneFromDom(documentRef);
   return { senderName, senderPhone: phone.replace(/@.*$/, ""), messages };
 }
 function findUnreadConversationRows(documentRef = document) {

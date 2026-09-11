@@ -47,6 +47,9 @@ export async function requestTriage(endpoint, conversation, sessionToken = "") {
     body: JSON.stringify(body),
   });
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload.error || "A IA não respondeu.");
+  if (!response.ok) {
+    const detail = typeof payload.error === "string" ? payload.error : payload.error?.message || payload.message || "A IA não respondeu.";
+    throw new Error(detail);
+  }
   return { ...body, classification: payload.data || payload };
 }
