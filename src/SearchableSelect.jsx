@@ -146,6 +146,7 @@ export default function SearchableSelect({
   className = "",
   variant = "",
   displayPrefix = "",
+  icon = null,
   name,
   "aria-label": ariaLabel,
   onQueryChange,
@@ -575,6 +576,7 @@ export default function SearchableSelect({
         }}
         onKeyDown={handleTriggerKeyDown}
       >
+        {icon}
         <span
           className={`custom-select-value${(multiple ? selectedValues.length === 0 : String(value ?? "") === "") ? " is-placeholder" : ""}`}
         >

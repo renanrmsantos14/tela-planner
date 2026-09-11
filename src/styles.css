@@ -2284,6 +2284,7 @@ button { cursor: pointer; }
 .board-group-select .custom-select-trigger { min-height: 36px; padding: 0 10px; border-radius: 10px; color: var(--muted); background: var(--surface); font-size: 10px; font-weight: 800; }
 .board-group-select .custom-select-trigger:hover, .board-group-select.is-open .custom-select-trigger, .board-group-select .custom-select-trigger:focus-visible { border-color: #c8d5e6; color: var(--navy); background: var(--surface-soft); box-shadow: none; outline: 0; }
 .board-group-select .custom-select-value { color: inherit; font-size: inherit; font-weight: inherit; }
+.board-group-select .custom-select-trigger > svg { flex: 0 0 auto; color: var(--muted); }
 .board-sort-trigger, .board-group-select .custom-select-trigger { min-height: 38px; box-sizing: border-box; }
 @media (max-width: 820px) {
   .board-sort-trigger, .board-group-select .custom-select-trigger { min-height: 46px; }

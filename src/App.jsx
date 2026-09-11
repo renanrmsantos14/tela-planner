@@ -15,6 +15,7 @@ import {
   ArrowUpRight,
   ArrowDownUp,
   BellRing,
+  Columns3,
   CalendarDays,
   Check,
   CheckCircle2,
@@ -2655,7 +2656,7 @@ function BoardView({
         }
       >
         <BoardSortSelector sort={sort} onChange={setSort} />
-        <SearchableSelect value={groupBy} onChange={setGroupBy} options={BOARD_GROUP_OPTIONS} placeholder="Escolher agrupamento" displayPrefix="Agrupar: " aria-label="Agrupar colunas por" className="board-group-select" />
+        <SearchableSelect value={groupBy} onChange={setGroupBy} options={BOARD_GROUP_OPTIONS} placeholder="Escolher agrupamento" displayPrefix="Agrupar: " icon={<Columns3 size={15} aria-hidden="true" />} aria-label="Agrupar colunas por" className="board-group-select" />
         <TaskScopeSelector
           active={taskScope}
           onSelect={onScopeChange}
