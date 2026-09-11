@@ -1,6 +1,6 @@
 import { maskSensitiveText, messageFingerprint, normalizeWhatsAppPhone } from "../src/whatsappBridge.js";
 
-export const DEFAULT_TRIAGE_ENDPOINT = "";
+export const DEFAULT_TRIAGE_ENDPOINT = "http://127.0.0.1:8765";
 
 export function buildTriageRequest(conversation = {}) {
   const senderPhone = normalizeWhatsAppPhone(conversation.senderPhone);
@@ -21,7 +21,7 @@ export async function requestTriage(endpoint, conversation, sessionToken = "") {
   const body = buildTriageRequest(conversation);
   const response = await fetch(endpoint.replace(/\/$/, "") + "/v1/triage", {
     method: "POST",
-    headers: { "Content-Type": "application/json", ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}) },
+    headers: { "Content-Type": "application/json", ...(sessionToken ? { Authorization: `Bearer ${sessionToken}`, "X-Local-Token": sessionToken } : {}) },
     body: JSON.stringify(body),
   });
   const payload = await response.json().catch(() => ({}));

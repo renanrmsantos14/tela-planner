@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "description": "Triagem assistida de conversas do WhatsApp Web e envio para o Planner.",
   "permissions": ["storage", "notifications", "tabs"],
-  "host_permissions": ["https://web.whatsapp.com/*", "https://*.dynamics.com/*"],
+  "host_permissions": ["https://web.whatsapp.com/*", "https://*.dynamics.com/*", "http://127.0.0.1:8765/*"],
   "action": { "default_popup": "popup.html", "default_title": "Betinhos Planner", "default_icon": { "128": "icon.svg" } },
   "background": { "service_worker": "service-worker.js", "type": "module" },
   "content_scripts": [

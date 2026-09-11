@@ -1,5 +1,5 @@
 import { parseActiveConversation } from "./whatsapp-parser.js";
-import { requestTriage } from "./triage.js";
+import { DEFAULT_TRIAGE_ENDPOINT, requestTriage } from "./triage.js";
 
 const QUEUE_KEY = "betinhos.triage.queue.v1";
 const SETTINGS_KEY = "betinhos.triage.settings.v1";
@@ -18,7 +18,7 @@ async function triageActiveTab(tabId) {
   if (!tabId) throw new Error("Nenhuma aba ativa encontrada.");
   const settings = (await chrome.storage.local.get(SETTINGS_KEY))[SETTINGS_KEY] || {};
   const response = await chrome.tabs.sendMessage(tabId, { type: "triage-active" });
-  const triage = await requestTriage(settings.endpoint, response, settings.sessionToken || "");
+  const triage = await requestTriage(settings.endpoint || DEFAULT_TRIAGE_ENDPOINT, response, settings.sessionToken || "");
   const queue = await readQueue();
   if (!queue.some((item) => item.requestId === triage.requestId)) queue.push({ ...triage, createdAt: new Date().toISOString(), status: "pending" });
   await writeQueue(queue);
