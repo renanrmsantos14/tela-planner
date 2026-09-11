@@ -135,6 +135,7 @@ import {
   createContactEvent,
   normalizeContact,
 } from "./contactDomain.js";
+import { installPlannerBridge } from "./whatsappBridge.js";
 
 const QUOTE_WORKSPACE_V2_ENABLED = import.meta.env.VITE_QUOTES_WORKSPACE_V2 !== "false";
 
@@ -6562,6 +6563,21 @@ export default function App() {
     },
     [currentEmployee, runOptimisticMutation, state, store],
   );
+  const handleWhatsAppIntake = useCallback(async (input) => {
+    if (!store.createContactFromWhatsAppIntake) throw new Error("Integração WhatsApp não disponível neste modo.");
+    const result = await store.createContactFromWhatsAppIntake(confirmedStateRef.current || state, {
+      ...input,
+      actorEmployeeId: currentEmployee?.id || "",
+      actorUserId: currentEmployee?.userId || "",
+      actorName: currentEmployee?.name || "Você",
+    });
+    if (!result?.state) throw new Error("Planner não retornou o estado após o intake WhatsApp.");
+    confirmedStateRef.current = result.state;
+    setState(applyPendingMutations(result.state));
+    showNotice(result.status === "duplicate" ? "Triagem já registrada." : result.status === "updated" ? "Caso WhatsApp atualizado." : "Caso WhatsApp criado.");
+    return { status: result.status, contactId: result.contactId, taskId: result.taskId };
+  }, [applyPendingMutations, currentEmployee, showNotice, state, store]);
+  useEffect(() => installPlannerBridge({ onIntake: handleWhatsAppIntake }), [handleWhatsAppIntake]);
   const createQuote = useCallback((input = {}) => {
     if (!store.createQuote) return Promise.resolve(false);
     return runOptimisticMutation(

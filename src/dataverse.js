@@ -33,6 +33,7 @@ import {
   updatePersonalTag as updateMockPersonalTag,
   updateTeam as updateMockTeam,
   createContact as createMockContact,
+  createContactFromWhatsAppIntake as createMockContactFromWhatsAppIntake,
   updateContact as updateMockContact,
   archiveContact as archiveMockContact,
 } from "./mockStore.js";
@@ -1875,6 +1876,10 @@ function createMockDataStore() {
       return { ...result, nextState: withMode(result.nextState) };
     },
     createContact: async (state, input) => withMode(createMockContact(state, input)),
+    createContactFromWhatsAppIntake: async (state, input) => {
+      const result = createMockContactFromWhatsAppIntake(state, input);
+      return { ...result, state: withMode(result.state) };
+    },
     updateContact: async (state, id, patch) => withMode(updateMockContact(state, id, patch)),
     archiveContact: async (state, id, context) => withMode(archiveMockContact(state, id, context)),
     addContactNote: async (state, id, input, context) => withMode(addMockContactNote(state, id, input, context)),
@@ -1944,6 +1949,10 @@ export function createDataStore() {
     createTask: (state, input) => createLiveTask(xrm, state, input),
     importPlannerTasks: (state, rows) => importLivePlannerTasks(xrm, state, rows),
     createContact: async () => { requireContactSchema(); return null; },
+    createContactFromWhatsAppIntake: async () => {
+      requireContactSchema();
+      throw new Error("Intake do WhatsApp no adapter live ainda exige o mapeamento dos campos de Contatos, eventos, lookup da Task e chave externa.");
+    },
     updateContact: async () => { requireContactSchema(); return null; },
     archiveContact: async () => { requireContactSchema(); return null; },
     addContactNote: async () => { requireContactSchema(); return null; },

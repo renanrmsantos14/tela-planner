@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head><meta charset="utf-8"><title>Betinhos Planner</title><link rel="stylesheet" href="popup.css"></head>
+  <body>
+    <main>
+      <h1>Betinhos Planner</h1>
+      <p id="status">Fila de triagem</p>
+      <label>Endpoint IA<input id="endpoint" type="url" placeholder="https://..." /></label>
+      <label>Sessão temporária<input id="sessionToken" type="password" placeholder="Token de pareamento" /></label>
+      <button id="save" type="button">Salvar configuração</button>
+      <button id="scan" type="button">Classificar conversa aberta</button>
+      <ul id="queue"></ul>
+    </main>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>
