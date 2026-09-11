@@ -138,7 +138,7 @@ export default function AssignmentFields({
   return (
     <div className="assignment-field">
       <div className="assignment-field-header">
-        <span>{assignmentMode === "team" ? "Equipe" : "Responsáveis"}</span>
+        <span>{assignmentMode === "team" ? "Equipe" : "Responsável"}</span>
         <div
           className="assignment-mode"
           role="group"
@@ -219,7 +219,7 @@ export default function AssignmentFields({
       ) : (
         <>
           <label className="assignment-control">
-            <span>Responsável principal</span>
+            <span className="sr-only">Responsável principal</span>
             <InputSelect
             value={primaryAssigneeId}
             onChange={selectPrimary}
