@@ -1,5 +1,12 @@
 const WHATSAPP_BRIDGE = { hello: "betinhos.whatsapp.bridge.hello", ready: "betinhos.whatsapp.bridge.ready", response: "betinhos.whatsapp.bridge.response" };
 
+function sendRuntimeMessage(message) {
+  try {
+    const pending = chrome.runtime.sendMessage(message);
+    pending?.catch?.(() => {});
+  } catch (_) {}
+}
+
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type !== "planner-intake") return;
   window.postMessage(message.payload, window.location.origin);
@@ -13,9 +20,15 @@ window.addEventListener("message", (event) => {
 
 window.addEventListener("message", (event) => {
   if (event.source !== window || event.origin !== window.location.origin || event.data?.type !== WHATSAPP_BRIDGE.response) return;
-  chrome.runtime.sendMessage({ type: "planner-response", response: event.data }).catch(() => {});
+  sendRuntimeMessage({ type: "planner-response", response: event.data });
 });
 
-const sendHello = () => window.postMessage({ type: WHATSAPP_BRIDGE.hello, clientNonce: crypto.randomUUID() }, window.location.origin);
+let helloTimer = null;
+const sendHello = () => {
+  window.postMessage({ type: WHATSAPP_BRIDGE.hello, clientNonce: crypto.randomUUID() }, window.location.origin);
+  clearTimeout(helloTimer);
+  helloTimer = setTimeout(sendHello, 30000);
+};
 sendHello();
-setInterval(sendHello, 2000);
+window.addEventListener("focus", sendHello, { passive: true });
+window.addEventListener("pageshow", sendHello, { passive: true });

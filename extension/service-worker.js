@@ -1,5 +1,6 @@
 import { parseActiveConversation } from "./whatsapp-parser.js";
 import { requestTriage } from "./triage.js";
+import { resolveWahaPhone } from "./waha.js";
 
 const QUEUE_KEY = "betinhos.triage.queue.v1";
 const SETTINGS_KEY = "betinhos.triage.settings.v1";
@@ -17,7 +18,11 @@ async function writeQueue(queue) {
 async function triageActiveTab(tabId) {
   if (!tabId) throw new Error("Nenhuma aba ativa encontrada.");
   const settings = (await chrome.storage.local.get(SETTINGS_KEY))[SETTINGS_KEY] || {};
-  const response = await chrome.tabs.sendMessage(tabId, { type: "triage-active" });
+  let response = await chrome.tabs.sendMessage(tabId, { type: "triage-active" });
+  if (!response.senderPhone && settings.wahaEnabled) {
+    const senderPhone = await resolveWahaPhone({ endpoint: settings.wahaEndpoint, apiKey: settings.wahaApiKey, session: settings.wahaSession, chatId: response.chatId });
+    if (senderPhone) response = { ...response, senderPhone, phoneSource: "waha" };
+  }
   const triage = await requestTriage(settings.endpoint, response, settings.sessionToken || "");
   const queue = await readQueue();
   if (!queue.some((item) => item.requestId === triage.requestId)) queue.push({ ...triage, createdAt: new Date().toISOString(), status: "pending" });

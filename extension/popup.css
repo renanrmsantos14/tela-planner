@@ -6,3 +6,7 @@ input, button { box-sizing: border-box; width: 100%; padding: 9px; border: 1px s
 button { cursor: pointer; background: #073b73; color: white; font-weight: 700; }
 ul { margin: 0; padding-left: 18px; }
 li { margin-bottom: 7px; }
+fieldset { display: grid; gap: 8px; margin: 0; padding: 10px; border: 1px solid #c8d3e1; border-radius: 7px; }
+legend { padding: 0 4px; font-weight: 700; }
+.check { display: flex; grid-template-columns: auto 1fr; align-items: center; gap: 6px; font-weight: 400; }
+.check input { width: auto; padding: 0; }

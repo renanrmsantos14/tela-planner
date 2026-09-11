@@ -39,7 +39,7 @@ export default {
     const upstream = await fetch("https://api.deepseek.com/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${env.DEEPSEEK_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model: env.DEEPSEEK_MODEL || "deepseek-chat", temperature: 0.1, response_format: { type: "json_object" }, messages: [{ role: "system", content: "Você é um classificador operacional. Nunca invente prazo ou informação." }, { role: "user", content: promptFor(input) }] }),
+      body: JSON.stringify({ model: env.DEEPSEEK_MODEL || "deepseek-flash", temperature: 0.1, response_format: { type: "json_object" }, messages: [{ role: "system", content: "Você é um classificador operacional. Nunca invente prazo ou informação." }, { role: "user", content: promptFor(input) }] }),
     });
     const body = await upstream.json().catch(() => ({}));
     if (!upstream.ok) return json({ error: body.error?.message || "DeepSeek indisponível." }, 502, env);

@@ -7,6 +7,13 @@
       <p id="status">Fila de triagem</p>
       <label>Endpoint IA<input id="endpoint" type="url" placeholder="https://..." /></label>
       <label>Sessão temporária<input id="sessionToken" type="password" placeholder="Token de pareamento" /></label>
+      <fieldset>
+        <legend>WAHA local · opcional</legend>
+        <label class="check"><input id="wahaEnabled" type="checkbox" /> Usar WAHA para resolver telefone</label>
+        <label>Endpoint WAHA<input id="wahaEndpoint" type="url" placeholder="http://127.0.0.1:3000" /></label>
+        <label>Sessão WAHA<input id="wahaSession" type="text" placeholder="default" /></label>
+        <label>Chave WAHA<input id="wahaApiKey" type="password" placeholder="Chave local" /></label>
+      </fieldset>
       <button id="save" type="button">Salvar configuração</button>
       <button id="scan" type="button">Classificar conversa aberta</button>
       <ul id="queue"></ul>
