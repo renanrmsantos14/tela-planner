@@ -1804,9 +1804,9 @@ button { cursor: pointer; }
 }
 
 /* Atribuição única: pessoa e equipe compartilham o mesmo contrato visual. */
-.assignment-field { min-width: 0; display: grid; gap: 5px; }
+.assignment-field { position: relative; min-width: 0; display: grid; gap: 5px; }
 .assignment-field-header { min-width: 0; min-height: 28px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.assignment-field-header > span { color: var(--muted); font-size: 10px; font-weight: 800; line-height: 14px; }
+.assignment-field-header-people { position: absolute; top: 0; right: 0; z-index: 2; min-height: 0; }
 .assignment-field .assignment-mode { grid-template-columns: repeat(2, 28px); gap: 2px; padding: 2px; border-radius: 7px; }
 .assignment-field .assignment-mode button { width: 28px; min-height: 20px; border-radius: 5px; }
 .assignment-field .assignment-mode button.is-selected { box-shadow: 0 1px 3px rgba(0,26,61,.08); }

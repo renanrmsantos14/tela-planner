@@ -137,8 +137,7 @@ export default function AssignmentFields({
   const selectConsultants = (ids) => commitPeople(primaryAssigneeId, Array.isArray(ids) ? ids : []);
   return (
     <div className="assignment-field">
-      <div className="assignment-field-header">
-        <span>{assignmentMode === "team" ? "Equipe" : "Responsáveis"}</span>
+      <div className={`assignment-field-header assignment-field-header-${assignmentMode}`}>
         <div
           className="assignment-mode"
           role="group"
