@@ -2280,3 +2280,7 @@ button { cursor: pointer; }
 .required-mark { color: var(--red); }
 .button-danger { color: #8b2f2f; border-color: #e3b4b0; background: #fff7f6; }
 @media (max-width: 900px) { .quote-workspace-footer { align-items: flex-start; flex-direction: column; } .quote-outcome-actions { justify-content: flex-start; } }
+.board-group-select { width: 150px; flex: 0 0 150px; }
+.board-group-select .custom-select-trigger { min-height: 36px; padding: 0 10px; border-radius: 10px; color: var(--muted); background: var(--surface); font-size: 10px; font-weight: 800; }
+.board-group-select .custom-select-trigger:hover, .board-group-select.is-open .custom-select-trigger, .board-group-select .custom-select-trigger:focus-visible { border-color: #c8d5e6; color: var(--navy); background: var(--surface-soft); box-shadow: none; outline: 0; }
+.board-group-select .custom-select-value { color: inherit; font-size: inherit; font-weight: inherit; }

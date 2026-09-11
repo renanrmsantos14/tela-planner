@@ -145,6 +145,7 @@ export default function SearchableSelect({
   multiple = false,
   className = "",
   variant = "",
+  displayPrefix = "",
   name,
   "aria-label": ariaLabel,
   onQueryChange,
@@ -488,13 +489,13 @@ export default function SearchableSelect({
     }
   };
 
-  const triggerLabel = multiple
+  const triggerLabel = displayPrefix + (multiple
     ? selectedOptions.length
       ? selectedOptions.length === 1
         ? selectedOptions[0].label
         : `${selectedOptions[0].label} e mais ${selectedOptions.length - 1}`
       : placeholder
-    : selectedOption?.label || placeholder;
+    : selectedOption?.label || placeholder);
   const rootClass = [
     "custom-select",
     variant && `custom-select--${variant}`,

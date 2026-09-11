@@ -180,6 +180,56 @@ const PRIORITY_OPTIONS = PRIORITIES.map((item) => ({
   label: item.label,
 }));
 const TEAM_OPTIONS = ["Comercial", "Financeiro", "Operação", "Qualidade"];
+const BOARD_GROUP_OPTIONS = [
+  { value: "status", label: "Status" },
+  { value: "team", label: "Equipe" },
+  { value: "assignee", label: "Responsável" },
+  { value: "priority", label: "Prioridade" },
+  { value: "personalTag", label: "Tag" },
+];
+const BOARD_GROUP_STORAGE_KEY = "betinhos-tela-planner-board-group-v1";
+
+function readBoardGroupPreference() {
+  try {
+    const saved = localStorage.getItem(BOARD_GROUP_STORAGE_KEY);
+    return BOARD_GROUP_OPTIONS.some((option) => option.value === saved) ? saved : "status";
+  } catch {
+    return "status";
+  }
+}
+
+function boardGroupValues(task, groupBy) {
+  if (groupBy === "status") return [task.status];
+  if (groupBy === "team") return task.teamNames?.length ? task.teamNames : [task.teamName || "Sem equipe"];
+  if (groupBy === "assignee") return task.assigneeNames?.length ? task.assigneeNames : [task.assigneeName || "Não atribuído"];
+  if (groupBy === "priority") return [task.priority || "medium"];
+  const tagIds = normalizePersonalTagIds(task.personalTagIds);
+  return tagIds.length ? tagIds : ["__none__"];
+}
+
+function boardColumns(groupBy, tasks, teams = [], personalTags = [], employees = []) {
+  if (groupBy === "status") return STATUSES.map((status) => ({ ...status, groupValue: status.id }));
+  if (groupBy === "priority") return PRIORITIES.map((priority) => ({ ...priority, groupValue: priority.id }));
+  if (groupBy === "team") {
+    const names = [...new Set([
+      ...teams.map((team) => team.name),
+      ...tasks.flatMap((task) => boardGroupValues(task, groupBy)),
+    ].filter(Boolean))];
+    return names.map((name) => ({ id: `team:${name}`, label: name, groupValue: name }));
+  }
+  if (groupBy === "assignee") {
+    const names = [...new Set([
+      ...employees.map((employee) => employee.name),
+      ...tasks.flatMap((task) => boardGroupValues(task, groupBy)),
+    ].filter(Boolean))];
+    return names.map((name) => ({ id: `assignee:${name}`, label: name, groupValue: name }));
+  }
+  const tags = personalTags.filter((tag) => !tag.archived);
+  return [
+    ...tags.map((tag) => ({ id: `tag:${tag.id}`, label: tag.name, groupValue: tag.id, color: tag.color })),
+    { id: "tag:__none__", label: "Sem tag", groupValue: "__none__" },
+  ];
+}
 const CALENDAR_WEEKDAY_FORMATTER = new Intl.DateTimeFormat("pt-BR", {
   weekday: "short",
 });
@@ -1681,11 +1731,11 @@ const TaskCard = memo(function TaskCard({
   );
 });
 
-function getDropIndex(tasksByStatus, statusId, draggedTask, employee, teams) {
+function getDropIndex(tasksByColumn, columnId, draggedTask, employee, teams) {
   if (!draggedTask) return 0;
-  const destination = tasksByStatus[statusId] || [];
+  const destination = tasksByColumn[columnId] || [];
   return sortTasks(
-    [...destination, { ...draggedTask, status: statusId }],
+    [...destination, { ...draggedTask }],
     employee,
     teams,
   ).findIndex((taskItem) => taskItem.id === draggedTask.id);
@@ -1700,7 +1750,9 @@ function translateBetween(previous, next) {
 
 const Board = memo(function Board({
   tasks,
-  tasksByStatus,
+  columns,
+  tasksByColumn,
+  groupBy,
   subtasksByParent,
   currentEmployee,
   checklistVisibility,
@@ -1740,13 +1792,13 @@ const Board = memo(function Board({
         (card) => card.dataset.taskId === pendingTransfer.id,
       );
       const movedNext = movedCard && nextRects.get(pendingTransfer.id);
-      const movedStatusId =
-        movedCard?.closest(".board-column")?.dataset.statusId;
+      const movedColumnId =
+        movedCard?.closest(".board-column")?.dataset.columnId;
       if (
         movedCard &&
         movedNext &&
         pendingTransfer.slotRect &&
-        movedStatusId === pendingTransfer.statusId
+        movedColumnId === pendingTransfer.columnId
       ) {
         cards.forEach((card) => {
           const previous = card.dataset.taskId === pendingTransfer.id
@@ -1780,7 +1832,7 @@ const Board = memo(function Board({
       } else if (
         !movedCard ||
         !movedNext ||
-        movedStatusId === pendingTransfer.statusId
+        movedColumnId === pendingTransfer.columnId
       ) {
         pendingTransferRef.current = null;
       } else {
@@ -1818,7 +1870,7 @@ const Board = memo(function Board({
     }
     cardRectsRef.current = nextRects;
   }, [
-    dragState?.statusId,
+    dragState?.columnId,
     dragState?.insertAt,
     dropExit,
     tasks,
@@ -1840,24 +1892,28 @@ const Board = memo(function Board({
       setDropExit(null);
       setDragState({
         id: taskId,
-        sourceStatusId: task?.status || "",
-        statusId: task?.status || "",
+        sourceColumnId: groupBy === "status"
+          ? task?.status || ""
+          : `${groupBy}:${boardGroupValues(task, groupBy)[0] || "__none__"}`,
+        columnId: groupBy === "status"
+          ? task?.status || ""
+          : `${groupBy}:${boardGroupValues(task, groupBy)[0] || "__none__"}`,
         insertAt: 0,
         height: event.currentTarget.getBoundingClientRect().height,
       });
     },
-    [tasks],
+    [groupBy, tasks],
   );
   const handleDragOver = useCallback(
-    (statusId, event) => {
+    (columnId, event) => {
       event.preventDefault();
       event.dataTransfer.dropEffect = "move";
       const draggedId =
         dragState?.id || event.dataTransfer.getData("text/task-id");
       const draggedTask = tasks.find((item) => item.id === draggedId);
       const insertAt = getDropIndex(
-        tasksByStatus,
-        statusId,
+        tasksByColumn,
+        columnId,
         draggedTask,
         currentEmployee,
         teams,
@@ -1865,15 +1921,15 @@ const Board = memo(function Board({
       setDragState((current) => {
         if (
           current &&
-          current.statusId === statusId &&
+          current.columnId === columnId &&
           current.insertAt === insertAt
         )
           return current;
         animateLayoutRef.current = true;
-        return { ...(current || {}), statusId, insertAt };
+        return { ...(current || {}), columnId, insertAt };
       });
     },
-    [currentEmployee, dragState?.id, tasks, tasksByStatus, teams],
+    [currentEmployee, dragState?.id, tasks, tasksByColumn, teams],
   );
   const getExitMetrics = useCallback(() => {
     const slot = boardRef.current?.querySelector(".card-drop-placeholder");
@@ -1890,19 +1946,19 @@ const Board = memo(function Board({
     };
   }, []);
   const handleDrop = useCallback(
-    (statusId, event) => {
+    (columnId, event) => {
       event.preventDefault();
       const id = dragState?.id || event.dataTransfer.getData("text/task-id");
       const task = tasks.find((item) => item.id === id);
-      const sourceStatusId = dragState?.sourceStatusId || task?.status;
+      const sourceColumnId = dragState?.sourceColumnId;
       const shouldAttemptMove =
-        id && !id.startsWith("optimistic-") && sourceStatusId !== statusId;
+        id && !id.startsWith("optimistic-") && sourceColumnId !== columnId;
       const canMove = shouldAttemptMove;
       const slotRect = getExitMetrics();
       if (canMove && dragState) {
         pendingTransferRef.current = {
           id,
-          statusId,
+          columnId,
           slotRect,
           insertAt: dragState.insertAt,
         };
@@ -1912,12 +1968,13 @@ const Board = memo(function Board({
       }
       setDragState(null);
       if (shouldAttemptMove) {
-        Promise.resolve(onMove(id, statusId)).then((success) => {
+        const column = columns.find((item) => item.id === columnId);
+        Promise.resolve(onMove(id, column?.groupValue, groupBy)).then((success) => {
           if (!success) pendingTransferRef.current = null;
         });
       }
     },
-    [dragState, getExitMetrics, onMove, tasks],
+    [columns, dragState, getExitMetrics, groupBy, onMove, tasks],
   );
   const clearDrag = useCallback(() => {
     if (dragState && !pendingTransferRef.current)
@@ -1930,16 +1987,16 @@ const Board = memo(function Board({
   }, [dragState, getExitMetrics]);
   return (
     <div className="board-grid" ref={boardRef}>
-      {STATUSES.map((status) => {
-        const items = tasksByStatus[status.id] || [];
+      {columns.map((column) => {
+        const items = tasksByColumn[column.id] || [];
         const visibleDropState = dragState || dropExit;
         const isExiting = !dragState && Boolean(dropExit);
         const hasExitMetrics = isExiting && visibleDropState.slotRect;
         const showDropSlot = Boolean(
           visibleDropState &&
             (!visibleDropState.isMove || dragState) &&
-            visibleDropState.sourceStatusId !== status.id &&
-            visibleDropState.statusId === status.id,
+            visibleDropState.sourceColumnId !== column.id &&
+            visibleDropState.columnId === column.id,
         );
         const dropSlot = showDropSlot ? (
           <div
@@ -1954,7 +2011,7 @@ const Board = memo(function Board({
                   }
                 : {}),
             }}
-            aria-label={`Espaço para soltar em ${status.label}`}
+            aria-label={`Espaço para soltar em ${column.label}`}
           >
             <Plus size={17} aria-hidden="true" />
             <span>Solte aqui</span>
@@ -1963,29 +2020,30 @@ const Board = memo(function Board({
         return (
           <section
             className={`board-column ${showDropSlot ? "is-drop-target" : ""}`}
-            data-status-id={status.id}
-            key={status.id}
-            onDragOver={(event) => handleDragOver(status.id, event)}
-            onDrop={(event) => handleDrop(status.id, event)}
+            data-column-id={column.id}
+            key={column.id}
+            onDragOver={(event) => handleDragOver(column.id, event)}
+            onDrop={(event) => handleDrop(column.id, event)}
             onDragEnd={clearDrag}
           >
             <div className="column-header">
               <div>
-                <StatusIcon
-                  status={status.id}
-                  className={`status-column-icon status-column-icon-${status.tone}`}
+                {groupBy === "status" && <StatusIcon
+                  status={column.id}
+                  className={`status-column-icon status-column-icon-${column.tone}`}
                   size={17}
                   strokeWidth={2.2}
                   aria-hidden="true"
-                />
-                <h2>{status.label}</h2>
+                />}
+                <h2>{column.label}</h2>
                 <span className="column-count">{items.length}</span>
               </div>
               <button
                 className="icon-button"
                 type="button"
-                onClick={() => onCreate(status.id)}
-                aria-label={`Criar tarefa em ${status.label}`}
+                onClick={() => onCreate(column.id)}
+                aria-label={`Criar tarefa em ${column.label}`}
+                disabled={groupBy !== "status"}
               >
                 <Plus size={16} />
               </button>
@@ -2010,6 +2068,7 @@ const Board = memo(function Board({
                     isDragging={dragState?.id === taskItem.id}
                     onDragStart={handleDragStart}
                     onDragEnd={clearDrag}
+                    enableDrag
                   />
                 </React.Fragment>
               ))}
@@ -2451,7 +2510,8 @@ const FilterBar = memo(function FilterBar({
 });
 
 function MobileBoardList({
-  tasksByStatus,
+  columns,
+  tasksByColumn,
   subtasksByParent,
   currentEmployee,
   checklistVisibility,
@@ -2465,22 +2525,22 @@ function MobileBoardList({
 }) {
   return (
     <div className="mobile-board-list">
-      {STATUSES.map((status) => (
-        <section className="mobile-status-group" key={status.id}>
+      {columns.map((column) => (
+        <section className="mobile-status-group" key={column.id}>
           <div className="mobile-status-heading">
             <StatusIcon
-              status={status.id}
-              className={`status-column-icon status-column-icon-${status.tone}`}
+              status={column.id}
+              className={`status-column-icon status-column-icon-${column.tone || "neutral"}`}
               size={17}
               strokeWidth={2.2}
               aria-hidden="true"
             />
-            <h2>{status.label}</h2>
+            <h2>{column.label}</h2>
             <span className="column-count">
-              {tasksByStatus[status.id].length}
+              {tasksByColumn[column.id].length}
             </span>
           </div>
-          {tasksByStatus[status.id].map((taskItem) => (
+          {(tasksByColumn[column.id] || []).map((taskItem) => (
             <TaskCard
               key={taskItem.id}
               task={taskItem}
@@ -2526,6 +2586,12 @@ function BoardView({
   onArchivePersonalTag,
   onReorderPersonalTags,
 }) {
+  const [groupBy, setGroupBy] = useState(readBoardGroupPreference);
+  useEffect(() => {
+    try {
+      localStorage.setItem(BOARD_GROUP_STORAGE_KEY, groupBy);
+    } catch {}
+  }, [groupBy]);
   const [sort, setSort] = useState(readBoardSortPreference);
   useEffect(() => {
     try {
@@ -2546,15 +2612,22 @@ function BoardView({
       ),
     [state.tasks, state.teams, filters, currentEmployee?.id, sort],
   );
-  const tasksByStatus = useMemo(
+  const columns = useMemo(
+    () => boardColumns(groupBy, filtered, state.teams, personalTags, state.employees),
+    [filtered, groupBy, personalTags, state.employees, state.teams],
+  );
+  const tasksByColumn = useMemo(
     () => {
-      const grouped = Object.fromEntries(STATUSES.map((status) => [status.id, []]));
+      const grouped = Object.fromEntries(columns.map((column) => [column.id, []]));
       filtered.forEach((taskItem) => {
-        if (grouped[taskItem.status]) grouped[taskItem.status].push(taskItem);
+        boardGroupValues(taskItem, groupBy).forEach((value) => {
+          const column = columns.find((item) => item.groupValue === value);
+          if (column) grouped[column.id].push(taskItem);
+        });
       });
       return grouped;
     },
-    [filtered],
+    [columns, filtered, groupBy],
   );
   const isMobile = useMediaQuery(
     "(max-width: 820px), (max-width: 900px) and (max-height: 600px)",
@@ -2578,10 +2651,11 @@ function BoardView({
         description={
           isMobile
             ? "Escolha a próxima ação e atualize o andamento da tarefa."
-            : "Arraste os cartões para atualizar o andamento das tarefas."
+            : "Arraste os cartões para atualizar o agrupamento selecionado."
         }
       >
         <BoardSortSelector sort={sort} onChange={setSort} />
+        <SearchableSelect value={groupBy} onChange={setGroupBy} options={BOARD_GROUP_OPTIONS} placeholder="Escolher agrupamento" displayPrefix="Agrupar: " aria-label="Agrupar colunas por" className="board-group-select" />
         <TaskScopeSelector
           active={taskScope}
           onSelect={onScopeChange}
@@ -2603,7 +2677,8 @@ function BoardView({
       />
       {isMobile ? (
         <MobileBoardList
-          tasksByStatus={tasksByStatus}
+          columns={columns}
+          tasksByColumn={tasksByColumn}
           subtasksByParent={subtasksByParent}
           currentEmployee={currentEmployee}
           checklistVisibility={checklistVisibility}
@@ -2618,7 +2693,9 @@ function BoardView({
       ) : (
         <Board
           tasks={filtered}
-          tasksByStatus={tasksByStatus}
+          columns={columns}
+          tasksByColumn={tasksByColumn}
+          groupBy={groupBy}
           subtasksByParent={subtasksByParent}
           currentEmployee={currentEmployee}
           checklistVisibility={checklistVisibility}
@@ -6227,32 +6304,58 @@ export default function App() {
     });
   }, []);
   const moveTask = useCallback(
-    (id, status) => {
+    (id, value, groupBy = "status") => {
       const task = state.tasks.find((item) => item.id === id);
       if (!task) return Promise.resolve(false);
-      const isCompleting = status === "done" && task.status !== "done";
+      let patch = { status: value };
+      let successMessage = "Status atualizado.";
+      if (groupBy === "team") {
+        const team = (state.teams || []).find((item) => normalizeText(item.name) === normalizeText(value));
+        if (!team) return Promise.resolve(false);
+        patch = resolveTaskAssignment({ assignmentMode: "team", teamIds: [team.id] }, state.teams || [], state.employees || []);
+        successMessage = "Equipe atualizada.";
+      } else if (groupBy === "assignee") {
+        const employee = (state.employees || []).find((item) => normalizeText(item.name) === normalizeText(value));
+        patch = resolveTaskAssignment({ assignmentMode: "people", assigneeIds: employee ? [employee.id] : [] }, state.teams || [], state.employees || []);
+        successMessage = "Responsável atualizado.";
+      } else if (groupBy === "priority") {
+        patch = { priority: value };
+        successMessage = "Prioridade atualizada.";
+      } else if (groupBy === "personalTag") {
+        patch = { personalTagIds: value === "__none__" ? [] : [value] };
+        successMessage = "Tag atualizada.";
+      }
+      const persist = async () => {
+        const { personalTagIds, ...taskPatch } = patch;
+        const nextState = Object.keys(taskPatch).length
+          ? await store.updateTask(state, id, taskPatch)
+          : state;
+        return personalTagIds !== undefined && store.replaceTaskPersonalTags
+          ? store.replaceTaskPersonalTags(nextState, id, personalTagIds, state.currentUserId || currentEmployee?.userId || "")
+          : nextState;
+      };
+      const isCompleting = groupBy === "status" && value === "done" && task.status !== "done";
       if (isCompleting) prepareCompletionSound();
-      if (status === "waiting" && task.status !== "waiting") {
+      if (groupBy === "status" && value === "waiting" && task.status !== "waiting") {
         const waitingValidation = validateWaitingContext("waiting", task.waitingContext);
         if (!waitingValidation.allowed) {
           setWaitingTaskId(id);
           return Promise.resolve(false);
         }
       }
-      const patch = { status };
       return runOptimisticMutation(
         (current) => applyOptimisticTaskPatch(current, id, patch),
-        () => store.updateTask(state, id, patch),
+        persist,
         store.live
-          ? "Status alterado. Sincronizando..."
-          : "Status alterado no mock local.",
-        store.live ? "Status sincronizado." : "Status atualizado localmente.",
+          ? `${successMessage} Sincronizando...`
+          : `${successMessage} No mock local.`,
+        store.live ? `${successMessage} Sincronizada.` : successMessage,
       ).then((success) => {
         if (success && isCompleting) playCompletionSound();
         return success;
       });
     },
-    [state, store, runOptimisticMutation, showNotice],
+    [currentEmployee?.userId, state, store, runOptimisticMutation, showNotice],
   );
   const createPersonalTag = useCallback(
     (input = {}) => {
