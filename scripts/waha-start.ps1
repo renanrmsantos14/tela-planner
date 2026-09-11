@@ -10,4 +10,5 @@ if (-not (Test-Path -LiteralPath $envPath)) {
 }
 
 docker compose --env-file $envPath -f $composePath up -d
+if ($LASTEXITCODE -ne 0) { throw "Nao foi possivel iniciar o WAHA. Verifique o Docker Desktop e a imagem local." }
 docker compose --env-file $envPath -f $composePath ps
