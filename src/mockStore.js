@@ -365,9 +365,13 @@ export function updateTask(state, id, patch) {
     const statusChanged = nextStatus !== taskItem.status;
     const waitingChanged = patch.waitingContext !== undefined && JSON.stringify(waitingContext) !== JSON.stringify(normalizeWaitingContext(taskItem.waitingContext));
     const history = [...(taskItem.history || [])];
-    if (statusChanged) history.push({ id: uid("history"), text: nextStatus === "done" ? "Tarefa concluída." : `Status alterado para ${STATUSES.find((item) => item.id === nextStatus)?.label || nextStatus}.`, createdAt: new Date().toISOString(), author: "Você" });
-    if (statusChanged && nextStatus === "waiting") history.push({ id: uid("history"), text: waitingContextSummary(waitingContext), createdAt: new Date().toISOString(), author: "Você" });
-    if (waitingChanged && !statusChanged) history.push({ id: uid("history"), text: `Contexto de Aguardando atualizado: ${waitingContextSummary(waitingContext)}.`, createdAt: new Date().toISOString(), author: "Você" });
+    const occurredAt = new Date().toISOString();
+    const actor = state.employees?.find((employee) => employee.id === patch.actorEmployeeId || employee.userId === patch.actorUserId);
+    const actorName = actor?.name || patch.actorName || "Executor não identificado";
+    const actorId = actor?.id || patch.actorEmployeeId || "";
+    if (statusChanged) history.push({ id: uid("history"), text: nextStatus === "done" ? "Tarefa concluída." : `Status alterado para ${STATUSES.find((item) => item.id === nextStatus)?.label || nextStatus}.`, createdAt: occurredAt, author: actorName, authorId: actorId, authorUserId: actor?.userId || patch.actorUserId || "", field: "status", previousValue: taskItem.status, nextValue: nextStatus });
+    if (statusChanged && nextStatus === "waiting") history.push({ id: uid("history"), text: waitingContextSummary(waitingContext), createdAt: new Date().toISOString(), author: actorName, authorId: actorId, authorUserId: actor?.userId || patch.actorUserId || "", field: "waitingContext", previousValue: "", nextValue: waitingContext });
+    if (waitingChanged && !statusChanged) history.push({ id: uid("history"), text: `Contexto de Aguardando atualizado: ${waitingContextSummary(waitingContext)}.`, createdAt: new Date().toISOString(), author: actorName, authorId: actorId, authorUserId: actor?.userId || patch.actorUserId || "", field: "waitingContext", previousValue: "", nextValue: waitingContext });
     const assignment = patch.assignmentMode !== undefined || patch.teamIds !== undefined || patch.teamId !== undefined || patch.assigneeIds !== undefined || patch.assigneeNames !== undefined || patch.assigneeName !== undefined || patch.primaryAssigneeId !== undefined || patch.consultantIds !== undefined
       ? resolveTaskAssignment({ ...taskItem, ...patch }, state.teams || [], state.employees || [])
       : null;

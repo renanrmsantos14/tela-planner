@@ -1,12 +1,26 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { addOptimisticAttachment, addOptimisticComment, addOptimisticReturn, applyOptimisticTaskPatch, buildAssigneeOptions, buildOptimisticTask, buildTaskCreationInput, canRegisterWaitingReturn, filterTasks, findCreatedMainTask, formatDate, formatLongDate, getDueBucket, getDueBucketForEmployee, hasTaskResponsible, isOverdue, isTaskVisibleToEmployee, mentionedEmployees, migrateLegacyTeams, normalizeAssigneeNames, normalizePersonalTag, normalizePersonalTagIds, normalizeTeam, normalizeWaitingContext, quoteTaskTitle, resolveTaskAssignment, responsibilityFromIds, sortBoardTasks, sortTasks, STATUSES, taskDisplayDueDate, taskStats, teamResponsibilitySummary, validatePersonalTag, validateTeamComposition, validateWaitingContext, waitingContextSummary } from "../src/domain.js";
+import { addOptimisticAttachment, addOptimisticComment, addOptimisticReturn, applyOptimisticTaskPatch, buildAssigneeOptions, buildOptimisticTask, buildTaskCreationInput, canRegisterWaitingReturn, deriveExecutionActor, filterTasks, findCreatedMainTask, formatDate, formatLongDate, getDueBucket, getDueBucketForEmployee, hasTaskResponsible, isOverdue, isTaskVisibleToEmployee, mentionedEmployees, migrateLegacyTeams, normalizeAssigneeNames, normalizePersonalTag, normalizePersonalTagIds, normalizeTeam, normalizeWaitingContext, quoteTaskTitle, resolveTaskAssignment, responsibilityFromIds, sortBoardTasks, sortTasks, STATUSES, taskDisplayDueDate, taskStats, teamResponsibilitySummary, validatePersonalTag, validateTeamComposition, validateWaitingContext, waitingContextSummary } from "../src/domain.js";
 
 const tasks = [
   { id: "1", title: "Atrasada", quoteTitle: "Cotação A", assigneeName: "Marina", status: "todo", priority: "high", dueDate: "2026-08-01" },
   { id: "2", title: "Hoje", quoteTitle: "Cotação B", assigneeName: "Rafael", status: "doing", priority: "medium", dueDate: "2026-08-03" },
   { id: "3", title: "Concluída", quoteTitle: "Cotação C", assigneeName: "Camila", status: "done", priority: "low", dueDate: "2026-08-01" },
 ];
+
+test("deriva executor atual pela entrada mais recente em Em andamento", () => {
+  const task = {
+    status: "doing",
+    history: [
+      { id: "h1", field: "status", nextValue: "doing", authorId: "e1", author: "Marina", createdAt: "2026-09-14T10:00:00Z" },
+      { id: "h2", field: "status", nextValue: "waiting", authorId: "e2", author: "Rafael", createdAt: "2026-09-14T11:00:00Z" },
+      { id: "h3", field: "status", nextValue: "doing", authorId: "e3", author: "Camila", createdAt: "2026-09-14T12:00:00Z" },
+    ],
+  };
+  assert.deepEqual(deriveExecutionActor(task), { id: "e3", userId: "", name: "Camila", occurredAt: "2026-09-14T12:00:00Z", eventId: "h3" });
+  assert.equal(deriveExecutionActor({ ...task, status: "waiting" }), null);
+  assert.equal(deriveExecutionActor({ status: "doing", history: [] }), null);
+});
 
 test("identifica atraso sem marcar tarefa concluída", () => {
   const today = new Date("2026-08-03T12:00:00");

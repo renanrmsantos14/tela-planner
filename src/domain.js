@@ -481,6 +481,22 @@ export function applyOptimisticTaskPatch(state, taskId, patch) {
   return updateTaskInState(state, taskId, (task) => ({ ...task, ...patch, syncStatus: "syncing" }));
 }
 
+export function deriveExecutionActor(task) {
+  if (!task || task.status !== "doing") return null;
+  const event = [...(task.history || [])]
+    .filter((item) => item.field === "status" && item.nextValue === "doing")
+    .sort((left, right) => String(left.createdAt || "").localeCompare(String(right.createdAt || "")))
+    .at(-1);
+  if (!event) return null;
+  return {
+    id: event.authorId || event.actorEmployeeId || "",
+    userId: event.authorUserId || "",
+    name: event.author || "Executor não identificado",
+    occurredAt: event.createdAt || "",
+    eventId: event.id || "",
+  };
+}
+
 export function addOptimisticComment(state, taskId, text) {
   const comment = {
     id: `optimistic-comment-${Date.now()}-${Math.random().toString(16).slice(2)}`,

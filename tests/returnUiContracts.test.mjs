@@ -31,6 +31,18 @@ test("histórico da tarefa permanece como última seção do corpo do drawer", a
   assert.match(styles, /\.task-drawer \.drawer-body > \.history-section \{ order: 99; \}/);
 });
 
+test("executor atual aparece separado do responsável", async () => {
+  const app = await read("src/App.jsx");
+  const domain = await read("src/domain.js");
+  const dataverse = await read("src/dataverse.js");
+
+  assert.match(domain, /function deriveExecutionActor/);
+  assert.match(domain, /nextValue === "doing"/);
+  assert.match(app, /Em andamento por/);
+  assert.match(app, /Execução atual/);
+  assert.match(dataverse, /_cr40f_autor_value \|\| item\._createdby_value/);
+});
+
 test("retorno live usa evento tipado e vínculo de evidência", async () => {
   const dataverse = await read("src/dataverse.js");
 

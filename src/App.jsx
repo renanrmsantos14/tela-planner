@@ -67,6 +67,7 @@ import {
   buildOptimisticTask,
   buildTaskCreationInput,
   DEFAULT_PERSONAL_TAG_COLOR,
+  deriveExecutionActor,
   canRegisterWaitingReturn,
   EMPTY_WAITING_CONTEXT,
   filterTasks,
@@ -1529,6 +1530,7 @@ const TaskCard = memo(function TaskCard({
   const overdue = getDueBucketForEmployee(taskItem, currentEmployee, teams) === "overdue";
   const waitingActionRequired = isTaskWaitingForEmployee(taskItem, currentEmployee);
   const canRegisterReturn = canRegisterWaitingReturn(taskItem, currentEmployee, teams);
+  const executionActor = deriveExecutionActor(taskItem);
   const canOpen = !taskItem.id.startsWith("optimistic-");
   const importedChecklist = Array.isArray(taskItem.checklist)
     ? taskItem.checklist.filter((item) => item?.title).map((item) => ({
@@ -1624,6 +1626,18 @@ const TaskCard = memo(function TaskCard({
         <div className="task-waiting-summary" title={waitingContextSummary(taskItem.waitingContext)}>
           <Clock3 size={13} />
           <span>{waitingContextSummary(taskItem.waitingContext)}</span>
+        </div>
+      )}
+      {executionActor && (
+        <div
+          className="task-execution-chip"
+          title={`Execução iniciada por ${executionActor.name} em ${formatCommentTimestamp(executionActor.occurredAt)}`}
+          aria-label={`Em andamento por ${executionActor.name}, ${formatRelativeTimestamp(executionActor.occurredAt)}`}
+        >
+          <Play size={11} fill="currentColor" aria-hidden="true" />
+          <Avatar name={executionActor.name} small />
+          <span><strong>Em andamento por</strong> {executionActor.name}</span>
+          <time dateTime={executionActor.occurredAt}>{formatRelativeTimestamp(executionActor.occurredAt)}</time>
         </div>
       )}
       {(showChecklistOnCard || importedChecklist.length > 0) && checklistItems.length > 0 && (
@@ -1777,11 +1791,36 @@ const Board = memo(function Board({
 }) {
   const [dragState, setDragState] = useState(null);
   const [dropExit, setDropExit] = useState(null);
+  const [hasHorizontalOverflow, setHasHorizontalOverflow] = useState(false);
   const boardRef = useRef(null);
   const cardRectsRef = useRef(new Map());
   const animateLayoutRef = useRef(false);
   const layoutAnimationsRef = useRef(new Map());
   const pendingTransferRef = useRef(null);
+  const overflowFrameRef = useRef(null);
+  useLayoutEffect(() => {
+    const board = boardRef.current;
+    if (!board) return undefined;
+    const updateOverflow = () => {
+      overflowFrameRef.current = null;
+      const nextValue = board.scrollLeft + board.clientWidth < board.scrollWidth - 1;
+      setHasHorizontalOverflow((current) => current === nextValue ? current : nextValue);
+    };
+    const scheduleOverflowUpdate = () => {
+      if (overflowFrameRef.current !== null) return;
+      overflowFrameRef.current = requestAnimationFrame(updateOverflow);
+    };
+    scheduleOverflowUpdate();
+    board.addEventListener("scroll", scheduleOverflowUpdate, { passive: true });
+    const observer = new ResizeObserver(scheduleOverflowUpdate);
+    observer.observe(board);
+    return () => {
+      board.removeEventListener("scroll", scheduleOverflowUpdate);
+      observer.disconnect();
+      if (overflowFrameRef.current !== null) cancelAnimationFrame(overflowFrameRef.current);
+      overflowFrameRef.current = null;
+    };
+  }, [columns.length]);
   useLayoutEffect(() => {
     const cards = [
       ...(boardRef.current?.querySelectorAll(".task-card[data-task-id]") || []),
@@ -1996,7 +2035,12 @@ const Board = memo(function Board({
     });
   }, [dragState, getExitMetrics]);
   return (
-    <div className="board-grid" ref={boardRef}>
+    <div className={`board-scroll-shell${hasHorizontalOverflow ? " has-horizontal-overflow" : ""}`}>
+      <div
+        className="board-grid"
+        ref={boardRef}
+        style={{ gridTemplateColumns: `repeat(${Math.max(columns.length, 1)}, minmax(240px, 1fr))` }}
+      >
       {columns.map((column) => {
         const items = tasksByColumn[column.id] || [];
         const visibleDropState = dragState || dropExit;
@@ -2094,7 +2138,8 @@ const Board = memo(function Board({
             </div>
           </section>
         );
-      })}
+        })}
+      </div>
     </div>
   );
 });
@@ -4158,6 +4203,17 @@ function formatCommentTimestamp(value) {
   return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(date);
 }
 
+function formatRelativeTimestamp(value) {
+  const date = new Date(value);
+  if (!value || Number.isNaN(date.getTime())) return "agora";
+  const minutes = Math.max(0, Math.floor((Date.now() - date.getTime()) / 60000));
+  if (minutes < 1) return "agora";
+  if (minutes < 60) return `há ${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `há ${hours} h`;
+  return `há ${Math.floor(hours / 24)} d`;
+}
+
 function TaskDrawerContent({
   task: taskItem,
   state,
@@ -4285,6 +4341,7 @@ function TaskDrawerContent({
     (item) => item.parentTaskId === taskItem.id,
   );
   const history = [...(taskItem.history || [])].reverse();
+  const executionActor = deriveExecutionActor(taskItem);
   const comments = taskItem.comments || [];
   const returns = [...(taskItem.returns || [])].sort((left, right) => String(left.createdAt || "").localeCompare(String(right.createdAt || "")));
   const latestReturn = returns.at(-1);
@@ -4721,6 +4778,23 @@ function TaskDrawerContent({
               error={validationError && !waitingValidation.allowed ? validationError : ""}
             />
           )}
+          <section className="drawer-section execution-section" aria-label="Execução atual">
+            <div className="drawer-section-heading">
+              <h3>Execução atual</h3>
+              {executionActor && <span className="section-count"><Play size={11} aria-hidden="true" /></span>}
+            </div>
+            {executionActor ? (
+              <div className="execution-summary" title={formatCommentTimestamp(executionActor.occurredAt)}>
+                <Avatar name={executionActor.name} small />
+                <div>
+                  <strong>Em andamento por {executionActor.name}</strong>
+                  <small>Iniciada {formatRelativeTimestamp(executionActor.occurredAt)} · {formatCommentTimestamp(executionActor.occurredAt)}</small>
+                </div>
+              </div>
+            ) : (
+              <div className="empty-inline">Nenhum executor identificado para a execução atual.</div>
+            )}
+          </section>
           {dueDateChanged && currentDeadlineRole !== "creator" && (
             <label className="deadline-reason">
               Motivo da alteração do prazo
@@ -6437,6 +6511,7 @@ export default function App() {
           : {}),
         actorEmployeeId: currentEmployee?.id || "",
         actorUserId: currentEmployee?.userId || "",
+        actorName: currentEmployee?.name || "Executor não identificado",
         mentionedEmployeeIds: mentionText ? mentionedEmployees(mentionText, state.employees).map((employee) => employee.id) : [],
       };
       const visibilityChanged = Boolean(existingTask)
@@ -6535,11 +6610,11 @@ export default function App() {
       };
       return runOptimisticMutation(
         (current) => addOptimisticReturn(
-          applyOptimisticTaskPatch(current, id, { status: "doing" }),
+          applyOptimisticTaskPatch(current, id, { status: "doing", actorEmployeeId: currentEmployee?.id || "", actorUserId: currentEmployee?.userId || "", actorName: currentEmployee?.name || "Executor não identificado" }),
           id,
           { id: input.returnId, text: input.text, createdAt: new Date().toISOString(), author: currentEmployee?.name || "Você" },
         ),
-        () => store.resolveWaitingReturn(state, id, operationInput),
+        () => store.resolveWaitingReturn(state, id, { ...operationInput, actorName: currentEmployee?.name || "Executor não identificado" }),
         store.live ? "Registrando retorno..." : "Registrando retorno no mock local...",
         store.live ? "Retorno registrado." : "Retorno registrado localmente.",
       ).then((success) => {
@@ -6558,8 +6633,8 @@ export default function App() {
       const completePatch = { status: "done" };
       prepareCompletionSound();
       return runOptimisticMutation(
-        (current) => applyOptimisticTaskPatch(current, id, completePatch),
-        () => store.updateTask(state, id, completePatch),
+        (current) => applyOptimisticTaskPatch(current, id, { ...completePatch, actorEmployeeId: currentEmployee?.id || "", actorUserId: currentEmployee?.userId || "", actorName: currentEmployee?.name || "Executor não identificado" }),
+        () => store.updateTask(state, id, { ...completePatch, actorEmployeeId: currentEmployee?.id || "", actorUserId: currentEmployee?.userId || "", actorName: currentEmployee?.name || "Executor não identificado" }),
         "",
         "",
       ).then((success) => {

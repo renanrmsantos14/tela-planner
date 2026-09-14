@@ -46,6 +46,7 @@ import {
   normalizePersonalTagIds,
   PERSONAL_TAG_COLORS,
   normalizeWaitingContext,
+  deriveExecutionActor,
   responsibilityFromIds,
   resolveTaskAssignment,
   STATUSES,
@@ -804,7 +805,13 @@ function normalizeEventDetails(events = []) {
     ...returnItem,
     attachments: attachments.filter((attachment) => attachment.returnId === returnItem.id),
   }));
-  const history = events.filter((item) => !["comentario", "retorno", "anexo", "notification:mention"].includes(item.cr40f_campo)).map((item) => ({ id: item.cr40f_plannertarefaeventoid, text: item.cr40f_descricao, createdAt: item.cr40f_ocorridoem, author: item.authorName || item["_cr40f_autor_value@OData.Community.Display.V1.FormattedValue"] || item["_createdby_value@OData.Community.Display.V1.FormattedValue"] || "Sistema" }));
+  const history = events.filter((item) => !["comentario", "retorno", "anexo", "notification:mention"].includes(item.cr40f_campo)).map((item) => {
+    const authorId = cleanId(item._cr40f_autor_value || item._createdby_value);
+    const author = item.authorName || item["_cr40f_autor_value@OData.Community.Display.V1.FormattedValue"] || item["_createdby_value@OData.Community.Display.V1.FormattedValue"] || "Executor não identificado";
+    let nextValue = item.cr40f_valornovo || "";
+    if (item.cr40f_campo === "status") nextValue = STATUS_BY_VALUE[item.cr40f_valornovo] || item.cr40f_valornovo || "";
+    return { id: item.cr40f_plannertarefaeventoid, text: item.cr40f_descricao, createdAt: item.cr40f_ocorridoem, author, authorId, field: item.cr40f_campo || "", previousValue: item.cr40f_campo === "status" ? STATUS_BY_VALUE[item.cr40f_valoranterior] || item.cr40f_valoranterior || "" : item.cr40f_valoranterior || "", nextValue };
+  });
   return { comments, returns: returnsWithAttachments, attachments, history };
 }
 
@@ -870,6 +877,7 @@ function normalizeTask(row, events = [], assignees = [], teamRelations = []) {
     returns,
     attachments,
     history,
+    executionActor: deriveExecutionActor({ status, history }),
   };
 }
 
@@ -1379,9 +1387,37 @@ async function updateLiveTask(xrm, state, id, patch) {
   await Promise.all(eventWrites);
   const confirmedPatch = Object.fromEntries(Object.entries({ ...patch, ...(quoteTask ? { status: nextStatus, quoteStatus: nextQuoteStatus } : {}) }).filter(([key]) => !["actorEmployeeId", "actorUserId", "mentionedEmployeeIds", "deadlineChangeReason", "suppressNotifications"].includes(key)));
   const nextState = applyOptimisticTaskPatch(state, id, confirmedPatch);
+  const executionActor = nextStatus === "doing" && statusChanged && (patch.actorEmployeeId || patch.actorUserId || patch.actorName)
+    ? (state.employees || []).find((employee) => employee.id === patch.actorEmployeeId || employee.userId === patch.actorUserId) || {
+        id: patch.actorEmployeeId || "",
+        userId: patch.actorUserId || "",
+        name: patch.actorName || "Executor não identificado",
+      }
+    : null;
+  const nextStateWithExecution = executionActor
+    ? {
+        ...nextState,
+        tasks: nextState.tasks.map((task) => task.id === id
+          ? {
+              ...task,
+              history: [...(task.history || []), {
+                id: `optimistic-execution-${Date.now()}`,
+                text: "Status alterado para Em andamento.",
+                createdAt: new Date().toISOString(),
+                author: executionActor.name || patch.actorName || "Executor não identificado",
+                authorId: executionActor.id || patch.actorEmployeeId || "",
+                authorUserId: executionActor.userId || patch.actorUserId || "",
+                field: "status",
+                previousValue: previousStatus,
+                nextValue: "doing",
+              }],
+            }
+          : task),
+      }
+    : nextState;
   return {
-    ...nextState,
-    tasks: nextState.tasks.map((task) => task.id === id ? { ...task, syncStatus: undefined, detailsLoaded: false, detailsLoading: false, detailsError: undefined } : task),
+    ...nextStateWithExecution,
+    tasks: nextStateWithExecution.tasks.map((task) => task.id === id ? { ...task, syncStatus: undefined, detailsLoaded: false, detailsLoading: false, detailsError: undefined } : task),
   };
 }
 
