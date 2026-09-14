@@ -1213,13 +1213,6 @@ function AppShell({
             <strong>{activeLabel}</strong>
             <span>Central de Trabalho</span>
           </div>
-          <div
-            className="mobile-header-status"
-            title={live ? "Dataverse conectado" : "Modo local"}
-          >
-            <span className="pulse-dot" />
-            {live ? "Live" : "Local"}
-          </div>
           <button
             className="notification-trigger mobile-notification-trigger"
             type="button"
@@ -1241,7 +1234,6 @@ function AppShell({
           >
             <RotateCcw size={16} />
           </button>
-          <Avatar name={userName} small />
         </header>
         {children}
       </main>
