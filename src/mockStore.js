@@ -117,6 +117,25 @@ export function seedState() {
     task("task-44", "Confirmar fechamento semanal", null, "OPS-044", "Rotina operacional interna", "done", "low", "Renan Martins", "Financeiro", dateFromToday(-1), "Conferir se todas as tarefas críticas têm evidência e responsável."),
   );
   const seedNow = new Date().toISOString();
+  const seedExecutionActor = (id, actorId, actorUserId, actorName, minutesAgo) => {
+    const item = tasks.find((taskItem) => taskItem.id === id);
+    if (!item || item.status !== "doing") return;
+    const occurredAt = new Date(Date.now() - minutesAgo * 60000).toISOString();
+    item.history = [...(item.history || []), {
+      id: `${id}-execution-seed`,
+      text: "Status alterado para Em andamento.",
+      createdAt: occurredAt,
+      author: actorName,
+      authorId: actorId,
+      authorUserId: actorUserId,
+      field: "status",
+      previousValue: "todo",
+      nextValue: "doing",
+    }];
+  };
+  seedExecutionActor("task-1", "employee-marina", "user-marina", "Marina Alves", 28);
+  seedExecutionActor("task-22", "employee-joao", "user-joao", "João Mendes", 74);
+  seedExecutionActor("task-40", "employee-renan", "user-renan", "Renan Martins", 9);
   const enrichTask = (id, comments = [], attachments = [], history = []) => {
     const item = tasks.find((taskItem) => taskItem.id === id);
     if (!item) return;

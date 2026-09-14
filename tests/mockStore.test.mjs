@@ -20,6 +20,16 @@ test("semeia datas da agenda relativas ao dia local", () => {
   assert.notEqual(taskUpcoming.dueDate, today);
 });
 
+test("mock semeia executor visível em tarefas Em andamento", () => {
+  const initial = seedState();
+  const task = initial.tasks.find((item) => item.id === "task-40");
+  const execution = task.history.find((item) => item.field === "status" && item.nextValue === "doing");
+
+  assert.equal(task.status, "doing");
+  assert.equal(execution.author, "Renan Martins");
+  assert.equal(execution.authorId, "employee-renan");
+});
+
 test("cria e atualiza tarefa sem alterar a referência original", () => {
   withStorage();
   const initial = seedState();
