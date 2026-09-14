@@ -2737,18 +2737,7 @@ function BoardView({
   );
   return (
     <div className="page-content board-page-content">
-      {isMobile ? (
-        <div className="mobile-task-page-header">
-          <div>
-            <span className="eyebrow">Tarefas</span>
-            <h1>Tarefas</h1>
-            <p>{filtered.length} tarefas no seu foco</p>
-          </div>
-          <button className="mobile-task-create" type="button" onClick={onCreate} aria-label="Criar nova tarefa">
-            <Plus size={20} aria-hidden="true" />
-          </button>
-        </div>
-      ) : <PageHeader
+      {!isMobile && <PageHeader
         eyebrow="Tarefas"
         title="Operação em movimento"
         description={
