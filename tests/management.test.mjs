@@ -1,8 +1,16 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { collectionRows, daysOverdue, localDateKey, overviewCollections, overviewWorkload, waitingRows, workloadGroups, workloadTotals } from "../src/management.js";
+import { canViewManagement, collectionRows, daysOverdue, localDateKey, overviewCollections, overviewWorkload, waitingRows, workloadGroups, workloadTotals } from "../src/management.js";
 import { normalizeWaitingContext, validateWaitingContext } from "../src/domain.js";
 import { collectTask, createTask, seedState } from "../src/mockStore.js";
+
+test("mostra Gestão somente para os dois e-mails autorizados", () => {
+  assert.equal(canViewManagement("noreply@betinhos.onmicrosoft.com"), true);
+  assert.equal(canViewManagement(" BETINHOS@BETINHOS.ONMICROSOFT.COM "), true);
+  assert.equal(canViewManagement("outro@betinhos.onmicrosoft.com"), false);
+  assert.equal(canViewManagement(""), false);
+  assert.equal(canViewManagement(null), false);
+});
 
 test("calcula atraso e centraliza cobrança por pessoa ou equipe", () => {
   const tasks = [

@@ -25,6 +25,7 @@ import {
   normalizeContact,
   validateContact,
 } from "./contactDomain.js";
+import { isQuoteTask, isQuoteTerminalStatus, quoteStatusForTaskStatus, taskStatusForQuoteStatus } from "./quoteTaskFlow.js";
 
 export const STORAGE_KEY = "betinhos-tela-planner-mock-v3-calendar";
 
@@ -302,11 +303,14 @@ export function withDailyNotifications(state, now = new Date()) {
 
 export function createTask(state, input) {
   if (input.quoteId && !input.parentTaskId) {
-    const activeMain = state.tasks.find((taskItem) => taskItem.quoteId === input.quoteId && !taskItem.parentTaskId && !["done", "cancelled"].includes(taskItem.status));
-    if (activeMain) throw new Error("Esta cotação já possui um acompanhamento principal ativo.");
+    const mainTask = state.tasks.find((taskItem) => taskItem.quoteId === input.quoteId && !taskItem.parentTaskId);
+    if (mainTask) throw new Error("Esta cotação já possui um acompanhamento principal ativo ou encerrado.");
   }
   const sourceType = input.sourceType || (input.quoteId ? "quote" : "manual");
-  const status = input.status || STATUSES[0].id;
+  const quote = input.quoteId ? (state.quotes || []).find((quoteItem) => quoteItem.id === input.quoteId) : null;
+  const managedQuoteTask = isQuoteTask(input) && !input.parentTaskId && Boolean(quote);
+  const quoteStatus = managedQuoteTask ? (input.quoteStatus || quote.status || "Nova") : "";
+  const status = managedQuoteTask ? taskStatusForQuoteStatus(quoteStatus) : (input.status || STATUSES[0].id);
   const waitingContext = normalizeWaitingContext(input.waitingContext);
   const waitingValidation = validateWaitingContext(status, waitingContext);
   if (!waitingValidation.allowed) throw new Error(waitingValidation.error);
@@ -316,7 +320,7 @@ export function createTask(state, input) {
   const nextTask = {
     id: uid("task"), parentTaskId: input.parentTaskId || null, quoteId: input.quoteId || null,
     quoteCode: input.quoteCode || "", quoteTitle: input.quoteTitle || "Sem vínculo", title: input.title.trim(),
-    status, priority: input.priority || "medium", assignmentMode: assignment.assignmentMode, teamIds: assignment.teamIds, teamNames: assignment.teamNames, teamId: assignment.teamId, assigneeNames, assigneeName: assigneeNames.join(", "), assigneeIds, primaryAssigneeId: assignment.primaryAssigneeId || assigneeIds[0] || "", consultantIds: assignment.consultantIds || assigneeIds.slice(1), primaryAssigneeName: assignment.primaryAssigneeName || assigneeNames[0] || "", consultantNames: assignment.consultantNames || assigneeNames.slice(1),
+    status, ...(managedQuoteTask ? { quoteStatus } : {}), priority: input.priority || "medium", assignmentMode: assignment.assignmentMode, teamIds: assignment.teamIds, teamNames: assignment.teamNames, teamId: assignment.teamId, assigneeNames, assigneeName: assigneeNames.join(", "), assigneeIds, primaryAssigneeId: assignment.primaryAssigneeId || assigneeIds[0] || "", consultantIds: assignment.consultantIds || assigneeIds.slice(1), primaryAssigneeName: assignment.primaryAssigneeName || assigneeNames[0] || "", consultantNames: assignment.consultantNames || assigneeNames.slice(1),
     creatorEmployeeId: input.actorEmployeeId || "", creatorUserId: input.actorUserId || "", restrictedVisibility: Boolean(input.restrictedVisibility), contactId: input.contactId || "",
     teamName: assignment.teamName || input.teamName || "", dueDate: input.dueDate || "", description: input.description || "", waitingContext,
     checklist: input.checklist || [], labels: input.quoteCode ? [input.quoteCode] : [], personalTagIds: normalizePersonalTagIds(input.personalTagIds), sourceType, sourceId: input.sourceId || input.quoteId || null, sourceLabel: input.sourceLabel || (sourceType === "quality" ? "Ação de qualidade" : sourceType === "quote" ? "Pedido de cotação" : "Tarefa manual"), sourceCode: input.sourceCode || input.quoteCode || "", comments: [], attachments: [],
@@ -337,7 +341,15 @@ export function createTask(state, input) {
 
 export function updateTask(state, id, patch) {
   const existing = state.tasks.find((taskItem) => taskItem.id === id);
-  const nextStatus = patch.status ?? existing?.status;
+  const quote = existing?.quoteId ? (state.quotes || []).find((quoteItem) => quoteItem.id === existing.quoteId) : null;
+  const quoteTask = isQuoteTask(existing || {}) && !existing?.parentTaskId && Boolean(quote);
+  const currentQuoteStatus = existing?.quoteStatus || quote?.status || "Nova";
+  const nextQuoteStatus = quoteTask && (patch.quoteStatus !== undefined || patch.status !== undefined)
+    ? (patch.quoteStatus !== undefined ? patch.quoteStatus : quoteStatusForTaskStatus(patch.status, currentQuoteStatus))
+    : currentQuoteStatus;
+  const nextStatus = quoteTask && (patch.quoteStatus !== undefined || patch.status !== undefined)
+    ? taskStatusForQuoteStatus(nextQuoteStatus)
+    : (patch.status ?? existing?.status);
   const waitingContext = patch.waitingContext === undefined
     ? normalizeWaitingContext(existing?.waitingContext)
     : normalizeWaitingContext(patch.waitingContext);
@@ -345,11 +357,12 @@ export function updateTask(state, id, patch) {
   if (existing && existing.status !== "waiting" && nextStatus === "waiting" && !waitingValidation.allowed) {
     throw new Error(waitingValidation.error);
   }
-  const statusChanged = patch.status !== undefined && patch.status !== existing?.status;
+  const statusChanged = nextStatus !== existing?.status;
+  const quoteStatusChanged = quoteTask && nextQuoteStatus !== currentQuoteStatus;
   const waitingChanged = patch.waitingContext !== undefined && JSON.stringify(waitingContext) !== JSON.stringify(normalizeWaitingContext(existing?.waitingContext));
   const tasks = state.tasks.map((taskItem) => {
     if (taskItem.id !== id) return taskItem;
-    const statusChanged = patch.status !== undefined && patch.status !== taskItem.status;
+    const statusChanged = nextStatus !== taskItem.status;
     const waitingChanged = patch.waitingContext !== undefined && JSON.stringify(waitingContext) !== JSON.stringify(normalizeWaitingContext(taskItem.waitingContext));
     const history = [...(taskItem.history || [])];
     if (statusChanged) history.push({ id: uid("history"), text: nextStatus === "done" ? "Tarefa concluída." : `Status alterado para ${STATUSES.find((item) => item.id === nextStatus)?.label || nextStatus}.`, createdAt: new Date().toISOString(), author: "Você" });
@@ -358,12 +371,12 @@ export function updateTask(state, id, patch) {
     const assignment = patch.assignmentMode !== undefined || patch.teamIds !== undefined || patch.teamId !== undefined || patch.assigneeIds !== undefined || patch.assigneeNames !== undefined || patch.assigneeName !== undefined || patch.primaryAssigneeId !== undefined || patch.consultantIds !== undefined
       ? resolveTaskAssignment({ ...taskItem, ...patch }, state.teams || [], state.employees || [])
       : null;
-    return { ...taskItem, ...patch, ...(assignment || {}), assigneeName: assignment ? assignment.assigneeNames.join(", ") : taskItem.assigneeName, status: nextStatus, waitingContext, history };
+    return { ...taskItem, ...patch, ...(assignment || {}), assigneeName: assignment ? assignment.assigneeNames.join(", ") : taskItem.assigneeName, status: nextStatus, ...(quoteTask ? { quoteStatus: nextQuoteStatus } : {}), waitingContext, history };
   });
   if (!existing) return saveState({ ...state, tasks });
   const next = tasks.find((taskItem) => taskItem.id === id);
   const changes = [
-    patch.status !== undefined && patch.status !== existing.status ? (next.status === "waiting" ? "waiting" : "status") : "",
+    (statusChanged || quoteStatusChanged) ? (next.status === "waiting" ? "waiting" : "status") : "",
     patch.dueDate !== undefined && patch.dueDate !== existing.dueDate ? "deadline" : "",
     waitingChanged && !statusChanged ? "waiting" : "",
     (patch.assigneeNames !== undefined || patch.assigneeIds !== undefined || patch.primaryAssigneeId !== undefined || patch.consultantIds !== undefined || patch.assignmentMode !== undefined || patch.teamIds !== undefined || patch.teamId !== undefined) && (JSON.stringify(next.assigneeIds || []) !== JSON.stringify(existing.assigneeIds || []) || next.primaryAssigneeId !== existing.primaryAssigneeId) ? "assignees" : "",
@@ -378,7 +391,17 @@ export function updateTask(state, id, patch) {
     const eventId = uid("event");
     notifications.unshift({ id: uid("notification"), taskId: id, recipientEmployeeId, type: "mention", title: "Você foi mencionado", message: next.title, occurredAt: new Date().toISOString(), readAt: "", dedupeKey: notificationDedupeKey({ recipientId: recipientEmployeeId, taskId: id, type: "mention", eventId }) });
   });
-  return saveState({ ...state, tasks, notifications });
+  const quoteStatusIsTerminal = isQuoteTerminalStatus(nextQuoteStatus);
+  const nextQuotes = quoteTask && quoteStatusChanged
+    ? state.quotes.map((quoteItem) => quoteItem.id === existing.quoteId ? {
+      ...quoteItem,
+      status: nextQuoteStatus,
+      responseSent: nextQuoteStatus === "Respondida ao cliente" ? quoteItem.responseSent : false,
+      finalizationAt: quoteStatusIsTerminal ? (quoteItem.finalizationAt || new Date().toISOString()) : "",
+      modifiedAt: new Date().toISOString(),
+    } : quoteItem)
+    : state.quotes;
+  return saveState({ ...state, tasks, notifications, quotes: nextQuotes });
 }
 
 export function loadPersonalTags(state, ownerUserId = state.currentUserId || "") {
@@ -961,7 +984,7 @@ export function markAllNotificationsRead(state, recipientEmployeeId, readAt = ne
 export function ensureQuoteTask(state, quote) {
   const existing = state.tasks.find((taskItem) => taskItem.quoteId === quote.id && !taskItem.parentTaskId);
   if (existing) return state;
-  return createTask(state, { title: `Acompanhar ${quote.code}`, quoteId: quote.id, quoteCode: quote.code, quoteTitle: quote.title, dueDate: quote.deadline, priority: "medium", assigneeName: "Não atribuído", teamName: "Financeiro", description: `Acompanhar a cotação ${quote.code} até a resposta ao cliente.` });
+  return createTask(state, { title: `Acompanhar ${quote.code}`, quoteId: quote.id, quoteCode: quote.code, quoteTitle: quote.title, quoteStatus: quote.status, dueDate: quote.deadline, priority: "medium", assigneeName: "Não atribuído", assignmentMode: "people", teamName: "Financeiro", description: `Acompanhar a cotação ${quote.code} até a resposta ao cliente.` });
 }
 
 export function createQuote(state, input = {}) {
@@ -979,7 +1002,7 @@ export function createQuote(state, input = {}) {
   const withQuote = { ...state, quotes: [quote, ...(state.quotes || [])] };
   const assigneeIds = input.assigneeIds || [];
   const assigneeNames = input.assigneeNames || assigneeIds.map((id) => withQuote.employees?.find((employee) => employee.id === id)?.name).filter(Boolean);
-  const withTask = createTask(withQuote, { title: `Acompanhar ${quote.code}`, quoteId: quote.id, quoteCode: quote.code, quoteTitle: quote.title, dueDate: quote.deadline, priority: quote.priority, assigneeIds, assigneeNames, assigneeName: assigneeNames.join(", ") || "Não atribuído", teamName: "Financeiro", description: `Acompanhar a cotação ${quote.code} até a resposta ao cliente.` });
+  const withTask = createTask(withQuote, { title: `Acompanhar ${quote.code}`, quoteId: quote.id, quoteCode: quote.code, quoteTitle: quote.title, quoteStatus: quote.status, dueDate: quote.deadline, priority: quote.priority, assigneeIds, assigneeNames, assigneeName: assigneeNames.join(", ") || "Não atribuído", assignmentMode: "people", teamName: "Financeiro", description: `Acompanhar a cotação ${quote.code} até a resposta ao cliente.` });
   const task = withTask.tasks.find((item) => item.quoteId === quote.id && !item.parentTaskId);
   return saveState({ ...withTask, quotes: withTask.quotes.map((item) => item.id === quote.id ? { ...item, plannerTaskId: task?.id || "", modifiedAt: now } : item) });
 }
@@ -989,16 +1012,38 @@ export function updateQuote(state, id, patch = {}) {
   if (!existing) throw new Error("Cotação não encontrada.");
   const nextQuote = { ...existing, ...patch, id, modifiedAt: new Date().toISOString() };
   const outcomeStatus = nextQuote.status;
-  const terminal = ["Perdida", "Cancelada", "Convertida em serviço"].includes(outcomeStatus);
+  const terminal = isQuoteTerminalStatus(outcomeStatus);
+  const reopening = !terminal && isQuoteTerminalStatus(existing.status);
+  if (reopening) {
+    nextQuote.finalizationAt = "";
+    nextQuote.responseSent = false;
+  }
+  const completedAt = nextQuote.finalizationAt || new Date().toISOString();
   return saveState({
     ...state,
     quotes: state.quotes.map((quote) => quote.id === id ? nextQuote : quote),
-    tasks: state.tasks.map((taskItem) => taskItem.quoteId === id ? { ...taskItem, title: taskItem.parentTaskId ? taskItem.title : `Acompanhar ${nextQuote.code || "cotação"}`, quoteCode: nextQuote.code || taskItem.quoteCode, quoteTitle: nextQuote.title || taskItem.quoteTitle, dueDate: nextQuote.deadline || taskItem.dueDate, priority: nextQuote.priority || taskItem.priority, ...(terminal && !taskItem.parentTaskId ? { status: "done", completedAt: nextQuote.finalizationAt || new Date().toISOString() } : {}) } : taskItem),
+    tasks: state.tasks.map((taskItem) => {
+      if (taskItem.quoteId !== id) return taskItem;
+      if (taskItem.parentTaskId && ["done", "cancelled"].includes(taskItem.status)) return taskItem;
+      return {
+        ...taskItem,
+        title: taskItem.parentTaskId ? taskItem.title : `Acompanhar ${nextQuote.code || "cotação"}`,
+        quoteCode: nextQuote.code || taskItem.quoteCode,
+        quoteTitle: nextQuote.title || taskItem.quoteTitle,
+        dueDate: nextQuote.deadline || taskItem.dueDate,
+        priority: nextQuote.priority || taskItem.priority,
+        ...(taskItem.parentTaskId ? (terminal ? { status: "done", completedAt } : {}) : {
+          status: taskStatusForQuoteStatus(outcomeStatus),
+          quoteStatus: outcomeStatus,
+          ...(terminal ? { completedAt } : { completedAt: "" }),
+        }),
+      };
+    }),
   });
 }
 
 export function markQuoteSent(state, id) {
-  return updateQuote(state, id, { responseSent: true, status: "Respondida ao cliente", finalizationAt: new Date().toISOString() });
+  return updateQuote(state, id, { responseSent: true, status: "Respondida ao cliente", finalizationAt: "" });
 }
 
 export function setQuoteOutcome(state, id, outcome, reason = "") {

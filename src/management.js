@@ -1,6 +1,10 @@
 import { getDueBucket, normalizeAssigneeNames, normalizeTeam } from "./domain.js";
 
 const TERMINAL = new Set(["done", "cancelled"]);
+const MANAGEMENT_ALLOWED_EMAILS = new Set([
+  "noreply@betinhos.onmicrosoft.com",
+  "betinhos@betinhos.onmicrosoft.com",
+]);
 const LOCAL_DATE_FORMATTER = new Intl.DateTimeFormat("en-CA", {
   timeZone: "America/Sao_Paulo",
   year: "numeric",
@@ -10,6 +14,10 @@ const LOCAL_DATE_FORMATTER = new Intl.DateTimeFormat("en-CA", {
 
 export function localDateKey(value = new Date()) {
   return LOCAL_DATE_FORMATTER.format(value);
+}
+
+export function canViewManagement(email) {
+  return MANAGEMENT_ALLOWED_EMAILS.has(String(email || "").trim().toLowerCase());
 }
 
 function dateDifference(from, to) {

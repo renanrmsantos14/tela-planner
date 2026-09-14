@@ -170,6 +170,18 @@ test("cria cotação e acompanhamento principal no mesmo estado mock", () => {
   assert.equal(task.priority, "high");
 });
 
+test("coloca nova cotação na fila Financeiro sem lembrete individual", () => {
+  withStorage();
+  const created = createQuote(seedState(), { title: "Transfer", client: "Cliente", deadline: "2026-09-19" });
+  const quote = created.quotes[0];
+  const task = created.tasks.find((item) => item.quoteId === quote.id && !item.parentTaskId);
+  assert.equal(quote.status, "Nova");
+  assert.equal(task.teamName, "Financeiro");
+  assert.equal(task.assigneeIds.length, 0);
+  assert.equal(task.status, "todo");
+  assert.equal(created.notifications.some((item) => item.taskId === task.id), false);
+});
+
 test("atualiza dados comerciais e replica campos operacionais na tarefa", () => {
   withStorage();
   const initial = seedState();
@@ -194,6 +206,67 @@ test("registra envio e resultados da cotação sem criar reserva", () => {
   assert.equal(lost.tasks.find((task) => task.quoteId === quote.id && !task.parentTaskId).status, "done");
   assert.throws(() => setQuoteOutcome(sent, quote.id, "Perdida"), /motivo/);
   assert.equal(lost.reservations, undefined);
+});
+
+test("sincroniza status comercial da cotação com sua tarefa principal", () => {
+  withStorage();
+  const created = createQuote(seedState(), { title: "Transfer", client: "Cliente", deadline: "2026-09-19" });
+  const quote = created.quotes[0];
+  const task = created.tasks.find((item) => item.quoteId === quote.id && !item.parentTaskId);
+
+  const waiting = updateQuote(created, quote.id, { status: "Aguardando informação" });
+  const waitingTask = waiting.tasks.find((item) => item.id === task.id);
+  assert.equal(waitingTask.quoteStatus, "Aguardando informação");
+  assert.equal(waitingTask.status, "waiting");
+
+  const sent = markQuoteSent(waiting, quote.id);
+  const sentTask = sent.tasks.find((item) => item.id === task.id);
+  assert.equal(sentTask.quoteStatus, "Respondida ao cliente");
+  assert.notEqual(sentTask.status, "done");
+});
+
+test("sincroniza alteração de status da tarefa de cotação de volta para a cotação", () => {
+  withStorage();
+  const created = createQuote(seedState(), { title: "Transfer", client: "Cliente", deadline: "2026-09-19" });
+  const quote = created.quotes[0];
+  const task = created.tasks.find((item) => item.quoteId === quote.id && !item.parentTaskId);
+
+  const next = updateTask(created, task.id, { quoteStatus: "Cotada" });
+  assert.equal(next.quotes.find((item) => item.id === quote.id).status, "Cotada");
+  assert.equal(next.tasks.find((item) => item.id === task.id).status, "doing");
+});
+
+test("reabrir cotação reativa sua tarefa principal e limpa encerramento", () => {
+  withStorage();
+  const created = createQuote(seedState(), { title: "Transfer", client: "Cliente", deadline: "2026-09-19" });
+  const quote = created.quotes[0];
+  const closed = setQuoteOutcome(created, quote.id, "Perdida", "Preço acima do orçamento");
+  const reopened = updateQuote(closed, quote.id, { status: "Nova", finalizationAt: "", responseSent: false });
+  const reopenedTask = reopened.tasks.find((item) => item.quoteId === quote.id && !item.parentTaskId);
+
+  assert.equal(reopened.quotes[0].status, "Nova");
+  assert.equal(reopened.quotes[0].finalizationAt, "");
+  assert.equal(reopenedTask.status, "todo");
+  assert.equal(reopenedTask.quoteStatus, "Nova");
+});
+
+test("conclui todas as tarefas abertas vinculadas ao resultado da cotação", () => {
+  withStorage();
+  const created = createQuote(seedState(), { title: "Transfer", client: "Cliente", deadline: "2026-09-19" });
+  const quote = created.quotes[0];
+  const mainTask = created.tasks.find((task) => task.quoteId === quote.id && !task.parentTaskId);
+  const withOpenSubtask = createTask(created, { title: "Validar veículo", parentTaskId: mainTask.id, quoteId: quote.id, quoteCode: quote.code, quoteTitle: quote.title });
+  const withDoneSubtask = createTask(withOpenSubtask, { title: "Conferir contato", parentTaskId: mainTask.id, quoteId: quote.id, quoteCode: quote.code, quoteTitle: quote.title });
+  const doneId = withDoneSubtask.tasks.at(-1).id;
+  const withDone = updateTask(withDoneSubtask, doneId, { status: "done" });
+  const alreadyDoneTask = withDone.tasks.find((task) => task.id === doneId);
+
+  const lost = setQuoteOutcome(withDone, quote.id, "Perdida", "Preço acima do orçamento");
+  const linkedTasks = lost.tasks.filter((task) => task.quoteId === quote.id);
+
+  assert.equal(linkedTasks.length, 3);
+  assert.equal(linkedTasks.every((task) => task.status === "done"), true);
+  assert.equal(linkedTasks.find((task) => task.id === doneId), alreadyDoneTask);
 });
 
 test("preserva origem na tarefa criada", () => {

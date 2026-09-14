@@ -1256,6 +1256,7 @@ button { cursor: pointer; }
 .priority-current-neutral { color: var(--control); }
 .status-field { display: grid; gap: 5px; min-width: 0; }
 .status-field-label { color: var(--muted); font-size: 10px; font-weight: 800; }
+.quote-task-status-picker { width: 100%; min-height: 44px; border: 1px solid #b8cfee; border-radius: 11px; padding: 0 11px; color: var(--blue); background: var(--blue-soft); font: inherit; font-size: 12px; font-weight: 700; }
 .status-picker { display: grid; gap: 5px; }
 .status-picker-options { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; }
 .status-option { width: 100%; min-height: 44px; display: grid; place-items: center; padding: 0; border: 1px solid var(--line); border-radius: 11px; color: var(--muted); background: var(--neutral); font: inherit; cursor: pointer; transition: border-color 160ms ease, background-color 160ms ease, color 160ms ease, transform 160ms ease; }
@@ -2257,6 +2258,9 @@ button { cursor: pointer; }
 .quote-form textarea { resize: vertical; min-height: 84px; }
 .quote-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 .quote-form-grid label { min-width: 0; }
+.quote-readonly-field { display: flex; flex-direction: column; justify-content: center; min-height: 40px; padding: 9px 11px; border: 1px solid var(--line); border-radius: 8px; background: #f5f7f8; color: var(--primary); font-weight: 700; }
+.quote-readonly-field small { margin-top: 3px; color: var(--tertiary); font-size: 10px; font-weight: 500; }
+.task-quote-status { max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--blue); font-size: 10px; font-weight: 800; }
 .quote-form-hint { margin: 20px 0 0; color: var(--tertiary); font-size: 12px; line-height: 1.5; }
 .quote-email-preview { min-width: 0; border: 1px solid var(--line); border-radius: 12px; background: #f3f0ea; overflow: hidden; align-self: start; position: sticky; top: 18px; }
 .quote-email-preview-bar { display: flex; justify-content: space-between; padding: 12px 14px; background: #112f28; color: #f6f1e7; font-size: 12px; }

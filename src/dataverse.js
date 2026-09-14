@@ -53,6 +53,7 @@ import {
   validateWaitingContext,
   waitingContextSummary,
 } from "./domain.js";
+import { isQuoteTask, isQuoteTerminalStatus, quoteStatusForTaskStatus, taskStatusForQuoteStatus } from "./quoteTaskFlow.js";
 import { localDateKey, manualCollectionKey } from "./management.js";
 import { normalizeContact } from "./contactDomain.js";
 
@@ -838,6 +839,7 @@ function normalizeTask(row, events = [], assignees = [], teamRelations = []) {
     description: row.cr40f_descricao || "",
     checklist: parseChecklist(row.cr40f_checklistjson),
     status,
+    quoteStatus: origin === "quote" ? quoteStatusForTaskStatus(status) : "",
     priority,
     restrictedVisibility: Boolean(row[TASK_RESTRICTED_VISIBILITY_FIELD]),
     dueDate: dateOnly(row.cr40f_prazo),
@@ -1028,7 +1030,7 @@ async function loadLiveState(xrm) {
   const quoteById = new Map(quotes.map((row) => [row.cr40f_pedidodecotacaoid, normalizeQuote(row)]));
   const employeesWithProfiles = employeeRecords;
   const quality = [...qualityErrors.map((row) => normalizeQuality(row, "error")), ...qualityActions.map((row) => normalizeQuality(row, "action"))].map((item) => ({ ...item, assigneeProfiles: employeeById.has(cleanId(item.assigneeId).toLowerCase()) ? [employeesWithProfiles.find((employee) => cleanId(employee.id).toLowerCase() === cleanId(item.assigneeId).toLowerCase())] : [] }));
-  const tasksWithProfiles = tasks.map((task) => ({ ...task, assigneeProfiles: task.assigneeProfiles?.length ? task.assigneeProfiles : task.assigneeIds.map((id) => employeesWithProfiles.find((employee) => cleanId(employee.id).toLowerCase() === cleanId(id).toLowerCase())).filter(Boolean), quoteCode: quoteById.get(task.quoteId)?.code || "", quoteTitle: quoteById.get(task.quoteId)?.title || "" }));
+  const tasksWithProfiles = tasks.map((task) => ({ ...task, assigneeProfiles: task.assigneeProfiles?.length ? task.assigneeProfiles : task.assigneeIds.map((id) => employeesWithProfiles.find((employee) => cleanId(employee.id).toLowerCase() === cleanId(id).toLowerCase())).filter(Boolean), quoteCode: quoteById.get(task.quoteId)?.code || "", quoteTitle: quoteById.get(task.quoteId)?.title || "", quoteStatus: isQuoteTask(task) ? quoteById.get(task.quoteId)?.status || task.quoteStatus : task.quoteStatus }));
   return { quotes: [...quoteById.values()], employees: employeesWithProfiles, teams, currentUserEmail, currentUserId, personalTags: personalTagData.personalTags || [], personalTagsUnavailable: Boolean(personalTagData.personalTagsUnavailable), quality, tasks: tasksWithProfiles, notifications: [], collectionEvents: normalizeCollectionEvents(events), lastUpdated: new Date().toISOString(), live: true };
 }
 
@@ -1253,12 +1255,15 @@ async function sendLiveNotificationTest(xrm, state, input = {}) {
 
 async function createLiveTask(xrm, state, input) {
   if (input.quoteId && !input.parentTaskId) {
-  const activeMain = state.tasks.find((task) => task.quoteId === input.quoteId && !task.parentTaskId && !["done", "cancelled"].includes(task.status));
-    if (activeMain) throw new Error("Esta cotação já possui um acompanhamento principal ativo.");
+    const mainTask = state.tasks.find((task) => task.quoteId === input.quoteId && !task.parentTaskId);
+    if (mainTask) throw new Error("Esta cotação já possui um acompanhamento principal ativo ou encerrado.");
   }
-  const status = input.status || "todo";
+  const linkedQuote = input.quoteId ? state.quotes.find((quote) => cleanId(quote.id) === cleanId(input.quoteId)) : null;
+  const managedQuoteTask = isQuoteTask(input) && !input.parentTaskId && Boolean(linkedQuote);
+  const quoteStatus = managedQuoteTask ? (input.quoteStatus || linkedQuote.status || "Nova") : "";
+  const status = managedQuoteTask ? taskStatusForQuoteStatus(quoteStatus) : (input.status || "todo");
   const waitingContext = normalizeWaitingContext(input.waitingContext);
-  const waitingValidation = validateWaitingContext(status, waitingContext);
+  const waitingValidation = managedQuoteTask ? { allowed: true, error: "" } : validateWaitingContext(status, waitingContext);
   if (!waitingValidation.allowed) throw new Error(waitingValidation.error);
   const payload = { cr40f_titulo: input.title.trim(), cr40f_descricao: input.description || "", cr40f_status: STATUS_VALUES[status], cr40f_prioridade: PRIORITY_VALUES[input.priority] || PRIORITY_VALUES.medium, cr40f_prazo: input.dueDate ? `${input.dueDate}T12:00:00Z` : null, [TASK_RESTRICTED_VISIBILITY_FIELD]: Boolean(input.restrictedVisibility), ...waitingContextPayload(waitingContext), cr40f_origem: ORIGIN_VALUES[input.sourceType || (input.quoteId ? "quote" : "manual")], cr40f_codigoorigem: input.sourceCode || input.quoteCode || "" };
   if (input.contactId) {
@@ -1292,23 +1297,31 @@ async function createLiveTask(xrm, state, input) {
 
 async function updateLiveTask(xrm, state, id, patch) {
   const existing = state.tasks.find((item) => item.id === id);
+  const linkedQuote = existing?.quoteId ? state.quotes.find((quote) => cleanId(quote.id) === cleanId(existing.quoteId)) : null;
+  const quoteTask = isQuoteTask(existing || {}) && !existing?.parentTaskId && Boolean(linkedQuote);
   const previousStatus = existing?.status || "";
   const previousDueDate = existing?.dueDate || "";
   const previousAssigneeIds = existing?.assigneeIds || [];
   const previousPrimaryAssigneeId = existing?.primaryAssigneeId || previousAssigneeIds[0] || "";
-  const nextStatus = patch.status ?? previousStatus;
+  const currentQuoteStatus = existing?.quoteStatus || linkedQuote?.status || "Nova";
+  const nextQuoteStatus = quoteTask && (patch.quoteStatus !== undefined || patch.status !== undefined)
+    ? (patch.quoteStatus !== undefined ? patch.quoteStatus : quoteStatusForTaskStatus(patch.status, currentQuoteStatus))
+    : currentQuoteStatus;
+  const nextStatus = quoteTask && (patch.quoteStatus !== undefined || patch.status !== undefined)
+    ? taskStatusForQuoteStatus(nextQuoteStatus)
+    : (patch.status ?? previousStatus);
   const effectiveAssignmentMode = patch.assignmentMode ?? existing?.assignmentMode ?? "people";
   const waitingContext = patch.waitingContext === undefined
     ? normalizeWaitingContext(existing?.waitingContext)
     : normalizeWaitingContext(patch.waitingContext);
-  const waitingValidation = validateWaitingContext(nextStatus, waitingContext);
+  const waitingValidation = quoteTask ? { allowed: true, error: "" } : validateWaitingContext(nextStatus, waitingContext);
   if (existing && previousStatus !== "waiting" && nextStatus === "waiting" && !waitingValidation.allowed) {
     throw new Error(waitingValidation.error);
   }
   const payload = {};
   if (patch.title !== undefined) payload.cr40f_titulo = patch.title.trim();
   if (patch.description !== undefined) payload.cr40f_descricao = patch.description;
-  if (patch.status !== undefined) payload.cr40f_status = STATUS_VALUES[patch.status];
+  if (patch.status !== undefined || patch.quoteStatus !== undefined) payload.cr40f_status = STATUS_VALUES[nextStatus];
   if (patch.priority !== undefined) payload.cr40f_prioridade = PRIORITY_VALUES[patch.priority];
   if (patch.dueDate !== undefined) payload.cr40f_prazo = patch.dueDate ? `${patch.dueDate}T12:00:00Z` : null;
   if (patch.restrictedVisibility !== undefined) payload[TASK_RESTRICTED_VISIBILITY_FIELD] = Boolean(patch.restrictedVisibility);
@@ -1341,9 +1354,10 @@ async function updateLiveTask(xrm, state, id, patch) {
   await Promise.all(relationUpdates);
   await Promise.all([
     request(xrm, `/${entitySetName(TASK_TABLE)}(${cleanId(id)})`, { method: "PATCH", body: JSON.stringify(payload) }),
+    ...(quoteTask && nextQuoteStatus !== currentQuoteStatus ? [request(xrm, `/${entitySetName(QUOTE_TABLE)}(${cleanId(existing.quoteId)})`, { method: "PATCH", body: JSON.stringify(quotePayload({ status: nextQuoteStatus, responseSent: nextQuoteStatus === "Respondida ao cliente" ? linkedQuote.responseSent : false, finalizationAt: isQuoteTerminalStatus(nextQuoteStatus) ? (linkedQuote.finalizationAt || new Date().toISOString()) : "" })) })] : []),
     markQuoteOrigin(xrm, existing?.quoteId),
   ]);
-  const statusChanged = patch.status !== undefined && nextStatus !== previousStatus;
+  const statusChanged = nextStatus !== previousStatus;
   const dueDateChanged = patch.dueDate !== undefined && patch.dueDate !== previousDueDate;
   const waitingChanged = patch.waitingContext !== undefined && JSON.stringify(waitingContext) !== JSON.stringify(normalizeWaitingContext(existing?.waitingContext));
   const suppressNotifications = patch.suppressNotifications === true;
@@ -1363,7 +1377,7 @@ async function updateLiveTask(xrm, state, id, patch) {
     if (!statusChanged && !dueDateChanged && !assigneesChanged && !waitingChanged) eventWrites.push(createEvent(xrm, id, patch.status !== undefined ? 100000002 : 100000001, "Tarefa atualizada."));
   }
   await Promise.all(eventWrites);
-  const confirmedPatch = Object.fromEntries(Object.entries(patch).filter(([key]) => !["actorEmployeeId", "actorUserId", "mentionedEmployeeIds", "deadlineChangeReason", "suppressNotifications"].includes(key)));
+  const confirmedPatch = Object.fromEntries(Object.entries({ ...patch, ...(quoteTask ? { status: nextStatus, quoteStatus: nextQuoteStatus } : {}) }).filter(([key]) => !["actorEmployeeId", "actorUserId", "mentionedEmployeeIds", "deadlineChangeReason", "suppressNotifications"].includes(key)));
   const nextState = applyOptimisticTaskPatch(state, id, confirmedPatch);
   return {
     ...nextState,
@@ -1559,7 +1573,7 @@ async function ensureLiveQuoteTask(xrm, state, quote) {
   const existing = state.tasks.find((item) => item.quoteId === quote.id && !item.parentTaskId);
   if (existing || quote.plannerTaskId) return state;
   const reference = String(quote.code || quote.title || "").trim();
-  return createLiveTask(xrm, state, { title: `Acompanhar ${reference || "cotação"}`, quoteId: quote.id, quoteCode: quote.code || "", quoteTitle: quote.title || "", dueDate: quote.deadline, priority: "medium", sourceType: "quote", assigneeName: "Não atribuído", teamName: "Financeiro", description: `Acompanhar a cotação ${reference || "selecionada"} até a resposta ao cliente.` });
+  return createLiveTask(xrm, state, { title: `Acompanhar ${reference || "cotação"}`, quoteId: quote.id, quoteCode: quote.code || "", quoteTitle: quote.title || "", quoteStatus: quote.status, dueDate: quote.deadline, priority: "medium", sourceType: "quote", assigneeName: "Não atribuído", teamName: "Financeiro", description: `Acompanhar a cotação ${reference || "selecionada"} até a resposta ao cliente.` });
 }
 
 function quoteDateTime(value) {
@@ -1622,7 +1636,7 @@ async function createLiveQuote(xrm, state, input = {}) {
   if (!quoteId) throw new Error("Dataverse criou a cotação sem retornar o ID.");
   try {
     const nextState = await loadLiveState(xrm);
-    const taskState = await createLiveTask(xrm, nextState, { title: `Acompanhar ${created.cr40f_numerodacotacao || input.title || "cotação"}`, quoteId, quoteCode: created.cr40f_numerodacotacao || "", quoteTitle: input.title || "", dueDate: input.deadline || "", priority: input.priority || "medium", sourceType: "quote", assigneeIds: input.assigneeIds || [], assigneeNames: input.assigneeNames || [], assignmentMode: "people", description: `Acompanhar a cotação ${created.cr40f_numerodacotacao || "selecionada"} até a resposta ao cliente.` });
+    const taskState = await createLiveTask(xrm, nextState, { title: `Acompanhar ${created.cr40f_numerodacotacao || input.title || "cotação"}`, quoteId, quoteCode: created.cr40f_numerodacotacao || "", quoteTitle: input.title || "", quoteStatus: input.status || "Nova", dueDate: input.deadline || "", priority: input.priority || "medium", sourceType: "quote", assigneeIds: input.assigneeIds || [], assigneeNames: input.assigneeNames || [], assignmentMode: "people", description: `Acompanhar a cotação ${created.cr40f_numerodacotacao || "selecionada"} até a resposta ao cliente.` });
     const createdQuote = (taskState.quotes || []).find((quote) => cleanId(quote.id) === quoteId);
     const linkedTask = (taskState.tasks || []).find((task) => cleanId(task.quoteId) === quoteId && !task.parentTaskId);
     const teamId = await resolveFinanceTeamId(xrm, taskState);
@@ -1640,16 +1654,28 @@ async function updateLiveQuote(xrm, state, id, patch = {}) {
   const existing = (state.quotes || []).find((quote) => cleanId(quote.id) === quoteId);
   if (!existing) throw new Error("Cotação não encontrada.");
   await request(xrm, `/${entitySetName(QUOTE_TABLE)}(${quoteId})`, { method: "PATCH", body: JSON.stringify(quotePayload(patch)) });
-  const task = (state.tasks || []).find((item) => cleanId(item.quoteId) === quoteId && !item.parentTaskId);
-  if (task) {
-    const terminal = ["Perdida", "Cancelada", "Convertida em serviço"].includes(patch.status);
-    await updateLiveTask(xrm, state, task.id, { title: patch.title ? `Acompanhar ${patch.code || existing.code || "cotação"}` : undefined, dueDate: patch.deadline, priority: patch.priority, status: terminal ? "done" : undefined, assigneeIds: patch.assigneeIds, assigneeNames: patch.assigneeNames });
-  }
+  const linkedTasks = (state.tasks || []).filter((item) => cleanId(item.quoteId) === quoteId);
+  const nextStatus = patch.status ?? existing.status;
+  const terminal = isQuoteTerminalStatus(nextStatus);
+  const reopening = !terminal && isQuoteTerminalStatus(existing.status);
+  await Promise.all(linkedTasks.map((task) => {
+    if (task.parentTaskId && ["done", "cancelled"].includes(task.status)) return Promise.resolve();
+    if (task.parentTaskId) return terminal ? updateLiveTask(xrm, state, task.id, { status: "done" }) : Promise.resolve();
+    return updateLiveTask(xrm, state, task.id, {
+      status: taskStatusForQuoteStatus(nextStatus),
+      quoteStatus: nextStatus,
+      title: patch.title ? `Acompanhar ${patch.code || existing.code || "cotação"}` : undefined,
+      dueDate: patch.deadline,
+      priority: patch.priority,
+      assigneeIds: patch.assigneeIds,
+      assigneeNames: patch.assigneeNames,
+    });
+  }));
   return loadLiveState(xrm);
 }
 
 async function markLiveQuoteSent(xrm, state, id) {
-  return updateLiveQuote(xrm, state, id, { responseSent: true, status: "Respondida ao cliente", finalizationAt: new Date().toISOString() });
+  return updateLiveQuote(xrm, state, id, { responseSent: true, status: "Respondida ao cliente", finalizationAt: "" });
 }
 
 async function setLiveQuoteOutcome(xrm, state, id, outcome, reason = "") {

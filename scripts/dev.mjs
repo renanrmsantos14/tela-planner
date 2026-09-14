@@ -10,23 +10,33 @@ const viteBin = path.join(projectRoot, "node_modules", "vite", "bin", "vite.js")
 const pidFile = path.join(os.tmpdir(), "tela-planner-vite-5192.pid");
 
 function getListeners() {
-  const output = execFileSync("netstat.exe", ["-ano", "-p", "tcp"], {
+  const isWindows = process.platform === "win32";
+  const command = isWindows ? "netstat.exe" : "ss";
+  const args = isWindows ? ["-ano", "-p", "tcp"] : ["-ltnpH"];
+  const output = execFileSync(command, args, {
     cwd: projectRoot,
     encoding: "utf8",
   });
 
-  return output
-    .split(/\r?\n/)
-    .filter((line) => /^\s*TCP\s+/i.test(line) && /\sLISTENING\s+/i.test(line))
-    .map((line) => {
+  return output.split(/\r?\n/).flatMap((line) => {
+    if (isWindows) {
+      if (!/^\s*TCP\s+/i.test(line) || !/\sLISTENING\s+/i.test(line)) return [];
       const parts = line.trim().split(/\s+/);
-      const localEndpoint = parts[1] || "";
-      return {
-        port: Number(localEndpoint.slice(localEndpoint.lastIndexOf(":") + 1)),
+      return [{
+        port: Number((parts[1] || "").slice((parts[1] || "").lastIndexOf(":") + 1)),
         pid: Number(parts.at(-1)),
-      };
-    })
-    .filter((listener) => Number.isInteger(listener.port) && Number.isInteger(listener.pid));
+      }];
+    }
+
+    if (!/^LISTEN\s/.test(line)) return [];
+    const parts = line.trim().split(/\s+/);
+    const localEndpoint = parts[3] || "";
+    const pid = Number(line.match(/pid=(\d+)/)?.[1]);
+    return [{
+      port: Number(localEndpoint.slice(localEndpoint.lastIndexOf(":") + 1)),
+      pid,
+    }];
+  }).filter((listener) => Number.isInteger(listener.port) && Number.isInteger(listener.pid));
 }
 
 function killProcess(pid) {

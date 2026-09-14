@@ -97,6 +97,8 @@ import {
   validateWaitingContext,
   waitingContextSummary,
 } from "./domain";
+import { QUOTE_STATUSES as QUOTE_WORKFLOW_STATUSES } from "./quoteDomain";
+import { isQuoteTask, quoteStatusForTaskStatus, taskStatusForQuoteStatus } from "./quoteTaskFlow";
 import { playCompletionSound, prepareCompletionSound } from "./completionSound";
 import { createDataStore } from "./dataverse";
 import { plannerUrlForState, readPlannerUrlState } from "./plannerUrl";
@@ -129,7 +131,7 @@ import {
   unreadCount,
   validateDeadlineChange,
 } from "./notifications.js";
-import { localDateKey } from "./management.js";
+import { canViewManagement, localDateKey } from "./management.js";
 import {
   buildLinkedTaskInput,
   createContactPayload,
@@ -577,6 +579,10 @@ function StatusPicker({ value, onChange }) {
       </span>
     </div>
   );
+}
+
+function QuoteStatusPicker({ value, onChange }) {
+  return <select className="quote-task-status-picker" aria-label="Status comercial da cotação" value={value || "Nova"} onChange={(event) => onChange(event.target.value)}>{QUOTE_WORKFLOW_STATUSES.map((item) => <option key={item}>{item}</option>)}</select>;
 }
 
 function UnsavedChangesDialog({ onContinue, onDiscard }) {
@@ -1055,6 +1061,7 @@ function AppShell({
   onMarkAllNotificationsRead,
   onRefresh,
   refreshing = false,
+  canViewManagement = false,
 }) {
   const [expanded, setExpanded] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -1125,7 +1132,7 @@ function AppShell({
           </div>
         </div>
         <nav className="main-nav">
-          {CENTRAL_NAV_ITEMS.map(([id, label, Icon]) => (
+          {CENTRAL_NAV_ITEMS.filter(([id]) => id !== "management" || canViewManagement).map(([id, label, Icon]) => (
             <button
               key={id}
               className={
@@ -1567,6 +1574,7 @@ const TaskCard = memo(function TaskCard({
     >
       <div className="task-card-top">
         <PriorityBadge priority={taskItem.priority} />
+        {isQuoteTask(taskItem) && <span className="task-quote-status">{taskItem.quoteStatus || quoteStatusForTaskStatus(taskItem.status)}</span>}
         {overdue && <span className="overdue-label">Vencida</span>}
         {waitingActionRequired && (
           <span className="task-waiting-action" title="Aguardando sua atuação" aria-label="Aguardando sua atuação">
@@ -1697,6 +1705,7 @@ const TaskCard = memo(function TaskCard({
           </span>
         )}
         {showQuickComplete &&
+          !isQuoteTask(taskItem) &&
           !["done", "cancelled"].includes(taskItem.status) && (
             <button
               className="task-quick-action"
@@ -2637,6 +2646,8 @@ function BoardView({
     () =>
       state.tasks.reduce((index, taskItem) => {
         if (!taskItem.parentTaskId) return index;
+        const parent = state.tasks.find((candidate) => candidate.id === taskItem.parentTaskId);
+        if (isQuoteTask(parent || {})) return index;
         const siblings = index.get(taskItem.parentTaskId) || [];
         siblings.push(taskItem);
         index.set(taskItem.parentTaskId, siblings);
@@ -4084,7 +4095,7 @@ function ReturnEvidenceList({ taskId, attachments = [], loadAttachmentContent, o
   );
 }
 
-function MoreView({ onNavigate }) {
+function MoreView({ onNavigate, canViewManagement = false }) {
   return (
     <div className="page-content more-page-content">
       <PageHeader
@@ -4093,7 +4104,7 @@ function MoreView({ onNavigate }) {
         description="Acesse origens e configurações sem tirar o foco das tarefas."
       />
       <section className="more-actions">
-        <button
+        {canViewManagement && <button
           className="panel more-action"
           type="button"
           onClick={() => onNavigate("management")}
@@ -4106,7 +4117,7 @@ function MoreView({ onNavigate }) {
             <small>Cobranças, carga e retornos pendentes</small>
           </span>
           <ChevronRight size={17} />
-        </button>
+        </button>}
         <button
           className="panel more-action"
           type="button"
@@ -4215,6 +4226,7 @@ function TaskDrawerContent({
             consultantIds: taskItem.consultantIds || taskItem.assigneeIds?.slice(1) || [],
             restrictedVisibility: Boolean(taskItem.restrictedVisibility),
             personalTagIds: normalizePersonalTagIds(taskItem.personalTagIds),
+            quoteStatus: isQuoteTask(taskItem) ? taskItem.quoteStatus || state.quotes?.find((quote) => quote.id === taskItem.quoteId)?.status || quoteStatusForTaskStatus(taskItem.status) : taskItem.quoteStatus,
             assigneeName: normalizeAssigneeNames(
               taskItem.assigneeNames || taskItem.assigneeName,
             ).filter((name) => name !== "Não atribuído"),
@@ -4269,7 +4281,7 @@ function TaskDrawerContent({
   }, [showAllComments]);
   if (!taskItem || !form) return null;
   const setMentionActiveIndex = () => undefined;
-  const subtasks = state.tasks.filter(
+  const subtasks = isQuoteTask(taskItem) ? [] : state.tasks.filter(
     (item) => item.parentTaskId === taskItem.id,
   );
   const history = [...(taskItem.history || [])].reverse();
@@ -4325,7 +4337,7 @@ function TaskDrawerContent({
     ...draftAttachments,
   ];
   const isDirty =
-    ["title", "status", "priority", "assignmentMode", "teamIds", "teamNames", "teamId", "teamName", "primaryAssigneeId", "consultantIds", "dueDate", "description", "waitingContext", "personalTagIds", "restrictedVisibility"].some(
+    ["title", "status", "quoteStatus", "priority", "assignmentMode", "teamIds", "teamNames", "teamId", "teamName", "primaryAssigneeId", "consultantIds", "dueDate", "description", "waitingContext", "personalTagIds", "restrictedVisibility"].some(
       (key) =>
         JSON.stringify(key === "personalTagIds" ? normalizePersonalTagIds(form[key]) : form[key] || "") !== JSON.stringify(key === "personalTagIds" ? normalizePersonalTagIds(taskItem[key]) : taskItem[key] || ""),
     ) ||
@@ -4340,7 +4352,9 @@ function TaskDrawerContent({
     draftAttachments.length > 0 ||
     pendingAttachmentRemovals.length > 0;
   const currentDeadlineRole = deadlineRole(taskItem, currentEmployee);
-  const headerStatus = statusById(form.status);
+  const headerStatus = isQuoteTask(taskItem)
+    ? { label: form.quoteStatus || "Nova", tone: "action" }
+    : statusById(form.status);
   const headerPriority = PRIORITIES.find((item) => item.id === form.priority) || PRIORITIES[1];
   const headerDueDate = form.dueDate ? formatDate(form.dueDate) : "Sem prazo";
   const dueDateChanged =
@@ -4351,7 +4365,7 @@ function TaskDrawerContent({
     nextDueDate: form.dueDate,
     reason: form.deadlineChangeReason,
   });
-  const waitingValidation = validateWaitingContext(form.status, form.waitingContext);
+  const waitingValidation = isQuoteTask(taskItem) ? { allowed: true, error: "" } : validateWaitingContext(form.status, form.waitingContext);
   const canRegisterReturn = canRegisterWaitingReturn(taskItem, currentEmployee, teams);
   const selectedEmployees = state.employees.filter((employee) =>
     normalizeAssigneeNames(form.assigneeName).includes(employee.name),
@@ -4446,6 +4460,7 @@ function TaskDrawerContent({
       onSave(taskItem.id, {
         title: form.title,
         status: form.status,
+        ...(isQuoteTask(taskItem) ? { quoteStatus: form.quoteStatus } : {}),
         priority: form.priority,
         assignmentMode: form.assignmentMode,
         teamIds: form.teamIds || [],
@@ -4674,10 +4689,7 @@ function TaskDrawerContent({
             <div className="drawer-status-priority-grid">
               <div className="status-field">
                 <span className="status-field-label">Status</span>
-                <StatusPicker
-                  value={form.status}
-                  onChange={(value) => set("status", value)}
-                />
+                {isQuoteTask(taskItem) ? <QuoteStatusPicker value={form.quoteStatus} onChange={(value) => set("quoteStatus", value)} /> : <StatusPicker value={form.status} onChange={(value) => set("status", value)} />}
               </div>
               <div className="priority-field">
                 <span className="priority-field-label">Prioridade</span>
@@ -4700,7 +4712,7 @@ function TaskDrawerContent({
               </label>
             </div>
           </div>
-          {form.status === "waiting" && (
+          {!isQuoteTask(taskItem) && form.status === "waiting" && (
             <WaitingContextFields
               value={form.waitingContext}
               onChange={(value) => set("waitingContext", value)}
@@ -4769,9 +4781,9 @@ function TaskDrawerContent({
           )}
           <section className="drawer-section">
             <div className="drawer-section-heading">
-              <h3>{taskItem.checklist?.length && !subtasks.length ? "Checklist do Planner" : "Subtarefas"}</h3>
+              <h3>{isQuoteTask(taskItem) ? "Checklist" : taskItem.checklist?.length && !subtasks.length ? "Checklist do Planner" : "Subtarefas"}</h3>
               <div className="drawer-heading-actions">
-                <label className="checklist-visibility-toggle">
+                {!isQuoteTask(taskItem) && <label className="checklist-visibility-toggle">
                   <input
                     type="checkbox"
                     checked={showChecklistOnCard}
@@ -4781,14 +4793,14 @@ function TaskDrawerContent({
                     }
                   />
                   <span>Mostrar no quadro</span>
-                </label>
+                </label>}
                 <button
                   className="text-button"
                   type="button"
                   onClick={() => setIsAddingSubtask(true)}
                 >
                   <Plus size={14} />
-                  Adicionar
+                  {isQuoteTask(taskItem) ? "Adicionar item" : "Adicionar"}
                 </button>
               </div>
             </div>
@@ -4806,15 +4818,15 @@ function TaskDrawerContent({
                       setIsAddingSubtask(false);
                     }
                   }}
-                  placeholder="Digite o título da subtarefa"
-                  aria-label="Título da subtarefa"
+                  placeholder={isQuoteTask(taskItem) ? "Digite o item do checklist" : "Digite o título da subtarefa"}
+                  aria-label={isQuoteTask(taskItem) ? "Item do checklist" : "Título da subtarefa"}
                 />
                 <button
                   className="subtask-inline-action"
                   type="button"
                   onClick={submitSubtask}
                   disabled={!newSubtaskTitle.trim()}
-                  aria-label="Salvar subtarefa"
+                  aria-label={isQuoteTask(taskItem) ? "Salvar item do checklist" : "Salvar subtarefa"}
                 >
                   <Check size={15} />
                 </button>
@@ -4822,16 +4834,12 @@ function TaskDrawerContent({
             )}
             {taskItem.checklist?.length && !subtasks.length
               ? <div className="subtask-list" aria-label="Checklist importado do Planner">
-                  {taskItem.checklist.filter((item) => item?.title).map((item) => (
-                    <div className={`subtask-row ${item.done ? "is-complete" : ""}`} key={item.id}>
-                      <span className="subtask-toggle" aria-hidden="true">
-                        <span className={`subtask-check ${item.done ? "checked" : ""}`}>
-                          {item.done && <Check size={13} />}
-                        </span>
-                      </span>
-                      <span>{item.title}</span>
-                    </div>
-                  ))}
+                  {taskItem.checklist.filter((item) => item?.title).map((item) => {
+                    const content = <><span className="subtask-toggle" aria-hidden="true"><span className={`subtask-check ${item.done ? "checked" : ""}`}>{item.done && <Check size={13} />}</span></span><span>{item.title}</span></>;
+                    return isQuoteTask(taskItem)
+                      ? <button className={`subtask-row ${item.done ? "is-complete" : ""}`} type="button" key={item.id} onClick={() => onSave(taskItem.id, { checklist: taskItem.checklist.map((checkItem) => checkItem.id === item.id ? { ...checkItem, done: !checkItem.done } : checkItem) })}>{content}</button>
+                      : <div className={`subtask-row ${item.done ? "is-complete" : ""}`} key={item.id}>{content}</div>;
+                  })}
                 </div>
               : subtasks.length
               ? subtasks.map((subtask) => (
@@ -5882,7 +5890,9 @@ export default function App() {
     store.live,
     state.currentUserEmail,
   );
+  const showManagement = canViewManagement(state.currentUserEmail);
   const [selectedId, setSelectedId] = useState(initialUrlStateRef.current.taskId);
+  const [quoteToOpenId, setQuoteToOpenId] = useState("");
   const [selectedContactId, setSelectedContactId] = useState(initialUrlStateRef.current.contactId);
   const [waitingTaskId, setWaitingTaskId] = useState("");
   const [waitingReturnTaskId, setWaitingReturnTaskId] = useState("");
@@ -6542,7 +6552,7 @@ export default function App() {
   const completeTask = useCallback(
     (id) => {
       const task = state.tasks.find((item) => item.id === id);
-      if (!task || ["done", "cancelled"].includes(task.status))
+      if (!task || isQuoteTask(task) || ["done", "cancelled"].includes(task.status))
         return Promise.resolve(false);
       const previousPatch = { status: task.status };
       const completePatch = { status: "done" };
@@ -6694,7 +6704,7 @@ export default function App() {
   const updateQuote = useCallback((id, patch = {}) => {
     if (!store.updateQuote) return Promise.resolve(false);
     return runOptimisticMutation(
-      (current) => ({ ...current, quotes: (current.quotes || []).map((quote) => quote.id === id ? { ...quote, ...patch, syncStatus: "syncing" } : quote) }),
+      (current) => ({ ...current, quotes: (current.quotes || []).map((quote) => quote.id === id ? { ...quote, ...patch, syncStatus: "syncing" } : quote), tasks: patch.status ? (current.tasks || []).map((task) => task.quoteId === id && !task.parentTaskId ? { ...task, status: taskStatusForQuoteStatus(patch.status), quoteStatus: patch.status } : task) : current.tasks }),
       () => store.updateQuote(confirmedStateRef.current || state, id, { ...patch, actorEmployeeId: currentEmployee?.id || "" }),
       store.live ? "Cotação em sincronização…" : "Cotação atualizada no mock local.",
       store.live ? "Cotação sincronizada." : "Cotação atualizada.",
@@ -6702,9 +6712,8 @@ export default function App() {
   }, [currentEmployee, runOptimisticMutation, state, store]);
   const markQuoteSent = useCallback((id) => {
     if (!store.markQuoteSent) return Promise.resolve(false);
-    const finalizationAt = new Date().toISOString();
     return runOptimisticMutation(
-      (current) => ({ ...current, quotes: (current.quotes || []).map((quote) => quote.id === id ? { ...quote, responseSent: true, status: "Respondida ao cliente", finalizationAt } : quote) }),
+      (current) => ({ ...current, quotes: (current.quotes || []).map((quote) => quote.id === id ? { ...quote, responseSent: true, status: "Respondida ao cliente", finalizationAt: "" } : quote), tasks: (current.tasks || []).map((task) => task.quoteId === id && !task.parentTaskId ? { ...task, status: "waiting", quoteStatus: "Respondida ao cliente" } : task) }),
       () => store.markQuoteSent(confirmedStateRef.current || state, id),
       store.live ? "Registrando envio…" : "Registrando envio no mock…",
       store.live ? "Envio registrado." : "Envio registrado no mock.",
@@ -6714,7 +6723,7 @@ export default function App() {
     if (!store.setQuoteOutcome) return Promise.resolve(false);
     const finalizationAt = new Date().toISOString();
     return runOptimisticMutation(
-      (current) => ({ ...current, quotes: (current.quotes || []).map((quote) => quote.id === id ? { ...quote, status: outcome, lossReason: outcome === "Perdida" ? reason : "", finalizationAt } : quote), tasks: (current.tasks || []).map((task) => task.quoteId === id && !task.parentTaskId ? { ...task, status: "done", completedAt: finalizationAt } : task) }),
+      (current) => ({ ...current, quotes: (current.quotes || []).map((quote) => quote.id === id ? { ...quote, status: outcome, lossReason: outcome === "Perdida" ? reason : "", finalizationAt } : quote), tasks: (current.tasks || []).map((task) => task.quoteId === id && !task.parentTaskId ? { ...task, status: "done", quoteStatus: outcome, completedAt: finalizationAt } : task) }),
       () => store.setQuoteOutcome(confirmedStateRef.current || state, id, outcome, reason),
       store.live ? "Registrando resultado…" : "Registrando resultado no mock…",
       store.live ? "Resultado registrado." : "Resultado registrado no mock.",
@@ -6931,6 +6940,17 @@ export default function App() {
   );
   const createSubtask = useCallback(
     (parentId, title, allowUnassigned = false) => {
+      const parent = state.tasks.find((taskItem) => taskItem.id === parentId);
+      if (isQuoteTask(parent || {})) {
+        const checklistItem = { id: `check-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, title: String(title || "").trim(), done: false };
+        if (!checklistItem.title) return Promise.resolve(false);
+        return runOptimisticMutation(
+          (current) => applyOptimisticTaskPatch(current, parentId, { checklist: [...(current.tasks.find((taskItem) => taskItem.id === parentId)?.checklist || []), checklistItem] }),
+          () => store.updateTask(state, parentId, { checklist: [...(parent.checklist || []), checklistItem] }),
+          store.live ? "Checklist sincronizado." : "Item adicionado ao checklist.",
+          "Item adicionado ao checklist.",
+        );
+      }
       const input = {
         title,
         description: "",
@@ -6952,7 +6972,7 @@ export default function App() {
         parentId,
       );
     },
-    [state, store, runOptimisticCreate],
+    [state, store, runOptimisticCreate, runOptimisticMutation],
   );
   const createQualityTask = useCallback(
     (item, allowUnassigned = false) => {
@@ -7280,6 +7300,7 @@ export default function App() {
         openTaskCount={0}
         onRefresh={refreshInBackground}
         refreshing={refreshing}
+        canViewManagement={false}
       >
         <DataLoadingView
           loading={state.loading}
@@ -7287,7 +7308,16 @@ export default function App() {
         />
       </AppShell>
     );
-  const viewState = { ...state, tasks: visibleTasks, workItems };
+  const viewState = {
+    ...state,
+    tasks: visibleTasks.map((task) => {
+      const quote = task.quoteId ? state.quotes.find((item) => item.id === task.quoteId) : null;
+      return isQuoteTask(task) && !task.parentTaskId && quote
+        ? { ...task, quoteStatus: quote.status, status: taskStatusForQuoteStatus(quote.status) }
+        : task;
+    }),
+    workItems,
+  };
   const personalItems = currentEmployee
     ? workItems.filter((item) => isAssignedToEmployee(item, currentEmployee))
     : [];
@@ -7351,7 +7381,7 @@ export default function App() {
         />
       );
     if (active === "quotes")
-      return <QuotesView state={viewState} onOpenTask={openTask} onCreateQuote={createQuote} onUpdateQuote={updateQuote} onMarkQuoteSent={markQuoteSent} onSetQuoteOutcome={setQuoteOutcome} workspaceEnabled={QUOTE_WORKSPACE_V2_ENABLED} />;
+      return <QuotesView state={viewState} onOpenTask={openTask} onCreateQuote={createQuote} onUpdateQuote={updateQuote} onMarkQuoteSent={markQuoteSent} onSetQuoteOutcome={setQuoteOutcome} initialQuoteId={quoteToOpenId} workspaceEnabled={QUOTE_WORKSPACE_V2_ENABLED} />;
     if (active === "board")
       return (
         <BoardView
@@ -7416,7 +7446,7 @@ export default function App() {
           onReorderPersonalTags={reorderPersonalTags}
         />
       );
-    if (active === "more") return <MoreView onNavigate={navigate} />;
+    if (active === "more") return <MoreView onNavigate={navigate} canViewManagement={showManagement} />;
     if (active === "quality")
       return state.loading?.quality ? (
         <LoadingFallback />
@@ -7458,6 +7488,7 @@ export default function App() {
       onMarkAllNotificationsRead={markAllNotificationsRead}
       onRefresh={refreshInBackground}
       refreshing={refreshing}
+      canViewManagement={showManagement}
     >
       {renderPage()}
       {(state.loading?.quotes || state.loading?.quality) && (
@@ -7548,7 +7579,8 @@ export default function App() {
           onAttachment={addAttachment}
           onDeleteAttachment={removeAttachment}
           onOpenQuote={(id) => {
-            onCentralModeChange("mine");
+            setQuoteToOpenId(id);
+            setActive("quotes");
             closeTask();
             showNotice(
               `Cotação ${state.quotes.find((quote) => quote.id === id)?.code || ""} vinculada.`,
