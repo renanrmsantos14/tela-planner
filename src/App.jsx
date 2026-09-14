@@ -2620,6 +2620,41 @@ function MobileBoardList({
   );
 }
 
+function MobileTaskListView({ tasks, currentEmployee, teams = [], onOpen }) {
+  const [tab, setTab] = useState("today");
+  const tabs = [["today", "Hoje"], ["next", "Próximas"], ["done", "Concluídas"]];
+  const visibleTasks = tasks.filter((taskItem) => {
+    if (tab === "done") return taskItem.status === "done";
+    if (["done", "cancelled"].includes(taskItem.status)) return false;
+    const bucket = getDueBucketForEmployee(taskItem, currentEmployee, teams);
+    return tab === "today"
+      ? ["overdue", "today", "none"].includes(bucket)
+      : !["overdue", "today", "none"].includes(bucket);
+  });
+  return (
+    <section className="mobile-task-list" aria-label="Lista de tarefas mobile">
+      <div className="mobile-task-tabs" role="tablist" aria-label="Período das tarefas">
+        {tabs.map(([id, label]) => <button key={id} type="button" role="tab" aria-selected={tab === id} className={tab === id ? "active" : ""} onClick={() => setTab(id)}>{label}</button>)}
+      </div>
+      <p className="mobile-task-summary">{visibleTasks.length} {tab === "done" ? "concluída(s)" : "tarefa(s)"}</p>
+      <div className="mobile-task-rows">
+        {visibleTasks.length ? visibleTasks.map((taskItem) => {
+          const status = statusById(taskItem.status);
+          const dueDate = taskDisplayDueDate(taskItem, currentEmployee, teams);
+          const overdue = getDueBucketForEmployee(taskItem, currentEmployee, teams) === "overdue";
+          const assignee = taskItem.primaryAssigneeName || taskItem.assigneeName || "Sem responsável";
+          return <button className={`mobile-task-row${overdue ? " is-overdue" : ""}`} key={taskItem.id} type="button" onClick={() => onOpen(taskItem.id)}>
+            <span className={`mobile-task-status-dot status-${taskItem.status}`} aria-hidden="true" />
+            <span className="mobile-task-row-main"><strong>{taskItem.title}</strong><span><Avatar name={assignee} small />{assignee}</span></span>
+            <span className="mobile-task-row-meta"><time>{dueDate ? formatDate(dueDate) : "Sem prazo"}</time><small>{status?.label || "Sem status"}</small></span>
+            <ChevronRight size={17} aria-hidden="true" />
+          </button>;
+        }) : <div className="mobile-task-empty">Nenhuma tarefa nesta aba.</div>}
+      </div>
+    </section>
+  );
+}
+
 function BoardView({
   state,
   currentEmployee,
@@ -2702,7 +2737,18 @@ function BoardView({
   );
   return (
     <div className="page-content board-page-content">
-      <PageHeader
+      {isMobile ? (
+        <div className="mobile-task-page-header">
+          <div>
+            <span className="eyebrow">Tarefas</span>
+            <h1>Tarefas</h1>
+            <p>{filtered.length} tarefas no seu foco</p>
+          </div>
+          <button className="mobile-task-create" type="button" onClick={onCreate} aria-label="Criar nova tarefa">
+            <Plus size={20} aria-hidden="true" />
+          </button>
+        </div>
+      ) : <PageHeader
         eyebrow="Tarefas"
         title="Operação em movimento"
         description={
@@ -2719,7 +2765,7 @@ function BoardView({
           disabled={!currentEmployee?.name}
         />
         <TaskViewSelector active="board" onSelect={onNavigate} />
-      </PageHeader>
+      </PageHeader>}
       <FilterBar
         filters={filters}
         setFilters={setFilters}
@@ -2733,19 +2779,11 @@ function BoardView({
         onReorderPersonalTags={onReorderPersonalTags}
       />
       {isMobile ? (
-        <MobileBoardList
-          columns={columns}
-          tasksByColumn={tasksByColumn}
-          subtasksByParent={subtasksByParent}
+        <MobileTaskListView
+          tasks={filtered}
           currentEmployee={currentEmployee}
-          checklistVisibility={checklistVisibility}
           teams={state.teams}
-          personalTags={personalTags}
-          unreadMentionTaskIds={unreadMentionTaskIds}
           onOpen={onOpen}
-          onToggleSubtask={onToggleSubtask}
-          onComplete={onComplete}
-          onRegisterWaitingReturn={onRegisterWaitingReturn}
         />
       ) : (
         <Board
