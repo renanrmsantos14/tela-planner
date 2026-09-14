@@ -7,6 +7,7 @@ const wrapper = readFileSync(new URL("../scripts/publish-webresource.cmd", impor
 const packageJson = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
 
 test("npm run push provisiona lookup direto de equipe do Planner", () => {
+  assert.match(script, /Ensure-PlannerStringAttribute \$Headers \$ApiBaseUrl \$team "cr40f_Icone" "Ícone da equipe" 100/);
   assert.match(script, /-SchemaName "cr40f_PlannerTarefa_EquipePlanner"/);
   assert.match(script, /-ReferencingEntity "cr40f_plannertarefa"/);
   assert.match(script, /-ReferencingAttribute "cr40f_EquipePlanner"/);
