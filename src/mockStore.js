@@ -1048,6 +1048,12 @@ export function updateQuote(state, id, patch = {}) {
     tasks: state.tasks.map((taskItem) => {
       if (taskItem.quoteId !== id) return taskItem;
       if (taskItem.parentTaskId && ["done", "cancelled"].includes(taskItem.status)) return taskItem;
+      const nextTaskStatus = taskItem.parentTaskId ? (terminal ? "done" : taskItem.status) : taskStatusForQuoteStatus(outcomeStatus);
+      const actor = state.employees?.find((employee) => employee.id === patch.actorEmployeeId);
+      const history = [...(taskItem.history || [])];
+      if (!taskItem.parentTaskId && (taskItem.quoteStatus || existing.status) !== outcomeStatus) history.push({ id: uid("history"), text: `Cotação movida para ${outcomeStatus}.`, createdAt: nextQuote.modifiedAt, author: actor?.name || "Sistema", authorId: actor?.id || "", field: "quoteStatus", previousValue: taskItem.quoteStatus || existing.status, nextValue: outcomeStatus });
+      if (!taskItem.parentTaskId && patch.deadline !== undefined && patch.deadline !== taskItem.dueDate) history.push({ id: uid("history"), text: `Prazo da cotação atualizado para ${patch.deadline || "sem prazo"}.`, createdAt: nextQuote.modifiedAt, author: actor?.name || "Sistema", authorId: actor?.id || "", field: "dueDate", previousValue: taskItem.dueDate || "", nextValue: patch.deadline || "" });
+      if (!taskItem.parentTaskId && patch.assigneeIds !== undefined && JSON.stringify(patch.assigneeIds) !== JSON.stringify(taskItem.assigneeIds || [])) history.push({ id: uid("history"), text: `Responsável atualizado para ${patch.assigneeNames?.join(", ") || "sem responsável"}.`, createdAt: nextQuote.modifiedAt, author: actor?.name || "Sistema", authorId: actor?.id || "", field: "assignees", previousValue: taskItem.assigneeNames || [], nextValue: patch.assigneeNames || [] });
       return {
         ...taskItem,
         title: taskItem.parentTaskId ? taskItem.title : `Acompanhar ${nextQuote.code || "cotação"}`,
@@ -1055,8 +1061,10 @@ export function updateQuote(state, id, patch = {}) {
         quoteTitle: nextQuote.title || taskItem.quoteTitle,
         dueDate: nextQuote.deadline || taskItem.dueDate,
         priority: nextQuote.priority || taskItem.priority,
+        ...(!taskItem.parentTaskId && patch.assigneeIds !== undefined ? { assigneeIds: patch.assigneeIds, assigneeNames: patch.assigneeNames || [], assigneeName: (patch.assigneeNames || []).join(", "), primaryAssigneeId: patch.assigneeIds[0] || "", primaryAssigneeName: patch.assigneeNames?.[0] || "" } : {}),
+        history,
         ...(taskItem.parentTaskId ? (terminal ? { status: "done", completedAt } : {}) : {
-          status: taskStatusForQuoteStatus(outcomeStatus),
+          status: nextTaskStatus,
           quoteStatus: outcomeStatus,
           ...(terminal ? { completedAt } : { completedAt: "" }),
         }),

@@ -18,6 +18,105 @@ export const QUOTE_PRIORITIES = [
 
 export const QUOTE_CHANNELS = ["WhatsApp", "Telefone", "E-mail"];
 
+export const QUOTE_OPEN_STATUSES = QUOTE_STATUSES.slice(0, 5);
+export const QUOTE_TERMINAL_STATUSES = QUOTE_STATUSES.slice(5);
+export const QUOTE_CREATE_STEPS = [
+  { id: "client", label: "Cliente" },
+  { id: "service", label: "Serviço" },
+  { id: "commercial", label: "Prazo e comercial" },
+  { id: "review", label: "Revisão" },
+];
+
+const STEP_FIELDS = {
+  client: [
+    ["title", "Informe o título interno."],
+    ["client", "Informe o cliente ou empresa."],
+    ["clientContact", "Informe o contato do cliente."],
+    ["channel", "Selecione o canal de entrada."],
+  ],
+  service: [
+    ["serviceType", "Informe o tipo de serviço."],
+    ["origin", "Informe a origem."],
+    ["destination", "Informe o destino."],
+    ["serviceDate", "Informe a data e hora do serviço."],
+  ],
+  commercial: [["deadline", "Informe o prazo para responder."]],
+};
+
+export function validateQuoteStep(input = {}, stepId = "review") {
+  if (stepId === "review") {
+    const errors = Object.fromEntries(["client", "service", "commercial"].flatMap((step) => Object.entries(validateQuoteStep(input, step).errors)));
+    return { valid: Object.keys(errors).length === 0, errors };
+  }
+  const errors = {};
+  for (const [field, message] of STEP_FIELDS[stepId] || []) {
+    if (!String(input[field] ?? "").trim()) errors[field] = message;
+  }
+  if (stepId === "client" && ["WhatsApp", "Telefone"].includes(input.channel) && !String(input.clientPhone || "").trim()) errors.clientPhone = "Informe o telefone.";
+  if (stepId === "client" && input.channel === "E-mail") {
+    const email = String(input.clientEmail || "").trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.clientEmail = "Informe um e-mail válido.";
+  }
+  return { valid: Object.keys(errors).length === 0, errors };
+}
+
+function saoPauloToday() {
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+export function isQuoteOpen(status) {
+  return QUOTE_OPEN_STATUSES.includes(status);
+}
+
+export function filterQuotes(quotes = [], tasks = [], filters = {}, today = saoPauloToday()) {
+  const taskByQuote = new Map(tasks.filter((task) => task.quoteId && !task.parentTaskId).map((task) => [task.quoteId, task]));
+  const needle = String(filters.query || "").trim().toLocaleLowerCase("pt-BR");
+  return quotes.filter((quote) => {
+    const task = taskByQuote.get(quote.id);
+    const searchable = [quote.code, quote.title, quote.client, quote.clientContact, quote.status].join(" ").toLocaleLowerCase("pt-BR");
+    if (needle && !searchable.includes(needle)) return false;
+    if (filters.status && quote.status !== filters.status) return false;
+    if (filters.priority && quote.priority !== filters.priority) return false;
+    if (filters.responsible === "unassigned" && (task?.assigneeIds || []).length) return false;
+    if (filters.responsible && filters.responsible !== "unassigned" && !(task?.assigneeIds || []).includes(filters.responsible)) return false;
+    if (filters.deadline === "overdue" && !(isQuoteOpen(quote.status) && quote.deadline && quote.deadline < today)) return false;
+    if (filters.deadline === "today" && !(isQuoteOpen(quote.status) && quote.deadline === today)) return false;
+    if (filters.deadline === "no-deadline" && quote.deadline) return false;
+    return true;
+  });
+}
+
+export function getQuoteMetrics(quotes = [], tasks = [], today = saoPauloToday()) {
+  const taskByQuote = new Map(tasks.filter((task) => task.quoteId && !task.parentTaskId).map((task) => [task.quoteId, task]));
+  const active = quotes.filter((quote) => isQuoteOpen(quote.status));
+  return {
+    active: active.length,
+    overdue: active.filter((quote) => quote.deadline && quote.deadline < today).length,
+    dueToday: active.filter((quote) => quote.deadline === today).length,
+    waiting: active.filter((quote) => quote.status === "Aguardando informação").length,
+    unassigned: active.filter((quote) => !(taskByQuote.get(quote.id)?.assigneeIds || []).length).length,
+  };
+}
+
+export function getQuoteNextAction(quote = {}) {
+  const actions = {
+    Nova: { primary: { id: "transition", label: "Iniciar análise", status: "Em análise pelo financeiro" }, secondary: [] },
+    "Em análise pelo financeiro": { primary: { id: "transition", label: "Marcar cotada", status: "Cotada" }, secondary: [{ id: "transition", label: "Aguardar informação", status: "Aguardando informação" }] },
+    "Aguardando informação": { primary: { id: "transition", label: "Retomar análise", status: "Em análise pelo financeiro" }, secondary: [] },
+    Cotada: { primary: { id: "copy", label: "Copiar proposta" }, secondary: [{ id: "sent", label: "Marcar enviada", status: "Respondida ao cliente" }] },
+    "Respondida ao cliente": { primary: { id: "outcome", label: "Registrar conversão", status: "Convertida em serviço" }, secondary: [{ id: "outcome", label: "Registrar perda", status: "Perdida" }, { id: "outcome", label: "Cancelar", status: "Cancelada" }] },
+  };
+  return actions[quote.status] || { primary: { id: "transition", label: "Reabrir como Nova", status: "Nova" }, secondary: [] };
+}
+
+export function isQuoteTransitionAllowed(from, to) {
+  if (from === to) return false;
+  if (QUOTE_TERMINAL_STATUSES.includes(from)) return to === "Nova";
+  return QUOTE_OPEN_STATUSES.includes(from) && QUOTE_STATUSES.includes(to);
+}
+
 const VAN_NOTES = [
   "É imprescindível o envio da lista de passageiros (nome completo e CPF) de cada passageiro com 36 horas antes do atendimento, para que tenhamos tempo hábil de solicitar autorização da viagem junto aos órgãos competentes.",
   "Sem essa autorização, infelizmente o veículo não poderá sair de nossa base.",
@@ -95,6 +194,9 @@ export function validateQuoteDraft(input = {}) {
     ["deadline", "prazo para responder"],
   ];
   const missing = required.filter(([key]) => !String(input[key] ?? "").trim()).map(([, label]) => label);
+  const stepErrors = validateQuoteStep(input, "review").errors;
+  if (stepErrors.clientPhone && !missing.includes("telefone")) missing.push("telefone");
+  if (stepErrors.clientEmail && !missing.includes("e-mail válido")) missing.push("e-mail válido");
   if (String(input.status || "") === "Perdida" && !String(input.lossReason || "").trim()) missing.push("motivo da perda");
   return missing.length ? { valid: false, missing, error: `Informe: ${missing.join(", ")}.` } : { valid: true, missing: [], error: "" };
 }

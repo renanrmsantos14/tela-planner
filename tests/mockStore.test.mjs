@@ -431,3 +431,15 @@ test("semeia cenário operacional amplo e variado", () => {
   assert.ok(new Set(state.tasks.map((item) => item.teamName)).size >= 4);
   assert.ok(state.tasks.some((item) => item.comments.length > 0 && item.attachments.length > 0 && item.history.length > 1));
 });
+
+test("registra no histórico da tarefa mudanças feitas pela gestão da cotação", () => {
+  const created = createQuote(seedState(), { title: "Transfer", client: "Cliente", channel: "WhatsApp", clientPhone: "11999999999", serviceType: "Transfer", origin: "A", destination: "B", serviceDate: "2026-09-20T10:00", deadline: "2026-09-19" });
+  const quote = created.quotes[0];
+  const changed = updateQuote(created, quote.id, { status: "Em análise pelo financeiro", deadline: "2026-09-18", assigneeIds: ["employee-renan"], assigneeNames: ["Renan Martins"] });
+  const task = changed.tasks.find((item) => item.quoteId === quote.id && !item.parentTaskId);
+  assert.equal(task.quoteStatus, "Em análise pelo financeiro");
+  assert.equal(task.assigneeIds[0], "employee-renan");
+  assert.ok(task.history.some((item) => item.field === "quoteStatus"));
+  assert.ok(task.history.some((item) => item.field === "dueDate"));
+  assert.ok(task.history.some((item) => item.field === "assignees"));
+});

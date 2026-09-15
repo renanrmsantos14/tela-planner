@@ -143,6 +143,7 @@ import { installPlannerBridge } from "./whatsappBridge.js";
 import { buildBackgroundRefreshPatch } from "./refreshState.js";
 
 const QUOTE_WORKSPACE_V2_ENABLED = import.meta.env.VITE_QUOTES_WORKSPACE_V2 !== "false";
+const QUOTE_HYBRID_V3_ENABLED = import.meta.env.VITE_QUOTES_HYBRID_V3 !== "false";
 
 const CENTRAL_NAV_ITEMS = [
   ["dashboard", "Início", LayoutDashboard],
@@ -6171,6 +6172,23 @@ export default function App() {
       activeRequest = false;
     };
   }, [store, mergeConfirmed]);
+  const ensureTaskDetails = useCallback((taskId) => {
+    const task = state.tasks.find((item) => item.id === taskId);
+    if (!taskId || !task || !isTaskVisibleToEmployee(task, currentEmployee, state.teams) || task.detailsLoaded || task.detailsLoading || !store.loadTaskDetails) return Promise.resolve(false);
+    setState((current) => ({
+      ...current,
+      tasks: current.tasks.map((item) => item.id === taskId ? { ...item, detailsLoading: true, detailsError: "" } : item),
+    }));
+    return store.loadTaskDetails(taskId)
+      .then((details) => setState((current) => ({
+        ...current,
+        tasks: current.tasks.map((item) => item.id === taskId ? { ...item, ...details, detailsLoaded: true, detailsLoading: false, detailsError: "" } : item),
+      })))
+      .catch((failure) => setState((current) => ({
+        ...current,
+        tasks: current.tasks.map((item) => item.id === taskId ? { ...item, detailsLoading: false, detailsError: failure.message || "Não foi possível carregar o histórico." } : item),
+      })));
+  }, [currentEmployee, state.tasks, state.teams, store]);
   useEffect(() => {
     const task = state.tasks.find((item) => item.id === selectedId);
     if (!selectedId || !task || !isTaskVisibleToEmployee(task, currentEmployee, state.teams) || task.detailsLoaded || task.detailsLoading || !store.loadTaskDetails) return;
@@ -7451,7 +7469,7 @@ export default function App() {
         />
       );
     if (active === "quotes")
-      return <QuotesView state={viewState} onOpenTask={openTask} onCreateQuote={createQuote} onUpdateQuote={updateQuote} onMarkQuoteSent={markQuoteSent} onSetQuoteOutcome={setQuoteOutcome} selectedQuoteId={quoteToOpenId} onSelectQuote={setQuoteToOpenId} workspaceEnabled={QUOTE_WORKSPACE_V2_ENABLED} />;
+      return <QuotesView state={viewState} onOpenTask={openTask} onCreateQuote={createQuote} onUpdateQuote={updateQuote} onMarkQuoteSent={markQuoteSent} onSetQuoteOutcome={setQuoteOutcome} onEnsureTaskDetails={ensureTaskDetails} selectedQuoteId={quoteToOpenId} onSelectQuote={setQuoteToOpenId} workspaceEnabled={QUOTE_WORKSPACE_V2_ENABLED} hybridEnabled={QUOTE_HYBRID_V3_ENABLED} />;
     if (active === "board")
       return (
         <BoardView

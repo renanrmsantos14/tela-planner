@@ -1,0 +1,11 @@
+import React, { useState } from "react";
+import { CalendarDays, GripVertical } from "lucide-react";
+import { QUOTE_OPEN_STATUSES, QUOTE_STATUSES } from "../quoteDomain";
+import { formatDate } from "../domain";
+import { InputSelect } from "../AssignmentFields.jsx";
+
+export default function QuoteKanban({ quotes, tasksByQuote, onOpen, onMove }) {
+  const [draggingId, setDraggingId] = useState("");
+  const move = (quote, status) => { if (status && status !== quote.status) onMove?.(quote, status); };
+  return <div className="quote-v3-kanban-shell"><div className="quote-v3-kanban" aria-label="Kanban de cotações">{QUOTE_OPEN_STATUSES.map((status) => <section key={status} className="quote-v3-kanban-column" onDragOver={(event) => event.preventDefault()} onDrop={() => { const quote = quotes.find((item) => item.id === draggingId); if (quote) move(quote, status); setDraggingId(""); }}><header><strong>{status}</strong><span>{quotes.filter((quote) => quote.status === status).length}</span></header><div>{quotes.filter((quote) => quote.status === status).map((quote) => { const task = tasksByQuote.get(quote.id); return <article key={quote.id} draggable onDragStart={() => setDraggingId(quote.id)} onDragEnd={() => setDraggingId("")} className="quote-v3-kanban-card"><button className="quote-v3-card-open" type="button" onClick={() => onOpen?.(quote.id)}><span><GripVertical size={14} />{quote.code}</span><strong>{quote.client || quote.title}</strong><small>{task?.assigneeNames?.join(", ") || "Sem responsável"}</small><small><CalendarDays size={12} />{formatDate(quote.deadline)}</small></button><label><span className="sr-only">Mover {quote.code} para</span><InputSelect value="" onChange={(value) => move(quote, value)} options={QUOTE_STATUSES.filter((item) => item !== quote.status)} placeholder="Mover para…" /></label></article>; })}</div></section>)}</div>{draggingId && <div className="quote-v3-terminal-drop" aria-label="Destinos de encerramento">{QUOTE_STATUSES.slice(5).map((status) => <button key={status} type="button" onDragOver={(event) => event.preventDefault()} onDrop={() => { const quote = quotes.find((item) => item.id === draggingId); if (quote) move(quote, status); setDraggingId(""); }}>{status}</button>)}</div>}</div>;
+}
