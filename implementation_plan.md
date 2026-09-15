@@ -139,6 +139,13 @@ O cliente live fica isolado em `src/dataverse.js`, resolve navegação de lookup
 
 Fazer a consulta de metadata do Dataverse para fechar o modelo de tarefa e, em paralelo, criar a primeira tela mock do board com o visual herdado do `Módulo Qualidade`.
 
+## Implementação: paridade do Kanban de Cotações com Tarefas
+
+- Extrair o motor visual e de drag-and-drop do quadro para `src/KanbanBoard.jsx`.
+- Adaptar os registros de cotação ao mesmo contrato de colunas, cartões, placeholders, overflow e motion.
+- Preservar abertura da cotação, seletor acessível de status e confirmação dos estados finais.
+- Validar contratos de UI, suíte completa e build do WebResource.
+
 ## Plano de correção: performance + frontend quebrado
 
 ### Evidência local

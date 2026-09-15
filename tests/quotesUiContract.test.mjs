@@ -9,6 +9,7 @@ const quoteSources = [
   read("../src/quotes/QuoteCreateDrawer.jsx"),
   read("../src/quotes/QuoteManagementDrawer.jsx"),
   read("../src/quotes/QuoteKanban.jsx"),
+  read("../src/KanbanBoard.jsx"),
 ].join("\n");
 const hybridInputSources = [
   read("../src/quotes/HybridQuotesView.jsx"),
@@ -35,6 +36,18 @@ test("kanban oferece alternativa acessível ao arrastar", () => {
   assert.match(quoteSources, /Mover .* para/);
   assert.match(quoteSources, /Mover para…/);
   assert.match(quoteSources, /onDragStart/);
+});
+
+test("kanban de cotações replica o motor e a composição do quadro de tarefas", () => {
+  const kanban = read("../src/KanbanBoard.jsx");
+  const quotes = read("../src/quotes/QuoteKanban.jsx");
+  assert.match(quotes, /<KanbanBoard/);
+  assert.match(quotes, /className={`task-card quote-kanban-card/);
+  assert.match(kanban, /className="board-grid"/);
+  assert.match(kanban, /className={`board-column/);
+  assert.match(kanban, /card-drop-placeholder/);
+  assert.match(kanban, /ResizeObserver/);
+  assert.match(kanban, /requestAnimationFrame/);
 });
 
 test("fluxo híbrido reutiliza o InputSelect do drawer do Planner", () => {

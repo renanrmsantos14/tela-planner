@@ -255,19 +255,14 @@ button { cursor: pointer; }
 .quote-v3-list-row .quote-main { display: grid; gap: 3px; }
 .quote-v3-status { display: inline-flex; width: fit-content; align-items: center; gap: 7px; font-size: 12px; font-weight: 700; }
 .quote-v3-status > span { width: 7px; height: 7px; border-radius: 50%; background: #2a7186; box-shadow: 0 0 0 3px rgba(42, 113, 134, .12); }
-.quote-v3-kanban-shell { position: relative; padding: 0 14px 14px; }
-.quote-v3-kanban { display: grid; grid-template-columns: repeat(5, minmax(220px, 1fr)); gap: 10px; overflow-x: auto; padding-bottom: 8px; }
-.quote-v3-kanban-column { min-height: 300px; padding: 10px; border: 1px solid var(--quote-v3-border); border-radius: 12px; background: #f5f7f8; }
-.quote-v3-kanban-column > header { display: flex; align-items: center; justify-content: space-between; min-height: 34px; font-size: 12px; }
-.quote-v3-kanban-column > header span { min-width: 22px; padding: 2px 6px; border-radius: 999px; background: #e5ebed; text-align: center; }
-.quote-v3-kanban-column > div { display: grid; gap: 8px; }
-.quote-v3-kanban-card { overflow: hidden; border: 1px solid var(--quote-v3-border); border-radius: 10px; background: #fff; box-shadow: 0 3px 10px rgba(0, 30, 48, .05); }
-.quote-v3-card-open { display: grid; width: 100%; gap: 7px; padding: 11px; border: 0; background: transparent; color: var(--navy); text-align: left; cursor: pointer; }
-.quote-v3-card-open span, .quote-v3-card-open small { display: flex; align-items: center; gap: 5px; color: var(--muted); }
-.quote-v3-kanban-card label { display: block; padding: 0 9px 9px; }
-.quote-v3-kanban-card select { width: 100%; min-height: 30px; font-size: 11px; }
-.quote-v3-terminal-drop { position: sticky; bottom: 12px; z-index: 3; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 10px; border-radius: 12px; background: rgba(4, 35, 50, .95); box-shadow: 0 10px 28px rgba(0, 22, 35, .25); }
-.quote-v3-terminal-drop button { min-height: 42px; border: 1px dashed rgba(255,255,255,.45); border-radius: 9px; background: transparent; color: #fff; }
+.quote-v3-kanban-shell { position: relative; min-width: 0; padding: 0 14px 14px; }
+.quote-v3-kanban-shell .board-grid { grid-template-columns: repeat(5, minmax(240px, 1fr)); }
+.quote-v3-kanban-shell .column-body { min-height: 490px; }
+.quote-kanban-card .task-link { margin-top: 1px; }
+.quote-kanban-card .task-description { margin-bottom: 10px; }
+.quote-kanban-move { display: block; margin-top: 9px; padding-top: 9px; border-top: 1px solid #eef1f5; cursor: default; }
+.quote-kanban-move .custom-select { width: 100%; }
+.quote-kanban-move .custom-select-trigger { width: 100%; min-height: 32px; justify-content: space-between; font-size: 10px; }
 .quote-v3-layer { position: fixed; inset: 0; z-index: 90; display: flex; justify-content: flex-end; background: rgba(2, 23, 34, .42); backdrop-filter: blur(2px); animation: quote-v3-fade 180ms linear; }
 .quote-v3-drawer { display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto; width: min(760px, 100vw); height: 100%; background: #fff; box-shadow: -20px 0 50px rgba(0, 24, 39, .2); animation: quote-v3-enter 240ms cubic-bezier(.23,1,.32,1); }
 .quote-v3-create { width: min(720px, 100vw); }
@@ -370,8 +365,9 @@ button { cursor: pointer; }
   .quote-v3-list-row > * { min-width: 0; }
   .quote-v3-list-row > strong { grid-column: 1 / -1; }
   .quote-v3-list-row .quote-v3-status { justify-self: end; }
-  .quote-v3-kanban { display: grid; grid-template-columns: 1fr; overflow: visible; }
-  .quote-v3-kanban-column { min-height: 90px; }
+  .quote-v3-kanban-shell { padding: 0 10px 10px; }
+  .quote-v3-kanban-shell .board-grid { display: grid; grid-template-columns: repeat(5, minmax(240px, 1fr)); overflow-x: auto; }
+  .quote-v3-kanban-shell .column-body { min-height: 320px; }
   .quote-v3-drawer { width: 100%; }
   .quote-v3-drawer-header { padding: 16px; }
   .quote-v3-stepper { padding: 9px 8px; }

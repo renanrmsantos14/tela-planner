@@ -1,11 +1,71 @@
-import React, { useState } from "react";
-import { CalendarDays, GripVertical } from "lucide-react";
-import { QUOTE_OPEN_STATUSES, QUOTE_STATUSES } from "../quoteDomain";
+import React, { memo, useCallback, useMemo } from "react";
+import { ArrowUpRight, BadgeDollarSign, CalendarDays, CircleHelp, ClipboardList, FileText, GripVertical, ScanSearch, Send, UserRound } from "lucide-react";
+import { QUOTE_OPEN_STATUSES, QUOTE_PRIORITIES, QUOTE_STATUSES } from "../quoteDomain";
 import { formatDate } from "../domain";
 import { InputSelect } from "../AssignmentFields.jsx";
+import KanbanBoard from "../KanbanBoard.jsx";
+
+const STATUS_META = {
+  "Nova": { tone: "neutral", Icon: ClipboardList },
+  "Em análise pelo financeiro": { tone: "action", Icon: ScanSearch },
+  "Aguardando informação": { tone: "warning", Icon: CircleHelp },
+  "Cotada": { tone: "purple", Icon: BadgeDollarSign },
+  "Respondida ao cliente": { tone: "success", Icon: Send },
+};
+
+const PRIORITY_TONES = { low: "neutral", medium: "action", high: "warning", urgent: "danger" };
+const TODAY = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+
+const QuoteCard = memo(function QuoteCard({ quote, task, isDragging, onOpen, onMove, onDragStart, onDragEnd }) {
+  const priority = QUOTE_PRIORITIES.find((item) => item.id === quote.priority) || QUOTE_PRIORITIES[1];
+  const overdue = Boolean(quote.deadline && quote.deadline < TODAY);
+  const responsible = task?.assigneeNames?.join(", ") || "Sem responsável";
+  return <article
+    className={`task-card quote-kanban-card${overdue ? " task-overdue" : ""}${isDragging ? " task-card-dragging" : ""}`}
+    draggable
+    tabIndex="0"
+    data-kanban-id={quote.id}
+    onDragStart={(event) => { event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/quote-id", quote.id); onDragStart(event); }}
+    onDragEnd={onDragEnd}
+    onClick={() => onOpen?.(quote.id)}
+    onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onOpen?.(quote.id); } }}
+  >
+    <div className="task-card-top"><span className={`priority priority-${PRIORITY_TONES[priority.id] || "neutral"}`}>{priority.label}</span>{overdue && <span className="overdue-label">Vencida</span>}<button className="card-open" type="button" onClick={(event) => { event.stopPropagation(); onOpen?.(quote.id); }} aria-label={`Abrir cotação ${quote.code || "sem número"}`}><ArrowUpRight size={15} /></button></div>
+    <div className="task-card-title-row"><h3>{quote.client || quote.title || "Cotação sem cliente"}</h3></div>
+    <div className="task-link"><GripVertical size={13} aria-hidden="true" /><FileText size={13} aria-hidden="true" /><em>{quote.code || "Sem número"}{quote.title ? ` · ${quote.title}` : ""}</em></div>
+    {(quote.serviceType || quote.origin || quote.destination) && <p className="task-description">{[quote.serviceType, [quote.origin, quote.destination].filter(Boolean).join(" → ")].filter(Boolean).join(" · ")}</p>}
+    <div className="task-card-footer"><span className="task-owner"><UserRound size={14} aria-hidden="true" /><span>{responsible}</span></span><span className={overdue ? "date-chip overdue" : "date-chip"}><CalendarDays size={13} aria-hidden="true" />{formatDate(quote.deadline)}</span></div>
+    <label className="quote-kanban-move" onClick={(event) => event.stopPropagation()}><span className="sr-only">Mover {quote.code || "cotação"} para</span><InputSelect value="" onChange={(value) => onMove(quote, value)} options={QUOTE_STATUSES.filter((status) => status !== quote.status)} placeholder="Mover para…" /></label>
+  </article>;
+});
 
 export default function QuoteKanban({ quotes, tasksByQuote, onOpen, onMove }) {
-  const [draggingId, setDraggingId] = useState("");
-  const move = (quote, status) => { if (status && status !== quote.status) onMove?.(quote, status); };
-  return <div className="quote-v3-kanban-shell"><div className="quote-v3-kanban" aria-label="Kanban de cotações">{QUOTE_OPEN_STATUSES.map((status) => <section key={status} className="quote-v3-kanban-column" onDragOver={(event) => event.preventDefault()} onDrop={() => { const quote = quotes.find((item) => item.id === draggingId); if (quote) move(quote, status); setDraggingId(""); }}><header><strong>{status}</strong><span>{quotes.filter((quote) => quote.status === status).length}</span></header><div>{quotes.filter((quote) => quote.status === status).map((quote) => { const task = tasksByQuote.get(quote.id); return <article key={quote.id} draggable onDragStart={() => setDraggingId(quote.id)} onDragEnd={() => setDraggingId("")} className="quote-v3-kanban-card"><button className="quote-v3-card-open" type="button" onClick={() => onOpen?.(quote.id)}><span><GripVertical size={14} />{quote.code}</span><strong>{quote.client || quote.title}</strong><small>{task?.assigneeNames?.join(", ") || "Sem responsável"}</small><small><CalendarDays size={12} />{formatDate(quote.deadline)}</small></button><label><span className="sr-only">Mover {quote.code} para</span><InputSelect value="" onChange={(value) => move(quote, value)} options={QUOTE_STATUSES.filter((item) => item !== quote.status)} placeholder="Mover para…" /></label></article>; })}</div></section>)}</div>{draggingId && <div className="quote-v3-terminal-drop" aria-label="Destinos de encerramento">{QUOTE_STATUSES.slice(5).map((status) => <button key={status} type="button" onDragOver={(event) => event.preventDefault()} onDrop={() => { const quote = quotes.find((item) => item.id === draggingId); if (quote) move(quote, status); setDraggingId(""); }}>{status}</button>)}</div>}</div>;
+  const columns = useMemo(() => QUOTE_OPEN_STATUSES.map((status) => ({ id: status, label: status, tone: STATUS_META[status]?.tone || "neutral" })), []);
+  const quotesByColumn = useMemo(() => Object.fromEntries(QUOTE_OPEN_STATUSES.map((status) => [status, quotes.filter((quote) => quote.status === status)])), [quotes]);
+  const getSourceColumnId = useCallback((quote) => quote?.status || "", []);
+  const getDropIndex = useCallback((grouped, columnId, draggedQuote) => {
+    if (!draggedQuote) return 0;
+    return [...(grouped[columnId] || []), draggedQuote].sort((left, right) => String(left.deadline || "9999-12-31").localeCompare(String(right.deadline || "9999-12-31"))).findIndex((quote) => quote.id === draggedQuote.id);
+  }, []);
+  const handleMove = useCallback((quote, status) => {
+    if (!status || status === quote.status) return false;
+    return onMove?.(quote, status);
+  }, [onMove]);
+  const handleBoardMove = useCallback((quoteId, column) => {
+    const quote = quotes.find((item) => item.id === quoteId);
+    return quote ? handleMove(quote, column.id) : false;
+  }, [handleMove, quotes]);
+  return <div className="quote-v3-kanban-shell" aria-label="Kanban de cotações"><KanbanBoard
+    items={quotes}
+    columns={columns}
+    itemsByColumn={quotesByColumn}
+    getSourceColumnId={getSourceColumnId}
+    getDropIndex={getDropIndex}
+    onMove={handleBoardMove}
+    itemLabel="cotação"
+    itemLabelPlural="cotações"
+    transferType="text/quote-id"
+    renderColumnIcon={(column) => { const Icon = STATUS_META[column.id]?.Icon || ClipboardList; return <Icon className={`status-column-icon status-column-icon-${column.tone}`} size={17} strokeWidth={2.2} aria-hidden="true" />; }}
+    renderCard={(quote, dragProps) => <QuoteCard key={quote.id} quote={quote} task={tasksByQuote.get(quote.id)} onOpen={onOpen} onMove={handleMove} {...dragProps} />}
+  /></div>;
 }

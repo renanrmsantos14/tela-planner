@@ -116,6 +116,7 @@ import AssigneeDisplay from "./AssigneeDisplay.jsx";
 import { TEAM_ICON_OPTIONS, TeamIcon } from "./teamIcons.jsx";
 import { MentionableField, useMentionController } from "./MentionableField.jsx";
 import LoadingFallback from "./LoadingFallback.jsx";
+import KanbanBoard from "./KanbanBoard.jsx";
 import PlannerImportView from "./PlannerImportView.jsx";
 import AdminCleanupPanel from "./AdminCleanupPanel.jsx";
 import NotificationTestPanel from "./NotificationTestPanel.jsx";
@@ -1517,6 +1518,7 @@ const TaskCard = memo(function TaskCard({
       draggable={enableDrag && taskItem.syncStatus !== "syncing"}
       tabIndex={canOpen ? "0" : "-1"}
       data-task-id={taskItem.id}
+      data-kanban-id={taskItem.id}
       onDragStart={(event) => {
         event.dataTransfer.effectAllowed = "move";
         event.dataTransfer.setData("text/task-id", taskItem.id);
@@ -1724,13 +1726,6 @@ function getDropIndex(tasksByColumn, columnId, draggedTask, employee, teams) {
   ).findIndex((taskItem) => taskItem.id === draggedTask.id);
 }
 
-const DRAG_REORDER_DURATION = 220;
-const DRAG_REORDER_EASING = "cubic-bezier(.77, 0, .175, 1)";
-
-function translateBetween(previous, next) {
-  return `translate(${previous.left - next.left}px, ${previous.top - next.top}px)`;
-}
-
 const Board = memo(function Board({
   tasks,
   columns,
@@ -1748,360 +1743,71 @@ const Board = memo(function Board({
   onMove,
   onCreate,
 }) {
-  const [dragState, setDragState] = useState(null);
-  const [dropExit, setDropExit] = useState(null);
-  const [hasHorizontalOverflow, setHasHorizontalOverflow] = useState(false);
-  const boardRef = useRef(null);
-  const cardRectsRef = useRef(new Map());
-  const animateLayoutRef = useRef(false);
-  const layoutAnimationsRef = useRef(new Map());
-  const pendingTransferRef = useRef(null);
-  const overflowFrameRef = useRef(null);
-  useLayoutEffect(() => {
-    const board = boardRef.current;
-    if (!board) return undefined;
-    const updateOverflow = () => {
-      overflowFrameRef.current = null;
-      const nextValue = board.scrollLeft + board.clientWidth < board.scrollWidth - 1;
-      setHasHorizontalOverflow((current) => current === nextValue ? current : nextValue);
-    };
-    const scheduleOverflowUpdate = () => {
-      if (overflowFrameRef.current !== null) return;
-      overflowFrameRef.current = requestAnimationFrame(updateOverflow);
-    };
-    scheduleOverflowUpdate();
-    board.addEventListener("scroll", scheduleOverflowUpdate, { passive: true });
-    const observer = new ResizeObserver(scheduleOverflowUpdate);
-    observer.observe(board);
-    return () => {
-      board.removeEventListener("scroll", scheduleOverflowUpdate);
-      observer.disconnect();
-      if (overflowFrameRef.current !== null) cancelAnimationFrame(overflowFrameRef.current);
-      overflowFrameRef.current = null;
-    };
-  }, [columns.length]);
-  useLayoutEffect(() => {
-    const cards = [
-      ...(boardRef.current?.querySelectorAll(".task-card[data-task-id]") || []),
-    ];
-    layoutAnimationsRef.current.forEach((animation) => animation.cancel());
-    layoutAnimationsRef.current.clear();
-    const nextRects = new Map(
-      cards.map((card) => [card.dataset.taskId, card.getBoundingClientRect()]),
-    );
-    const motionDuration = globalThis.matchMedia?.(
-      "(prefers-reduced-motion: reduce)",
-    )?.matches
-      ? 1
-      : undefined;
-    const pendingTransfer = pendingTransferRef.current;
-    if (pendingTransfer) {
-      const movedCard = cards.find(
-        (card) => card.dataset.taskId === pendingTransfer.id,
-      );
-      const movedNext = movedCard && nextRects.get(pendingTransfer.id);
-      const movedColumnId =
-        movedCard?.closest(".board-column")?.dataset.columnId;
-      if (
-        movedCard &&
-        movedNext &&
-        pendingTransfer.slotRect &&
-        movedColumnId === pendingTransfer.columnId
-      ) {
-        cards.forEach((card) => {
-          const previous = card.dataset.taskId === pendingTransfer.id
-            ? pendingTransfer.slotRect
-            : cardRectsRef.current.get(card.dataset.taskId);
-          const next = nextRects.get(card.dataset.taskId);
-          if (!previous || !next || typeof card.animate !== "function") return;
-          if (
-            Math.abs(previous.top - next.top) < 1 &&
-            Math.abs(previous.left - next.left) < 1
-          )
-            return;
-          layoutAnimationsRef.current.set(
-            card.dataset.taskId,
-            card.animate(
-              [
-                { transform: translateBetween(previous, next) },
-                { transform: "translate(0, 0)" },
-              ],
-              {
-                duration: motionDuration ?? DRAG_REORDER_DURATION,
-                easing: DRAG_REORDER_EASING,
-                fill: "both",
-                composite: "replace",
-              },
-            ),
-          );
-        });
-        pendingTransferRef.current = null;
-        animateLayoutRef.current = false;
-      } else if (
-        !movedCard ||
-        !movedNext ||
-        movedColumnId === pendingTransfer.columnId
-      ) {
-        pendingTransferRef.current = null;
-      } else {
-        return;
-      }
-    } else if (animateLayoutRef.current) {
-      cards.forEach((card) => {
-        const previous = cardRectsRef.current.get(card.dataset.taskId);
-        const next = nextRects.get(card.dataset.taskId);
-        if (
-          !previous ||
-          !next ||
-          typeof card.animate !== "function" ||
-          (Math.abs(previous.top - next.top) < 1 &&
-            Math.abs(previous.left - next.left) < 1)
-        )
-          return;
-        const animation = card.animate(
-          [
-            {
-              transform: `translate(${previous.left - next.left}px, ${previous.top - next.top}px)`,
-            },
-            { transform: "translate(0, 0)" },
-          ],
-          {
-            duration: motionDuration ?? DRAG_REORDER_DURATION,
-            easing: DRAG_REORDER_EASING,
-            fill: "both",
-            composite: "replace",
-          },
-        );
-        layoutAnimationsRef.current.set(card.dataset.taskId, animation);
-      });
-      animateLayoutRef.current = false;
-    }
-    cardRectsRef.current = nextRects;
-  }, [
-    dragState?.columnId,
-    dragState?.insertAt,
-    dropExit,
-    tasks,
-  ]);
-  useEffect(() => {
-    if (!dropExit) return undefined;
-    const timer = window.setTimeout(
-      () => {
-        animateLayoutRef.current = true;
-        setDropExit(null);
-      },
-      160,
-    );
-    return () => window.clearTimeout(timer);
-  }, [dropExit]);
-  const handleDragStart = useCallback(
-    (taskId, event) => {
-      const task = tasks.find((item) => item.id === taskId);
-      setDropExit(null);
-      setDragState({
-        id: taskId,
-        sourceColumnId: groupBy === "status"
-          ? task?.status || ""
-          : `${groupBy}:${boardGroupValues(task, groupBy)[0] || "__none__"}`,
-        columnId: groupBy === "status"
-          ? task?.status || ""
-          : `${groupBy}:${boardGroupValues(task, groupBy)[0] || "__none__"}`,
-        insertAt: 0,
-        height: event.currentTarget.getBoundingClientRect().height,
-      });
-    },
-    [groupBy, tasks],
+  const getSourceColumnId = useCallback(
+    (taskItem) => groupBy === "status"
+      ? taskItem?.status || ""
+      : `${groupBy}:${boardGroupValues(taskItem, groupBy)[0] || "__none__"}`,
+    [groupBy],
   );
-  const handleDragOver = useCallback(
-    (columnId, event) => {
-      event.preventDefault();
-      event.dataTransfer.dropEffect = "move";
-      const draggedId =
-        dragState?.id || event.dataTransfer.getData("text/task-id");
-      const draggedTask = tasks.find((item) => item.id === draggedId);
-      const insertAt = getDropIndex(
-        tasksByColumn,
-        columnId,
-        draggedTask,
-        currentEmployee,
-        teams,
-      );
-      setDragState((current) => {
-        if (
-          current &&
-          current.columnId === columnId &&
-          current.insertAt === insertAt
-        )
-          return current;
-        animateLayoutRef.current = true;
-        return { ...(current || {}), columnId, insertAt };
-      });
-    },
-    [currentEmployee, dragState?.id, tasks, tasksByColumn, teams],
+  const getTaskDropIndex = useCallback(
+    (grouped, columnId, draggedTask) => getDropIndex(
+      grouped,
+      columnId,
+      draggedTask,
+      currentEmployee,
+      teams,
+    ),
+    [currentEmployee, teams],
   );
-  const getExitMetrics = useCallback(() => {
-    const slot = boardRef.current?.querySelector(".card-drop-placeholder");
-    const body = slot?.closest(".column-body");
-    if (!slot || !body) return null;
-    const slotRect = slot.getBoundingClientRect();
-    const bodyRect = body.getBoundingClientRect();
-    return {
-      top: slotRect.top,
-      left: slotRect.left,
-      localTop: slotRect.top - bodyRect.top,
-      localLeft: slotRect.left - bodyRect.left,
-      width: slotRect.width,
-    };
-  }, []);
-  const handleDrop = useCallback(
-    (columnId, event) => {
-      event.preventDefault();
-      const id = dragState?.id || event.dataTransfer.getData("text/task-id");
-      const task = tasks.find((item) => item.id === id);
-      const sourceColumnId = dragState?.sourceColumnId;
-      const shouldAttemptMove =
-        id && !id.startsWith("optimistic-") && sourceColumnId !== columnId;
-      const canMove = shouldAttemptMove;
-      const slotRect = getExitMetrics();
-      if (canMove && dragState) {
-        pendingTransferRef.current = {
-          id,
-          columnId,
-          slotRect,
-          insertAt: dragState.insertAt,
-        };
-        setDropExit(null);
-      } else if (dragState) {
-        setDropExit({ ...dragState, isMove: false, slotRect });
-      }
-      setDragState(null);
-      if (shouldAttemptMove) {
-        const column = columns.find((item) => item.id === columnId);
-        Promise.resolve(onMove(id, column?.groupValue, groupBy)).then((success) => {
-          if (!success) pendingTransferRef.current = null;
-        });
-      }
-    },
-    [columns, dragState, getExitMetrics, groupBy, onMove, tasks],
+  const moveTask = useCallback(
+    (taskId, column) => onMove(taskId, column?.groupValue, groupBy),
+    [groupBy, onMove],
   );
-  const clearDrag = useCallback(() => {
-    if (dragState && !pendingTransferRef.current)
-      setDropExit({ ...dragState, isMove: false, slotRect: getExitMetrics() });
-    setDragState((current) => {
-      if (!current) return current;
-      animateLayoutRef.current = true;
-      return null;
-    });
-  }, [dragState, getExitMetrics]);
   return (
-    <div className={`board-scroll-shell${hasHorizontalOverflow ? " has-horizontal-overflow" : ""}`}>
-      <div
-        className="board-grid"
-        ref={boardRef}
-        style={{ gridTemplateColumns: `repeat(${Math.max(columns.length, 1)}, minmax(240px, 1fr))` }}
-      >
-      {columns.map((column) => {
-        const items = tasksByColumn[column.id] || [];
-        const visibleDropState = dragState || dropExit;
-        const isExiting = !dragState && Boolean(dropExit);
-        const hasExitMetrics = isExiting && visibleDropState.slotRect;
-        const showDropSlot = Boolean(
-          visibleDropState &&
-            (!visibleDropState.isMove || dragState) &&
-            visibleDropState.sourceColumnId !== column.id &&
-            visibleDropState.columnId === column.id,
-        );
-        const dropSlot = showDropSlot ? (
-          <div
-            className={`drop-placeholder card-drop-placeholder ${hasExitMetrics ? "is-exiting" : ""}`}
-            style={{
-              "--drop-slot-height": `${Math.max(76, visibleDropState.height || 96)}px`,
-              ...(hasExitMetrics
-                ? {
-                    "--drop-slot-top": `${visibleDropState.slotRect.localTop}px`,
-                    "--drop-slot-left": `${visibleDropState.slotRect.localLeft}px`,
-                    "--drop-slot-width": `${visibleDropState.slotRect.width}px`,
-                  }
-                : {}),
-            }}
-            aria-label={`Espaço para soltar em ${column.label}`}
-          >
-            <Plus size={17} aria-hidden="true" />
-            <span>Solte aqui</span>
-          </div>
-        ) : null;
-        return (
-          <section
-            className={`board-column ${showDropSlot ? "is-drop-target" : ""}`}
-            data-column-id={column.id}
-            key={column.id}
-            onDragOver={(event) => handleDragOver(column.id, event)}
-            onDrop={(event) => handleDrop(column.id, event)}
-            onDragEnd={clearDrag}
-          >
-            <div className="column-header">
-              <div>
-                {groupBy === "status" && <StatusIcon
-                  status={column.id}
-                  className={`status-column-icon status-column-icon-${column.tone}`}
-                  size={17}
-                  strokeWidth={2.2}
-                  aria-hidden="true"
-                />}
-                <h2>{column.label}</h2>
-                <span className="column-count">{items.length}</span>
-              </div>
-              <button
-                className="icon-button"
-                type="button"
-                onClick={() => onCreate(column.id)}
-                aria-label={`Criar tarefa em ${column.label}`}
-                disabled={groupBy !== "status"}
-              >
-                <Plus size={16} />
-              </button>
-            </div>
-            <div className="column-body">
-              {items.map((taskItem, index) => (
-                <React.Fragment key={taskItem.id}>
-                  {showDropSlot &&
-                    visibleDropState.insertAt === index &&
-                    dropSlot}
-                  <TaskCard
-                    task={taskItem}
-                    subtasks={subtasksByParent.get(taskItem.id) || []}
-                    currentEmployee={currentEmployee}
-                    teams={teams}
-                    personalTags={personalTags}
-                    hasUnreadMention={unreadMentionTaskIds.has(taskItem.id)}
-                    showChecklistOnCard={checklistVisibility[taskItem.id]}
-                    onOpen={onOpen}
-                    onToggleSubtask={onToggleSubtask}
-                    onRegisterWaitingReturn={onRegisterWaitingReturn}
-                    isDragging={dragState?.id === taskItem.id}
-                    onDragStart={handleDragStart}
-                    onDragEnd={clearDrag}
-                    enableDrag
-                  />
-                </React.Fragment>
-              ))}
-              {showDropSlot &&
-                visibleDropState.insertAt >= items.length &&
-                dropSlot}
-              {!items.length && !showDropSlot && (
-                <div className="drop-placeholder">
-                  <Plus size={17} />
-                  <span>Arraste tarefas para cá</span>
-                </div>
-              )}
-            </div>
-          </section>
-        );
-        })}
-      </div>
-    </div>
+    <KanbanBoard
+      items={tasks}
+      columns={columns}
+      itemsByColumn={tasksByColumn}
+      getSourceColumnId={getSourceColumnId}
+      getDropIndex={getTaskDropIndex}
+      canMove={(taskItem) => !taskItem.id.startsWith("optimistic-")}
+      canCreate={() => groupBy === "status"}
+      onMove={moveTask}
+      onCreate={(column) => onCreate(column.id)}
+      itemLabel="tarefa"
+      itemLabelPlural="tarefas"
+      transferType="text/task-id"
+      renderColumnIcon={groupBy === "status"
+        ? (column) => <StatusIcon
+            status={column.id}
+            className={`status-column-icon status-column-icon-${column.tone}`}
+            size={17}
+            strokeWidth={2.2}
+            aria-hidden="true"
+          />
+        : undefined}
+      renderCard={(taskItem, dragProps) => (
+        <TaskCard
+          task={taskItem}
+          subtasks={subtasksByParent.get(taskItem.id) || []}
+          currentEmployee={currentEmployee}
+          teams={teams}
+          personalTags={personalTags}
+          hasUnreadMention={unreadMentionTaskIds.has(taskItem.id)}
+          showChecklistOnCard={checklistVisibility[taskItem.id]}
+          onOpen={onOpen}
+          onToggleSubtask={onToggleSubtask}
+          onRegisterWaitingReturn={onRegisterWaitingReturn}
+          isDragging={dragProps.isDragging}
+          onDragStart={(_, event) => dragProps.onDragStart(event)}
+          onDragEnd={dragProps.onDragEnd}
+          enableDrag
+        />
+      )}
+    />
   );
 });
+
 
 function PersonalTagPicker({ tags = [], tasks = [], value = [], onChange, onCreate, showAllTags = false }) {
   const [visibleCount, setVisibleCount] = useState(tags.length);

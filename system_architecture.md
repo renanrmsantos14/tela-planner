@@ -16,3 +16,9 @@
 - Não há envio automático de mensagens nem captura de mídia.
 - O adapter mock cobre o fluxo; o adapter live permanece bloqueado até o metadata DEV real de Contatos ser confirmado.
 - A aprovação humana é obrigatória e a chave de idempotência é o `requestId` do intake.
+
+## Kanban reutilizável
+
+- `src/KanbanBoard.jsx` concentra o motor compartilhado de colunas, overflow horizontal, drag-and-drop, placeholder e animação de reposicionamento usado pelos quadros de Tarefas e Cotações.
+- Cada módulo fornece colunas, agrupamento, regra de movimento e renderização do cartão; os dados e as ações comerciais continuam no domínio de Cotações.
+- Cotações reutiliza as primitives CSS de Tarefas (`board-grid`, `board-column`, `column-body`, `task-card`) para impedir divergência visual.
