@@ -140,6 +140,7 @@ import {
   normalizeContact,
 } from "./contactDomain.js";
 import { installPlannerBridge } from "./whatsappBridge.js";
+import { buildBackgroundRefreshPatch } from "./refreshState.js";
 
 const QUOTE_WORKSPACE_V2_ENABLED = import.meta.env.VITE_QUOTES_WORKSPACE_V2 !== "false";
 
@@ -4352,9 +4353,6 @@ function TaskDrawerContent({
     }
     setShowAllComments(true);
   };
-  const mentionMatch = comment.match(/(?:^|[^\p{L}\p{N}_])@([^\s@]*)$/u);
-  const mentionQuery = normalizeText(mentionMatch?.[1] || "");
-  const mentionSuggestions = [];
   const isOwnComment = (item) =>
     item.author === "Você" ||
     (state.currentUserId &&
@@ -4431,7 +4429,6 @@ function TaskDrawerContent({
     onComment(taskItem.id, comment);
     setComment("");
   };
-  const insertMention = () => undefined;
   const handleDraftAttachment = (id, filesOrFile) =>
     setDraftAttachments((current) => [
       ...current,
@@ -5013,45 +5010,17 @@ function TaskDrawerContent({
             )}
             <div className="comment-compose">
               <div className="comment-mention-field">
-                <textarea
+                <MentionableField
                   value={comment}
-                  onChange={(event) => setComment(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" && !event.shiftKey) {
-                      event.preventDefault();
-                      submitComment();
-                    }
-                    if (event.key === "Escape")
-                      setComment((value) =>
-                        value.replace(/(?:^|\s)@[^\s@]*$/, ""),
-                      );
-                  }}
+                  onChange={setComment}
+                  employees={state.employees}
+                  multiline
+                  onSubmit={submitComment}
                   aria-label="Nova atualização da tarefa"
                   placeholder="O que a equipe precisa saber?"
                   maxLength={1000}
                   rows="2"
                 />
-                {mentionSuggestions.length > 0 && (
-                  <div
-                    className="mention-suggestions"
-                    role="listbox"
-                    aria-label="Responsáveis para mencionar"
-                  >
-                    {mentionSuggestions.map((employee) => (
-                      <button
-                        type="button"
-                        className="mention-suggestion"
-                        key={employee.id || employee.name}
-                        onMouseDown={(event) => event.preventDefault()}
-                        onClick={() => insertMention(employee)}
-                      >
-                        <Avatar name={employee.apelido || employee.name} small />
-                        <span>{employee.apelido || employee.name}</span>
-                        {employee.apelido && employee.name !== employee.apelido && <small>{employee.name}</small>}
-                      </button>
-                    ))}
-                  </div>
-                )}
               </div>
               <div className="comment-compose-footer">
                 <button className="button button-secondary comment-submit" aria-label="Enviar comentário" title="Enviar comentário" disabled={!comment.trim()} onClick={submitComment}>
@@ -6080,30 +6049,30 @@ export default function App() {
     if (!silent) showNotice("Atualizando dados…", 5200);
     try {
       const core = await store.loadCore();
-      mergeConfirmed(core);
       const [supplemental, photos, contacts] = await Promise.allSettled([
         store.loadSupplemental(core),
         store.loadPhotos(core),
         store.loadContacts ? store.loadContacts(core) : Promise.resolve(core.contacts || []),
       ]);
-      if (supplemental.status === "fulfilled") mergeConfirmed(supplemental.value);
-      if (photos.status === "fulfilled") mergeConfirmed(photos.value);
-      if (contacts.status === "fulfilled") mergeConfirmed({ contacts: contacts.value, contactLoading: false, contactLoadError: "" });
-      setState((current) => ({
-        ...current,
-        loadErrors: {
-          ...current.loadErrors,
-          ...(supplemental.status === "rejected"
-            ? { supplemental: supplemental.reason?.message || "Dados complementares indisponíveis." }
-            : { supplemental: undefined }),
-          ...(photos.status === "rejected"
-            ? { photos: photos.reason?.message || "Fotos indisponíveis." }
-            : { photos: undefined }),
-          ...(contacts.status === "rejected"
-            ? { contactLoadError: contacts.reason?.message || "Contatos indisponíveis.", contactLoading: false }
-            : { contactLoadError: undefined }),
-        },
-      }));
+      const current = confirmedStateRef.current || {};
+      const patch = buildBackgroundRefreshPatch(
+        current,
+        core,
+        { supplemental, photos, contacts },
+      );
+      patch.loadErrors = {
+        ...(current.loadErrors || {}),
+        ...(supplemental.status === "rejected"
+          ? { supplemental: supplemental.reason?.message || "Dados complementares indisponíveis." }
+          : { supplemental: undefined }),
+        ...(photos.status === "rejected"
+          ? { photos: photos.reason?.message || "Fotos indisponíveis." }
+          : { photos: undefined }),
+        ...(contacts.status === "rejected"
+          ? { contactLoadError: contacts.reason?.message || "Contatos indisponíveis." }
+          : { contactLoadError: undefined }),
+      };
+      mergeConfirmed(patch);
       if (!silent) showNotice("Dados atualizados agora.", 2200);
     } catch {
       if (!silent) showNotice("Não foi possível atualizar. Dados atuais mantidos.", 4200);
@@ -7141,7 +7110,11 @@ export default function App() {
       return (
       runOptimisticMutation(
         (current) => addOptimisticComment(current, id, text),
-        () => store.addComment(state, id, text, context),
+        async () => {
+          const next = await store.addComment(state, id, text, context);
+          if (!store.live || !store.loadNotifications || !actor?.id) return next;
+          return { ...next, notifications: await store.loadNotifications(actor.id) };
+        },
         store.live
           ? "Comentário adicionado. Sincronizando..."
           : "Comentário adicionado no mock local.",
@@ -7242,12 +7215,29 @@ export default function App() {
     if (!currentEmployee?.id || !store.loadNotifications) return undefined;
     let activeRequest = true;
     const refresh = () => store.loadNotifications(currentEmployee.id)
-      .then((notifications) => { if (activeRequest) setState((current) => ({ ...current, notifications, loadErrors: { ...current.loadErrors, notifications: undefined } })); })
-      .catch((failure) => { if (activeRequest) setState((current) => ({ ...current, loadErrors: { ...current.loadErrors, notifications: failure.message || "Notificações indisponíveis." } })); });
+      .then((notifications) => {
+        if (activeRequest) {
+          const current = confirmedStateRef.current || {};
+          mergeConfirmed({
+            notifications,
+            loadErrors: { ...(current.loadErrors || {}), notifications: undefined },
+          });
+        }
+      })
+      .catch((failure) => {
+        if (activeRequest) {
+          const current = confirmedStateRef.current || {};
+          mergeConfirmed({
+            loadErrors: { ...(current.loadErrors || {}), notifications: failure.message || "Notificações indisponíveis." },
+          });
+        }
+      });
     refresh();
-    const timer = window.setInterval(refresh, 60000);
-    return () => { activeRequest = false; window.clearInterval(timer); };
-  }, [currentEmployee?.id, store]);
+    const onVisibilityChange = () => { if (document.visibilityState === "visible") refresh(); };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    const timer = window.setInterval(refresh, 15000);
+    return () => { activeRequest = false; document.removeEventListener("visibilitychange", onVisibilityChange); window.clearInterval(timer); };
+  }, [currentEmployee?.id, mergeConfirmed, store]);
   const markNotificationRead = useCallback((notificationId) => {
     if (!store.markNotificationRead) return;
     const notification = (state.notifications || []).find((item) => item.id === notificationId);

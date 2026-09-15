@@ -374,3 +374,18 @@
 **Suggested improvement:** Ao percorrer ancestrais para detectar clipping, encerrar a busca no primeiro limite `position: fixed` ou outro containing block que isole o portal; validar abertura, opções e seleção no navegador.
 
 **Principle:** A visibilidade de um elemento posicionado em um contexto fixo deve ser avaliada somente dentro do contexto que realmente o contém, não por wrappers externos do layout.
+
+### Observation 26: Refresh por etapas não deve publicar coleções intermediárias vazias
+
+**Status:** OPEN
+**Date:** 2026-09-15
+**Session context:** Correção do refresh automático do painel de notificações do Tela Planner.
+**Skill:** Debug Issue / antigravity-protocol / karpathy-coder
+**Type:** open-source
+**Phase/Area:** Sincronização em segundo plano e estado confirmado
+
+**Issue:** A carga principal retornava coleções vazias que pertenciam a etapas complementares; publicar cada etapa imediatamente fazia listas visíveis desaparecerem enquanto a resposta seguinte ainda estava pendente.
+
+**Suggested improvement:** Tratar o refresh como snapshot transacional: aplicar o núcleo somente após a resposta, omitir coleções não pertencentes ao núcleo e mesclar cada bloco complementar apenas quando concluído, preservando o snapshot anterior em falhas.
+
+**Principle:** Uma resposta parcial não deve substituir dados confirmados; estados intermediários precisam ser separados de coleções vazias legitimamente carregadas.

@@ -1,0 +1,511 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - complementary [ref=e4]:
+      - button "Expandir navegação" [ref=e5] [cursor=pointer]
+      - generic "Hoje, 36 pendências e 1 atrasados" [ref=e14]:
+        - strong [ref=e16]: 15 de set
+        - generic [ref=e17]:
+          - strong [ref=e19]: "36"
+          - strong [ref=e21]: "1"
+      - navigation [ref=e22]:
+        - button [ref=e23] [cursor=pointer]
+        - button [ref=e29] [cursor=pointer]
+        - button [ref=e33] [cursor=pointer]
+        - button [ref=e39] [cursor=pointer]
+        - button [ref=e43] [cursor=pointer]
+    - main [ref=e47]:
+      - generic "Ações do aplicativo" [ref=e48]:
+        - button "Abrir notificações, 2 não lidas" [ref=e49] [cursor=pointer]:
+          - generic [ref=e55]: "2"
+        - button "Atualizar dados" [ref=e56] [cursor=pointer]
+      - generic [ref=e60]:
+        - generic [ref=e61]:
+          - generic [ref=e62]:
+            - generic [ref=e63]: Tarefas
+            - heading "Operação em movimento" [level=1] [ref=e64]
+            - paragraph [ref=e65]: Arraste os cartões para atualizar o agrupamento selecionado.
+          - generic [ref=e66]:
+            - 'button "Ordenar: Prazo" [ref=e68] [cursor=pointer]'
+            - generic [ref=e75]:
+              - combobox
+              - button "Agrupar colunas por" [ref=e76] [cursor=pointer]:
+                - generic [ref=e79]: "Agrupar: Status"
+            - generic "Escopo das tarefas" [ref=e81]:
+              - button "Todas" [ref=e82] [cursor=pointer]
+              - button "Minhas" [pressed] [ref=e88] [cursor=pointer]
+            - generic "Modo de visualização das tarefas" [ref=e92]:
+              - button "Quadro" [pressed] [ref=e93] [cursor=pointer]
+              - button "Lista" [ref=e99] [cursor=pointer]
+              - button "Agenda" [ref=e101] [cursor=pointer]
+        - generic [ref=e104]:
+          - textbox "Buscar tarefas, cotações, qualidade ou pessoas" [ref=e109]
+          - generic [ref=e110]:
+            - generic [ref=e111]:
+              - listbox:
+                - option: Não atribuído
+                - option: Camila Torres
+                - option: Gustavo Neri
+                - option: João Mendes
+                - option: Luiza Prado
+                - option: Marina Alves
+                - option: Rafael Lima
+                - option: Renan Martins
+              - button "Todos os responsáveis" [ref=e112] [cursor=pointer]
+            - generic [ref=e115]:
+              - listbox:
+                - option: A fazer
+                - option: Aguardando
+                - option: Em andamento
+                - option: Concluído
+                - option: Cancelada
+              - button "Todos os status" [ref=e116] [cursor=pointer]
+            - generic [ref=e119]:
+              - listbox:
+                - option: Baixa
+                - option: Média
+                - option: Alta
+              - button "Todas as prioridades" [ref=e120] [cursor=pointer]
+            - generic [ref=e123]:
+              - listbox:
+                - option: Comercial
+                - option: Financeiro
+                - option: Operação
+                - option: Qualidade
+              - button "Todas as equipes" [ref=e124] [cursor=pointer]
+            - generic [ref=e127]:
+              - listbox
+              - button "Minhas tags" [ref=e128] [cursor=pointer]
+            - button "Nova tarefa" [ref=e131] [cursor=pointer]
+        - generic [ref=e134]:
+          - generic [ref=e135]:
+            - generic [ref=e136]:
+              - generic [ref=e137]:
+                - heading "A fazer" [level=2] [ref=e141]
+                - generic [ref=e142]: "11"
+              - button "Criar tarefa em A fazer" [ref=e143] [cursor=pointer]
+            - generic [ref=e145]:
+              - article [ref=e146]:
+                - generic [ref=e147]:
+                  - generic [ref=e148]: Alta
+                  - generic [ref=e149]: Nova
+                  - button "Abrir tarefa" [ref=e150] [cursor=pointer]
+                - heading "Validar motorista bilíngue" [level=3] [ref=e155]
+                - generic [ref=e156]:
+                  - 'generic "Principal: Operação. Equipe: Operação" [ref=e157]': Operação
+                  - generic [ref=e165]: 16 set.
+              - article [ref=e169]:
+                - generic [ref=e170]:
+                  - generic [ref=e171]: Média
+                  - button "Abrir tarefa" [ref=e172] [cursor=pointer]
+                - heading "Revisar comentário da ocorrência QAL-205" [level=3] [ref=e177]
+                - generic [ref=e178]:
+                  - 'generic "Principal: Qualidade. Equipe: Qualidade" [ref=e179]': Qualidade
+                  - generic [ref=e187]: 17 set.
+              - article [ref=e191]:
+                - generic [ref=e192]:
+                  - generic [ref=e193]: Alta
+                  - generic [ref=e194]: Nova
+                  - button "Abrir tarefa" [ref=e195] [cursor=pointer]
+                - heading "Abrir ordem de serviço do roadshow" [level=3] [ref=e200]
+                - 'generic "Checklist: 1 de 3 concluídas" [ref=e201]':
+                  - generic [ref=e202]:
+                    - generic [ref=e203]: Checklist
+                    - strong [ref=e207]: 1/3
+                  - generic [ref=e208]:
+                    - generic: Criar ordem de serviço
+                    - generic: Conferir quatro janelas
+                    - generic: Validar pontos de apoio
+                - generic [ref=e214]:
+                  - 'generic "Principal: Operação. Equipe: Operação" [ref=e215]': Operação
+                  - generic [ref=e223]: 18 set.
+              - article [ref=e227]:
+                - generic [ref=e228]:
+                  - generic [ref=e229]: Média
+                  - button "Abrir tarefa" [ref=e230] [cursor=pointer]
+                - heading "Registrar retorno do cliente" [level=3] [ref=e235]
+                - generic [ref=e236]:
+                  - 'generic "Principal: Comercial. Equipe: Comercial" [ref=e237]': Comercial
+                  - generic [ref=e245]: 18 set.
+              - article [ref=e249]:
+                - generic [ref=e250]:
+                  - generic [ref=e251]: Média
+                  - button "Abrir tarefa" [ref=e252] [cursor=pointer]
+                - heading "Revisar tabela de parceiros" [level=3] [ref=e257]
+                - generic [ref=e258]:
+                  - 'generic "Principal: Financeiro. Equipe: Financeiro" [ref=e259]': Financeiro
+                  - generic [ref=e267]: 19 set.
+              - article [ref=e271]:
+                - generic [ref=e272]:
+                  - generic [ref=e273]: Média
+                  - generic [ref=e274]: Nova
+                  - button "Abrir tarefa" [ref=e275] [cursor=pointer]
+                - heading "Acompanhar retorno sobre embarque" [level=3] [ref=e280]
+                - generic [ref=e281]:
+                  - 'generic "Principal: Operação. Equipe: Operação" [ref=e282]': Operação
+                  - generic [ref=e290]: 20 set.
+              - article [ref=e294]:
+                - generic [ref=e295]:
+                  - generic [ref=e296]: Baixa
+                  - button "Abrir tarefa" [ref=e297] [cursor=pointer]
+                - heading "Solicitar segunda via do comprovante" [level=3] [ref=e302]
+                - generic [ref=e303]:
+                  - 'generic "Principal: Financeiro. Equipe: Financeiro" [ref=e304]': Financeiro
+                  - generic [ref=e312]: 20 set.
+              - article [ref=e316]:
+                - generic [ref=e317]:
+                  - generic [ref=e318]: Média
+                  - generic [ref=e319]: Nova
+                  - button "Abrir tarefa" [ref=e320] [cursor=pointer]
+                - heading "Conferir janela de chegada no terminal" [level=3] [ref=e325]
+                - generic [ref=e326]:
+                  - 'generic "Principal: Operação. Equipe: Operação" [ref=e327]': Operação
+                  - generic [ref=e335]: 22 set.
+              - article [ref=e339]:
+                - generic [ref=e340]:
+                  - generic [ref=e341]: Alta
+                  - generic [ref=e342]: Nova
+                  - button "Abrir tarefa" [ref=e343] [cursor=pointer]
+                - heading "Definir protocolo de embarque noturno" [level=3] [ref=e348]
+                - generic [ref=e349]:
+                  - 'generic "Principal: Qualidade. Equipe: Qualidade" [ref=e350]': Qualidade
+                  - generic [ref=e358]: 23 set.
+              - article [ref=e362]:
+                - generic [ref=e363]:
+                  - generic [ref=e364]: Baixa
+                  - generic [ref=e365]: Nova
+                  - button "Abrir tarefa" [ref=e366] [cursor=pointer]
+                - heading "Validar cobrança de pedágios" [level=3] [ref=e371]
+                - generic [ref=e372]:
+                  - 'generic "Principal: Financeiro. Equipe: Financeiro" [ref=e373]': Financeiro
+                  - generic [ref=e381]: 23 set.
+              - article [ref=e385]:
+                - generic [ref=e386]:
+                  - generic [ref=e387]: Média
+                  - generic [ref=e388]: Nova
+                  - button "Abrir tarefa" [ref=e389] [cursor=pointer]
+                - heading "Checar adicional de madrugada" [level=3] [ref=e394]
+                - generic [ref=e395]:
+                  - 'generic "Principal: Financeiro. Equipe: Financeiro" [ref=e396]': Financeiro
+                  - generic [ref=e404]: 24 set.
+          - generic [ref=e408]:
+            - generic [ref=e409]:
+              - generic [ref=e410]:
+                - heading "Aguardando" [level=2] [ref=e414]
+                - generic [ref=e415]: "13"
+              - button "Criar tarefa em Aguardando" [ref=e416] [cursor=pointer]
+            - generic [ref=e418]:
+              - article [ref=e419]:
+                - generic [ref=e420]:
+                  - generic [ref=e421]: Baixa
+                  - generic [ref=e422]: Respondida ao cliente
+                  - generic [ref=e423]: Vencida
+                  - generic "Aguardando sua atuação" [ref=e424]: Pendente
+                  - button "Abrir tarefa" [ref=e431] [cursor=pointer]
+                - heading "Arquivar aceite da diretoria" [level=3] [ref=e436]
+                - generic [ref=e437]:
+                  - 'generic "Principal: Comercial. Equipe: Comercial" [ref=e438]': Comercial
+                  - generic [ref=e446]: 09 set.
+                  - button "Registrar retorno" [ref=e450] [cursor=pointer]
+              - article [ref=e451]:
+                - generic [ref=e452]:
+                  - generic [ref=e453]: Baixa
+                  - generic [ref=e454]: Respondida ao cliente
+                  - generic [ref=e455]: Vencida
+                  - generic "Aguardando sua atuação" [ref=e456]: Pendente
+                  - button "Abrir tarefa" [ref=e463] [cursor=pointer]
+                - heading "Enviar comprovante de serviço" [level=3] [ref=e468]
+                - generic [ref=e469]:
+                  - 'generic "Principal: Financeiro. Equipe: Financeiro" [ref=e470]': Financeiro
+                  - generic [ref=e478]: 11 set.
+                  - button "Registrar retorno" [ref=e482] [cursor=pointer]
+              - article [ref=e483]:
+                - generic [ref=e484]:
+                  - generic [ref=e485]: Alta
+                  - generic [ref=e486]: Vencida
+                  - generic "Aguardando sua atuação" [ref=e487]: Pendente
+                  - button "Abrir tarefa" [ref=e494] [cursor=pointer]
+                - heading "Tratar divergência de quilometragem" [level=3] [ref=e499]
+                - generic [ref=e500]:
+                  - 'generic "Principal: Qualidade. Equipe: Qualidade" [ref=e501]': Qualidade
+                  - generic [ref=e509]: 13 set.
+                  - button "Registrar retorno" [ref=e513] [cursor=pointer]
+              - article [ref=e514]:
+                - generic [ref=e515]:
+                  - generic [ref=e516]: Média
+                  - generic [ref=e517]: Respondida ao cliente
+                  - generic [ref=e518]: Vencida
+                  - generic "Aguardando sua atuação" [ref=e519]: Pendente
+                  - button "Abrir tarefa" [ref=e526] [cursor=pointer]
+                - heading "Registrar aceite do cliente" [level=3] [ref=e531]
+                - generic [ref=e532]:
+                  - 'generic "Principal: Comercial. Equipe: Comercial" [ref=e533]': Comercial
+                  - generic [ref=e541]: 13 set.
+                  - button "Registrar retorno" [ref=e545] [cursor=pointer]
+              - article [ref=e546]:
+                - generic [ref=e547]:
+                  - generic [ref=e548]: Baixa
+                  - generic [ref=e549]: Respondida ao cliente
+                  - generic [ref=e550]: Vencida
+                  - generic "Aguardando sua atuação" [ref=e551]: Pendente
+                  - button "Abrir tarefa" [ref=e558] [cursor=pointer]
+                - heading "Registrar resposta enviada" [level=3] [ref=e563]
+                - generic [ref=e564]:
+                  - 'generic "Principal: Comercial. Equipe: Comercial" [ref=e565]': Comercial
+                  - generic [ref=e573]: 14 set.
+                  - button "Registrar retorno" [ref=e577] [cursor=pointer]
+              - article [ref=e578]:
+                - generic [ref=e579]:
+                  - generic [ref=e580]: Alta
+                  - generic "Aguardando sua atuação" [ref=e581]: Pendente
+                  - button "Abrir tarefa" [ref=e588] [cursor=pointer]
+                - heading "Conferir certificados dos veículos" [level=3] [ref=e593]
+                - generic [ref=e594]:
+                  - 'generic "Principal: Qualidade. Equipe: Qualidade" [ref=e595]': Qualidade
+                  - generic [ref=e603]: 16 set.
+                  - button "Registrar retorno" [ref=e607] [cursor=pointer]
+              - article [ref=e608]:
+                - generic [ref=e609]:
+                  - generic [ref=e610]: Alta
+                  - generic "Aguardando sua atuação" [ref=e611]: Pendente
+                  - button "Abrir tarefa" [ref=e618] [cursor=pointer]
+                - heading "Validar causa do erro operacional" [level=3] [ref=e623]
+                - generic [ref=e624]:
+                  - 'generic "Principal: Qualidade. Equipe: Qualidade" [ref=e625]': Qualidade
+                  - generic [ref=e633]: 16 set.
+                  - button "Registrar retorno" [ref=e637] [cursor=pointer]
+              - article [ref=e638]:
+                - generic [ref=e639]:
+                  - generic [ref=e640]: Média
+                  - generic [ref=e641]: Aguardando informação
+                  - generic "Aguardando sua atuação" [ref=e642]: Pendente
+                  - button "Abrir tarefa" [ref=e649] [cursor=pointer]
+                - heading "Acompanhar retorno do fornecedor" [level=3] [ref=e654]
+                - generic [ref=e655]: Você foi mencionado
+                - generic "Aguardando disponibilidade da segunda van · Rafael Lima · até 16 set." [ref=e662]
+                - 'generic "Checklist: 1 de 3 concluídas" [ref=e667]':
+                  - generic [ref=e668]:
+                    - generic [ref=e669]: Checklist
+                    - strong [ref=e673]: 1/3
+                  - generic [ref=e674]:
+                    - generic: Enviar cobrança ao parceiro
+                    - generic: Registrar retorno
+                    - generic: Atualizar status da tarefa
+                - generic [ref=e680]:
+                  - 'generic "Principal: Operação. Equipe: Operação" [ref=e681]': Operação
+                  - generic [ref=e689]: 16 set.
+                  - button "Registrar retorno" [ref=e693] [cursor=pointer]
+              - article [ref=e694]:
+                - generic [ref=e695]:
+                  - generic [ref=e696]: Média
+                  - generic [ref=e697]: Aguardando informação
+                  - generic "Aguardando sua atuação" [ref=e698]: Pendente
+                  - button "Abrir tarefa" [ref=e705] [cursor=pointer]
+                - heading "Enviar briefing para recepção VIP" [level=3] [ref=e710]
+                - generic [ref=e711]:
+                  - 'generic "Principal: Comercial. Equipe: Comercial" [ref=e712]': Comercial
+                  - generic [ref=e720]: 16 set.
+                  - button "Registrar retorno" [ref=e724] [cursor=pointer]
+              - article [ref=e725]:
+                - generic [ref=e726]:
+                  - generic [ref=e727]: Alta
+                  - generic [ref=e728]: Aguardando informação
+                  - generic "Aguardando sua atuação" [ref=e729]: Pendente
+                  - button "Abrir tarefa" [ref=e736] [cursor=pointer]
+                - heading "Confirmar equipe de aeroporto" [level=3] [ref=e741]
+                - generic [ref=e742]:
+                  - 'generic "Principal: Operação. Equipe: Operação" [ref=e743]': Operação
+                  - generic [ref=e751]: 17 set.
+                  - button "Registrar retorno" [ref=e755] [cursor=pointer]
+              - article [ref=e756]:
+                - generic [ref=e757]:
+                  - generic [ref=e758]: Alta
+                  - generic [ref=e759]: Aguardando informação
+                  - generic "Aguardando sua atuação" [ref=e760]: Pendente
+                  - button "Abrir tarefa" [ref=e767] [cursor=pointer]
+                - heading "Reabrir negociação de horário" [level=3] [ref=e772]
+                - generic [ref=e773]:
+                  - 'generic "Principal: Comercial. Equipe: Comercial" [ref=e774]': Comercial
+                  - generic [ref=e782]: 17 set.
+                  - button "Registrar retorno" [ref=e786] [cursor=pointer]
+              - article [ref=e787]:
+                - generic [ref=e788]:
+                  - generic [ref=e789]: Média
+                  - generic [ref=e790]: Aguardando informação
+                  - generic "Aguardando sua atuação" [ref=e791]: Pendente
+                  - button "Abrir tarefa" [ref=e798] [cursor=pointer]
+                - heading "Confirmar disponibilidade de veículo" [level=3] [ref=e803]
+                - generic "Aguardando confirmação da segunda van · Operação · até 17 set." [ref=e804]
+                - generic [ref=e809]:
+                  - 'generic "Principal: Operação. Equipe: Operação" [ref=e810]': Operação
+                  - generic [ref=e818]: 17 set.
+                  - button "Registrar retorno" [ref=e822] [cursor=pointer]
+              - article [ref=e823]:
+                - generic [ref=e824]:
+                  - generic [ref=e825]: Média
+                  - generic [ref=e826]: Aguardando informação
+                  - generic "Aguardando sua atuação" [ref=e827]: Pendente
+                  - button "Abrir tarefa" [ref=e834] [cursor=pointer]
+                - heading "Revisar diária em Alphaville" [level=3] [ref=e839]
+                - generic [ref=e840]:
+                  - 'generic "Principal: Financeiro. Equipe: Financeiro" [ref=e841]': Financeiro
+                  - generic [ref=e849]: 19 set.
+                  - button "Registrar retorno" [ref=e853] [cursor=pointer]
+          - generic [ref=e854]:
+            - generic [ref=e855]:
+              - generic [ref=e856]:
+                - heading "Em andamento" [level=2] [ref=e859]
+                - generic [ref=e860]: "10"
+              - button "Criar tarefa em Em andamento" [ref=e861] [cursor=pointer]
+            - generic [ref=e863]:
+              - article [ref=e864]:
+                - generic [ref=e865]:
+                  - generic [ref=e866]: Alta
+                  - generic [ref=e867]: Em análise pelo financeiro
+                  - button "Abrir tarefa" [ref=e868] [cursor=pointer]
+                - heading "Enviar condições comerciais" [level=3] [ref=e873]
+                - generic [ref=e874]:
+                  - 'generic "Principal: Comercial. Equipe: Comercial" [ref=e875]': Comercial
+                  - generic [ref=e883]: 15 set.
+              - article [ref=e887]:
+                - generic [ref=e888]:
+                  - generic [ref=e889]: Alta
+                  - generic [ref=e890]: Em análise pelo financeiro
+                  - button "Abrir tarefa" [ref=e891] [cursor=pointer]
+                - heading "Preparar proposta comercial" [level=3] [ref=e896]
+                - generic "Em andamento por Marina Alves, há 28 min" [ref=e897]:
+                  - generic "Marina Alves" [ref=e900]: MA
+                  - generic [ref=e901]:
+                    - strong [ref=e902]: Em andamento por
+                    - text: Marina Alves
+                  - time [ref=e903]: há 28 min
+                - 'generic "Checklist: 1 de 4 concluídas" [ref=e904]':
+                  - generic [ref=e905]:
+                    - generic [ref=e906]: Checklist
+                    - strong [ref=e910]: 1/4
+                  - generic [ref=e911]:
+                    - generic: Revisar tarifa base
+                    - generic: Confirmar janela de embarque
+                    - generic: Validar margem
+                  - generic [ref=e915]: +1 itens
+                - generic [ref=e916]:
+                  - 'generic "Principal: Comercial. Equipe: Comercial" [ref=e917]': Comercial
+                  - generic [ref=e925]: 15 set.
+              - article [ref=e929]:
+                - generic [ref=e930]:
+                  - generic [ref=e931]: Alta
+                  - button "Abrir tarefa" [ref=e932] [cursor=pointer]
+                - heading "Revisar pendências prioritárias do dia" [level=3] [ref=e937]
+                - generic "Em andamento por Renan Martins, há 9 min" [ref=e938]:
+                  - generic "Renan Martins" [ref=e941]: RM
+                  - generic [ref=e942]:
+                    - strong [ref=e943]: Em andamento por
+                    - text: Renan Martins
+                  - time [ref=e944]: há 9 min
+                - 'generic "Checklist: 0 de 1 concluídas" [ref=e945]':
+                  - generic [ref=e946]:
+                    - generic [ref=e947]: Checklist
+                    - strong [ref=e951]: 0/1
+                  - generic [ref=e952]:
+                    - button "Aprovar mensagem para cliente estratégico"
+                - generic [ref=e954]:
+                  - 'generic "Principal: Comercial. Equipe: Comercial" [ref=e955]': Comercial
+                  - generic [ref=e963]: 15 set.
+              - article [ref=e967]:
+                - generic [ref=e968]:
+                  - generic [ref=e969]: Média
+                  - button "Abrir tarefa" [ref=e970] [cursor=pointer]
+                - heading "Atualizar quadro de disponibilidade" [level=3] [ref=e975]
+                - generic [ref=e976]:
+                  - 'generic "Principal: Operação. Equipe: Operação" [ref=e977]': Operação
+                  - generic [ref=e985]: 15 set.
+              - article [ref=e989]:
+                - generic [ref=e990]:
+                  - generic [ref=e991]: Alta
+                  - generic [ref=e992]: Em análise pelo financeiro
+                  - button "Abrir tarefa" [ref=e993] [cursor=pointer]
+                - heading "Montar cotação do carro blindado" [level=3] [ref=e998]
+                - generic [ref=e999]:
+                  - 'generic "Principal: Comercial. Equipe: Comercial" [ref=e1000]': Comercial
+                  - generic [ref=e1008]: 16 set.
+              - article [ref=e1012]:
+                - generic [ref=e1013]:
+                  - generic [ref=e1014]: Alta
+                  - button "Abrir tarefa" [ref=e1015] [cursor=pointer]
+                - heading "Validar plano de contingência" [level=3] [ref=e1020]
+                - generic [ref=e1021]:
+                  - 'generic "Principal: Qualidade. Equipe: Qualidade" [ref=e1022]': Qualidade
+                  - generic [ref=e1030]: 17 set.
+              - article [ref=e1034]:
+                - generic [ref=e1035]:
+                  - generic [ref=e1036]: Média
+                  - generic [ref=e1037]: Em análise pelo financeiro
+                  - button "Abrir tarefa" [ref=e1038] [cursor=pointer]
+                - heading "Confirmar credenciamento dos palestrantes" [level=3] [ref=e1043]
+                - generic [ref=e1044]:
+                  - 'generic "Principal: Comercial. Equipe: Comercial" [ref=e1045]': Comercial
+                  - generic [ref=e1053]: 18 set.
+              - article [ref=e1057]:
+                - generic [ref=e1058]:
+                  - generic [ref=e1059]: Alta
+                  - generic [ref=e1060]: Em análise pelo financeiro
+                  - button "Abrir tarefa" [ref=e1061] [cursor=pointer]
+                - heading "Confirmar quantidade de veículos" [level=3] [ref=e1066]
+                - generic [ref=e1067]:
+                  - 'generic "Principal: Operação. Equipe: Operação" [ref=e1068]': Operação
+                  - generic [ref=e1076]: 20 set.
+              - article [ref=e1080]:
+                - generic [ref=e1081]:
+                  - generic [ref=e1082]: Alta
+                  - generic [ref=e1083]: Em análise pelo financeiro
+                  - button "Abrir tarefa" [ref=e1084] [cursor=pointer]
+                - heading "Montar escala da convenção" [level=3] [ref=e1089]
+                - generic "Em andamento por João Mendes, há 1 h" [ref=e1090]:
+                  - generic "João Mendes" [ref=e1093]: JM
+                  - generic [ref=e1094]:
+                    - strong [ref=e1095]: Em andamento por
+                    - text: João Mendes
+                  - time [ref=e1096]: há 1 h
+                - generic [ref=e1097]:
+                  - 'generic "Principal: Operação. Equipe: Operação" [ref=e1098]': Operação
+                  - generic [ref=e1106]: 21 set.
+              - article [ref=e1110]:
+                - generic [ref=e1111]:
+                  - generic [ref=e1112]: Média
+                  - generic [ref=e1113]: Em análise pelo financeiro
+                  - button "Abrir tarefa" [ref=e1114] [cursor=pointer]
+                - heading "Revisar contrato de disponibilidade" [level=3] [ref=e1119]
+                - generic [ref=e1120]:
+                  - 'generic "Principal: Comercial. Equipe: Comercial" [ref=e1121]': Comercial
+                  - generic [ref=e1129]: 23 set.
+          - generic [ref=e1133]:
+            - generic [ref=e1134]:
+              - generic [ref=e1135]:
+                - heading "Concluído" [level=2] [ref=e1139]
+                - generic [ref=e1140]: "3"
+              - button "Criar tarefa em Concluído" [ref=e1141] [cursor=pointer]
+            - generic [ref=e1143]:
+              - article [ref=e1144]:
+                - generic [ref=e1145]:
+                  - generic [ref=e1146]: Média
+                  - button "Abrir tarefa" [ref=e1147] [cursor=pointer]
+                - heading "Confirmar contato de plantão" [level=3] [ref=e1152]
+                - generic [ref=e1153]:
+                  - 'generic "Principal: Operação. Equipe: Operação" [ref=e1154]': Operação
+                  - generic [ref=e1162]: 12 set.
+              - article [ref=e1166]:
+                - generic [ref=e1167]:
+                  - generic [ref=e1168]: Baixa
+                  - button "Abrir tarefa" [ref=e1169] [cursor=pointer]
+                - heading "Confirmar fechamento semanal" [level=3] [ref=e1174]
+                - generic [ref=e1175]:
+                  - 'generic "Principal: Financeiro. Equipe: Financeiro" [ref=e1176]': Financeiro
+                  - generic [ref=e1184]: 14 set.
+              - article [ref=e1188]:
+                - generic [ref=e1189]:
+                  - generic [ref=e1190]: Baixa
+                  - button "Abrir tarefa" [ref=e1191] [cursor=pointer]
+                - heading "Distribuir escala do fim de semana" [level=3] [ref=e1196]
+                - generic [ref=e1197]:
+                  - 'generic "Principal: Operação. Equipe: Operação" [ref=e1198]': Operação
+                  - generic [ref=e1206]: 14 set.
+  - listbox [ref=e1210]
