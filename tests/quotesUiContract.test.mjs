@@ -42,6 +42,15 @@ test("fluxo híbrido reutiliza o InputSelect do drawer do Planner", () => {
   assert.equal(hybridInputSources.includes("<select"), false);
 });
 
+test("campos textuais usam o componente adaptado da Tela Formulário Geral", () => {
+  const fields = read("../src/quotes/QuoteFields.jsx");
+  assert.match(fields, /FormTextInput/);
+  assert.match(fields, /FormTextArea/);
+  assert.equal((fields.match(/<input/g) || []).length, 1);
+  assert.equal((fields.match(/<textarea/g) || []).length, 1);
+  assert.match(fields, /form-general-input/);
+});
+
 test("integração mantém flag V3 e carregamento sob demanda do histórico", () => {
   const app = read("../src/App.jsx");
   assert.match(app, /VITE_QUOTES_HYBRID_V3/);

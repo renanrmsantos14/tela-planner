@@ -286,11 +286,20 @@ button { cursor: pointer; }
 .quote-v3-step-heading span { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
 .quote-v3-step-heading h3 { margin: 4px 0 0; }
 .quote-v3-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-.quote-v3-field { display: grid; align-content: start; gap: 6px; color: var(--navy); font-size: 12px; font-weight: 650; }
+.quote-v3-field { display: grid; align-content: start; gap: 5px; min-height: 66px; padding: 8px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface-soft); color: var(--navy); font-size: 12px; font-weight: 650; box-shadow: 0 1px 2px rgba(0,26,61,.04); transition: border-color 190ms var(--ease-out), background-color 190ms var(--ease-out), box-shadow 190ms var(--ease-out), transform 190ms var(--ease-out); }
+.quote-v3-field:hover { border-color: #c8d5e6; }
+.quote-v3-field:focus-within { border-color: var(--blue); background: #fff; box-shadow: 0 0 0 3px rgba(33,89,210,.14), 0 1px 2px rgba(0,26,61,.04); transform: translateY(-1px); }
 .quote-v3-field-wide { grid-column: 1 / -1; }
 .quote-v3-field b { color: #b74343; }
-.quote-v3-field input, .quote-v3-field select, .quote-v3-field textarea, .quote-v3-dialog textarea { width: 100%; }
-.quote-v3-field [aria-invalid="true"] { border-color: #ba3c3c; box-shadow: 0 0 0 2px rgba(186, 60, 60, .1); }
+.quote-v3-field > :where(input, textarea, output, .custom-select) { width: 100%; min-width: 0; max-width: 100%; }
+.form-general-input { width: 100%; max-width: 100%; min-width: 0; min-height: 34px; height: 34px; padding: 7px 9px; border: 1px solid var(--line); border-radius: 6px; background: #fff; color: var(--ink); font: inherit; font-size: 14px; outline: 0; box-shadow: inset 0 1px 0 rgba(255,255,255,.7); transition: border-color 150ms var(--ease-out), box-shadow 150ms var(--ease-out), background-color 150ms var(--ease-out); }
+.form-general-input:hover { border-color: #c8d5e6; }
+.form-general-input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(33,89,210,.14); }
+.form-general-input::placeholder { color: var(--tertiary); }
+.form-general-textarea { min-height: 72px; height: auto; resize: vertical; line-height: 1.42; }
+.quote-v3-field.is-invalid { border-color: #dc2626; background: #fff7f7; box-shadow: 0 0 0 3px rgba(220,38,38,.14); }
+.quote-v3-field.is-invalid .drawer-title-label { color: #b91c1c; }
+.quote-v3-field [aria-invalid="true"], .quote-v3-field.is-invalid .custom-select-trigger { border-color: #dc2626; box-shadow: 0 0 0 3px rgba(220,38,38,.13); }
 .quote-v3-field-error, .quote-v3-save-error { color: #a32f2f; font-weight: 600; }
 .quote-v3-readonly { display: flex; min-height: 40px; align-items: center; padding: 0 11px; border: 1px solid var(--quote-v3-border); border-radius: 9px; background: #f5f7f8; }
 .quote-v3-review { display: grid; gap: 12px; }

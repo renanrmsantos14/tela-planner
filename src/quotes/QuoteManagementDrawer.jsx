@@ -2,14 +2,14 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { CheckCircle2, Copy, ExternalLink, FileText, Link2, Save, Send, X } from "lucide-react";
 import { buildQuoteEmailHtml, copyQuoteToClipboard, getQuoteNextAction, QUOTE_OPEN_STATUSES, QUOTE_TERMINAL_STATUSES, quoteSubject, validateQuoteStep } from "../quoteDomain";
 import { formatDate } from "../domain";
-import { QuoteClientFields, QuoteCommercialFields, QuoteServiceFields } from "./QuoteFields";
+import { FormTextArea, QuoteClientFields, QuoteCommercialFields, QuoteServiceFields } from "./QuoteFields";
 
 function StatusBadge({ status }) { return <span className="quote-v3-status"><span />{status || "Sem status"}</span>; }
 
 function OutcomeDialog({ status, onCancel, onConfirm, saving }) {
   const [reason, setReason] = useState("");
   const needsReason = status === "Perdida";
-  return <div className="quote-v3-confirm-layer"><form className="quote-v3-dialog" role="dialog" aria-modal="true" onSubmit={(event) => { event.preventDefault(); if (!needsReason || reason.trim()) onConfirm(reason.trim()); }}><h3>{status === "Convertida em serviço" ? "Confirmar conversão?" : status === "Perdida" ? "Registrar perda" : "Cancelar cotação?"}</h3><p>Esta ação encerra a cotação e conclui a tarefa vinculada.</p>{needsReason && <label htmlFor="quote-loss-reason">Motivo da perda<textarea id="quote-loss-reason" autoFocus required rows="3" value={reason} onChange={(event) => setReason(event.target.value)} /></label>}<div><button className="button button-secondary" type="button" onClick={onCancel}>Voltar</button><button className={status === "Convertida em serviço" ? "button button-primary" : "button button-danger"} type="submit" disabled={saving || (needsReason && !reason.trim())}>{saving ? "Registrando…" : "Confirmar"}</button></div></form></div>;
+  return <div className="quote-v3-confirm-layer"><form className="quote-v3-dialog" role="dialog" aria-modal="true" onSubmit={(event) => { event.preventDefault(); if (!needsReason || reason.trim()) onConfirm(reason.trim()); }}><h3>{status === "Convertida em serviço" ? "Confirmar conversão?" : status === "Perdida" ? "Registrar perda" : "Cancelar cotação?"}</h3><p>Esta ação encerra a cotação e conclui a tarefa vinculada.</p>{needsReason && <label htmlFor="quote-loss-reason">Motivo da perda<FormTextArea id="quote-loss-reason" autoFocus required rows="3" value={reason} onChange={(event) => setReason(event.target.value)} /></label>}<div><button className="button button-secondary" type="button" onClick={onCancel}>Voltar</button><button className={status === "Convertida em serviço" ? "button button-primary" : "button button-danger"} type="submit" disabled={saving || (needsReason && !reason.trim())}>{saving ? "Registrando…" : "Confirmar"}</button></div></form></div>;
 }
 
 export default function QuoteManagementDrawer({ quote, task, employees = [], onClose, onOpenTask, onEnsureTaskDetails, onUpdate, onMarkSent, onOutcome }) {
