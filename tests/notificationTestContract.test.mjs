@@ -25,5 +25,10 @@ test("módulo de teste de notificações usa o evento controlado", async () => {
   assert.match(dataverse, /emailDelivery/);
   assert.match(app, /<NotificationTestPanel live=\{live\} tasks=\{tasks\}/);
   assert.match(app, /onSendNotificationTest=\{sendNotificationTest\}/);
-  assert.match(app, /notification-email-delivery/);
+  assert.match(app, /Você foi mencionado/);
+  assert.match(app, /Nova tarefa para você/);
+  assert.match(app, /Tarefa atualizada/);
+  assert.doesNotMatch(app, /notification-email-delivery/);
+  assert.doesNotMatch(app, /className="notification-action"/);
+  assert.doesNotMatch(app, /className="notification-read"/);
 });

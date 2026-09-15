@@ -747,17 +747,15 @@ function formatNotificationTime(value) {
 function notificationPresentation(item, task, contact) {
   const taskTitle = task?.title || item.message || "Atualização da tarefa";
   const contactTitle = contact?.subject || item.message || "Atualização do caso";
-  const taskCode = task?.quoteCode || task?.sourceCode || "OPS";
-  const context = task ? `${taskCode} • ${task.teamName || "Operação"}` : contact ? `${contactChannelLabelForNotification(contact.channel)} • ${contact.ownerName || "Sem responsável"}` : "Central de avisos";
+  const context = task ? task.teamName || "Sem equipe" : contact ? `${contactChannelLabelForNotification(contact.channel)} • ${contact.ownerName || "Sem responsável"}` : "Central de avisos";
   const type = item.type || "update";
   const distinctMessage = item.message && String(item.message).trim() !== String(taskTitle).trim() ? item.message : "";
 
   if (item.contactId) {
     return {
-      action: "Abrir caso",
       context,
       icon: Users,
-      label: "CONTATO",
+      label: "Novo caso para você",
       message: item.message || "Um caso de atendimento foi atribuído a você.",
       title: item.title || contactTitle,
       tone: "success",
@@ -766,10 +764,9 @@ function notificationPresentation(item, task, contact) {
 
   if (["deadline", "due_today", "overdue"].includes(type)) {
     return {
-      action: "Revisar tarefa",
       context,
       icon: type === "overdue" ? ShieldAlert : CalendarDays,
-      label: type === "overdue" ? "ATRASADA" : "PENDENTE",
+      label: type === "overdue" ? "Prazo da tarefa atrasado" : "Prazo da tarefa",
       message: distinctMessage || (type === "overdue" ? "O prazo desta tarefa está atrasado." : "O prazo desta tarefa vence hoje."),
       title: taskTitle,
       tone: type === "overdue" ? "danger" : "warning",
@@ -778,10 +775,9 @@ function notificationPresentation(item, task, contact) {
 
   if (type === "assignment") {
     return {
-      action: "Abrir tarefa",
       context,
       icon: ClipboardList,
-      label: "TAREFA",
+      label: "Nova tarefa para você",
       message: "Você recebeu uma nova tarefa para acompanhar.",
       title: taskTitle,
       tone: "success",
@@ -790,24 +786,22 @@ function notificationPresentation(item, task, contact) {
 
   if (type === "mention") {
     return {
-      action: "Abrir conversa",
       context,
       icon: MessageCircle,
-      label: "MENÇÃO",
+      label: "Você foi mencionado",
       message: distinctMessage || "Há uma mensagem aguardando sua resposta.",
-      title: item.title || "Você foi mencionado",
+      title: taskTitle,
       tone: "info",
     };
   }
 
   if (type === "waiting" || (type === "status" && task?.status === "waiting")) {
     return {
-      action: "Abrir tarefa",
       context,
       icon: BellRing,
-      label: "RETORNO PENDENTE",
+      label: "Aguardando seu retorno",
       message: distinctMessage || waitingContextSummary(task?.waitingContext) || "Esta tarefa aguarda um retorno para avançar.",
-      title: item.title || taskTitle,
+      title: taskTitle,
       tone: "warning",
     };
   }
@@ -815,10 +809,9 @@ function notificationPresentation(item, task, contact) {
   if (type === "status") {
     const statusLabel = task ? statusById(task.status)?.label : "";
     return {
-      action: "Ver tarefa",
       context,
       icon: CheckCircle2,
-      label: "STATUS",
+      label: "Tarefa atualizada",
       message: statusLabel ? `Agora: ${statusLabel}` : "O andamento desta tarefa foi alterado.",
       title: taskTitle,
       tone: "info",
@@ -827,10 +820,9 @@ function notificationPresentation(item, task, contact) {
 
   if (type === "assignees") {
     return {
-      action: "Ver equipe",
       context,
       icon: Users,
-      label: "EQUIPE",
+      label: "Responsáveis atualizados",
       message: distinctMessage || "A equipe responsável foi atualizada.",
       title: taskTitle,
       tone: "info",
@@ -838,25 +830,13 @@ function notificationPresentation(item, task, contact) {
   }
 
   return {
-    action: task ? "Ver tarefa" : "Abrir aviso",
     context,
     icon: BellRing,
-    label: "INFORMATIVA",
+    label: "Nova atualização",
     message: distinctMessage || "Há uma nova atualização no Planner.",
     title: item.title || taskTitle,
     tone: "neutral",
   };
-}
-
-function emailDeliveryPresentation(delivery) {
-  if (!delivery) return null;
-  const isPush = delivery.channel === "PowerAppsPush" || delivery.idempotencyKey?.endsWith("|PowerAppsPush");
-  const noun = isPush ? "Push" : "E-mail";
-  if (delivery.status === "sent") return { tone: "sent", label: `${noun} enviado`, title: `${noun} enviado${delivery.recipientEmail ? ` para ${delivery.recipientEmail}` : ""}.` };
-  if (delivery.status === "failed" || delivery.status === "unknown") return { tone: "failed", label: `${noun} não enviado`, title: delivery.error || delivery.statusText || "O Flow registrou uma falha no envio." };
-  if (delivery.status === "noAddress") return { tone: "failed", label: `${noun} não enviado`, title: isPush ? "Destinatário sem identidade Microsoft vinculada." : "Destinatário sem endereço operacional configurado." };
-  if (delivery.status === "pending") return { tone: "pending", label: `${noun} pendente`, title: "O Flow ainda não confirmou o disparo." };
-  return null;
 }
 
 function contactChannelLabelForNotification(channel) {
@@ -887,7 +867,6 @@ function NotificationsPanel({
   onClose,
   onOpenTask,
   onOpenContact,
-  onMarkRead,
   onMarkAllRead,
 }) {
   const [notificationFilter, setNotificationFilter] = useState("all");
@@ -974,7 +953,6 @@ function NotificationsPanel({
               const task = tasks.find((entry) => entry.id === item.taskId);
               const contact = contacts.find((entry) => entry.id === item.contactId);
               const presentation = notificationPresentation(item, task, contact);
-              const emailDelivery = emailDeliveryPresentation(item.emailDelivery);
               const Icon = presentation.icon;
               return (
                 <article
@@ -988,40 +966,12 @@ function NotificationsPanel({
                     <button className="notification-item-main" type="button" onClick={() => item.contactId ? onOpenContact?.(item) : onOpenTask(item)}>
                       <span className="notification-kicker">{presentation.label}</span>
                       <strong>{presentation.title}</strong>
-                      <p>{presentation.message}</p>
                       <span className="notification-meta">
                         <span>{presentation.context}</span>
                         <time dateTime={item.occurredAt || undefined}>{formatNotificationTime(item.occurredAt)}</time>
                       </span>
+                      <ChevronRight className="notification-item-chevron" aria-hidden="true" size={18} strokeWidth={2.1} />
                     </button>
-                    <div className="notification-item-footer">
-                      {emailDelivery && (
-                        <span
-                          className={`notification-email-delivery is-${emailDelivery.tone}`}
-                          title={emailDelivery.title}
-                          aria-label={emailDelivery.title}
-                        >
-                          <span aria-hidden="true">✉</span>
-                          {emailDelivery.label}
-                        </span>
-                      )}
-                      <button className="notification-action" type="button" onClick={() => item.contactId ? onOpenContact?.(item) : onOpenTask(item)}>
-                        <span>{presentation.action}</span>
-                        <ChevronRight aria-hidden="true" size={15} strokeWidth={2.4} />
-                      </button>
-                      {!item.readAt && (
-                        <button
-                          className="notification-read"
-                          type="button"
-                          onClick={() => onMarkRead(item.id)}
-                          aria-label={`Marcar como lida: ${presentation.title}`}
-                          title="Marcar como lida"
-                        >
-                          <Check aria-hidden="true" size={13} strokeWidth={2.4} />
-                          <span className="sr-only">Marcar como lida</span>
-                        </button>
-                      )}
-                    </div>
                   </div>
                 </article>
               );
@@ -1287,7 +1237,6 @@ function AppShell({
             onOpenContact?.(item);
             setNotificationsOpen(false);
           }}
-          onMarkRead={onMarkNotificationRead}
           onMarkAllRead={onMarkAllNotificationsRead}
         />
       )}
@@ -6366,15 +6315,36 @@ export default function App() {
       ? { ...taskItem, ...pendingPatch, ...failedPatch, syncStatus: undefined }
       : taskItem;
   }, [currentEmployee, state, selectedId, failedTaskDraft, pendingTaskDraft]);
+  const markTaskNotificationsRead = useCallback((taskId) => {
+    if (!taskId || !store.markNotificationRead) return;
+    const unread = (state.notifications || []).filter((item) => item.taskId === taskId && !item.readAt);
+    if (!unread.length) return;
+    const optimisticReadAt = new Date().toISOString();
+    const unreadIds = new Set(unread.map((item) => item.id));
+    setState((current) => ({
+      ...current,
+      notifications: (current.notifications || []).map((item) => unreadIds.has(item.id) ? { ...item, readAt: item.readAt || optimisticReadAt } : item),
+    }));
+    Promise.all(unread.map((item) => store.markNotificationRead(state, item.id)))
+      .then(() => undefined)
+      .catch((failure) => {
+        setState((current) => ({
+          ...current,
+          notifications: (current.notifications || []).map((item) => unreadIds.has(item.id) && item.readAt === optimisticReadAt ? { ...item, readAt: "" } : item),
+        }));
+        showNotice(`Falha ao atualizar notificações: ${failure.message}`);
+      });
+  }, [state, store, showNotice]);
   const openTask = useCallback((id) => {
     const task = state.tasks.find((item) => item.id === id);
     if (task && !isTaskVisibleToEmployee(task, currentEmployee, state.teams)) {
       showNotice("Esta tarefa não está disponível para este usuário.", 3600);
       return;
     }
+    markTaskNotificationsRead(id);
     setSelectedContactId("");
     setSelectedId(id);
-  }, [currentEmployee, showNotice, state.tasks, state.teams]);
+  }, [currentEmployee, markTaskNotificationsRead, showNotice, state.tasks, state.teams]);
   const openContact = useCallback((id) => {
     setSelectedId("");
     setActive("contacts");
@@ -7280,17 +7250,6 @@ export default function App() {
       showNotice(`Falha ao atualizar notificação: ${failure.message}`, 4200);
     });
   }, [state, store, showNotice]);
-  const markTaskNotificationsRead = useCallback((taskId) => {
-    if (!taskId || !store.markNotificationRead) return;
-    const unread = (state.notifications || []).filter((item) => item.taskId === taskId && !item.readAt);
-    if (!unread.length) return;
-    Promise.all(unread.map((item) => store.markNotificationRead(state, item.id)))
-      .then(() => setState((current) => ({
-        ...current,
-        notifications: (current.notifications || []).map((item) => unread.some((entry) => entry.id === item.id) ? { ...item, readAt: item.readAt || new Date().toISOString() } : item),
-      })))
-      .catch((failure) => showNotice(`Falha ao atualizar notificações: ${failure.message}`));
-  }, [state, store, showNotice]);
   useEffect(() => {
     if (selectedId) markTaskNotificationsRead(selectedId);
   }, [selectedId, markTaskNotificationsRead]);
@@ -7317,9 +7276,12 @@ export default function App() {
     });
   }, [currentEmployee?.id, state, store, showNotice]);
   const openNotification = useCallback((item) => {
-    if (!item.readAt) markNotificationRead(item.id);
-    if (item.contactId) openContact(item.contactId);
-    else if (item.taskId) openTask(item.taskId);
+    if (item.contactId) {
+      if (!item.readAt) markNotificationRead(item.id);
+      openContact(item.contactId);
+    } else if (item.taskId) {
+      openTask(item.taskId);
+    }
   }, [markNotificationRead, openContact, openTask]);
   const onTaskScopeChange = useCallback(
     (scope) => {
