@@ -3,7 +3,7 @@
 ## Referências
 
 - Fonte visual: `C:\Users\mendo\AppData\Local\Temp\codex-clipboard-21dc2332-eb7f-49b8-9588-b15980f30dc3.png`
-- Implementação validada: `tmp/notification-inbox-implementation.png`
+- Implementação validada: `tmp/notification-inbox-eye.png`
 - Viewport: 1440 × 1100 CSS px
 - Estado: quadro local com a Inbox aberta na aba “Todas”
 
@@ -13,11 +13,13 @@
 - A lista usa uma hierarquia compacta por linha: mensagem orientada à ação, título relacionado, contexto/equipe, tempo e um único chevron.
 - Rótulos técnicos foram removidos da linha visual; a data/tempo recebeu maior peso e contraste.
 - Altura, espaçamento e quantidade de controles foram reduzidos conforme o pedido, sem perder a área clicável da notificação.
+- Notificações não lidas exibem um botão de olho separado para marcar apenas aquela linha como lida sem abrir a task.
 
 ## Interação validada
 
 - Abrir a task manualmente pelo quadro marca como lidas todas as notificações não lidas vinculadas àquela task.
 - Abrir uma notificação de task usa o mesmo fluxo e atualiza o contador da Inbox.
+- Usar o botão de olho mantém a Inbox aberta, não abre o detalhe e reduz o contador de não lidas.
 - Console do navegador: 0 erros, 0 warnings.
 
 ## Achados

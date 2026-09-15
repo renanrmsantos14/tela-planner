@@ -28,6 +28,8 @@ test("módulo de teste de notificações usa o evento controlado", async () => {
   assert.match(app, /Você foi mencionado/);
   assert.match(app, /Nova tarefa para você/);
   assert.match(app, /Tarefa atualizada/);
+  assert.match(app, /notification-view/);
+  assert.match(app, /Marcar como lida sem abrir/);
   assert.doesNotMatch(app, /notification-email-delivery/);
   assert.doesNotMatch(app, /className="notification-action"/);
   assert.doesNotMatch(app, /className="notification-read"/);

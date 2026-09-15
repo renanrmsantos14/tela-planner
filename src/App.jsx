@@ -867,6 +867,7 @@ function NotificationsPanel({
   onClose,
   onOpenTask,
   onOpenContact,
+  onMarkRead,
   onMarkAllRead,
 }) {
   const [notificationFilter, setNotificationFilter] = useState("all");
@@ -972,6 +973,20 @@ function NotificationsPanel({
                       </span>
                       <ChevronRight className="notification-item-chevron" aria-hidden="true" size={18} strokeWidth={2.1} />
                     </button>
+                    {!item.readAt && (
+                      <button
+                        className="notification-view"
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onMarkRead?.(item.id);
+                        }}
+                        aria-label={`Marcar como lida sem abrir: ${presentation.title}`}
+                        title="Marcar como lida sem abrir"
+                      >
+                        <Eye aria-hidden="true" size={17} strokeWidth={2.1} />
+                      </button>
+                    )}
                   </div>
                 </article>
               );
@@ -1237,6 +1252,7 @@ function AppShell({
             onOpenContact?.(item);
             setNotificationsOpen(false);
           }}
+          onMarkRead={onMarkNotificationRead}
           onMarkAllRead={onMarkAllNotificationsRead}
         />
       )}
