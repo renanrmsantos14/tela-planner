@@ -404,3 +404,18 @@
 **Suggested improvement:** Combinar breakpoint com modalidade de entrada (`pointer: coarse` para touch) ao escolher variantes que removem capacidades; manter uma regressão para janela estreita com `pointer: fine` e validar DOM interativo no navegador.
 
 **Principle:** Responsividade deve adaptar apresentação ao espaço disponível sem remover uma capacidade de interação quando a modalidade de entrada ainda a suporta.
+
+### Observation 28: Query URL de conteúdo embutido deve atualizar a janela visível
+
+**Status:** OPEN
+**Date:** 2026-09-15
+**Session context:** Correção da Query URL ao abrir registros em um WebResource embutido.
+**Skill:** antigravity-protocol / karpathy-coder
+**Type:** open-source
+**Phase/Area:** Navegação, deep links e histórico do navegador
+
+**Issue:** O estado era serializado no `history` do iframe, então o drawer respondia corretamente sem alterar a URL exibida pelo shell hospedeiro.
+
+**Suggested improvement:** Em aplicações embutidas, resolver explicitamente a janela de navegação visível, preservar o estado existente do `history` e manter fallback para execução standalone e bloqueios cross-origin.
+
+**Principle:** Deep links só são compartilháveis quando o estado é gravado na superfície cuja URL o usuário realmente vê.

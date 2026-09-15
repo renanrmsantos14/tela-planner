@@ -1,13 +1,34 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { plannerUrlForState, readPlannerUrlState } from "../src/plannerUrl.js";
+import { plannerNavigationWindow, plannerUrlForState, readPlannerUrlState } from "../src/plannerUrl.js";
+
+test("usa a janela visível do Model-driven para atualizar a Query URL", () => {
+  const shell = {
+    location: {
+      pathname: "/main.aspx",
+      search: "?appid=APP-1&pagetype=webresource&webresourceName=new_TelaPlanner.html",
+      hash: "",
+    },
+  };
+  shell.parent = shell;
+  const iframe = { location: { pathname: "/WebResources/new_TelaPlanner.html", search: "", hash: "" }, parent: shell };
+
+  assert.equal(plannerNavigationWindow(iframe), shell);
+});
+
+test("mantém a própria janela quando não está no shell do Model-driven", () => {
+  const standalone = { location: { pathname: "/", search: "", hash: "" } };
+  standalone.parent = standalone;
+  assert.equal(plannerNavigationWindow(standalone), standalone);
+});
 
 test("lê view e tarefa do envelope data do WebResource", () => {
   assert.deepEqual(readPlannerUrlState("?data=view%3Dcalendar%26taskId%3DTASK-1"), {
     view: "calendar",
     taskId: "TASK-1",
     contactId: "",
+    quoteId: "",
   });
 });
 
@@ -23,7 +44,7 @@ test("gera URL compartilhável e preserva parâmetros externos", () => {
 
   const parsed = new URL(url, "https://example.test");
   assert.equal(parsed.searchParams.get("org"), "betinhos");
-  assert.deepEqual(readPlannerUrlState(parsed.search), { view: "management", taskId: "TASK-2", contactId: "" });
+  assert.deepEqual(readPlannerUrlState(parsed.search), { view: "management", taskId: "TASK-2", contactId: "", quoteId: "" });
   assert.equal(parsed.hash, "#top");
 });
 
@@ -45,6 +66,7 @@ test("lê e gera deep link de caso sem misturar com tarefa", () => {
     view: "contacts",
     taskId: "",
     contactId: "C-9",
+    quoteId: "",
   });
   const url = plannerUrlForState(
     { pathname: "/WebResources/new_TelaPlanner.html", search: "", hash: "" },
@@ -54,6 +76,7 @@ test("lê e gera deep link de caso sem misturar com tarefa", () => {
     view: "contacts",
     taskId: "",
     contactId: "C-10",
+    quoteId: "",
   });
 });
 
@@ -63,5 +86,42 @@ test("abrir tarefa remove vínculo de caso do envelope", () => {
     { view: "board", taskId: "TASK-4" },
   );
   const state = readPlannerUrlState(new URL(url, "https://example.test").search);
-  assert.deepEqual(state, { view: "board", taskId: "TASK-4", contactId: "" });
+  assert.deepEqual(state, { view: "board", taskId: "TASK-4", contactId: "", quoteId: "" });
+});
+
+test("infere a tela do registro e gera deep link de cotação", () => {
+  assert.deepEqual(readPlannerUrlState("?data=contactId%3DC-11"), {
+    view: "contacts",
+    taskId: "",
+    contactId: "C-11",
+    quoteId: "",
+  });
+
+  const url = plannerUrlForState(
+    { pathname: "/WebResources/new_TelaPlanner.html", search: "", hash: "" },
+    { view: "quotes", quoteId: "Q-12" },
+  );
+  assert.deepEqual(readPlannerUrlState(new URL(url, "https://example.test").search), {
+    view: "quotes",
+    taskId: "",
+    contactId: "",
+    quoteId: "Q-12",
+  });
+});
+
+test("troca IDs diretos conflitantes por um único registro no envelope", () => {
+  const url = plannerUrlForState(
+    { pathname: "/WebResources/new_TelaPlanner.html", search: "?taskId=T-1&contactId=C-1&quoteId=Q-1", hash: "" },
+    { view: "contacts", contactId: "C-2" },
+  );
+  const parsed = new URL(url, "https://example.test");
+  assert.equal(parsed.searchParams.has("taskId"), false);
+  assert.equal(parsed.searchParams.has("contactId"), false);
+  assert.equal(parsed.searchParams.has("quoteId"), false);
+  assert.deepEqual(readPlannerUrlState(parsed.search), {
+    view: "contacts",
+    taskId: "",
+    contactId: "C-2",
+    quoteId: "",
+  });
 });

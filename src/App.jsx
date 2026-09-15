@@ -102,7 +102,7 @@ import { QUOTE_STATUSES as QUOTE_WORKFLOW_STATUSES } from "./quoteDomain";
 import { isQuoteTask, quoteStatusForTaskStatus, taskStatusForQuoteStatus } from "./quoteTaskFlow";
 import { playCompletionSound, prepareCompletionSound } from "./completionSound";
 import { createDataStore } from "./dataverse";
-import { plannerUrlForState, readPlannerUrlState } from "./plannerUrl";
+import { plannerNavigationWindow, plannerUrlForState, readPlannerUrlState } from "./plannerUrl";
 import SearchableSelect, {
   SearchableMultiSelect,
 } from "./SearchableSelect.jsx";
@@ -268,8 +268,8 @@ function readChecklistVisibility() {
   }
 }
 
-function launchQuoteId() {
-  const params = new URLSearchParams(window.location.search);
+function launchQuoteId(search = window.location.search) {
+  const params = new URLSearchParams(search);
   const data = new URLSearchParams(
     (params.get("data") || "").replace(/^\?/, ""),
   );
@@ -5891,7 +5891,8 @@ const LazyQualityView = lazy(() => Promise.resolve({ default: QualityView }));
 const LazySettingsView = lazy(() => Promise.resolve({ default: SettingsView }));
 
 export default function App() {
-  const initialUrlStateRef = useRef(readPlannerUrlState(window.location.search));
+  const navigationWindowRef = useRef(plannerNavigationWindow(window));
+  const initialUrlStateRef = useRef(readPlannerUrlState(navigationWindowRef.current.location.search));
   const [active, setActive] = useState(initialUrlStateRef.current.view);
   const [store] = useState(() => createDataStore());
   const [state, setState] = useState(() => ({
@@ -5919,7 +5920,7 @@ export default function App() {
   );
   const showManagement = canViewManagement(state.currentUserEmail);
   const [selectedId, setSelectedId] = useState(initialUrlStateRef.current.taskId);
-  const [quoteToOpenId, setQuoteToOpenId] = useState("");
+  const [quoteToOpenId, setQuoteToOpenId] = useState(initialUrlStateRef.current.quoteId);
   const [selectedContactId, setSelectedContactId] = useState(initialUrlStateRef.current.contactId);
   const [waitingTaskId, setWaitingTaskId] = useState("");
   const [waitingReturnTaskId, setWaitingReturnTaskId] = useState("");
@@ -5947,23 +5948,26 @@ export default function App() {
   const handlingHistoryRef = useRef(false);
   const failedTaskReopenTimerRef = useRef(null);
   useEffect(() => {
+    const navigationWindow = navigationWindowRef.current;
     const handlePopState = () => {
-      const next = readPlannerUrlState(window.location.search);
+      const next = readPlannerUrlState(navigationWindow.location.search);
       handlingHistoryRef.current = true;
       urlStateRef.current = next;
       setActive(next.view);
       setSelectedId(next.taskId);
       setSelectedContactId(next.contactId);
+      setQuoteToOpenId(next.quoteId);
     };
-    window.addEventListener("popstate", handlePopState);
-    return () => window.removeEventListener("popstate", handlePopState);
+    navigationWindow.addEventListener("popstate", handlePopState);
+    return () => navigationWindow.removeEventListener("popstate", handlePopState);
   }, []);
   useEffect(() => {
-    const next = { view: active, taskId: selectedId, contactId: selectedContactId };
+    const next = { view: active, taskId: selectedId, contactId: selectedContactId, quoteId: quoteToOpenId };
     if (
       next.view === urlStateRef.current.view &&
       next.taskId === urlStateRef.current.taskId &&
-      next.contactId === urlStateRef.current.contactId
+      next.contactId === urlStateRef.current.contactId &&
+      next.quoteId === urlStateRef.current.quoteId
     ) {
       handlingHistoryRef.current = false;
       return;
@@ -5973,8 +5977,9 @@ export default function App() {
       handlingHistoryRef.current = false;
       return;
     }
-    window.history.pushState(null, "", plannerUrlForState(window.location, next));
-  }, [active, selectedId, selectedContactId]);
+    const navigationWindow = navigationWindowRef.current;
+    navigationWindow.history.pushState(navigationWindow.history.state, "", plannerUrlForState(navigationWindow.location, next));
+  }, [active, selectedId, selectedContactId, quoteToOpenId]);
   const dismissNotice = useCallback(() => {
     if (noticeTimerRef.current) window.clearTimeout(noticeTimerRef.current);
     noticeTimerRef.current = null;
@@ -6202,11 +6207,12 @@ export default function App() {
   useEffect(() => {
     if (!state || launchHandledRef.current) return;
     launchHandledRef.current = true;
-    const { taskId } = readPlannerUrlState(window.location.search);
-    const params = new URLSearchParams(window.location.search);
+    const search = navigationWindowRef.current.location.search;
+    const { taskId } = readPlannerUrlState(search);
+    const params = new URLSearchParams(search);
     const data = new URLSearchParams((params.get("data") || "").replace(/^\?/, ""));
     const mode = params.get("mode") || data.get("mode") || "";
-    const quoteSourceId = launchQuoteId();
+    const quoteSourceId = launchQuoteId(search);
     if (taskId) setSelectedId(taskId);
     if (quoteSourceId) {
       const openExistingOrCreate = (quote) =>
@@ -6328,10 +6334,12 @@ export default function App() {
     }
     markTaskNotificationsRead(id);
     setSelectedContactId("");
+    setQuoteToOpenId("");
     setSelectedId(id);
   }, [currentEmployee, markTaskNotificationsRead, showNotice, state.tasks, state.teams]);
   const openContact = useCallback((id) => {
     setSelectedId("");
+    setQuoteToOpenId("");
     setActive("contacts");
     setSelectedContactId(id);
   }, []);
@@ -7443,7 +7451,7 @@ export default function App() {
         />
       );
     if (active === "quotes")
-      return <QuotesView state={viewState} onOpenTask={openTask} onCreateQuote={createQuote} onUpdateQuote={updateQuote} onMarkQuoteSent={markQuoteSent} onSetQuoteOutcome={setQuoteOutcome} initialQuoteId={quoteToOpenId} workspaceEnabled={QUOTE_WORKSPACE_V2_ENABLED} />;
+      return <QuotesView state={viewState} onOpenTask={openTask} onCreateQuote={createQuote} onUpdateQuote={updateQuote} onMarkQuoteSent={markQuoteSent} onSetQuoteOutcome={setQuoteOutcome} selectedQuoteId={quoteToOpenId} onSelectQuote={setQuoteToOpenId} workspaceEnabled={QUOTE_WORKSPACE_V2_ENABLED} />;
     if (active === "board")
       return (
         <BoardView
