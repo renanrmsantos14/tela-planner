@@ -2678,7 +2678,7 @@ function BoardView({
     [columns, filtered, groupBy],
   );
   const isMobile = useMediaQuery(
-    "(max-width: 820px), (max-width: 900px) and (max-height: 600px)",
+    "(pointer: coarse) and (max-width: 820px), (pointer: coarse) and (max-width: 900px) and (max-height: 600px)",
   );
   const subtasksByParent = useMemo(
     () =>

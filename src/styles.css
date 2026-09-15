@@ -971,6 +971,14 @@ button { cursor: pointer; }
 .column-body { position: relative; }
 .card-drop-placeholder.is-exiting { position: absolute; top: var(--drop-slot-top); left: var(--drop-slot-left); width: var(--drop-slot-width); z-index: 2; }
 
+/* Janela estreita com mouse continua sendo quadro; somente touch usa lista mobile. */
+@media (max-width: 900px) and (pointer: fine) {
+  .board-grid { display: grid; }
+  .mobile-board-list { display: none; }
+  .task-card { cursor: grab; }
+  .task-card:active { cursor: grabbing; }
+}
+
 @media (max-width: 390px) {
   .page-content { padding-right: 13px; padding-left: 13px; }
   .metric-card { padding: 11px; }

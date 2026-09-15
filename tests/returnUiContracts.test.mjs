@@ -59,3 +59,15 @@ test("drawer carrega detalhes uma vez por tarefa selecionada", async () => {
   assert.match(app, /task\.detailsLoaded \|\| task\.detailsLoading/);
   assert.match(dataverse, /export async function loadTaskDetails/);
 });
+
+test("quadro estreito com mouse mantém drag-and-drop", async () => {
+  const app = await read("src/App.jsx");
+  const styles = await read("src/styles.css");
+
+  assert.match(
+    app,
+    /\(pointer: coarse\) and \(max-width: 820px\), \(pointer: coarse\) and \(max-width: 900px\) and \(max-height: 600px\)/,
+  );
+  assert.match(styles, /@media \(max-width: 900px\) and \(pointer: fine\)/);
+  assert.match(styles, /\.board-grid \{ display: grid; \}/);
+});

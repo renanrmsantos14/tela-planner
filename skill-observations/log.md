@@ -389,3 +389,18 @@
 **Suggested improvement:** Tratar o refresh como snapshot transacional: aplicar o núcleo somente após a resposta, omitir coleções não pertencentes ao núcleo e mesclar cada bloco complementar apenas quando concluído, preservando o snapshot anterior em falhas.
 
 **Principle:** Uma resposta parcial não deve substituir dados confirmados; estados intermediários precisam ser separados de coleções vazias legitimamente carregadas.
+
+### Observation 27: Breakpoint não deve remover capacidade de interação do desktop
+
+**Status:** OPEN
+**Date:** 2026-09-15
+**Session context:** Correção do drag-and-drop do quadro do Tela Planner em janela estreita.
+**Skill:** systematic-debugging / antigravity-protocol / karpathy-coder
+**Type:** open-source
+**Phase/Area:** Responsividade e interação por ponteiro
+
+**Issue:** O runtime classificava qualquer janela abaixo do breakpoint como mobile e trocava o quadro arrastável por uma lista sem drag, mesmo quando o navegador reportava mouse e hover; a interface parecia travar ao segurar o card porque nenhuma operação de arraste existia naquele modo.
+
+**Suggested improvement:** Combinar breakpoint com modalidade de entrada (`pointer: coarse` para touch) ao escolher variantes que removem capacidades; manter uma regressão para janela estreita com `pointer: fine` e validar DOM interativo no navegador.
+
+**Principle:** Responsividade deve adaptar apresentação ao espaço disponível sem remover uma capacidade de interação quando a modalidade de entrada ainda a suporta.
