@@ -27,7 +27,11 @@ test("Flow piloto usa Power Apps Notification V2 com destinatário Microsoft e t
   const source = await readFile(new URL("../scripts/create-planner-immediate-flow.ps1", import.meta.url), "utf8");
   const definition = compileFlowDefinition(source);
   const push = findAction(definition, "Send_PowerApps_push");
+  const notificationTitle = findAction(definition, "Compose_Notification_Title");
+  const createNotification = findAction(definition, "Create_notification");
   assert.ok(push, "ação Send_PowerApps_push não encontrada");
+  assert.ok(notificationTitle, "rótulo contextual da notificação não encontrado");
+  assert.equal(createNotification.inputs.parameters["item/cr40f_titulo"], "@outputs('Compose_Notification_Title')");
   assert.equal(push.inputs.host.operationId, "SendPushNotificationV2");
   assert.equal(push.inputs.host.apiId, "/providers/Microsoft.PowerApps/apis/shared_powerappsnotificationv2");
   assert.equal(push.inputs.parameters["payload/playerType"], "PowerApps");
@@ -40,6 +44,23 @@ test("Flow piloto usa Power Apps Notification V2 com destinatário Microsoft e t
   assert.match(push.inputs.parameters["payload/recipients"], /Get_system_user/);
   assert.match(push.inputs.parameters["payload/dynamicParams"], /entityName/);
   assert.match(push.inputs.parameters["payload/dynamicParams"], /entityId/);
+  assert.equal(
+    push.inputs.parameters["payload/message"],
+    "@concat(outputs('Compose_Notification_Title'), ': ', coalesce(triggerOutputs()?['body/cr40f_descricao'], 'Tarefa atualizada.'))",
+  );
+  for (const label of [
+    "Teste de notificação",
+    "Nova tarefa atribuída a você",
+    "Você foi mencionado em uma tarefa",
+    "Tarefa aguardando retorno",
+    "Você foi adicionado como responsável",
+    "Tarefa vence hoje",
+    "Tarefa atrasada",
+    "Prazo da tarefa alterado",
+    "Status da tarefa alterado",
+  ]) {
+    assert.match(notificationTitle.inputs, new RegExp(label));
+  }
   assert.equal(push.inputs.parameters.playerType, undefined);
   assert.equal(push.inputs.parameters.app, undefined);
   assert.match(source, /notification:test.*notification:assignment.*notification:mention.*notification:waiting.*notification:status.*notification:assignees.*notification:overdue_manual.*notification:deadline/);
