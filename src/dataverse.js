@@ -104,6 +104,7 @@ const PERSONAL_TAG_TABLE = "cr40f_plannertagpessoal";
 const PERSONAL_TAG_TASK_TABLE = "cr40f_plannertagpessoaltarefa";
 const ENVIRONMENT_VARIABLE_DEFINITION_TABLE = "environmentvariabledefinition";
 const ENVIRONMENT_VARIABLE_VALUE_TABLE = "environmentvariablevalue";
+const SERVICE_TYPES_SCHEMA = "cr40f_PlannerTiposServico";
 const FLOW_URL_SCHEMA = "new_URLFlowsalvararquivosSharePoint";
 const READ_FLOW_URL_SCHEMA = "new_URLFlowConsultarArquivosSharePoint";
 const DELETE_FLOW_URL_SCHEMA = "new_URLFlowExcluirArquivoSharePoint";
@@ -385,6 +386,38 @@ async function resolveEnvironmentVariableUrl(xrm, schemaName, fallback = "") {
   if (!definition) return fallback.trim();
   const values = await retrieveMany(xrm, ENVIRONMENT_VARIABLE_VALUE_TABLE, `?$select=value&$filter=_environmentvariabledefinitionid_value eq ${definition.environmentvariabledefinitionid}&$top=1`);
   return String(values[0]?.value || definition.defaultvalue || fallback).trim();
+}
+
+export async function loadQuoteServiceTypes() {
+  const xrm = getXrm();
+  if (!xrm) return (await import("./quoteServiceTypes.js")).DEFAULT_SERVICE_TYPES;
+  const { DEFAULT_SERVICE_TYPES, normalizeServiceTypes } = await import("./quoteServiceTypes.js");
+  const definitions = await retrieveMany(xrm, ENVIRONMENT_VARIABLE_DEFINITION_TABLE, `?$select=environmentvariabledefinitionid,defaultvalue&$filter=schemaname eq '${SERVICE_TYPES_SCHEMA}'&$top=1`);
+  if (!definitions.length) return DEFAULT_SERVICE_TYPES;
+  const values = await retrieveMany(xrm, ENVIRONMENT_VARIABLE_VALUE_TABLE, `?$select=value&$filter=_environmentvariabledefinitionid_value eq ${definitions[0].environmentvariabledefinitionid}&$top=1`);
+  const raw = values[0]?.value || definitions[0].defaultvalue;
+  try { return normalizeServiceTypes(JSON.parse(raw)); }
+  catch { throw new Error("Configuração de tipos de serviço inválida no Dataverse."); }
+}
+
+export async function saveQuoteServiceTypes(input) {
+  const xrm = getXrm();
+  if (!xrm) throw new Error("Salvar tipos de serviço exige Dataverse conectado.");
+  const { normalizeServiceTypes } = await import("./quoteServiceTypes.js");
+  const options = normalizeServiceTypes(input);
+  if (!options.length) throw new Error("Informe pelo menos um tipo de serviço.");
+  const definitions = await retrieveMany(xrm, ENVIRONMENT_VARIABLE_DEFINITION_TABLE, `?$select=environmentvariabledefinitionid&$filter=schemaname eq '${SERVICE_TYPES_SCHEMA}'&$top=1`);
+  let id = definitions[0]?.environmentvariabledefinitionid;
+  if (!id) {
+    const created = await request(xrm, `/${entitySetName(ENVIRONMENT_VARIABLE_DEFINITION_TABLE)}`, { method: "POST", body: JSON.stringify({ schemaname: SERVICE_TYPES_SCHEMA, displayname: "Planner - Tipos de serviço", type: 100000000, defaultvalue: JSON.stringify(options) }) });
+    id = created?.environmentvariabledefinitionid;
+    if (!id) throw new Error("Dataverse não retornou o ID da configuração criada.");
+  }
+  const values = await retrieveMany(xrm, ENVIRONMENT_VARIABLE_VALUE_TABLE, `?$select=environmentvariablevalueid&$filter=_environmentvariabledefinitionid_value eq ${id}&$top=1`);
+  const value = JSON.stringify(options);
+  if (values.length) await request(xrm, `/${entitySetName(ENVIRONMENT_VARIABLE_VALUE_TABLE)}(${values[0].environmentvariablevalueid})`, { method: "PATCH", body: JSON.stringify({ value }) });
+  else await request(xrm, `/${entitySetName(ENVIRONMENT_VARIABLE_VALUE_TABLE)}`, { method: "POST", body: JSON.stringify({ value, "EnvironmentVariableDefinitionId@odata.bind": `/${entitySetName(ENVIRONMENT_VARIABLE_DEFINITION_TABLE)}(${id})` }) });
+  return loadQuoteServiceTypes();
 }
 
 async function resolveSharePointFlowUrl(xrm) {
