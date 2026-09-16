@@ -4,7 +4,7 @@ import test from "node:test";
 
 const readSource = (path) => readFile(new URL(path, import.meta.url), "utf8");
 
-test("Flow piloto de push cobre teste e atribuição com array vazio válido", async () => {
+test("Flow piloto de push evita rota de formulário inválida", async () => {
   const source = await readSource("../scripts/create-planner-immediate-flow.ps1");
 
   assert.match(source, /notification:test.*notification:assignment/);
@@ -14,7 +14,8 @@ test("Flow piloto de push cobre teste e atribuição com array vazio válido", a
   assert.doesNotMatch(source, /createArray\(\)/);
   assert.match(source, /item\/cr40f_Destinatario@odata\.bind/);
   assert.match(source, /dynamicParams/);
-  assert.match(source, /entityId/);
+  assert.match(source, /"payload\/dynamicParams\/entityLogicalName": "cr40f_plannertarefa"/);
+  assert.doesNotMatch(source, /"entityId"/);
   assert.match(source, /\|PowerAppsPush/);
 });
 

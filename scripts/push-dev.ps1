@@ -26,13 +26,17 @@ Set-Location $root
 function Write-Step([string] $Message) { Write-Host "[push-dev] $Message" }
 function Assert-ExitCode([string] $Label) { if ($LASTEXITCODE -ne 0) { throw "$Label falhou com exit code $LASTEXITCODE." } }
 
-Write-Step "build e testes do WebResource"
-npm test
-Assert-ExitCode "npm test"
+Write-Step "build do WebResource"
 npm run build
 Assert-ExitCode "npm run build"
+$generatedVersion = "v$((Get-Content (Join-Path $root 'package.json') -Raw | ConvertFrom-Json).version)"
+Write-Host "NOVA VERSAO GERADA: $generatedVersion"
 
-Write-Step "publicacao do WebResource no Dataverse DEV"
+Write-Step "testes do WebResource"
+npm test
+Assert-ExitCode "npm test"
+
+Write-Step "publicacao do WebResource no Dataverse DEV: $generatedVersion"
 $publishScript = Join-Path $PSScriptRoot "publish-webresource.ps1"
 & $publishScript -EnvironmentUrl $EnvironmentUrl -DeviceCode:$DeviceCode
 Assert-ExitCode "publish-webresource"
@@ -59,4 +63,5 @@ $flowScript = Join-Path $PSScriptRoot "create-planner-immediate-flow.ps1"
 & $flowScript -EnvironmentUrl $EnvironmentUrl.TrimEnd('/')
 Assert-ExitCode "provisionamento do Flow de push"
 
+Write-Host "VERSAO PUBLICADA COM SUCESSO: $generatedVersion"
 Write-Step "push concluido: WebResource, plugin e Flow de push atualizados"

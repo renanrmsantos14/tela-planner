@@ -1,6 +1,6 @@
 {
   "name": "tela-planner",
-  "version": "0.1.521",
+  "version": "0.1.523",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,7 +10,7 @@
     "build": "vite build && node scripts/build-redirect-bridge.mjs && node scripts/inline-webresource.mjs && node scripts/verify-webresource.mjs",
     "push": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\\push-dev.ps1 -DeviceCode",
     "psh": "npm run push",
-    "check": "npm test && npm run build"
+    "check": "npm run build && npm test"
   },
   "dependencies": {
     "@azure/msal-browser": "^5.21.0",

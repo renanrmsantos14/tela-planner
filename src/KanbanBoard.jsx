@@ -35,12 +35,22 @@ const KanbanBoard = memo(function KanbanBoard({
   const [dragState, setDragState] = useState(null);
   const [dropExit, setDropExit] = useState(null);
   const [hasHorizontalOverflow, setHasHorizontalOverflow] = useState(false);
+  const [pointerDragEnabled, setPointerDragEnabled] = useState(() => window.matchMedia("(max-width: 620px)").matches);
   const boardRef = useRef(null);
+  const pointerDragRef = useRef(null);
+  const suppressClickRef = useRef(false);
   const cardRectsRef = useRef(new Map());
   const animateLayoutRef = useRef(false);
   const layoutAnimationsRef = useRef(new Map());
   const pendingTransferRef = useRef(null);
   const overflowFrameRef = useRef(null);
+
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 620px)");
+    const update = () => setPointerDragEnabled(media.matches);
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
 
   useLayoutEffect(() => {
     const board = boardRef.current;
@@ -239,12 +249,110 @@ const KanbanBoard = memo(function KanbanBoard({
     });
   }, [dragState, getExitMetrics]);
 
+  const handlePointerDown = useCallback((event) => {
+    if (!pointerDragEnabled || event.pointerType !== "mouse" || event.button !== 0) return;
+    const card = event.target.closest(".task-card[data-kanban-id]");
+    if (!card || event.target.closest("button, input, textarea, a")) return;
+    const id = card.dataset.kanbanId;
+    const item = items.find((candidate) => getItemId(candidate) === id);
+    if (!item || !canMove(item)) return;
+    pointerDragRef.current = {
+      id,
+      sourceColumnId: getSourceColumnId(item),
+      startX: event.clientX,
+      startY: event.clientY,
+      height: card.getBoundingClientRect().height,
+      active: false,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }, [canMove, getItemId, getSourceColumnId, items, pointerDragEnabled]);
+
+  const handlePointerMove = useCallback((event) => {
+    const pointer = pointerDragRef.current;
+    if (!pointer) return;
+    if (!pointer.active && Math.hypot(event.clientX - pointer.startX, event.clientY - pointer.startY) < 6) return;
+    pointer.active = true;
+    event.preventDefault();
+    const board = boardRef.current;
+    const rect = board.getBoundingClientRect();
+    if (event.clientX > rect.right - 32) board.scrollLeft += 18;
+    if (event.clientX < rect.left + 32) board.scrollLeft -= 18;
+    const columnId = document.elementFromPoint(event.clientX, event.clientY)?.closest(".board-column")?.dataset.columnId;
+    if (!columnId) return;
+    const item = items.find((candidate) => getItemId(candidate) === pointer.id);
+    const insertAt = getDropIndex(itemsByColumn, columnId, item);
+    setDragState((current) => current?.columnId === columnId && current.insertAt === insertAt
+      ? current
+      : { id: pointer.id, sourceColumnId: pointer.sourceColumnId, columnId, insertAt, height: pointer.height });
+  }, [getDropIndex, getItemId, items, itemsByColumn]);
+
+  const handlePointerEnd = useCallback((event) => {
+    const pointer = pointerDragRef.current;
+    pointerDragRef.current = null;
+    if (!pointer?.active) return;
+    suppressClickRef.current = true;
+    window.setTimeout(() => { suppressClickRef.current = false; }, 0);
+    const columnId = document.elementFromPoint(event.clientX, event.clientY)?.closest(".board-column")?.dataset.columnId;
+    setDragState(null);
+    setDropExit(null);
+    if (columnId && columnId !== pointer.sourceColumnId) {
+      const column = columns.find((candidate) => candidate.id === columnId);
+      if (column) onMove(pointer.id, column);
+    }
+  }, [columns, onMove]);
+
+  const handlePointerCancel = useCallback(() => {
+    pointerDragRef.current = null;
+    setDragState(null);
+    setDropExit(null);
+  }, []);
+
+  useEffect(() => {
+    if (!dragState) return undefined;
+    const finishDrag = () => {
+      pointerDragRef.current = null;
+      if (pointerDragEnabled) handlePointerCancel();
+      else clearDrag();
+    };
+    const finishPointer = (event) => {
+      if (pointerDragEnabled) handlePointerEnd(event);
+      else finishDrag();
+    };
+    const cancelOnEscape = (event) => {
+      if (event.key === "Escape") finishDrag();
+    };
+    window.addEventListener("dragend", finishDrag);
+    window.addEventListener("drop", finishDrag);
+    window.addEventListener("pointerup", finishPointer);
+    window.addEventListener("blur", finishDrag);
+    window.addEventListener("keydown", cancelOnEscape);
+    const fallback = window.setTimeout(finishDrag, 10000);
+    return () => {
+      window.removeEventListener("dragend", finishDrag);
+      window.removeEventListener("drop", finishDrag);
+      window.removeEventListener("pointerup", finishPointer);
+      window.removeEventListener("blur", finishDrag);
+      window.removeEventListener("keydown", cancelOnEscape);
+      window.clearTimeout(fallback);
+    };
+  }, [clearDrag, dragState, handlePointerCancel, handlePointerEnd, pointerDragEnabled]);
+
   return (
     <div className={`board-scroll-shell${hasHorizontalOverflow ? " has-horizontal-overflow" : ""}`}>
       <div
         className="board-grid"
         ref={boardRef}
-        style={{ gridTemplateColumns: `repeat(${Math.max(columns.length, 1)}, minmax(240px, 1fr))` }}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerEnd}
+        onPointerCancel={handlePointerCancel}
+        onClickCapture={(event) => {
+          if (!suppressClickRef.current) return;
+          event.preventDefault();
+          event.stopPropagation();
+          suppressClickRef.current = false;
+        }}
+        style={{ gridTemplateColumns: `repeat(${Math.max(columns.length, 1)}, minmax(240px, 1fr))`, userSelect: pointerDragEnabled ? "none" : undefined }}
       >
         {columns.map((column) => {
           const columnItems = itemsByColumn[column.id] || [];
@@ -309,17 +417,18 @@ const KanbanBoard = memo(function KanbanBoard({
                       {showDropSlot && visibleDropState.insertAt === index && dropSlot}
                       {renderCard(item, {
                         isDragging: dragState?.id === itemId,
+                        draggable: !pointerDragEnabled,
                         onDragStart: (event) => handleDragStart(itemId, event),
                         onDragEnd: clearDrag,
                       })}
                     </React.Fragment>
                   );
                 })}
-                {showDropSlot && visibleDropState.insertAt >= columnItems.length && dropSlot}
-                {!columnItems.length && !showDropSlot && (
-                  <div className="drop-placeholder">
+                {showDropSlot && columnItems.length > 0 && visibleDropState.insertAt >= columnItems.length && dropSlot}
+                {!columnItems.length && (
+                  <div className={`drop-placeholder${showDropSlot ? " card-drop-placeholder" : ""}`}>
                     <Plus size={17} />
-                    <span>Arraste {itemLabelPlural} para cá</span>
+                    <span>{showDropSlot ? "Solte aqui" : `Arraste ${itemLabelPlural} para cá`}</span>
                   </div>
                 )}
               </div>

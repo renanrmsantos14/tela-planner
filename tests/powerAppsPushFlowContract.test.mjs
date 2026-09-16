@@ -23,7 +23,7 @@ function findAction(node, actionName) {
   return null;
 }
 
-test("Flow piloto usa Power Apps Notification V2 com destinatário Microsoft e taskId", async () => {
+test("Flow piloto configura push sem navegar para o formulário da tabela", async () => {
   const source = await readFile(new URL("../scripts/create-planner-immediate-flow.ps1", import.meta.url), "utf8");
   const definition = compileFlowDefinition(source);
   const push = findAction(definition, "Send_PowerApps_push");
@@ -42,8 +42,8 @@ test("Flow piloto usa Power Apps Notification V2 com destinatário Microsoft e t
   });
   assert.equal(push.inputs.parameters["payload/openApp"], true);
   assert.match(push.inputs.parameters["payload/recipients"], /Get_system_user/);
-  assert.match(push.inputs.parameters["payload/dynamicParams"], /entityName/);
-  assert.match(push.inputs.parameters["payload/dynamicParams"], /entityId/);
+  assert.equal(push.inputs.parameters["payload/dynamicParams/entityLogicalName"], "cr40f_plannertarefa");
+  assert.equal(push.inputs.parameters["payload/dynamicParams/recordId"], undefined);
   assert.equal(
     push.inputs.parameters["payload/message"],
     "@concat(outputs('Compose_Notification_Title'), ': ', coalesce(triggerOutputs()?['body/cr40f_descricao'], 'Tarefa atualizada.'))",

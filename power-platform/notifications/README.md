@@ -33,7 +33,7 @@ Provisionamento versionado: `powershell -ExecutionPolicy Bypass -File scripts/cr
 4. Destinatários: responsáveis novos para `notification:assignment` e `notification:assignees`; menções usam `mentionedEmployeeIds`; cobrança manual usa `notificationRecipientIds`; cobrança diária usa o responsável principal. `notification:test` usa o funcionário vinculado ao usuário Microsoft atual. O autor é removido e os IDs são deduplicados.
 5. Para cada destinatário, montar chave `<evento>|<destinatario>|<tipo>|PowerAppsPush` e consultar `cr40f_plannernotificacao` por `cr40f_chavededupe`. Criar somente quando ausente.
 6. Resolver `cr40f_funcionarios.cr40f_usuariodataverse` e `systemuser.internalemailaddress` ativo.
-7. Com identidade, executar **Send push notification V2** para o app model-driven `AppBetinhos`, com `openApp=true` e parâmetros `pageType=entityrecord`, `entityName=cr40f_plannertarefa`, `entityId=<taskId>`.
+7. Com identidade, executar **Send push notification V2** para o app model-driven `AppBetinhos`, com `openApp=true` e `payload/dynamicParams/entityLogicalName=cr40f_plannertarefa`. O conector exige a tabela para salvar o Flow. Sem `recordId`, o push não tenta abrir o formulário da tarefa, que havia mostrado uma tela vazia no Power Apps Mobile. A navegação após o toque ainda exige validação no dispositivo; a tarefa segue acessível pelo Planner e pela caixa de notificações.
 8. Registrar `PowerAppsPush` em `cr40f_plannerdisparo` com status Enviado (`100000001`), Falha (`100000002`) ou Sem identidade (`100000003`). Teams, e-mail e `SendAppNotification` permanecem canais separados.
 
 O destinatário precisa abrir o AppBetinhos no Power Apps Mobile uma vez, autenticar e permitir notificações no Android/iOS. Push é entregue na lista de notificações do celular; `SendAppNotification` é central/toast in-app e depende do app em execução/sincronização.
@@ -63,7 +63,7 @@ Os flows devem usar referências de conexão da solução para Dataverse, Power 
 
 - Reprocessar o mesmo evento e a mesma recorrência sem duplicar linhas.
 - Confirmar push Power Apps Mobile com o app fechado e dois usuários reais.
-- Confirmar toque no push abrindo o AppBetinhos com a tarefa correta.
+- Confirmar toque no push abrindo o AppBetinhos com navegação funcional no dispositivo; conferir a tarefa pela caixa de notificações do Planner.
 - Confirmar `Sem identidade` com funcionário sem `cr40f_usuariodataverse`.
 - Confirmar isolamento de notificações entre criador, responsável e terceiro.
 - Confirmar retry e erro final em `cr40f_plannerdisparo`.

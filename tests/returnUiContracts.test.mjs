@@ -60,14 +60,13 @@ test("drawer carrega detalhes uma vez por tarefa selecionada", async () => {
   assert.match(dataverse, /export async function loadTaskDetails/);
 });
 
-test("quadro estreito com mouse mantém drag-and-drop", async () => {
+test("janela estreita com mouse usa a lista mobile de tarefas", async () => {
   const app = await read("src/App.jsx");
-  const styles = await read("src/styles.css");
 
   assert.match(
     app,
-    /\(pointer: coarse\) and \(max-width: 820px\), \(pointer: coarse\) and \(max-width: 900px\) and \(max-height: 600px\)/,
+    /const isMobile = useMediaQuery\(\s*"\(max-width: 820px\), \(max-width: 900px\) and \(max-height: 600px\)"/,
   );
-  assert.match(styles, /@media \(max-width: 900px\) and \(pointer: fine\)/);
-  assert.match(styles, /\.board-grid \{ display: grid; \}/);
+  assert.match(app, /isMobile \? \(\s*<MobileTaskListView/);
+  assert.match(app, /<div className="mobile-task-tabs" role="tablist"/);
 });

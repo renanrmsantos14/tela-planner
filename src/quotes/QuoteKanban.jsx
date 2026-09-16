@@ -15,13 +15,13 @@ const STATUS_META = {
 const PRIORITY_TONES = { low: "neutral", medium: "action", high: "warning", urgent: "danger" };
 const TODAY = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 
-const QuoteCard = memo(function QuoteCard({ quote, task, isDragging, onOpen, onDragStart, onDragEnd }) {
+const QuoteCard = memo(function QuoteCard({ quote, task, isDragging, draggable, onOpen, onDragStart, onDragEnd }) {
   const priority = QUOTE_PRIORITIES.find((item) => item.id === quote.priority) || QUOTE_PRIORITIES[1];
   const overdue = Boolean(quote.deadline && quote.deadline < TODAY);
   const waitingSummary = quote.status === "Aguardando informação" ? waitingContextSummary(task?.waitingContext) : "";
   return <article
     className={`task-card quote-kanban-card${overdue ? " task-overdue" : ""}${isDragging ? " task-card-dragging" : ""}`}
-    draggable
+    draggable={draggable}
     tabIndex="0"
     data-kanban-id={quote.id}
     onDragStart={(event) => { event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/quote-id", quote.id); onDragStart(event); }}

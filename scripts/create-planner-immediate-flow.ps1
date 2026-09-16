@@ -256,7 +256,7 @@ $definition = @'
                           "payload/recipients": "@createArray(outputs('Get_system_user')?['body/internalemailaddress'])",
                           "payload/message": "@concat(outputs('Compose_Notification_Title'), ': ', coalesce(triggerOutputs()?['body/cr40f_descricao'], 'Tarefa atualizada.'))",
                           "payload/openApp": true,
-                          "payload/dynamicParams": "@json(concat('{\"pageType\":\"entityrecord\",\"entityName\":\"cr40f_plannertarefa\",\"entityId\":\"', triggerOutputs()?['body/_cr40f_tarefa_value'], '\"}'))"
+                          "payload/dynamicParams/entityLogicalName": "cr40f_plannertarefa"
                         },
                         "host": {
                           "apiId": "/providers/Microsoft.PowerApps/apis/shared_powerappsnotificationv2",

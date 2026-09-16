@@ -1758,7 +1758,7 @@ const Board = memo(function Board({
           isDragging={dragProps.isDragging}
           onDragStart={(_, event) => dragProps.onDragStart(event)}
           onDragEnd={dragProps.onDragEnd}
-          enableDrag
+          enableDrag={dragProps.draggable}
         />
       )}
     />
@@ -2342,7 +2342,7 @@ function BoardView({
     [columns, filtered, groupBy],
   );
   const isMobile = useMediaQuery(
-    "(pointer: coarse) and (max-width: 820px), (pointer: coarse) and (max-width: 900px) and (max-height: 600px)",
+    "(max-width: 820px), (max-width: 900px) and (max-height: 600px)",
   );
   const subtasksByParent = useMemo(
     () =>
