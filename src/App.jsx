@@ -1448,25 +1448,7 @@ function DataLoadingView({ loading, error }) {
     : loading?.quotes || loading?.quality
       ? "Preparando dados complementares"
       : "Finalizando conexão";
-  return (
-    <div className="data-loading-view" role="status" aria-live="polite">
-      <div className="loading-orbit" aria-hidden="true">
-        <span />
-      </div>
-      <div className="loading-copy">
-        <strong>{stage}</strong>
-        <span>
-          {error ||
-            "A operação continua disponível enquanto os dados são preparados."}
-        </span>
-      </div>
-      <div className="loading-skeleton-grid" aria-hidden="true">
-        <span />
-        <span />
-        <span />
-      </div>
-    </div>
-  );
+  return <LoadingFallback label={error || stage} view="dashboard" />;
 }
 
 const TaskCard = memo(function TaskCard({
@@ -5632,6 +5614,11 @@ export default function App() {
   const navigationWindowRef = useRef(plannerNavigationWindow(window));
   const initialUrlStateRef = useRef(readPlannerUrlState(navigationWindowRef.current.location.search));
   const [active, setActive] = useState(initialUrlStateRef.current.view);
+  const [readyView, setReadyView] = useState(null);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setReadyView(active), 180);
+    return () => window.clearTimeout(timer);
+  }, [active]);
   const [store] = useState(() => createDataStore());
   const [state, setState] = useState(() => ({
     tasks: [],
@@ -7231,7 +7218,7 @@ export default function App() {
         />
       );
     if (active === "quotes")
-      return <QuotesView state={viewState} onOpenTask={openTask} onCreateQuote={createQuote} onUpdateQuote={updateQuote} onMarkQuoteSent={markQuoteSent} onSetQuoteOutcome={setQuoteOutcome} onEnsureTaskDetails={ensureTaskDetails} onAttachment={addAttachment} onDeleteAttachment={removeAttachment} loadAttachmentContent={store.loadAttachmentContent} AttachmentSectionComponent={AttachmentSection} selectedQuoteId={quoteToOpenId} onSelectQuote={setQuoteToOpenId} workspaceEnabled={QUOTE_WORKSPACE_V2_ENABLED} hybridEnabled={QUOTE_HYBRID_V3_ENABLED} />;
+      return state.loading?.quotes ? <LoadingFallback label="Carregando cotações" view="quotes" /> : <QuotesView state={viewState} onOpenTask={openTask} onCreateQuote={createQuote} onUpdateQuote={updateQuote} onMarkQuoteSent={markQuoteSent} onSetQuoteOutcome={setQuoteOutcome} onEnsureTaskDetails={ensureTaskDetails} onAttachment={addAttachment} onDeleteAttachment={removeAttachment} loadAttachmentContent={store.loadAttachmentContent} AttachmentSectionComponent={AttachmentSection} selectedQuoteId={quoteToOpenId} onSelectQuote={setQuoteToOpenId} workspaceEnabled={QUOTE_WORKSPACE_V2_ENABLED} hybridEnabled={QUOTE_HYBRID_V3_ENABLED} />;
     if (active === "board")
       return (
         <BoardView
@@ -7299,9 +7286,9 @@ export default function App() {
     if (active === "more") return <MoreView onNavigate={navigate} canViewManagement={showManagement} />;
     if (active === "quality")
       return state.loading?.quality ? (
-        <LoadingFallback />
+        <LoadingFallback view="quality" />
       ) : (
-        <Suspense fallback={<LoadingFallback />}>
+        <Suspense fallback={<LoadingFallback view="quality" />}>
           <LazyQualityView
             state={viewState}
             currentEmployee={currentEmployee}
@@ -7313,7 +7300,7 @@ export default function App() {
         </Suspense>
       );
     return (
-      <Suspense fallback={<LoadingFallback />}>
+      <Suspense fallback={<LoadingFallback view="settings" />}>
           <LazySettingsView onReset={reloadData} onAdminCleanup={adminCleanup} onSendNotificationTest={sendNotificationTest} live={store.live} teams={state.teams} tasks={state.tasks} contacts={state.contacts} notifications={state.notifications} employees={state.employees} personalTags={state.personalTags} onCreatePersonalTag={createPersonalTag} onUpdatePersonalTag={updatePersonalTag} onArchivePersonalTag={archivePersonalTag} onReorderPersonalTags={reorderPersonalTags} onSaveTeam={saveTeam} onDeleteTeam={deleteTeam} onImportPlannerTasks={importPlannerTasks} />
       </Suspense>
     );
@@ -7340,7 +7327,7 @@ export default function App() {
       refreshing={refreshing}
       canViewManagement={showManagement}
     >
-      {renderPage()}
+      {readyView === active ? renderPage() : <LoadingFallback view={active} />}
       {(state.loading?.quotes || state.loading?.quality) && (
         <div className="data-sync-chip" role="status" aria-live="polite">
           Preparando dados complementares…
