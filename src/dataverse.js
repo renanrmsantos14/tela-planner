@@ -451,6 +451,18 @@ export async function updateQuoteServiceType(id, patch) {
   return loadQuoteServiceTypes();
 }
 
+export async function deleteQuoteServiceType(id) {
+  const xrm = getXrm();
+  if (!xrm) return (await import("./mockQuoteServiceTypes.js")).deleteMockQuoteServiceType(id, loadMockState().quotes);
+  assertServiceTypeDev(xrm);
+  const typeId = cleanId(id);
+  if (!(await loadQuoteServiceTypes()).some((item) => item.id === typeId)) throw new Error("Tipo de serviço não encontrado.");
+  const linked = await request(xrm, `/${entitySetName(QUOTE_TABLE)}?$select=${QUOTE_TABLE}id&$filter=_${SERVICE_TYPE_LOOKUP}_value eq ${typeId}&$top=1`);
+  if (linked?.value?.length) throw new Error("Este tipo de serviço está vinculado a uma cotação. Arquive-o para preservar o histórico.");
+  await request(xrm, `/${entitySetName(SERVICE_TYPE_TABLE)}(${typeId})`, { method: "DELETE" });
+  return loadQuoteServiceTypes();
+}
+
 async function resolveSharePointFlowUrl(xrm) {
   return resolveEnvironmentVariableUrl(xrm, FLOW_URL_SCHEMA, String(import.meta.env?.VITE_FLOW_SALVAR_ANEXOS_SHAREPOINT_URL || ""));
 }

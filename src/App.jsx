@@ -3112,7 +3112,6 @@ function SettingsView({ onReset, onAdminCleanup, onSendNotificationTest, live, t
         }
       />
       <section className="settings-grid">
-        <ServiceTypeManager live={live} />
         <div className="panel setting-card">
           <div className="setting-icon">
             <RotateCcw size={19} />
@@ -3175,6 +3174,7 @@ function SettingsView({ onReset, onAdminCleanup, onSendNotificationTest, live, t
         </section>
         <TeamManager teams={teams} tasks={tasks} employees={employees} onSave={onSaveTeam} onDelete={onDeleteTeam} />
       </div>
+      <ServiceTypeManager live={live} />
     </div>
   );
 }
@@ -6865,6 +6865,7 @@ export default function App() {
   );
   const reloadData = useCallback(() => {
     runMutation(store.reset(), "Dados recarregados.");
+    if (!store.live) window.dispatchEvent(new Event("planner-service-types-changed"));
     setSelectedId("");
   }, [store, runMutation]);
   const adminCleanup = useCallback((action) => runMutation(store.adminCleanup(state, action), "Limpeza administrativa concluída."), [state, store, runMutation]);

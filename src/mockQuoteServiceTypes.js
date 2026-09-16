@@ -42,6 +42,16 @@ export function updateMockQuoteServiceType(id, patch) {
   return save(current.map((item) => item.id === id ? { ...item, ...changes } : item));
 }
 
+export function deleteMockQuoteServiceType(id, quotes = []) {
+  const current = loadMockQuoteServiceTypes();
+  const type = current.find((item) => item.id === id);
+  if (!type) throw new Error("Tipo de serviço não encontrado.");
+  if (quotes.some((quote) => quote.serviceTypeId === id || (!quote.serviceTypeId && quote.serviceType?.localeCompare(type.name, "pt-BR", { sensitivity: "base" }) === 0))) {
+    throw new Error("Este tipo de serviço está vinculado a uma cotação. Arquive-o para preservar o histórico.");
+  }
+  return save(current.filter((item) => item.id !== id));
+}
+
 export function resetMockQuoteServiceTypes() {
   return save(seed());
 }
