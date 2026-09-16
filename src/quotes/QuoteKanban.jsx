@@ -29,7 +29,7 @@ const QuoteCard = memo(function QuoteCard({ quote, task, isDragging, onOpen, onD
     onClick={() => onOpen?.(quote.id)}
     onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onOpen?.(quote.id); } }}
   >
-    <div className="task-card-top"><span className={`priority priority-${PRIORITY_TONES[priority.id] || "neutral"}`}>{priority.label}</span>{overdue && <span className="overdue-label">Vencida</span>}<button className="card-open" type="button" onClick={(event) => { event.stopPropagation(); onOpen?.(quote.id); }} aria-label={`Abrir cotação ${quote.code || "sem número"}`}><ArrowUpRight size={15} /></button></div>
+    <div className="task-card-top"><span className={`priority priority-${PRIORITY_TONES[priority.id] || "neutral"}`} aria-label={`Prioridade: ${priority.label}`}>{priority.label}</span>{overdue && <span className="overdue-label">Vencida</span>}<button className="card-open" type="button" onClick={(event) => { event.stopPropagation(); onOpen?.(quote.id); }} aria-label={`Abrir cotação ${quote.code || "sem número"}`}><ArrowUpRight size={15} /></button></div>
     <div className="task-card-title-row"><h3>{quote.client || quote.title || "Cotação sem cliente"}</h3></div>
     <div className="task-link"><GripVertical size={13} aria-hidden="true" /><FileText size={13} aria-hidden="true" /><em>{quote.code || "Sem número"}{quote.title ? ` · ${quote.title}` : ""}</em></div>
     {(quote.serviceType || quote.origin || quote.destination) && <p className="task-description">{[quote.serviceType, [quote.origin, quote.destination].filter(Boolean).join(" → ")].filter(Boolean).join(" · ")}</p>}
