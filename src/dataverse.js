@@ -411,7 +411,10 @@ export async function loadQuoteServiceTypes() {
   if (!definitions.length) return choices.map((option) => option.label);
   const values = await retrieveMany(xrm, ENVIRONMENT_VARIABLE_VALUE_TABLE, `?$select=value&$filter=_environmentvariabledefinitionid_value eq ${definitions[0].environmentvariabledefinitionid}&$top=1`);
   const raw = values[0]?.value || definitions[0].defaultvalue;
-  try { return normalizeServiceTypes(JSON.parse(raw)).filter((label) => serviceTypeValues.has(label)); }
+  try {
+    const labels = new Map(choices.map(({ label }) => [label.toLocaleLowerCase("pt-BR"), label]));
+    return normalizeServiceTypes(JSON.parse(raw)).map((label) => labels.get(label.toLocaleLowerCase("pt-BR"))).filter(Boolean);
+  }
   catch { throw new Error("Configuração de tipos de serviço inválida no Dataverse."); }
 }
 
