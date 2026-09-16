@@ -18,6 +18,16 @@ export const QUOTE_PRIORITIES = [
 
 export const QUOTE_CHANNELS = ["WhatsApp", "Telefone", "E-mail"];
 
+export const QUOTE_VEHICLE_VALUES = Object.freeze({
+  "Básico": 202410000,
+  Executivo: 202410001,
+  Blindado: 202410002,
+  Van: 202410003,
+  "Van Blindado": 202410004,
+  Spin: 202410005,
+  "Somente Motorista": 202410006,
+});
+
 export const QUOTE_OPEN_STATUSES = QUOTE_STATUSES.slice(0, 5);
 export const QUOTE_TERMINAL_STATUSES = QUOTE_STATUSES.slice(5);
 export const QUOTE_CREATE_STEPS = [
@@ -31,7 +41,7 @@ const STEP_FIELDS = {
   client: [
     ["title", "Informe o título interno."],
     ["client", "Informe o cliente ou empresa."],
-    ["clientContact", "Informe o contato do cliente."],
+    ["clientContact", "Informe o nome do solicitante."],
     ["channel", "Selecione o canal de entrada."],
   ],
   service: [
@@ -40,7 +50,7 @@ const STEP_FIELDS = {
     ["destination", "Informe o destino."],
     ["serviceDate", "Informe a data e hora do serviço."],
   ],
-  commercial: [["deadline", "Informe o prazo para responder."]],
+  commercial: [],
 };
 
 export function validateQuoteStep(input = {}, stepId = "review") {
@@ -51,6 +61,10 @@ export function validateQuoteStep(input = {}, stepId = "review") {
   const errors = {};
   for (const [field, message] of STEP_FIELDS[stepId] || []) {
     if (!String(input[field] ?? "").trim()) errors[field] = message;
+  }
+  if (stepId === "service") {
+    for (const field of ["origin", "destination"]) if (String(input[field] || "").length > 10000) errors[field] = "Máximo de 10.000 caracteres.";
+    if (String(input.notes || "").length > 4000) errors.notes = "O pedido do cliente excede 4.000 caracteres, limite do Dataverse.";
   }
   if (stepId === "client" && ["WhatsApp", "Telefone"].includes(input.channel) && !String(input.clientPhone || "").trim()) errors.clientPhone = "Informe o telefone.";
   if (stepId === "client" && input.channel === "E-mail") {
@@ -77,13 +91,17 @@ export function filterQuotes(quotes = [], tasks = [], filters = {}, today = saoP
     const task = taskByQuote.get(quote.id);
     const searchable = [quote.code, quote.title, quote.client, quote.clientContact, quote.status].join(" ").toLocaleLowerCase("pt-BR");
     if (needle && !searchable.includes(needle)) return false;
-    if (filters.status && quote.status !== filters.status) return false;
-    if (filters.priority && quote.priority !== filters.priority) return false;
-    if (filters.responsible === "unassigned" && (task?.assigneeIds || []).length) return false;
-    if (filters.responsible && filters.responsible !== "unassigned" && !(task?.assigneeIds || []).includes(filters.responsible)) return false;
-    if (filters.deadline === "overdue" && !(isQuoteOpen(quote.status) && quote.deadline && quote.deadline < today)) return false;
-    if (filters.deadline === "today" && !(isQuoteOpen(quote.status) && quote.deadline === today)) return false;
-    if (filters.deadline === "no-deadline" && quote.deadline) return false;
+    const selected = (value) => Array.isArray(value) ? value : value ? [value] : [];
+    if (selected(filters.status).length && !selected(filters.status).includes(quote.status)) return false;
+    if (selected(filters.priority).length && !selected(filters.priority).includes(quote.priority)) return false;
+    const responsible = selected(filters.responsible);
+    if (responsible.length && !responsible.some((id) => id === "unassigned" ? !(task?.assigneeIds || []).length : (task?.assigneeIds || []).includes(id))) return false;
+    const deadline = selected(filters.deadline);
+    if (deadline.length && !deadline.some((value) =>
+      value === "overdue" && isQuoteOpen(quote.status) && quote.deadline && quote.deadline < today ||
+      value === "today" && isQuoteOpen(quote.status) && quote.deadline === today ||
+      value === "no-deadline" && !quote.deadline
+    )) return false;
     return true;
   });
 }
@@ -185,13 +203,12 @@ export function validateQuoteDraft(input = {}) {
   const required = [
     ["title", "título interno"],
     ["client", "cliente/empresa"],
-    ["clientContact", "contato do cliente"],
+    ["clientContact", "nome do solicitante"],
     ["channel", "canal de entrada"],
     ["serviceType", "tipo de serviço"],
     ["origin", "origem"],
     ["destination", "destino"],
     ["serviceDate", "data e hora do serviço"],
-    ["deadline", "prazo para responder"],
   ];
   const missing = required.filter(([key]) => !String(input[key] ?? "").trim()).map(([, label]) => label);
   const stepErrors = validateQuoteStep(input, "review").errors;

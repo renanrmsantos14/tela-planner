@@ -367,9 +367,9 @@ export function updateTask(state, id, patch) {
   const nextQuoteStatus = quoteTask && (patch.quoteStatus !== undefined || patch.status !== undefined)
     ? (patch.quoteStatus !== undefined ? patch.quoteStatus : quoteStatusForTaskStatus(patch.status, currentQuoteStatus))
     : currentQuoteStatus;
-  const nextStatus = quoteTask && (patch.quoteStatus !== undefined || patch.status !== undefined)
+  const nextStatus = patch.status ?? (quoteTask && patch.quoteStatus !== undefined
     ? taskStatusForQuoteStatus(nextQuoteStatus)
-    : (patch.status ?? existing?.status);
+    : existing?.status);
   const waitingContext = patch.waitingContext === undefined
     ? normalizeWaitingContext(existing?.waitingContext)
     : normalizeWaitingContext(patch.waitingContext);
@@ -379,6 +379,10 @@ export function updateTask(state, id, patch) {
   }
   const statusChanged = nextStatus !== existing?.status;
   const quoteStatusChanged = quoteTask && nextQuoteStatus !== currentQuoteStatus;
+  const nextResponseSent = quoteTask && patch.responseSent !== undefined
+    ? Boolean(patch.responseSent)
+    : nextQuoteStatus === "Respondida ao cliente" && Boolean(quote?.responseSent);
+  const quoteResponseSentChanged = quoteTask && nextResponseSent !== Boolean(quote?.responseSent);
   const waitingChanged = patch.waitingContext !== undefined && JSON.stringify(waitingContext) !== JSON.stringify(normalizeWaitingContext(existing?.waitingContext));
   const tasks = state.tasks.map((taskItem) => {
     if (taskItem.id !== id) return taskItem;
@@ -395,7 +399,8 @@ export function updateTask(state, id, patch) {
     const assignment = patch.assignmentMode !== undefined || patch.teamIds !== undefined || patch.teamId !== undefined || patch.assigneeIds !== undefined || patch.assigneeNames !== undefined || patch.assigneeName !== undefined || patch.primaryAssigneeId !== undefined || patch.consultantIds !== undefined
       ? resolveTaskAssignment({ ...taskItem, ...patch }, state.teams || [], state.employees || [])
       : null;
-    return { ...taskItem, ...patch, ...(assignment || {}), assigneeName: assignment ? assignment.assigneeNames.join(", ") : taskItem.assigneeName, status: nextStatus, ...(quoteTask ? { quoteStatus: nextQuoteStatus } : {}), waitingContext, history };
+    const { responseSent: _responseSent, ...taskPatch } = patch;
+    return { ...taskItem, ...taskPatch, ...(assignment || {}), assigneeName: assignment ? assignment.assigneeNames.join(", ") : taskItem.assigneeName, status: nextStatus, ...(quoteTask ? { quoteStatus: nextQuoteStatus } : {}), waitingContext, history };
   });
   if (!existing) return saveState({ ...state, tasks });
   const next = tasks.find((taskItem) => taskItem.id === id);
@@ -416,11 +421,11 @@ export function updateTask(state, id, patch) {
     notifications.unshift({ id: uid("notification"), taskId: id, recipientEmployeeId, type: "mention", title: "Você foi mencionado", message: next.title, occurredAt: new Date().toISOString(), readAt: "", dedupeKey: notificationDedupeKey({ recipientId: recipientEmployeeId, taskId: id, type: "mention", eventId }) });
   });
   const quoteStatusIsTerminal = isQuoteTerminalStatus(nextQuoteStatus);
-  const nextQuotes = quoteTask && quoteStatusChanged
+  const nextQuotes = quoteTask && (quoteStatusChanged || quoteResponseSentChanged)
     ? state.quotes.map((quoteItem) => quoteItem.id === existing.quoteId ? {
       ...quoteItem,
       status: nextQuoteStatus,
-      responseSent: nextQuoteStatus === "Respondida ao cliente" ? quoteItem.responseSent : false,
+      responseSent: nextResponseSent,
       finalizationAt: quoteStatusIsTerminal ? (quoteItem.finalizationAt || new Date().toISOString()) : "",
       modifiedAt: new Date().toISOString(),
     } : quoteItem)
@@ -632,6 +637,7 @@ export function resolveWaitingReturn(state, id, input = {}) {
   const tasks = state.tasks.map((taskItem) => taskItem.id === id ? {
     ...taskItem,
     status: "doing",
+    ...(isQuoteTask(taskItem) && !taskItem.parentTaskId ? { quoteStatus: "Em análise pelo financeiro" } : {}),
     returns: [...(taskItem.returns || []), { ...returnRecord, attachments }],
     attachments: [...(taskItem.attachments || [])],
     history: [...(taskItem.history || []), historyEntry],
@@ -672,7 +678,10 @@ export function resolveWaitingReturn(state, id, input = {}) {
       dedupeKey: notificationDedupeKey({ recipientId: recipientEmployeeId, taskId: id, type: "mention", eventId: historyEntry.id }),
     });
   });
-  return saveState({ ...state, tasks, notifications });
+  const quotes = isQuoteTask(existing) && !existing.parentTaskId
+    ? (state.quotes || []).map((quote) => quote.id === existing.quoteId ? { ...quote, status: "Em análise pelo financeiro", modifiedAt: occurredAt } : quote)
+    : state.quotes;
+  return saveState({ ...state, tasks, quotes, notifications });
 }
 
 export function createTeam(state, input) {
@@ -1034,8 +1043,14 @@ export function createQuote(state, input = {}) {
 export function updateQuote(state, id, patch = {}) {
   const existing = (state.quotes || []).find((quote) => quote.id === id);
   if (!existing) throw new Error("Cotação não encontrada.");
+  if (patch.status === "Aguardando informação" && existing.status !== patch.status) {
+    const validation = validateWaitingContext("waiting", patch.waitingContext);
+    if (!validation.allowed) throw new Error(validation.error);
+    if (!(state.tasks || []).some((task) => task.quoteId === id && !task.parentTaskId)) throw new Error("Tarefa vinculada à cotação não encontrada.");
+  }
   const nextQuote = { ...existing, ...patch, id, modifiedAt: new Date().toISOString() };
   const outcomeStatus = nextQuote.status;
+  const statusChanged = outcomeStatus !== existing.status;
   const terminal = isQuoteTerminalStatus(outcomeStatus);
   const reopening = !terminal && isQuoteTerminalStatus(existing.status);
   if (reopening) {
@@ -1043,13 +1058,13 @@ export function updateQuote(state, id, patch = {}) {
     nextQuote.responseSent = false;
   }
   const completedAt = nextQuote.finalizationAt || new Date().toISOString();
-  return saveState({
+  const nextState = {
     ...state,
     quotes: state.quotes.map((quote) => quote.id === id ? nextQuote : quote),
     tasks: state.tasks.map((taskItem) => {
       if (taskItem.quoteId !== id) return taskItem;
       if (taskItem.parentTaskId && ["done", "cancelled"].includes(taskItem.status)) return taskItem;
-      const nextTaskStatus = taskItem.parentTaskId ? (terminal ? "done" : taskItem.status) : taskStatusForQuoteStatus(outcomeStatus);
+      const nextTaskStatus = taskItem.parentTaskId ? (statusChanged && terminal ? "done" : taskItem.status) : (statusChanged ? taskStatusForQuoteStatus(outcomeStatus) : taskItem.status);
       const actor = state.employees?.find((employee) => employee.id === patch.actorEmployeeId);
       const history = [...(taskItem.history || [])];
       if (!taskItem.parentTaskId && (taskItem.quoteStatus || existing.status) !== outcomeStatus) history.push({ id: uid("history"), text: `Cotação movida para ${outcomeStatus}.`, createdAt: nextQuote.modifiedAt, author: actor?.name || "Sistema", authorId: actor?.id || "", field: "quoteStatus", previousValue: taskItem.quoteStatus || existing.status, nextValue: outcomeStatus });
@@ -1064,14 +1079,19 @@ export function updateQuote(state, id, patch = {}) {
         priority: nextQuote.priority || taskItem.priority,
         ...(!taskItem.parentTaskId && patch.assigneeIds !== undefined ? { assigneeIds: patch.assigneeIds, assigneeNames: patch.assigneeNames || [], assigneeName: (patch.assigneeNames || []).join(", "), primaryAssigneeId: patch.assigneeIds[0] || "", primaryAssigneeName: patch.assigneeNames?.[0] || "" } : {}),
         history,
-        ...(taskItem.parentTaskId ? (terminal ? { status: "done", completedAt } : {}) : {
+        ...(taskItem.parentTaskId ? (statusChanged && terminal ? { status: "done", completedAt } : {}) : {
           status: nextTaskStatus,
           quoteStatus: outcomeStatus,
-          ...(terminal ? { completedAt } : { completedAt: "" }),
+          ...(statusChanged ? (terminal ? { completedAt } : { completedAt: "" }) : {}),
         }),
       };
     }),
-  });
+  };
+  if (patch.waitingContext !== undefined) {
+    const linkedTask = nextState.tasks.find((taskItem) => taskItem.quoteId === id && !taskItem.parentTaskId);
+    if (linkedTask) return updateTask(nextState, linkedTask.id, { waitingContext: patch.waitingContext, actorEmployeeId: patch.actorEmployeeId });
+  }
+  return saveState(nextState);
 }
 
 export function markQuoteSent(state, id) {

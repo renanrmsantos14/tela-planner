@@ -53,9 +53,15 @@
       .control-button:hover { color: var(--ink); background: #fff; transform: translateY(-1px); }
       .control-button.is-active { color: #075b55; background: var(--accent-soft); box-shadow: 0 1px 3px rgba(13, 100, 93, .14); }
       .scenario-control { display: inline-flex; align-items: center; gap: 8px; min-height: 52px; padding: 4px 9px 4px 12px; border: 1px solid #dfe4ea; border-radius: 12px; background: #f8fafb; }
-      .scenario-control label { color: #7a8797; font-size: 10px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; }
-      .scenario-control select { min-height: 44px; max-width: 245px; padding: 0 30px 0 10px; border: 1px solid #dfe4ea; border-radius: 8px; color: var(--ink); background: #fff; font-size: 11px; font-weight: 700; cursor: pointer; }
-      .scenario-control select:focus-visible { outline: 3px solid #76a9ff; outline-offset: 2px; }
+      .scenario-control .control-label { color: #7a8797; font-size: 10px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; }
+      .scenario-control .custom-select-trigger { min-height: 44px; max-width: 245px; padding: 0 30px 0 10px; border: 1px solid #dfe4ea; border-radius: 8px; color: var(--ink); background: #fff; font-size: 11px; font-weight: 700; cursor: pointer; }
+      .scenario-select { position: relative; }
+      .scenario-control .custom-select-trigger { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+      .scenario-control .custom-select-panel { position: absolute; z-index: 20; top: calc(100% + 4px); right: 0; width: max(100%, 245px); max-height: 290px; overflow-y: auto; padding: 5px; border: 1px solid #dfe4ea; border-radius: 9px; background: #fff; box-shadow: 0 14px 32px #1a294020; }
+      .scenario-control .custom-select-panel[hidden] { display: none; }
+      .scenario-control .custom-select-panel button { display: block; width: 100%; padding: 9px 10px; border: 0; border-radius: 6px; background: transparent; color: var(--ink); text-align: left; font: inherit; font-size: 11px; cursor: pointer; }
+      .scenario-control .custom-select-panel button:hover, .scenario-control .custom-select-panel button[aria-selected="true"] { background: #eaf1fc; }
+      .scenario-control .custom-select-trigger:focus-visible { outline: 3px solid #76a9ff; outline-offset: 2px; }
 
       .preview-layout { display: grid; grid-template-columns: minmax(0, 1fr) 284px; gap: 24px; width: min(1440px, calc(100% - 40px)); margin: 0 auto; padding: 32px 0 52px; }
       .mail-stage { min-width: 0; overflow: auto; padding: clamp(20px, 3vw, 52px); border: 1px solid #dfe4ea; border-radius: 22px; background: linear-gradient(145deg, #e8edf1, #dce3e9); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .8), 0 14px 35px rgba(25, 44, 65, .05); }
@@ -127,7 +133,8 @@
         .control-label { min-width: 66px; }
         .control-button { flex: 0 0 auto; }
         .scenario-control { width: 100%; justify-content: space-between; }
-        .scenario-control select { flex: 1; max-width: none; }
+        .scenario-control .custom-select { flex: 1; min-width: 0; }
+        .scenario-control .custom-select-trigger { width: 100%; max-width: none; }
       }
 
       @media (prefers-reduced-motion: reduce) {
@@ -164,36 +171,26 @@
             <button class="control-button" type="button" data-stress="dpi" aria-pressed="false">DPI 125%</button>
           </div>
           <div class="scenario-control">
-            <label for="emailScenario">Cenário</label>
-            <select id="emailScenario" aria-label="Tipo de notificação por e-mail">
-              <optgroup label="Tarefas">
-                <option value="assignment">Nova tarefa atribuída</option>
-                <option value="assignees">Responsáveis alterados</option>
-                <option value="status">Status alterado</option>
-                <option value="deadline">Prazo alterado</option>
-                <option value="update">Atualização genérica</option>
-                <option value="waiting">Retorno aguardado</option>
-                <option value="waiting_return">Retorno registrado</option>
-                <option value="mention">Você foi mencionado</option>
-              </optgroup>
-              <optgroup label="Prazos">
-                <option value="due_today">Tarefa vence hoje</option>
-                <option value="due_soon">Prazo se aproximando</option>
-                <option value="overdue">Tarefa atrasada</option>
-                <option value="digest_daily">Resumo diário · atrasadas e vencem hoje</option>
-                <option value="digest_weekly">Resumo de segunda · semana e indicadores</option>
-              </optgroup>
-              <optgroup label="Atendimento">
-                <option value="contact_assignment">Novo caso atribuído</option>
-                <option value="contact_transfer">Caso transferido para você</option>
-              </optgroup>
-              <optgroup label="Teste">
-                <option value="test">Teste de notificação</option>
-              </optgroup>
-              <optgroup label="Operacional">
-                <option value="flow_error">Erro no Flow</option>
-              </optgroup>
-            </select>
+            <span class="control-label" id="emailScenarioLabel">Cenário</span>
+            <div class="custom-select scenario-select"><button id="emailScenario" class="custom-select-trigger" type="button" aria-label="Tipo de notificação por e-mail" aria-expanded="false" aria-controls="emailScenarioOptions" data-value="assignment">Nova tarefa atribuída <span aria-hidden="true">⌄</span></button><div id="emailScenarioOptions" class="custom-select-panel" role="listbox" aria-label="Cenários de e-mail" hidden>
+                <button type="button" role="option" data-scenario="assignment" aria-selected="true">Nova tarefa atribuída</button>
+                <button type="button" role="option" data-scenario="assignees" aria-selected="false">Responsáveis alterados</button>
+                <button type="button" role="option" data-scenario="status" aria-selected="false">Status alterado</button>
+                <button type="button" role="option" data-scenario="deadline" aria-selected="false">Prazo alterado</button>
+                <button type="button" role="option" data-scenario="update" aria-selected="false">Atualização genérica</button>
+                <button type="button" role="option" data-scenario="waiting" aria-selected="false">Retorno aguardado</button>
+                <button type="button" role="option" data-scenario="waiting_return" aria-selected="false">Retorno registrado</button>
+                <button type="button" role="option" data-scenario="mention" aria-selected="false">Você foi mencionado</button>
+                <button type="button" role="option" data-scenario="due_today" aria-selected="false">Tarefa vence hoje</button>
+                <button type="button" role="option" data-scenario="due_soon" aria-selected="false">Prazo se aproximando</button>
+                <button type="button" role="option" data-scenario="overdue" aria-selected="false">Tarefa atrasada</button>
+                <button type="button" role="option" data-scenario="digest_daily" aria-selected="false">Resumo diário · atrasadas e vencem hoje</button>
+                <button type="button" role="option" data-scenario="digest_weekly" aria-selected="false">Resumo de segunda · semana e indicadores</button>
+                <button type="button" role="option" data-scenario="contact_assignment" aria-selected="false">Novo caso atribuído</button>
+                <button type="button" role="option" data-scenario="contact_transfer" aria-selected="false">Caso transferido para você</button>
+                <button type="button" role="option" data-scenario="test" aria-selected="false">Teste de notificação</button>
+                <button type="button" role="option" data-scenario="flow_error" aria-selected="false">Erro no Flow</button>
+              </div></div>
           </div>
         </div>
       </header>
@@ -389,8 +386,30 @@
         });
       });
 
+      const scenarioPanel = document.querySelector("#emailScenarioOptions");
+      const closeScenarioPanel = () => { scenarioPanel.hidden = true; emailScenario.setAttribute("aria-expanded", "false"); };
+      emailScenario.addEventListener("click", () => {
+        scenarioPanel.hidden = !scenarioPanel.hidden;
+        emailScenario.setAttribute("aria-expanded", String(!scenarioPanel.hidden));
+      });
+      scenarioPanel.addEventListener("click", (event) => {
+        const option = event.target.closest("[data-scenario]");
+        if (!option) return;
+        emailScenario.dataset.value = option.dataset.scenario;
+        emailScenario.firstChild.textContent = option.textContent + " ";
+        scenarioPanel.querySelectorAll("[data-scenario]").forEach((item) => item.setAttribute("aria-selected", String(item === option)));
+        closeScenarioPanel();
+        emailScenario.dispatchEvent(new Event("change"));
+        emailScenario.focus();
+      });
+      document.addEventListener("pointerdown", (event) => {
+        if (!event.target.closest(".scenario-select")) closeScenarioPanel();
+      });
+      emailScenario.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") closeScenarioPanel();
+      });
       emailScenario.addEventListener("change", () => {
-        const scenario = scenarios[emailScenario.value] || scenarios.assignment;
+        const scenario = scenarios[emailScenario.dataset.value] || scenarios.assignment;
         emailSubject.textContent = scenario.subject;
         emailTitle.textContent = scenario.title;
         emailCopy.textContent = scenario.copy;

@@ -20,7 +20,7 @@ test("prévia local do e-mail mantém contrato compatível com Outlook", async (
   assert.match(source, /aria-pressed="true"/);
   assert.match(source, /data-legend="status"/);
   for (const scenario of ["assignment", "mention", "waiting", "waiting_return", "status", "assignees", "deadline", "update", "overdue", "due_today", "due_soon", "contact_assignment", "contact_transfer", "test", "flow_error"]) {
-    assert.match(source, new RegExp(`value="${scenario}"`));
+    assert.match(source, new RegExp(`data-scenario="${scenario}"`));
   }
   assert.match(source, /id="emailScenario"/);
   assert.match(source, /id="emailCtaLabel"/);

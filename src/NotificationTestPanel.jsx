@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, BellRing, CheckCircle2, Clock3, LoaderCircle, Smartphone, Send } from "lucide-react";
+import SearchableSelect from "./SearchableSelect.jsx";
 
 export const NOTIFICATION_TEST_TYPES = [
   { id: "digest_daily", label: "Resumo diário", description: "Teste de push diário" },
@@ -60,10 +61,7 @@ export default function NotificationTestPanel({ live, tasks = [], onSend }) {
         <div className="notification-test-fields">
           <label className="notification-test-field">
             <span>Tarefa de referência</span>
-            <select value={taskId} onChange={(event) => setTaskId(event.target.value)} disabled={!live || sending || !availableTasks.length}>
-              {!availableTasks.length && <option value="">Nenhuma tarefa disponível</option>}
-              {availableTasks.map((task) => <option key={task.id} value={task.id}>{task.title || "Tarefa sem título"}</option>)}
-            </select>
+            <SearchableSelect value={taskId} onChange={setTaskId} disabled={!live || sending || !availableTasks.length} options={availableTasks.map((task) => ({ value: task.id, label: task.title || "Tarefa sem título" }))} placeholder={availableTasks.length ? "Selecione uma tarefa" : "Nenhuma tarefa disponível"} clearable={false} aria-label="Tarefa de referência" />
           </label>
           <label className="notification-test-field">
             <span>Mensagem do teste</span>

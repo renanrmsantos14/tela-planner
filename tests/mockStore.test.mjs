@@ -224,10 +224,13 @@ test("sincroniza status comercial da cotação com sua tarefa principal", () => 
   const quote = created.quotes[0];
   const task = created.tasks.find((item) => item.quoteId === quote.id && !item.parentTaskId);
 
-  const waiting = updateQuote(created, quote.id, { status: "Aguardando informação" });
+  assert.throws(() => updateQuote(created, quote.id, { status: "Aguardando informação" }), /aguardado/);
+  const waitingContext = { subject: "Confirmação do cliente", onType: "external", onName: "Cliente", note: "Aguardando dados" };
+  const waiting = updateQuote(created, quote.id, { status: "Aguardando informação", waitingContext });
   const waitingTask = waiting.tasks.find((item) => item.id === task.id);
   assert.equal(waitingTask.quoteStatus, "Aguardando informação");
   assert.equal(waitingTask.status, "waiting");
+  assert.equal(waitingTask.waitingContext.subject, waitingContext.subject);
 
   const sent = markQuoteSent(waiting, quote.id);
   const sentTask = sent.tasks.find((item) => item.id === task.id);
@@ -244,6 +247,51 @@ test("sincroniza alteração de status da tarefa de cotação de volta para a co
   const next = updateTask(created, task.id, { quoteStatus: "Cotada" });
   assert.equal(next.quotes.find((item) => item.id === quote.id).status, "Cotada");
   assert.equal(next.tasks.find((item) => item.id === task.id).status, "doing");
+});
+
+test("concluir tarefa vinculada mantém a tarefa concluída e marca a cotação como respondida", () => {
+  withStorage();
+  const created = createQuote(seedState(), { title: "Transfer", client: "Cliente", deadline: "2026-09-19" });
+  const quote = created.quotes[0];
+  const task = created.tasks.find((item) => item.quoteId === quote.id && !item.parentTaskId);
+
+  const next = updateTask(created, task.id, { status: "done" });
+  assert.equal(next.tasks.find((item) => item.id === task.id).status, "done");
+  assert.equal(next.tasks.find((item) => item.id === task.id).quoteStatus, "Respondida ao cliente");
+  assert.equal(next.quotes.find((item) => item.id === quote.id).status, "Respondida ao cliente");
+});
+
+test("confirmação de envio ao concluir tarefa atualiza a cotação vinculada", () => {
+  withStorage();
+  const created = createQuote(seedState(), { title: "Transfer", client: "Cliente", deadline: "2026-09-19" });
+  const quote = created.quotes[0];
+  const task = created.tasks.find((item) => item.quoteId === quote.id && !item.parentTaskId);
+
+  const completed = updateTask(created, task.id, { status: "done", quoteStatus: "Respondida ao cliente", responseSent: true });
+  assert.equal(completed.tasks.find((item) => item.id === task.id).status, "done");
+  assert.equal(completed.quotes.find((item) => item.id === quote.id).status, "Respondida ao cliente");
+  assert.equal(completed.quotes.find((item) => item.id === quote.id).responseSent, true);
+
+  const alreadyResponded = updateTask(created, task.id, { status: "done" });
+  const confirmed = updateTask(alreadyResponded, task.id, { responseSent: true });
+  assert.equal(confirmed.quotes.find((item) => item.id === quote.id).responseSent, true);
+});
+
+test("conclusão só com cotação realizada mantém a cotação cotada e não enviada", () => {
+  withStorage();
+  const created = createQuote(seedState(), { title: "Transfer", client: "Cliente", deadline: "2026-09-19" });
+  const quote = created.quotes[0];
+  const task = created.tasks.find((item) => item.quoteId === quote.id && !item.parentTaskId);
+
+  const completed = updateTask(created, task.id, { status: "done", quoteStatus: "Cotada", responseSent: false });
+  assert.equal(completed.tasks.find((item) => item.id === task.id).status, "done");
+  assert.equal(completed.tasks.find((item) => item.id === task.id).quoteStatus, "Cotada");
+  assert.equal(completed.quotes.find((item) => item.id === quote.id).status, "Cotada");
+  assert.equal(completed.quotes.find((item) => item.id === quote.id).responseSent, false);
+
+  const edited = updateQuote(completed, quote.id, { title: "Transfer revisado", status: "Cotada" });
+  assert.equal(edited.tasks.find((item) => item.id === task.id).status, "done");
+  assert.equal(edited.quotes.find((item) => item.id === quote.id).status, "Cotada");
 });
 
 test("reabrir cotação reativa sua tarefa principal e limpa encerramento", () => {

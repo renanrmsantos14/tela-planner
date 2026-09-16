@@ -22,6 +22,7 @@ import {
 import SearchableSelect from "./SearchableSelect.jsx";
 import AssignmentFields from "./AssignmentFields.jsx";
 import PageHeader from "./PageHeader.jsx";
+import { DateInput } from "./DateInput.jsx";
 import {
   CONTACT_CHANNELS,
   CONTACT_PRIORITIES,
@@ -335,7 +336,7 @@ function ContactDrawer({
             </div>
             <div className="drawer-assignment-deadline-grid contact-assignment-grid">
               <AssignmentFields form={draft} setForm={setAssignmentForm} employees={employees} teams={teams} />
-              <label className="deadline-field">Prazo<input type="date" value={draft.dueDate || ""} onChange={(event) => update("dueDate", event.target.value)} disabled={!canEdit || saving} /></label>
+              <label className="deadline-field">Prazo<DateInput type="date" value={draft.dueDate || ""} onChange={(event) => update("dueDate", event.target.value)} disabled={!canEdit || saving} /></label>
             </div>
           </div>
           {draft.status === "done" && <label className="drawer-description contact-resolution-field">Resultado da conclusão (opcional)<textarea value={draft.resolutionOutcome || ""} onChange={(event) => update("resolutionOutcome", event.target.value)} disabled={!canEdit || saving} placeholder="Ex.: retorno confirmado com o cliente" rows={2} /></label>}
@@ -537,11 +538,11 @@ export default function ContactsView({
         <button className="filter-toggle button button-quiet" type="button" onClick={() => setFilterOpen((value) => !value)} aria-expanded={filterOpen} aria-controls="contacts-filter-options"><SlidersHorizontal size={15} aria-hidden="true" /><span>Filtros</span>{activeFilterCount > 0 && <b aria-label={`${activeFilterCount} filtros ativos`}>{activeFilterCount}</b>}<span className="filter-toggle-symbol" aria-hidden="true">{filterOpen ? "−" : "+"}</span></button>
         <div className="search-field filter-search"><Search size={16} aria-hidden="true" /><input value={filters.query} onChange={(event) => updateFilter("query", event.target.value)} placeholder="Buscar assunto, pessoa, telefone ou e-mail" aria-label="Buscar contatos" /></div>
         <div className="filter-bar-content" id="contacts-filter-options">
-          <select value={filters.channel} onChange={(event) => updateFilter("channel", event.target.value)} aria-label="Filtrar por canal"><option value="">Todos os canais</option>{CONTACT_CHANNELS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select>
-          <select value={filters.status} onChange={(event) => updateFilter("status", event.target.value)} aria-label="Filtrar por status"><option value="">Pendentes e aguardando</option>{CONTACT_STATUSES.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select>
-          <select value={filters.priority} onChange={(event) => updateFilter("priority", event.target.value)} aria-label="Filtrar por prioridade"><option value="">Todas as prioridades</option>{CONTACT_PRIORITIES.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select>
-          <select value={filters.owner} onChange={(event) => updateFilter("owner", event.target.value)} aria-label="Filtrar por responsável"><option value="">Todos os responsáveis</option>{employees.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
-          <select value={filters.team} onChange={(event) => updateFilter("team", event.target.value)} aria-label="Filtrar por equipe"><option value="">Todas as equipes</option>{teams.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
+          <SearchableSelect value={filters.channel} onChange={(value) => updateFilter("channel", value)} options={CONTACT_CHANNELS.map((item) => ({ value: item.id, label: item.label }))} placeholder="Todos os canais" aria-label="Filtrar por canal" />
+          <SearchableSelect value={filters.status} onChange={(value) => updateFilter("status", value)} options={CONTACT_STATUSES.map((item) => ({ value: item.id, label: item.label }))} placeholder="Pendentes e aguardando" aria-label="Filtrar por status" />
+          <SearchableSelect value={filters.priority} onChange={(value) => updateFilter("priority", value)} options={CONTACT_PRIORITIES.map((item) => ({ value: item.id, label: item.label }))} placeholder="Todas as prioridades" aria-label="Filtrar por prioridade" />
+          <SearchableSelect value={filters.owner} onChange={(value) => updateFilter("owner", value)} options={employees.map((item) => ({ value: item.id, label: item.name }))} placeholder="Todos os responsáveis" aria-label="Filtrar por responsável" />
+          <SearchableSelect value={filters.team} onChange={(value) => updateFilter("team", value)} options={teams.map((item) => ({ value: item.id, label: item.name }))} placeholder="Todas as equipes" aria-label="Filtrar por equipe" />
           <button className={`contact-filter-chip ${filters.mine ? "is-active" : ""}`} type="button" onClick={() => updateFilter("mine", !filters.mine)} disabled={!currentEmployee?.id}>Minhas pendências</button>
           <button className={`contact-filter-chip ${filters.overdue ? "is-active" : ""}`} type="button" onClick={() => updateFilter("overdue", !filters.overdue)}>Vencidos</button>
           <button className={`contact-filter-chip ${filters.includeCompleted ? "is-active" : ""}`} type="button" onClick={() => updateFilter("includeCompleted", !filters.includeCompleted)}>Concluídos</button>

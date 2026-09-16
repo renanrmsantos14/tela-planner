@@ -55,6 +55,7 @@ import {
   waitingContextSummary,
 } from "./domain.js";
 import { isQuoteTask, isQuoteTerminalStatus, quoteStatusForTaskStatus, taskStatusForQuoteStatus } from "./quoteTaskFlow.js";
+import { QUOTE_VEHICLE_VALUES } from "./quoteDomain.js";
 import { localDateKey, manualCollectionKey } from "./management.js";
 import { normalizeContact } from "./contactDomain.js";
 
@@ -193,6 +194,9 @@ const QUOTE_STATUS_VALUES = Object.freeze({
 const QUOTE_PRIORITY_VALUES = Object.freeze({ low: 100003000, medium: 100003001, high: 100003002, urgent: 100003003 });
 const QUOTE_CHANNEL_VALUES = Object.freeze({ WhatsApp: 100001000, Telefone: 100001001, "E-mail": 100001002 });
 const lookupCache = new Map();
+let quoteClientEntitySet = "";
+let quoteLongRoutesAvailable = false;
+let quoteLongRoutesChecked = false;
 let quoteServiceLookupAvailable = false;
 let quoteServiceLookupChecked = false;
 
@@ -646,6 +650,7 @@ function normalizeQuote(row) {
     code: row.cr40f_numerodacotacao || "",
     title: row.cr40f_titulo || "Sem título",
     client: row.cr40f_clienteempresa || "",
+    clientId: row._cr40f_cliente_value || "",
     status: row["cr40f_statuscotacao@OData.Community.Display.V1.FormattedValue"] || Object.entries(QUOTE_STATUS_VALUES).find(([, value]) => value === row.cr40f_statuscotacao)?.[0] || "",
     channel: row["cr40f_canalentrada@OData.Community.Display.V1.FormattedValue"] || Object.entries(QUOTE_CHANNEL_VALUES).find(([, value]) => value === row.cr40f_canalentrada)?.[0] || "",
     clientContact: row.cr40f_contatocliente || "",
@@ -653,9 +658,9 @@ function normalizeQuote(row) {
     clientPhone: row.cr40f_telefonewhatsapp || "",
     serviceTypeId: row[`_${SERVICE_TYPE_LOOKUP}_value`] || "",
     serviceType: row[`_${SERVICE_TYPE_LOOKUP}_value@OData.Community.Display.V1.FormattedValue`] || row["cr40f_tiposervico@OData.Community.Display.V1.FormattedValue"] || [...serviceTypeValues].find(([, value]) => value === row.cr40f_tiposervico)?.[0] || "",
-    vehicleType: row.cr40f_tipoveiculo || "",
-    origin: row.cr40f_origem || "",
-    destination: row.cr40f_destino || "",
+    vehicleType: Object.entries(QUOTE_VEHICLE_VALUES).find(([, value]) => value === row.cr40f_tipoveiculo)?.[0] || row["cr40f_tipoveiculo@OData.Community.Display.V1.FormattedValue"] || "",
+    origin: row.cr40f_origemcompleta ?? row.cr40f_origem ?? "",
+    destination: row.cr40f_destinocompleto ?? row.cr40f_destino ?? "",
     serviceDate: row.cr40f_datahoraservico || "",
     returnDate: row.cr40f_datahoraretorno || "",
     passengers: row.cr40f_quantidadepassageiros == null ? "" : String(row.cr40f_quantidadepassageiros),
@@ -675,16 +680,46 @@ function normalizeQuote(row) {
 }
 
 const QUOTE_SELECT = [
-  "cr40f_pedidodecotacaoid", "cr40f_numerodacotacao", "cr40f_titulo", "cr40f_clienteempresa", "cr40f_contatocliente", "cr40f_telefonewhatsapp", "cr40f_emailcliente", "cr40f_canalentrada", "cr40f_tiposervico", "cr40f_tipoveiculo", "cr40f_origem", "cr40f_destino", "cr40f_datahoraservico", "cr40f_retorno", "cr40f_datahoraretorno", "cr40f_quantidadepassageiros", "cr40f_observacoespedido", "cr40f_prioridade", "cr40f_statuscotacao", "cr40f_prazoresponder", "cr40f_valorcotado", "cr40f_condicaocomercial", "cr40f_respostaenviadacliente", "cr40f_datahorafinalizacao", "cr40f_plannertaskid", "cr40f_linktarefaplanner", "cr40f_linkmensagemteams",
+  "cr40f_pedidodecotacaoid", "cr40f_numerodacotacao", "cr40f_titulo", "cr40f_clienteempresa", "_cr40f_cliente_value", "cr40f_contatocliente", "cr40f_telefonewhatsapp", "cr40f_emailcliente", "cr40f_canalentrada", "cr40f_tiposervico", "cr40f_tipoveiculo", "cr40f_origem", "cr40f_destino", "cr40f_datahoraservico", "cr40f_retorno", "cr40f_datahoraretorno", "cr40f_quantidadepassageiros", "cr40f_observacoespedido", "cr40f_prioridade", "cr40f_statuscotacao", "cr40f_prazoresponder", "cr40f_valorcotado", "cr40f_condicaocomercial", "cr40f_respostaenviadacliente", "cr40f_datahorafinalizacao", "cr40f_plannertaskid", "cr40f_linktarefaplanner", "cr40f_linkmensagemteams",
 ].join(",");
 
 async function quoteSelect(xrm) {
+  if (!quoteLongRoutesChecked) {
+    try {
+      await Promise.all(["cr40f_origemcompleta", "cr40f_destinocompleto"].map((field) => request(xrm, `/EntityDefinitions(LogicalName='${QUOTE_TABLE}')/Attributes(LogicalName='${field}')?$select=LogicalName`)));
+      quoteLongRoutesAvailable = true;
+    } catch (error) {
+      console.warn("[Planner] colunas de rota longa indisponíveis; usando campos legados", error);
+    }
+    quoteLongRoutesChecked = true;
+  }
   if (!quoteServiceLookupChecked) {
     try { await request(xrm, `/EntityDefinitions(LogicalName='${QUOTE_TABLE}')/Attributes(LogicalName='${SERVICE_TYPE_LOOKUP}')?$select=LogicalName`); quoteServiceLookupAvailable = true; }
     catch { quoteServiceLookupAvailable = false; }
     quoteServiceLookupChecked = true;
   }
-  return quoteServiceLookupAvailable ? `${QUOTE_SELECT},_${SERVICE_TYPE_LOOKUP}_value` : QUOTE_SELECT;
+  return [QUOTE_SELECT, ...(quoteLongRoutesAvailable ? ["cr40f_origemcompleta", "cr40f_destinocompleto"] : []), ...(quoteServiceLookupAvailable ? [`_${SERVICE_TYPE_LOOKUP}_value`] : [])].join(",");
+}
+
+export async function loadQuoteClients() {
+  const xrm = getXrm();
+  if (!xrm) {
+    const names = [...new Set((loadMockState().quotes || []).map((quote) => String(quote.client || "").trim()).filter(Boolean))];
+    return { clients: names.sort((a, b) => a.localeCompare(b, "pt-BR")).map((name) => ({ id: `mock-client-${name}`, name })), entitySet: "" };
+  }
+  const metadata = await request(xrm, "/EntityDefinitions(LogicalName='cr40f_clientes1')?$select=PrimaryIdAttribute,PrimaryNameAttribute,EntitySetName");
+  const { PrimaryIdAttribute: idField, PrimaryNameAttribute: nameField, EntitySetName: entitySet } = metadata;
+  if (!idField || !nameField || !entitySet) throw new Error("Metadata de Clientes incompleta.");
+  quoteClientEntitySet = entitySet;
+  const rows = [];
+  let next = `/${entitySet}?$select=${idField},${nameField}&$filter=statecode eq 0&$orderby=${nameField} asc`;
+  while (next) {
+    const result = await request(xrm, next);
+    rows.push(...(result?.value || []));
+    const link = result?.["@odata.nextLink"];
+    next = link ? new URL(link).pathname.replace(`/api/data/${API_VERSION}`, "") + new URL(link).search : "";
+  }
+  return { clients: rows.map((row) => ({ id: row[idField], name: row[nameField] })).filter((row) => row.id && row.name), entitySet };
 }
 
 async function primaryNameAttribute(xrm, table) {
@@ -1090,10 +1125,9 @@ export async function searchQuotes(xrm, query) {
 }
 
 async function loadLiveState(xrm) {
-  const quoteFields = await quoteSelect(xrm);
   const currentUserId = cleanId(xrm.Utility?.getGlobalContext?.().userSettings?.userId);
   const [quotes, rows, events, relations, assigneeRelations, qualityErrors, qualityActions, employees, currentUserEmail, teams, teamRelations, personalTagData] = await Promise.all([
-    retrieveMany(xrm, QUOTE_TABLE, `?$select=${quoteFields}&$filter=statecode eq 0&$orderby=modifiedon desc`),
+    quoteSelect(xrm).then((quoteFields) => retrieveMany(xrm, QUOTE_TABLE, `?$select=${quoteFields}&$filter=statecode eq 0&$orderby=modifiedon desc`)),
     retrievePlannerTasks(xrm),
     retrieveMany(xrm, EVENT_TABLE, "?$select=cr40f_plannertarefaeventoid,_cr40f_tarefa_value,cr40f_tipo,cr40f_campo,cr40f_descricao,cr40f_valornovo,cr40f_ocorridoem,_cr40f_autor_value,_createdby_value&$orderby=cr40f_ocorridoem desc"),
     retrieveMany(xrm, RELATION_TABLE, "?$select=cr40f_plannertarearelacaoid,_cr40f_tarefapai_value,_cr40f_subtarefa_value&$filter=statecode eq 0"),
@@ -1404,9 +1438,13 @@ async function updateLiveTask(xrm, state, id, patch) {
   const nextQuoteStatus = quoteTask && (patch.quoteStatus !== undefined || patch.status !== undefined)
     ? (patch.quoteStatus !== undefined ? patch.quoteStatus : quoteStatusForTaskStatus(patch.status, currentQuoteStatus))
     : currentQuoteStatus;
-  const nextStatus = quoteTask && (patch.quoteStatus !== undefined || patch.status !== undefined)
+  const nextStatus = patch.status ?? (quoteTask && patch.quoteStatus !== undefined
     ? taskStatusForQuoteStatus(nextQuoteStatus)
-    : (patch.status ?? previousStatus);
+    : previousStatus);
+  const nextResponseSent = quoteTask && patch.responseSent !== undefined
+    ? Boolean(patch.responseSent)
+    : nextQuoteStatus === "Respondida ao cliente" && Boolean(linkedQuote?.responseSent);
+  const quoteResponseSentChanged = quoteTask && nextResponseSent !== Boolean(linkedQuote?.responseSent);
   const effectiveAssignmentMode = patch.assignmentMode ?? existing?.assignmentMode ?? "people";
   const waitingContext = patch.waitingContext === undefined
     ? normalizeWaitingContext(existing?.waitingContext)
@@ -1451,7 +1489,7 @@ async function updateLiveTask(xrm, state, id, patch) {
   await Promise.all(relationUpdates);
   await Promise.all([
     request(xrm, `/${entitySetName(TASK_TABLE)}(${cleanId(id)})`, { method: "PATCH", body: JSON.stringify(payload) }),
-    ...(quoteTask && nextQuoteStatus !== currentQuoteStatus ? [request(xrm, `/${entitySetName(QUOTE_TABLE)}(${cleanId(existing.quoteId)})`, { method: "PATCH", body: JSON.stringify(quotePayload({ status: nextQuoteStatus, responseSent: nextQuoteStatus === "Respondida ao cliente" ? linkedQuote.responseSent : false, finalizationAt: isQuoteTerminalStatus(nextQuoteStatus) ? (linkedQuote.finalizationAt || new Date().toISOString()) : "" })) })] : []),
+    ...(quoteTask && (nextQuoteStatus !== currentQuoteStatus || quoteResponseSentChanged) ? [request(xrm, `/${entitySetName(QUOTE_TABLE)}(${cleanId(existing.quoteId)})`, { method: "PATCH", body: JSON.stringify(quotePayload({ status: nextQuoteStatus, responseSent: nextResponseSent, finalizationAt: isQuoteTerminalStatus(nextQuoteStatus) ? (linkedQuote.finalizationAt || new Date().toISOString()) : "" })) })] : []),
     markQuoteOrigin(xrm, existing?.quoteId),
   ]);
   const statusChanged = nextStatus !== previousStatus;
@@ -1474,8 +1512,13 @@ async function updateLiveTask(xrm, state, id, patch) {
     if (!statusChanged && !dueDateChanged && !assigneesChanged && !waitingChanged) eventWrites.push(createEvent(xrm, id, patch.status !== undefined ? 100000002 : 100000001, "Tarefa atualizada."));
   }
   await Promise.all(eventWrites);
-  const confirmedPatch = Object.fromEntries(Object.entries({ ...patch, ...(quoteTask ? { status: nextStatus, quoteStatus: nextQuoteStatus } : {}) }).filter(([key]) => !["actorEmployeeId", "actorUserId", "mentionedEmployeeIds", "deadlineChangeReason", "suppressNotifications"].includes(key)));
+  const confirmedPatch = Object.fromEntries(Object.entries({ ...patch, ...(quoteTask ? { status: nextStatus, quoteStatus: nextQuoteStatus } : {}) }).filter(([key]) => !["actorEmployeeId", "actorUserId", "mentionedEmployeeIds", "deadlineChangeReason", "suppressNotifications", "responseSent"].includes(key)));
   const nextState = applyOptimisticTaskPatch(state, id, confirmedPatch);
+  if (quoteTask && (nextQuoteStatus !== currentQuoteStatus || quoteResponseSentChanged)) {
+    nextState.quotes = nextState.quotes.map((quote) => cleanId(quote.id) === cleanId(existing.quoteId)
+      ? { ...quote, status: nextQuoteStatus, responseSent: nextResponseSent }
+      : quote);
+  }
   const executionActor = nextStatus === "doing" && statusChanged && (patch.actorEmployeeId || patch.actorUserId || patch.actorName)
     ? (state.employees || []).find((employee) => employee.id === patch.actorEmployeeId || employee.userId === patch.actorUserId) || {
         id: patch.actorEmployeeId || "",
@@ -1714,39 +1757,52 @@ function quoteMoney(value) {
   return Number.isFinite(number) ? number : null;
 }
 
+function quoteChoice(value, choices, label) {
+  if (Object.prototype.hasOwnProperty.call(choices, value)) return choices[value];
+  if (Number.isInteger(value) && Object.values(choices).includes(value)) return value;
+  throw new Error(`${label} inválido para cotação: ${String(value ?? "vazio")}. Selecione uma opção válida.`);
+}
+
 function quotePayload(input = {}, includeUnset = false) {
   const payload = {};
   const has = (key) => includeUnset || Object.prototype.hasOwnProperty.call(input, key);
   const set = (key, field, value) => { if (has(key)) payload[field] = value; };
   set("title", "cr40f_titulo", input.title == null ? "" : String(input.title).trim());
   set("client", "cr40f_clienteempresa", input.client == null ? "" : String(input.client).trim());
+  if (has("clientId") && (input.clientId || !includeUnset)) {
+    const clientId = cleanId(input.clientId);
+    if (clientId && (!/^[0-9a-f-]{36}$/i.test(clientId) || !quoteClientEntitySet)) throw new Error("Cliente cadastrado inválido. Selecione novamente.");
+    payload["cr40f_cliente@odata.bind"] = clientId ? `/${quoteClientEntitySet}(${clientId})` : null;
+  }
   set("clientContact", "cr40f_contatocliente", input.clientContact == null ? "" : String(input.clientContact).trim());
   set("clientPhone", "cr40f_telefonewhatsapp", input.clientPhone == null ? "" : String(input.clientPhone).trim());
   set("clientEmail", "cr40f_emailcliente", input.clientEmail == null ? "" : String(input.clientEmail).trim());
-  set("channel", "cr40f_canalentrada", QUOTE_CHANNEL_VALUES[input.channel] ?? input.channel);
+  if (has("channel")) payload.cr40f_canalentrada = quoteChoice(input.channel, QUOTE_CHANNEL_VALUES, "Canal de entrada");
   if (has("serviceType")) {
     const label = String(input.serviceType || "").trim();
     payload.cr40f_tiposervico = serviceTypeValues.get(label) || 100002008;
   }
-  set("vehicleType", "cr40f_tipoveiculo", input.vehicleType == null ? "" : String(input.vehicleType).trim());
-  set("origin", "cr40f_origem", input.origin == null ? "" : String(input.origin).trim());
-  set("destination", "cr40f_destino", input.destination == null ? "" : String(input.destination).trim());
+  if (has("vehicleType")) payload.cr40f_tipoveiculo = quoteChoice(input.vehicleType === "Basico" ? "Básico" : input.vehicleType, QUOTE_VEHICLE_VALUES, "Tipo de veículo");
+  for (const [key, legacyField, longField] of [["origin", "cr40f_origem", "cr40f_origemcompleta"], ["destination", "cr40f_destino", "cr40f_destinocompleto"]]) {
+    if (!has(key)) continue;
+    const value = input[key] == null ? "" : String(input[key]);
+    if (value.length > 10000) throw new Error(`${key === "origin" ? "Origem" : "Destino"} excede 10.000 caracteres.`);
+    if (value.length > 300 && !quoteLongRoutesAvailable) throw new Error("Campos de rota longa ainda não disponíveis neste ambiente.");
+    payload[legacyField] = value.length > 300 ? `${value.slice(0, 297)}...` : value;
+    if (quoteLongRoutesAvailable) payload[longField] = value;
+  }
   if (has("serviceDate")) payload.cr40f_datahoraservico = quoteDateTime(input.serviceDate);
   if (has("returnDate")) payload.cr40f_datahoraretorno = quoteDateTime(input.returnDate);
   if (has("hasReturn") || has("returnDate")) payload.cr40f_retorno = Boolean(input.hasReturn || input.returnDate);
   if (has("passengers")) payload.cr40f_quantidadepassageiros = input.passengers === "" ? null : Number(input.passengers);
   set("notes", "cr40f_observacoespedido", input.notes == null ? "" : String(input.notes));
-  if (has("priority")) payload.cr40f_prioridade = QUOTE_PRIORITY_VALUES[input.priority] ?? input.priority;
-  if (has("status")) payload.cr40f_statuscotacao = QUOTE_STATUS_VALUES[input.status] ?? input.status;
+  if (has("priority")) payload.cr40f_prioridade = quoteChoice(input.priority, QUOTE_PRIORITY_VALUES, "Prioridade");
+  if (has("status")) payload.cr40f_statuscotacao = quoteChoice(input.status, QUOTE_STATUS_VALUES, "Status");
   if (has("deadline")) payload.cr40f_prazoresponder = input.deadline ? `${input.deadline}T12:00:00Z` : null;
   if (has("value")) payload.cr40f_valorcotado = quoteMoney(input.value);
   set("commercialTerms", "cr40f_condicaocomercial", input.commercialTerms == null ? "" : String(input.commercialTerms));
   if (has("responseSent")) payload.cr40f_respostaenviadacliente = Boolean(input.responseSent);
   if (has("finalizationAt")) payload.cr40f_datahorafinalizacao = quoteDateTime(input.finalizationAt);
-  if (input.lossReason && !payload.cr40f_motivoperda) {
-    const existingNotes = String(payload.cr40f_observacoespedido || "").trim();
-    payload.cr40f_observacoespedido = `${existingNotes}${existingNotes ? "\n" : ""}Motivo da perda: ${String(input.lossReason).trim()}`;
-  }
   return payload;
 }
 
@@ -1800,19 +1856,26 @@ async function updateLiveQuote(xrm, state, id, patch = {}) {
   const quoteId = cleanId(id);
   const existing = (state.quotes || []).find((quote) => cleanId(quote.id) === quoteId);
   if (!existing) throw new Error("Cotação não encontrada.");
+  const linkedTasks = (state.tasks || []).filter((item) => cleanId(item.quoteId) === quoteId);
+  if (patch.status === "Aguardando informação" && existing.status !== patch.status) {
+    const validation = validateWaitingContext("waiting", patch.waitingContext);
+    if (!validation.allowed) throw new Error(validation.error);
+    if (!linkedTasks.some((task) => !task.parentTaskId)) throw new Error("Tarefa vinculada à cotação não encontrada.");
+  }
   const payload = quotePayload(patch);
   await bindQuoteServiceType(xrm, payload, patch);
   await request(xrm, `/${entitySetName(QUOTE_TABLE)}(${quoteId})`, { method: "PATCH", body: JSON.stringify(payload) });
-  const linkedTasks = (state.tasks || []).filter((item) => cleanId(item.quoteId) === quoteId);
   const nextStatus = patch.status ?? existing.status;
+  const statusChanged = nextStatus !== existing.status;
   const terminal = isQuoteTerminalStatus(nextStatus);
   const reopening = !terminal && isQuoteTerminalStatus(existing.status);
   await Promise.all(linkedTasks.map((task) => {
     if (task.parentTaskId && ["done", "cancelled"].includes(task.status)) return Promise.resolve();
-    if (task.parentTaskId) return terminal ? updateLiveTask(xrm, state, task.id, { status: "done" }) : Promise.resolve();
+    if (task.parentTaskId) return statusChanged && terminal ? updateLiveTask(xrm, state, task.id, { status: "done" }) : Promise.resolve();
     return updateLiveTask(xrm, state, task.id, {
-      status: taskStatusForQuoteStatus(nextStatus),
-      quoteStatus: nextStatus,
+      status: statusChanged ? taskStatusForQuoteStatus(nextStatus) : undefined,
+      quoteStatus: statusChanged ? nextStatus : undefined,
+      waitingContext: patch.waitingContext,
       title: patch.title ? `Acompanhar ${patch.code || existing.code || "cotação"}` : undefined,
       dueDate: patch.deadline,
       priority: patch.priority,
@@ -1829,9 +1892,14 @@ async function markLiveQuoteSent(xrm, state, id) {
 
 async function setLiveQuoteOutcome(xrm, state, id, outcome, reason = "") {
   if (outcome === "Perdida" && !String(reason).trim()) throw new Error("Informe o motivo da perda.");
-  const existing = (state.quotes || []).find((quote) => cleanId(quote.id) === cleanId(id));
-  const notes = outcome === "Perdida" ? `${String(existing?.notes || "").trim()}${existing?.notes ? "\n" : ""}Motivo da perda: ${String(reason).trim()}` : undefined;
-  return updateLiveQuote(xrm, state, id, { status: outcome, lossReason: reason, notes, finalizationAt: new Date().toISOString() });
+  const next = await updateLiveQuote(xrm, state, id, { status: outcome, finalizationAt: new Date().toISOString() });
+  if (outcome !== "Perdida") return next;
+  const task = (next.tasks || []).find((item) => cleanId(item.quoteId) === cleanId(id) && !item.parentTaskId);
+  if (task) {
+    await createEvent(xrm, task.id, 100000001, `Motivo da perda: ${String(reason).trim()}`, "resultado-cotacao", "", String(reason).trim());
+    return loadLiveState(xrm);
+  }
+  return next;
 }
 
 async function deleteLiveTask(xrm, state, id) {

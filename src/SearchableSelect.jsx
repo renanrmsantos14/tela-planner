@@ -312,7 +312,10 @@ export default function SearchableSelect({
         return;
       setOpen(false);
     };
-    const reposition = () => schedulePosition();
+    const reposition = (event) => {
+      if (event.target === panelRef.current) return;
+      schedulePosition();
+    };
     const closeOnEscape = (event) => {
       if (event.key === "Escape") {
         event.preventDefault();

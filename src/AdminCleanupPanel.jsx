@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { ShieldAlert, Trash2 } from "lucide-react";
+import SearchableSelect from "./SearchableSelect.jsx";
 
 const ACTIONS = [
   { id: "completed_tasks", label: "Apagar tasks concluídas", detail: "Remove somente as tasks com status concluído.", countKey: "completedTasks" },
@@ -88,9 +89,9 @@ export default function AdminCleanupPanel({ live, counts = {}, employees = [], t
             <div className="admin-user-scope">
               <strong>Limpeza por usuário</strong>
               <div>
-                <label>Usuário<select value={scope.employeeId} onChange={(event) => setScope((value) => ({ ...value, employeeId: event.target.value }))}><option value="">Selecione</option>{employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.name}</option>)}</select></label>
-                <label>Status da task<select value={scope.status} onChange={(event) => setScope((value) => ({ ...value, status: event.target.value }))}><option value="">Todos</option><option value="todo">A fazer</option><option value="progress">Em andamento</option><option value="waiting">Aguardando</option><option value="done">Concluída</option></select></label>
-                <label>Equipe da task<select value={scope.teamId} onChange={(event) => setScope((value) => ({ ...value, teamId: event.target.value }))}><option value="">Todas</option>{teams.map((team) => <option key={team.id} value={team.id}>{team.name}</option>)}</select></label>
+                <label>Usuário<SearchableSelect value={scope.employeeId} onChange={(employeeId) => setScope((value) => ({ ...value, employeeId }))} options={employees.map((employee) => ({ value: employee.id, label: employee.name }))} placeholder="Selecione" aria-label="Usuário" /></label>
+                <label>Status da task<SearchableSelect value={scope.status} onChange={(status) => setScope((value) => ({ ...value, status }))} options={[{ value: "todo", label: "A fazer" }, { value: "progress", label: "Em andamento" }, { value: "waiting", label: "Aguardando" }, { value: "done", label: "Concluída" }]} placeholder="Todos" aria-label="Status da task" /></label>
+                <label>Equipe da task<SearchableSelect value={scope.teamId} onChange={(teamId) => setScope((value) => ({ ...value, teamId }))} options={teams.map((team) => ({ value: team.id, label: team.name }))} placeholder="Todas" aria-label="Equipe da task" /></label>
               </div>
               <small>{scope.employeeId ? `${tasks.filter((task) => task.assigneeIds?.includes(scope.employeeId) && (!scope.status || task.status === scope.status) && (!scope.teamId || task.teamIds?.includes(scope.teamId) || task.teamId === scope.teamId)).length} task(s) correspondem aos filtros · ${contacts.filter((contact) => contact.assigneeIds?.includes(scope.employeeId) || contact.ownerEmployeeId === scope.employeeId).length} contato(s)` : "Selecione um usuário para habilitar as ações abaixo."}</small>
             </div>

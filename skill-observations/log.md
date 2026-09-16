@@ -419,3 +419,33 @@
 **Suggested improvement:** Em aplicações embutidas, resolver explicitamente a janela de navegação visível, preservar o estado existente do `history` e manter fallback para execução standalone e bloqueios cross-origin.
 
 **Principle:** Deep links só são compartilháveis quando o estado é gravado na superfície cuja URL o usuário realmente vê.
+
+### Observation 29: Contrato de integração deve validar a semântica da mensagem
+
+**Status:** OPEN
+**Date:** 2026-09-15
+**Session context:** Correção de mensagens contextuais no Flow de push automático do Planner.
+**Skill:** antigravity-protocol / karpathy-coder
+**Type:** open-source
+**Phase/Area:** Testes de contrato e comunicação operacional
+
+**Issue:** O teste confirmava conector, destinatário e deep link, mas não verificava a mensagem exibida; um fallback de teste passou a rotular eventos reais como teste sem quebrar a suíte.
+
+**Suggested improvement:** Em integrações que entregam mensagens ao usuário, validar no contrato o rótulo de cada tipo funcional e restringir textos de teste ao evento explicitamente marcado como teste.
+
+**Principle:** Teste de integração precisa validar a semântica visível, não apenas transporte e estrutura.
+
+### Observation 30: Reuso visual não substitui reuso explícito de componente
+
+**Status:** OPEN
+**Date:** 2026-09-15
+**Session context:** Correção dos campos textuais no novo drawer de cotações.
+**Skill:** antigravity-protocol / karpathy-coder
+**Type:** open-source
+**Phase/Area:** Implementação de UI e contratos de componentes
+
+**Issue:** A primeira implementação reutilizou o seletor compartilhado, mas manteve inputs nativos com classes parecidas. Isso atendia parte da aparência, porém não ao pedido de usar o componente de referência.
+
+**Suggested improvement:** Quando o usuário pedir um componente existente, localizar sua estrutura e seus estados reais, criar ou importar uma implementação identificável e adicionar um teste que impeça controles nativos diretos fora desse componente.
+
+**Principle:** Paridade de componente exige reuso estrutural verificável; semântica e aparência semelhantes não são evidência suficiente.

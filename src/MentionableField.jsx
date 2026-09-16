@@ -159,7 +159,7 @@ export function useMentionController(employees = []) {
     };
     const refresh = () => {
       const element = document.activeElement;
-      if (!element || !["INPUT", "TEXTAREA"].includes(element.tagName) || element.readOnly || element.disabled) return close();
+      if (!element || !["INPUT", "TEXTAREA"].includes(element.tagName) || element.readOnly || element.disabled || element.closest(".mentionable-field")) return close();
       const context = getMentionContext(element.value, element.selectionStart ?? element.value.length);
       if (!context) return close();
       const query = normalize(context.query);

@@ -1,7 +1,7 @@
 import React, { memo, useCallback, useMemo } from "react";
-import { ArrowUpRight, BadgeDollarSign, CalendarDays, CircleHelp, ClipboardList, FileText, GripVertical, ScanSearch, Send, UserRound } from "lucide-react";
+import { BadgeDollarSign, CalendarDays, CircleHelp, ClipboardList, Clock3, FileText, GripVertical, ScanSearch, Send } from "lucide-react";
 import { QUOTE_OPEN_STATUSES, QUOTE_PRIORITIES } from "../quoteDomain";
-import { formatDate } from "../domain";
+import { formatDate, waitingContextSummary } from "../domain";
 import KanbanBoard from "../KanbanBoard.jsx";
 
 const STATUS_META = {
@@ -18,7 +18,7 @@ const TODAY = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", 
 const QuoteCard = memo(function QuoteCard({ quote, task, isDragging, onOpen, onDragStart, onDragEnd }) {
   const priority = QUOTE_PRIORITIES.find((item) => item.id === quote.priority) || QUOTE_PRIORITIES[1];
   const overdue = Boolean(quote.deadline && quote.deadline < TODAY);
-  const responsible = task?.assigneeNames?.join(", ") || "Sem responsável";
+  const waitingSummary = quote.status === "Aguardando informação" ? waitingContextSummary(task?.waitingContext) : "";
   return <article
     className={`task-card quote-kanban-card${overdue ? " task-overdue" : ""}${isDragging ? " task-card-dragging" : ""}`}
     draggable
@@ -29,11 +29,11 @@ const QuoteCard = memo(function QuoteCard({ quote, task, isDragging, onOpen, onD
     onClick={() => onOpen?.(quote.id)}
     onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onOpen?.(quote.id); } }}
   >
-    <div className="task-card-top"><span className={`priority priority-${PRIORITY_TONES[priority.id] || "neutral"}`} aria-label={`Prioridade: ${priority.label}`}>{priority.label}</span>{overdue && <span className="overdue-label">Vencida</span>}<button className="card-open" type="button" onClick={(event) => { event.stopPropagation(); onOpen?.(quote.id); }} aria-label={`Abrir cotação ${quote.code || "sem número"}`}><ArrowUpRight size={15} /></button></div>
+    <div className="task-card-top"><span className={`priority priority-${PRIORITY_TONES[priority.id] || "neutral"}`} aria-label={`Prioridade: ${priority.label}`}>{priority.label}</span>{overdue && <span className="overdue-label">Vencida</span>}<span className={overdue ? "date-chip overdue" : "date-chip"} title={`Prazo: ${formatDate(quote.deadline)}`}><CalendarDays size={13} aria-hidden="true" />{formatDate(quote.deadline)}</span></div>
     <div className="task-card-title-row"><h3>{quote.client || quote.title || "Cotação sem cliente"}</h3></div>
     <div className="task-link"><GripVertical size={13} aria-hidden="true" /><FileText size={13} aria-hidden="true" /><em>{quote.code || "Sem número"}{quote.title ? ` · ${quote.title}` : ""}</em></div>
+    {waitingSummary && <div className="task-waiting-summary" title={waitingSummary}><Clock3 size={13} /><span>{waitingSummary}</span></div>}
     {(quote.serviceType || quote.origin || quote.destination) && <p className="task-description">{[quote.serviceType, [quote.origin, quote.destination].filter(Boolean).join(" → ")].filter(Boolean).join(" · ")}</p>}
-    <div className="task-card-footer"><span className="task-owner"><UserRound size={14} aria-hidden="true" /><span>{responsible}</span></span><span className={overdue ? "date-chip overdue" : "date-chip"}><CalendarDays size={13} aria-hidden="true" />{formatDate(quote.deadline)}</span></div>
   </article>;
 });
 

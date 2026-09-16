@@ -33,10 +33,9 @@ export default function AssigneeDisplay({ value, small = false, team = null, tea
     : "";
   if (team || teamName) {
     const label = team?.name || teamName || "Equipe responsável";
-    const visibleLabel = primaryName || label;
-    return <span className="assignee-display assignee-display-team" title={`${label}${responsibilityLabel ? ` — ${responsibilityLabel}` : ""}`} aria-label={`Principal: ${visibleLabel}. Equipe: ${label}${responsibilityLabel ? `. ${responsibilityLabel}` : ""}`}>
+    return <span className="assignee-display assignee-display-team" title={`Equipe responsável: ${label}`} aria-label={`Equipe responsável: ${label}`}>
       <span className={`team-assignee-icon ${small ? "team-assignee-icon-small" : ""}`} aria-hidden="true"><TeamIcon name={team?.iconName} size={small ? 14 : 16} /></span>
-      <span className="assignee-name">{visibleLabel}</span>
+      <span className="assignee-name">{label}</span>
     </span>;
   }
   const profiles = normalizeProfiles(value);

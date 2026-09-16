@@ -1,0 +1,243 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - button "Expandir navegação" [ref=e5] [cursor=pointer]
+    - generic "Hoje, 36 pendências e 1 atrasados" [ref=e14]:
+      - strong [ref=e16]: 16 de set
+      - generic [ref=e17]:
+        - strong [ref=e19]: "36"
+        - strong [ref=e21]: "1"
+    - navigation [ref=e22]:
+      - button [ref=e23] [cursor=pointer]
+      - button [ref=e29] [cursor=pointer]
+      - button [ref=e33] [cursor=pointer]
+      - button [active] [ref=e39] [cursor=pointer]
+      - button [ref=e43] [cursor=pointer]
+  - main [ref=e47]:
+    - generic "Ações do aplicativo" [ref=e48]:
+      - button "Abrir notificações, 4 não lidas" [ref=e1211] [cursor=pointer]:
+        - generic [ref=e55]: "4"
+      - button "Atualizar dados" [ref=e56] [cursor=pointer]
+    - generic [ref=e1221]:
+      - generic [ref=e1222]:
+        - generic [ref=e1223]:
+          - generic [ref=e1224]: ACOMPANHAMENTO COMERCIAL
+          - heading "Cotações" [level=1] [ref=e1225]
+          - paragraph [ref=e1226]: Cadastre, priorize e acompanhe a resposta sem sair da gestão.
+        - button "Nova cotação" [ref=e1227] [cursor=pointer]
+      - generic "Indicadores de cotações" [ref=e1229]:
+        - button "Ativas 17" [ref=e1230] [cursor=pointer]:
+          - generic [ref=e1235]: Ativas
+          - strong [ref=e1236]: "17"
+        - button "Atrasadas 4" [ref=e1237] [cursor=pointer]:
+          - generic [ref=e1246]: Atrasadas
+          - strong [ref=e1247]: "4"
+        - button "Vencem hoje 2" [ref=e1248] [cursor=pointer]:
+          - generic [ref=e1252]: Vencem hoje
+          - strong [ref=e1253]: "2"
+        - button "Aguardando 3" [ref=e1254] [cursor=pointer]:
+          - generic [ref=e1259]: Aguardando
+          - strong [ref=e1260]: "3"
+      - generic [ref=e1261]:
+        - generic [ref=e1262]:
+          - textbox "Buscar cotações" [ref=e1267]:
+            - /placeholder: Buscar cotação, cliente ou serviço
+          - generic [ref=e1268]:
+            - generic [ref=e1269]:
+              - listbox:
+                - option: Sem responsável
+                - option: Marina Alves
+                - option: Rafael Lima
+                - option: Camila Torres
+                - option: João Mendes
+                - option: Luiza Prado
+                - option: Gustavo Neri
+                - option: Renan Martins
+              - button "Todos os responsáveis" [ref=e1270] [cursor=pointer]
+            - generic [ref=e1273]:
+              - listbox:
+                - option: Nova
+                - option: Em análise pelo financeiro
+                - option: Aguardando informação
+                - option: Cotada
+                - option: Respondida ao cliente
+                - option: Perdida
+                - option: Cancelada
+                - option: Convertida em serviço
+              - button "Todos os status" [ref=e1274] [cursor=pointer]
+            - generic [ref=e1277]:
+              - listbox:
+                - option: Baixa
+                - option: Média
+                - option: Alta
+                - option: Urgente
+              - button "Todas as prioridades" [ref=e1278] [cursor=pointer]
+            - generic [ref=e1281]:
+              - listbox:
+                - option: Atrasadas
+                - option: Vencem hoje
+                - option: Sem prazo
+              - button "Todos os prazos" [ref=e1282] [cursor=pointer]
+          - generic "Visualização" [ref=e1285]:
+            - button "Lista" [pressed] [ref=e1286] [cursor=pointer]
+            - button "Kanban" [ref=e1288] [cursor=pointer]
+        - table "Cotações" [ref=e1294]:
+          - row "Cotação Cliente Status Responsável Prazo Prioridade" [ref=e1295]:
+            - generic [ref=e1296]: Cotação
+            - generic [ref=e1297]: Cliente
+            - generic [ref=e1298]: Status
+            - generic [ref=e1299]: Responsável
+            - generic [ref=e1300]: Prazo
+            - generic [ref=e1301]: Prioridade
+          - row "COT-1008 Transfer executivo · Aeroporto GRU Grupo Horizonte Em análise pelo financeiro Marina Alves 16 set. Média" [ref=e1302] [cursor=pointer]:
+            - generic [ref=e1303]:
+              - generic [ref=e1304]: COT-1008
+              - generic [ref=e1305]: Transfer executivo · Aeroporto GRU
+            - strong [ref=e1306]: Grupo Horizonte
+            - generic [ref=e1307]: Em análise pelo financeiro
+            - generic [ref=e1309]: Marina Alves
+            - generic [ref=e1313]: 16 set.
+            - generic [ref=e1316]: Média
+          - row "COT-1007 Van executiva · Evento corporativo Norte & Sul Eventos Aguardando informação Renan Martins, Rafael Lima 18 set. Média" [ref=e1317] [cursor=pointer]:
+            - generic [ref=e1318]:
+              - generic [ref=e1319]: COT-1007
+              - generic [ref=e1320]: Van executiva · Evento corporativo
+            - strong [ref=e1321]: Norte & Sul Eventos
+            - generic [ref=e1322]: Aguardando informação
+            - generic [ref=e1324]: Renan Martins, Rafael Lima
+            - generic [ref=e1328]: 18 set.
+            - generic [ref=e1331]: Média
+          - row "COT-1006 Carro blindado · Diretoria Alvorada Capital Em análise pelo financeiro Marina Alves 17 set. Média" [ref=e1332] [cursor=pointer]:
+            - generic [ref=e1333]:
+              - generic [ref=e1334]: COT-1006
+              - generic [ref=e1335]: Carro blindado · Diretoria
+            - strong [ref=e1336]: Alvorada Capital
+            - generic [ref=e1337]: Em análise pelo financeiro
+            - generic [ref=e1339]: Marina Alves
+            - generic [ref=e1343]: 17 set.
+            - generic [ref=e1346]: Média
+          - row "COT-1005 Recepção de convidados · Congonhas Casa 9 Produções Respondida ao cliente Camila Torres 15 set. Média" [ref=e1347] [cursor=pointer]:
+            - generic [ref=e1348]:
+              - generic [ref=e1349]: COT-1005
+              - generic [ref=e1350]: Recepção de convidados · Congonhas
+            - strong [ref=e1351]: Casa 9 Produções
+            - generic [ref=e1352]: Respondida ao cliente
+            - generic [ref=e1354]: Camila Torres
+            - generic [ref=e1358]: 15 set.
+            - generic [ref=e1361]: Média
+          - row "COT-1004 Roadshow executivo · São Paulo e Campinas Vértice Tecnologia Nova Marina Alves 19 set. Média" [ref=e1362] [cursor=pointer]:
+            - generic [ref=e1363]:
+              - generic [ref=e1364]: COT-1004
+              - generic [ref=e1365]: Roadshow executivo · São Paulo e Campinas
+            - strong [ref=e1366]: Vértice Tecnologia
+            - generic [ref=e1367]: Nova
+            - generic [ref=e1369]: Marina Alves
+            - generic [ref=e1373]: 19 set.
+            - generic [ref=e1376]: Média
+          - row "COT-1003 Traslado de palestrantes · Expo Center Norte Mosaico Eventos Em análise pelo financeiro Camila Torres 20 set. Média" [ref=e1377] [cursor=pointer]:
+            - generic [ref=e1378]:
+              - generic [ref=e1379]: COT-1003
+              - generic [ref=e1380]: Traslado de palestrantes · Expo Center Norte
+            - strong [ref=e1381]: Mosaico Eventos
+            - generic [ref=e1382]: Em análise pelo financeiro
+            - generic [ref=e1384]: Camila Torres
+            - generic [ref=e1388]: 20 set.
+            - generic [ref=e1391]: Média
+          - row "COT-1002 Disposição diária · Alphaville Lumen Energia Aguardando informação Marina Alves 21 set. Média" [ref=e1392] [cursor=pointer]:
+            - generic [ref=e1393]:
+              - generic [ref=e1394]: COT-1002
+              - generic [ref=e1395]: Disposição diária · Alphaville
+            - strong [ref=e1396]: Lumen Energia
+            - generic [ref=e1397]: Aguardando informação
+            - generic [ref=e1399]: Marina Alves
+            - generic [ref=e1403]: 21 set.
+            - generic [ref=e1406]: Média
+          - row "COT-1001 Transfer internacional · GRU–Faria Lima Kairós Health Nova João Mendes 17 set. Média" [ref=e1407] [cursor=pointer]:
+            - generic [ref=e1408]:
+              - generic [ref=e1409]: COT-1001
+              - generic [ref=e1410]: Transfer internacional · GRU–Faria Lima
+            - strong [ref=e1411]: Kairós Health
+            - generic [ref=e1412]: Nova
+            - generic [ref=e1414]: João Mendes
+            - generic [ref=e1418]: 17 set.
+            - generic [ref=e1421]: Média
+          - row "COT-0999 Transporte de equipe · Guarujá Aurora Produções Respondida ao cliente Camila Torres 13 set. Média" [ref=e1422] [cursor=pointer]:
+            - generic [ref=e1423]:
+              - generic [ref=e1424]: COT-0999
+              - generic [ref=e1425]: Transporte de equipe · Guarujá
+            - strong [ref=e1426]: Aurora Produções
+            - generic [ref=e1427]: Respondida ao cliente
+            - generic [ref=e1429]: Camila Torres
+            - generic [ref=e1433]: 13 set.
+            - generic [ref=e1436]: Média
+          - row "COT-0998 Transfer para conselho · Itaim Bibi Orbe Consultoria Em análise pelo financeiro Marina Alves 16 set. Média" [ref=e1437] [cursor=pointer]:
+            - generic [ref=e1438]:
+              - generic [ref=e1439]: COT-0998
+              - generic [ref=e1440]: Transfer para conselho · Itaim Bibi
+            - strong [ref=e1441]: Orbe Consultoria
+            - generic [ref=e1442]: Em análise pelo financeiro
+            - generic [ref=e1444]: Marina Alves
+            - generic [ref=e1448]: 16 set.
+            - generic [ref=e1451]: Média
+          - row "COT-0997 Operação de embarque · Viracopos Delta Foods Nova Rafael Lima 22 set. Média" [ref=e1452] [cursor=pointer]:
+            - generic [ref=e1453]:
+              - generic [ref=e1454]: COT-0997
+              - generic [ref=e1455]: Operação de embarque · Viracopos
+            - strong [ref=e1456]: Delta Foods
+            - generic [ref=e1457]: Nova
+            - generic [ref=e1459]: Rafael Lima
+            - generic [ref=e1463]: 22 set.
+            - generic [ref=e1466]: Média
+          - row "COT-0996 Apoio logístico · Hotel Fasano Estação 21 Respondida ao cliente Camila Torres 11 set. Média" [ref=e1467] [cursor=pointer]:
+            - generic [ref=e1468]:
+              - generic [ref=e1469]: COT-0996
+              - generic [ref=e1470]: Apoio logístico · Hotel Fasano
+            - strong [ref=e1471]: Estação 21
+            - generic [ref=e1472]: Respondida ao cliente
+            - generic [ref=e1474]: Camila Torres
+            - generic [ref=e1478]: 11 set.
+            - generic [ref=e1481]: Média
+          - row "COT-0995 Transfer de executivos · São José dos Campos Nexa Industrial Nova Camila Torres 23 set. Média" [ref=e1482] [cursor=pointer]:
+            - generic [ref=e1483]:
+              - generic [ref=e1484]: COT-0995
+              - generic [ref=e1485]: Transfer de executivos · São José dos Campos
+            - strong [ref=e1486]: Nexa Industrial
+            - generic [ref=e1487]: Nova
+            - generic [ref=e1489]: Camila Torres
+            - generic [ref=e1493]: 23 set.
+            - generic [ref=e1496]: Média
+          - row "COT-0994 Frota dedicada · Convenção anual Pilar Seguros Em análise pelo financeiro Marina Alves 24 set. Média" [ref=e1497] [cursor=pointer]:
+            - generic [ref=e1498]:
+              - generic [ref=e1499]: COT-0994
+              - generic [ref=e1500]: Frota dedicada · Convenção anual
+            - strong [ref=e1501]: Pilar Seguros
+            - generic [ref=e1502]: Em análise pelo financeiro
+            - generic [ref=e1504]: Marina Alves
+            - generic [ref=e1508]: 24 set.
+            - generic [ref=e1511]: Média
+          - row "COT-0993 Recepção VIP · Hotel Unique Leste Mídia Aguardando informação João Mendes 18 set. Média" [ref=e1512] [cursor=pointer]:
+            - generic [ref=e1513]:
+              - generic [ref=e1514]: COT-0993
+              - generic [ref=e1515]: Recepção VIP · Hotel Unique
+            - strong [ref=e1516]: Leste Mídia
+            - generic [ref=e1517]: Aguardando informação
+            - generic [ref=e1519]: João Mendes
+            - generic [ref=e1523]: 18 set.
+            - generic [ref=e1526]: Média
+          - row "COT-0992 Transfer noturno · Santos–GRU Maré Logística Nova Marina Alves 25 set. Média" [ref=e1527] [cursor=pointer]:
+            - generic [ref=e1528]:
+              - generic [ref=e1529]: COT-0992
+              - generic [ref=e1530]: Transfer noturno · Santos–GRU
+            - strong [ref=e1531]: Maré Logística
+            - generic [ref=e1532]: Nova
+            - generic [ref=e1534]: Marina Alves
+            - generic [ref=e1538]: 25 set.
+            - generic [ref=e1541]: Média
+          - row "COT-0991 Veículo executivo · Diretoria regional Horizon Bio Respondida ao cliente Camila Torres 09 set. Média" [ref=e1542] [cursor=pointer]:
+            - generic [ref=e1543]:
+              - generic [ref=e1544]: COT-0991
+              - generic [ref=e1545]: Veículo executivo · Diretoria regional
+            - strong [ref=e1546]: Horizon Bio
+            - generic [ref=e1547]: Respondida ao cliente
+            - generic [ref=e1549]: Camila Torres
+            - generic [ref=e1553]: 09 set.
+            - generic [ref=e1556]: Média

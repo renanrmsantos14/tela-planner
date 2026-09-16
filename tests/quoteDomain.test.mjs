@@ -65,9 +65,16 @@ test("valida cada etapa e o contato exigido pelo canal", () => {
   assert.equal(validateQuoteStep({ ...base, channel: "E-mail", clientEmail: "invalido" }, "client").errors.clientEmail, "Informe um e-mail válido.");
   assert.equal(validateQuoteStep({ ...base, channel: "E-mail", clientEmail: "iara@acme.com" }, "client").valid, true);
   assert.equal(validateQuoteStep(base, "service").valid, true);
-  assert.equal(validateQuoteStep({ ...base, deadline: "" }, "commercial").errors.deadline, "Informe o prazo para responder.");
+  assert.equal(validateQuoteStep({ ...base, deadline: "" }, "commercial").valid, true);
+  assert.equal(validateQuoteDraft({ ...base, channel: "Telefone", clientPhone: "11999999999", deadline: "" }).valid, true);
   assert.equal(validateQuoteStep(base, "review").valid, false);
   assert.equal(validateQuoteStep({ ...base, channel: "Telefone", clientPhone: "11999999999" }, "review").valid, true);
+});
+
+test("aceita origem e destino com até 10.000 caracteres", () => {
+  assert.equal(validateQuoteStep({ ...base, origin: "A".repeat(10000), destination: "B".repeat(10000) }, "service").valid, true);
+  assert.equal(validateQuoteStep({ ...base, origin: "A".repeat(10001) }, "service").errors.origin, "Máximo de 10.000 caracteres.");
+  assert.equal(validateQuoteStep({ ...base, destination: "B".repeat(10001) }, "service").errors.destination, "Máximo de 10.000 caracteres.");
 });
 
 test("filtra cotações e calcula indicadores operacionais", () => {
@@ -80,6 +87,8 @@ test("filtra cotações e calcula indicadores operacionais", () => {
   assert.deepEqual(getQuoteMetrics(quotes, tasks, "2026-09-15"), { active: 2, overdue: 1, dueToday: 1, waiting: 1, unassigned: 1 });
   assert.deepEqual(filterQuotes(quotes, tasks, { query: "acme", priority: "high", responsible: "e1" }, "2026-09-15").map((item) => item.id), ["q1"]);
   assert.deepEqual(filterQuotes(quotes, tasks, { deadline: "overdue" }, "2026-09-15").map((item) => item.id), ["q1"]);
+  assert.deepEqual(filterQuotes(quotes, tasks, { status: ["Nova", "Aguardando informação"], responsible: ["e1", "unassigned"] }, "2026-09-15").map((item) => item.id), ["q1", "q2"]);
+  assert.deepEqual(filterQuotes(quotes, tasks, { deadline: ["overdue", "today"], priority: ["high", "medium"] }, "2026-09-15").map((item) => item.id), ["q1", "q2"]);
 });
 
 test("define próxima ação e transições válidas", () => {

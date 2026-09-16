@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const read = (path) => readFileSync(new URL(path, import.meta.url), "utf8");
 const quoteSources = [
@@ -10,13 +12,6 @@ const quoteSources = [
   read("../src/quotes/QuoteManagementDrawer.jsx"),
   read("../src/quotes/QuoteKanban.jsx"),
   read("../src/KanbanBoard.jsx"),
-].join("\n");
-const hybridInputSources = [
-  read("../src/quotes/HybridQuotesView.jsx"),
-  read("../src/quotes/QuoteFields.jsx"),
-  read("../src/quotes/QuoteCreateDrawer.jsx"),
-  read("../src/quotes/QuoteManagementDrawer.jsx"),
-  read("../src/quotes/QuoteKanban.jsx"),
 ].join("\n");
 
 test("cotações não usam prompt nativo e confirmam alterações não salvas", () => {
@@ -51,9 +46,10 @@ test("kanban de cotações replica o motor e a composição do quadro de tarefas
   assert.match(kanban, /requestAnimationFrame/);
 });
 
-test("fluxo híbrido reutiliza o InputSelect do drawer do Planner", () => {
-  assert.match(hybridInputSources, /InputSelect/);
-  assert.equal(hybridInputSources.includes("<select"), false);
+test("filtros de cotações reutilizam o multiselect da aba Tarefas", () => {
+  const hybrid = read("../src/quotes/HybridQuotesView.jsx");
+  assert.match(hybrid, /SearchableMultiSelect/);
+  assert.equal((hybrid.match(/<SearchableMultiSelect/g) || []).length, 4);
 });
 
 test("campos textuais usam o componente adaptado da Tela Formulário Geral", () => {
@@ -63,6 +59,18 @@ test("campos textuais usam o componente adaptado da Tela Formulário Geral", () 
   assert.equal((fields.match(/<input/g) || []).length, 1);
   assert.equal((fields.match(/<textarea/g) || []).length, 1);
   assert.match(fields, /form-general-input/);
+});
+
+test("app usa select compartilhado e prévia estática não usa select nativo", () => {
+  const walk = (directory) => readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(directory, entry.name);
+    if (entry.isDirectory()) return walk(path);
+    return path.endsWith(".jsx") && entry.name !== "SearchableSelect.jsx" ? [path] : [];
+  });
+  for (const path of walk(fileURLToPath(new URL("../src/", import.meta.url)))) {
+    assert.doesNotMatch(readFileSync(path, "utf8"), /<select\b/i, path);
+  }
+  assert.doesNotMatch(read("../public/email-preview.html"), /<select\b/i);
 });
 
 test("integração mantém flag V3 e carregamento sob demanda do histórico", () => {

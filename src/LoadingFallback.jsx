@@ -43,8 +43,8 @@ function SkeletonRows({ count = 5, table = false }) {
   </div>;
 }
 
-function SkeletonBoard() {
-  return <div className="screen-skeleton-board">{Array.from({ length: 4 }, (_, column) => (
+function SkeletonBoard({ columns = 4 }) {
+  return <div className="skeleton-kanban-columns">{Array.from({ length: columns }, (_, column) => (
     <section className="screen-skeleton-column" key={column}>
       <div className="skeleton-column-heading">{BAR("skeleton-column-dot")}{BAR("skeleton-column-title")}{BAR("skeleton-column-count")}</div>
       <div className="skeleton-column-body">{Array.from({ length: column === 2 ? 2 : 3 }, (_, card) => (
@@ -71,17 +71,22 @@ function SkeletonSettings() {
   </section>)}</div>;
 }
 
-export default function LoadingFallback({ label = "Carregando tela", view = "dashboard" }) {
+export default function LoadingFallback({ label = "Carregando tela", view = "dashboard", quoteView = "kanban" }) {
   const metrics = ["dashboard", "team", "contacts", "quotes", "management"].includes(view);
   const filters = !["settings", "more", "management"].includes(view);
+  const quoteKanban = view === "quotes" && quoteView !== "list";
   return (
     <div className={`screen-skeleton screen-skeleton-${view}`} role="status" aria-live="polite" aria-label={label}>
       <span className="screen-skeleton-label">{label}…</span>
       <div aria-hidden="true">
         <SkeletonHeader view={view} />
-        {metrics && <SkeletonMetrics count={view === "quotes" ? 5 : 4} />}
-        {filters && <SkeletonFilters compact={view === "contacts" || view === "quotes"} />}
+        {metrics && <SkeletonMetrics />}
+        {view === "quotes" ? <section className="screen-skeleton-panel screen-skeleton-quotes-panel">
+          <SkeletonFilters compact />
+          {quoteKanban ? <SkeletonBoard columns={5} /> : <SkeletonRows table />}
+        </section> : filters && <SkeletonFilters compact={view === "contacts"} />}
         {view === "board" ? <SkeletonBoard />
+          : view === "quotes" ? null
           : view === "calendar" ? <SkeletonCalendar />
           : view === "settings" || view === "more" ? <SkeletonSettings />
           : view === "management" ? <div className="screen-skeleton-settings"><section className="screen-skeleton-panel">{BAR("skeleton-section-title")}<SkeletonRows count={3} /></section><section className="screen-skeleton-panel">{BAR("skeleton-section-title")}<SkeletonRows count={3} /></section></div>
