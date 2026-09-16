@@ -1,8 +1,7 @@
 import React, { memo, useCallback, useMemo } from "react";
 import { ArrowUpRight, BadgeDollarSign, CalendarDays, CircleHelp, ClipboardList, FileText, GripVertical, ScanSearch, Send, UserRound } from "lucide-react";
-import { QUOTE_OPEN_STATUSES, QUOTE_PRIORITIES, QUOTE_STATUSES } from "../quoteDomain";
+import { QUOTE_OPEN_STATUSES, QUOTE_PRIORITIES } from "../quoteDomain";
 import { formatDate } from "../domain";
-import { InputSelect } from "../AssignmentFields.jsx";
 import KanbanBoard from "../KanbanBoard.jsx";
 
 const STATUS_META = {
@@ -16,7 +15,7 @@ const STATUS_META = {
 const PRIORITY_TONES = { low: "neutral", medium: "action", high: "warning", urgent: "danger" };
 const TODAY = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 
-const QuoteCard = memo(function QuoteCard({ quote, task, isDragging, onOpen, onMove, onDragStart, onDragEnd }) {
+const QuoteCard = memo(function QuoteCard({ quote, task, isDragging, onOpen, onDragStart, onDragEnd }) {
   const priority = QUOTE_PRIORITIES.find((item) => item.id === quote.priority) || QUOTE_PRIORITIES[1];
   const overdue = Boolean(quote.deadline && quote.deadline < TODAY);
   const responsible = task?.assigneeNames?.join(", ") || "Sem responsável";
@@ -35,7 +34,6 @@ const QuoteCard = memo(function QuoteCard({ quote, task, isDragging, onOpen, onM
     <div className="task-link"><GripVertical size={13} aria-hidden="true" /><FileText size={13} aria-hidden="true" /><em>{quote.code || "Sem número"}{quote.title ? ` · ${quote.title}` : ""}</em></div>
     {(quote.serviceType || quote.origin || quote.destination) && <p className="task-description">{[quote.serviceType, [quote.origin, quote.destination].filter(Boolean).join(" → ")].filter(Boolean).join(" · ")}</p>}
     <div className="task-card-footer"><span className="task-owner"><UserRound size={14} aria-hidden="true" /><span>{responsible}</span></span><span className={overdue ? "date-chip overdue" : "date-chip"}><CalendarDays size={13} aria-hidden="true" />{formatDate(quote.deadline)}</span></div>
-    <label className="quote-kanban-move" onClick={(event) => event.stopPropagation()}><span className="sr-only">Mover {quote.code || "cotação"} para</span><InputSelect value="" onChange={(value) => onMove(quote, value)} options={QUOTE_STATUSES.filter((status) => status !== quote.status)} placeholder="Mover para…" /></label>
   </article>;
 });
 
@@ -66,6 +64,6 @@ export default function QuoteKanban({ quotes, tasksByQuote, onOpen, onMove }) {
     itemLabelPlural="cotações"
     transferType="text/quote-id"
     renderColumnIcon={(column) => { const Icon = STATUS_META[column.id]?.Icon || ClipboardList; return <Icon className={`status-column-icon status-column-icon-${column.tone}`} size={17} strokeWidth={2.2} aria-hidden="true" />; }}
-    renderCard={(quote, dragProps) => <QuoteCard key={quote.id} quote={quote} task={tasksByQuote.get(quote.id)} onOpen={onOpen} onMove={handleMove} {...dragProps} />}
+    renderCard={(quote, dragProps) => <QuoteCard key={quote.id} quote={quote} task={tasksByQuote.get(quote.id)} onOpen={onOpen} {...dragProps} />}
   /></div>;
 }

@@ -32,10 +32,11 @@ test("cadastro expõe progresso, resumo de erros e bloqueio durante criação", 
   assert.match(quoteSources, /aria-invalid/);
 });
 
-test("kanban oferece alternativa acessível ao arrastar", () => {
-  assert.match(quoteSources, /Mover .* para/);
-  assert.match(quoteSources, /Mover para…/);
-  assert.match(quoteSources, /onDragStart/);
+test("kanban de cotações move por arraste sem seletor nos cards", () => {
+  const kanban = read("../src/quotes/QuoteKanban.jsx");
+  assert.doesNotMatch(kanban, /Mover para…|quote-kanban-move/);
+  assert.match(kanban, /onDragStart/);
+  assert.match(kanban, /onMove={handleBoardMove}/);
 });
 
 test("kanban de cotações replica o motor e a composição do quadro de tarefas", () => {

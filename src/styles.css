@@ -260,9 +260,6 @@ button { cursor: pointer; }
 .quote-v3-kanban-shell .column-body { min-height: 490px; }
 .quote-kanban-card .task-link { margin-top: 1px; }
 .quote-kanban-card .task-description { margin-bottom: 10px; }
-.quote-kanban-move { display: block; margin-top: 9px; padding-top: 9px; border-top: 1px solid #eef1f5; cursor: default; }
-.quote-kanban-move .custom-select { width: 100%; }
-.quote-kanban-move .custom-select-trigger { width: 100%; min-height: 32px; justify-content: space-between; font-size: 10px; }
 .quote-v3-layer { position: fixed; inset: 0; z-index: 90; display: flex; justify-content: flex-end; background: rgba(2, 23, 34, .42); backdrop-filter: blur(2px); animation: quote-v3-fade 180ms linear; }
 .quote-v3-drawer { display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto; width: min(760px, 100vw); height: 100%; background: #fff; box-shadow: -20px 0 50px rgba(0, 24, 39, .2); animation: quote-v3-enter 240ms cubic-bezier(.23,1,.32,1); }
 .quote-v3-create { width: min(720px, 100vw); }
