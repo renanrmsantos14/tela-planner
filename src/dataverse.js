@@ -105,6 +105,18 @@ const PERSONAL_TAG_TASK_TABLE = "cr40f_plannertagpessoaltarefa";
 const ENVIRONMENT_VARIABLE_DEFINITION_TABLE = "environmentvariabledefinition";
 const ENVIRONMENT_VARIABLE_VALUE_TABLE = "environmentvariablevalue";
 const SERVICE_TYPES_SCHEMA = "cr40f_PlannerTiposServico";
+const serviceTypeValues = new Map();
+
+async function quoteServiceMetadata(xrm) {
+  const path = `/EntityDefinitions(LogicalName='${QUOTE_TABLE}')/Attributes(LogicalName='cr40f_tiposervico')/Microsoft.Dynamics.CRM.PicklistAttributeMetadata?$expand=OptionSet,GlobalOptionSet`;
+  const metadata = await request(xrm, path);
+  const choices = metadata.GlobalOptionSet || metadata.OptionSet;
+  if (!choices?.Options?.length) throw new Error("Choice de tipo de serviço indisponível no Dataverse.");
+  return choices.Options.map((option) => ({
+    value: option.Value,
+    label: option.Label?.UserLocalizedLabel?.Label || option.Label?.LocalizedLabels?.find((label) => label.LanguageCode === 1046)?.Label || "",
+  })).filter((option) => option.label && Number.isInteger(option.value));
+}
 const FLOW_URL_SCHEMA = "new_URLFlowsalvararquivosSharePoint";
 const READ_FLOW_URL_SCHEMA = "new_URLFlowConsultarArquivosSharePoint";
 const DELETE_FLOW_URL_SCHEMA = "new_URLFlowExcluirArquivoSharePoint";
@@ -391,21 +403,36 @@ async function resolveEnvironmentVariableUrl(xrm, schemaName, fallback = "") {
 export async function loadQuoteServiceTypes() {
   const xrm = getXrm();
   if (!xrm) return (await import("./quoteServiceTypes.js")).DEFAULT_SERVICE_TYPES;
-  const { DEFAULT_SERVICE_TYPES, normalizeServiceTypes } = await import("./quoteServiceTypes.js");
+  const { normalizeServiceTypes } = await import("./quoteServiceTypes.js");
+  const choices = await quoteServiceMetadata(xrm);
+  serviceTypeValues.clear();
+  choices.forEach(({ label, value }) => serviceTypeValues.set(label, value));
   const definitions = await retrieveMany(xrm, ENVIRONMENT_VARIABLE_DEFINITION_TABLE, `?$select=environmentvariabledefinitionid,defaultvalue&$filter=schemaname eq '${SERVICE_TYPES_SCHEMA}'&$top=1`);
-  if (!definitions.length) return DEFAULT_SERVICE_TYPES;
+  if (!definitions.length) return choices.map((option) => option.label);
   const values = await retrieveMany(xrm, ENVIRONMENT_VARIABLE_VALUE_TABLE, `?$select=value&$filter=_environmentvariabledefinitionid_value eq ${definitions[0].environmentvariabledefinitionid}&$top=1`);
   const raw = values[0]?.value || definitions[0].defaultvalue;
-  try { return normalizeServiceTypes(JSON.parse(raw)); }
+  try { return normalizeServiceTypes(JSON.parse(raw)).filter((label) => serviceTypeValues.has(label)); }
   catch { throw new Error("Configuração de tipos de serviço inválida no Dataverse."); }
 }
 
 export async function saveQuoteServiceTypes(input) {
   const xrm = getXrm();
   if (!xrm) throw new Error("Salvar tipos de serviço exige Dataverse conectado.");
+  if (xrm.Utility.getGlobalContext().getClientUrl().replace(/\/$/, "").toLowerCase() !== DEV_DATAVERSE_URL.toLowerCase()) throw new Error("Tipos de serviço só podem ser alterados no DEV.");
   const { normalizeServiceTypes } = await import("./quoteServiceTypes.js");
   const options = normalizeServiceTypes(input);
   if (!options.length) throw new Error("Informe pelo menos um tipo de serviço.");
+  const choices = await quoteServiceMetadata(xrm);
+  const byLabel = new Map(choices.map(({ label, value }) => [label.toLocaleLowerCase("pt-BR"), value]));
+  let nextValue = Math.max(100002000, ...choices.map((choice) => choice.value)) + 1;
+  let changed = false;
+  for (const label of options) {
+    if (byLabel.has(label.toLocaleLowerCase("pt-BR"))) continue;
+    await request(xrm, "/InsertOptionValue", { method: "POST", body: JSON.stringify({ EntityLogicalName: QUOTE_TABLE, AttributeLogicalName: "cr40f_tiposervico", Value: nextValue, Label: { "@odata.type": "Microsoft.Dynamics.CRM.Label", LocalizedLabels: [{ "@odata.type": "Microsoft.Dynamics.CRM.LocalizedLabel", Label: label, LanguageCode: 1046 }] } }) });
+    byLabel.set(label.toLocaleLowerCase("pt-BR"), nextValue++);
+    changed = true;
+  }
+  if (changed) await request(xrm, "/PublishXml", { method: "POST", body: JSON.stringify({ ParameterXml: `<importexportxml><entities><entity>${QUOTE_TABLE}</entity></entities></importexportxml>` }) });
   const definitions = await retrieveMany(xrm, ENVIRONMENT_VARIABLE_DEFINITION_TABLE, `?$select=environmentvariabledefinitionid&$filter=schemaname eq '${SERVICE_TYPES_SCHEMA}'&$top=1`);
   let id = definitions[0]?.environmentvariabledefinitionid;
   if (!id) {
@@ -416,7 +443,7 @@ export async function saveQuoteServiceTypes(input) {
   const values = await retrieveMany(xrm, ENVIRONMENT_VARIABLE_VALUE_TABLE, `?$select=environmentvariablevalueid&$filter=_environmentvariabledefinitionid_value eq ${id}&$top=1`);
   const value = JSON.stringify(options);
   if (values.length) await request(xrm, `/${entitySetName(ENVIRONMENT_VARIABLE_VALUE_TABLE)}(${values[0].environmentvariablevalueid})`, { method: "PATCH", body: JSON.stringify({ value }) });
-  else await request(xrm, `/${entitySetName(ENVIRONMENT_VARIABLE_VALUE_TABLE)}`, { method: "POST", body: JSON.stringify({ value, "EnvironmentVariableDefinitionId@odata.bind": `/${entitySetName(ENVIRONMENT_VARIABLE_DEFINITION_TABLE)}(${id})` }) });
+  else await request(xrm, `/${entitySetName(ENVIRONMENT_VARIABLE_VALUE_TABLE)}`, { method: "POST", body: JSON.stringify({ schemaname: SERVICE_TYPES_SCHEMA, value, "environmentvariabledefinitionid@odata.bind": `/${entitySetName(ENVIRONMENT_VARIABLE_DEFINITION_TABLE)}(${id})` }) });
   return loadQuoteServiceTypes();
 }
 
@@ -608,7 +635,7 @@ function normalizeQuote(row) {
     clientContact: row.cr40f_contatocliente || "",
     clientEmail: row.cr40f_emailcliente || "",
     clientPhone: row.cr40f_telefonewhatsapp || "",
-    serviceType: row.cr40f_tiposervico || "",
+    serviceType: row["cr40f_tiposervico@OData.Community.Display.V1.FormattedValue"] || [...serviceTypeValues].find(([, value]) => value === row.cr40f_tiposervico)?.[0] || "",
     vehicleType: row.cr40f_tipoveiculo || "",
     origin: row.cr40f_origem || "",
     destination: row.cr40f_destino || "",
@@ -1668,7 +1695,13 @@ function quotePayload(input = {}, includeUnset = false) {
   set("clientPhone", "cr40f_telefonewhatsapp", input.clientPhone == null ? "" : String(input.clientPhone).trim());
   set("clientEmail", "cr40f_emailcliente", input.clientEmail == null ? "" : String(input.clientEmail).trim());
   set("channel", "cr40f_canalentrada", QUOTE_CHANNEL_VALUES[input.channel] ?? input.channel);
-  set("serviceType", "cr40f_tiposervico", input.serviceType == null ? "" : String(input.serviceType).trim());
+  if (has("serviceType")) {
+    const label = String(input.serviceType || "").trim();
+    const value = serviceTypeValues.get(label);
+    if (!value) throw new Error(`Tipo de serviço não configurado no Dataverse: ${label || "vazio"}.`);
+    payload.cr40f_tiposervico = value;
+  }
+
   set("vehicleType", "cr40f_tipoveiculo", input.vehicleType == null ? "" : String(input.vehicleType).trim());
   set("origin", "cr40f_origem", input.origin == null ? "" : String(input.origin).trim());
   set("destination", "cr40f_destino", input.destination == null ? "" : String(input.destination).trim());
@@ -1699,6 +1732,7 @@ async function resolveFinanceTeamId(xrm, state) {
 }
 
 async function createLiveQuote(xrm, state, input = {}) {
+  await loadQuoteServiceTypes();
   const payload = quotePayload(input, true);
   const created = await request(xrm, `/${entitySetName(QUOTE_TABLE)}`, { method: "POST", body: JSON.stringify(payload) });
   const quoteId = cleanId(created?.cr40f_pedidodecotacaoid || created?.[`${QUOTE_TABLE}id`]);
@@ -1719,6 +1753,7 @@ async function createLiveQuote(xrm, state, input = {}) {
 }
 
 async function updateLiveQuote(xrm, state, id, patch = {}) {
+  if (Object.hasOwn(patch, "serviceType")) await loadQuoteServiceTypes();
   const quoteId = cleanId(id);
   const existing = (state.quotes || []).find((quote) => cleanId(quote.id) === quoteId);
   if (!existing) throw new Error("Cotação não encontrada.");
