@@ -26,6 +26,7 @@ import {
   validateContact,
 } from "./contactDomain.js";
 import { isQuoteTask, isQuoteTerminalStatus, quoteStatusForTaskStatus, taskStatusForQuoteStatus } from "./quoteTaskFlow.js";
+import { resetMockQuoteServiceTypes } from "./mockQuoteServiceTypes.js";
 
 export const STORAGE_KEY = "betinhos-tela-planner-mock-v3-calendar";
 
@@ -1083,6 +1084,7 @@ export function setQuoteOutcome(state, id, outcome, reason = "") {
 }
 
 export function resetState() {
+  resetMockQuoteServiceTypes();
   const next = seedState();
   localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
   return next;

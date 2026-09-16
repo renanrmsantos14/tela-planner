@@ -4,7 +4,7 @@ import { canEditQuoteServiceTypes, createQuoteServiceType, updateQuoteServiceTyp
 import { useQuoteServiceTypes } from "./useQuoteServiceTypes.js";
 
 export default function ServiceTypeManager({ live }) {
-  const editable = live && canEditQuoteServiceTypes();
+  const editable = !live || canEditQuoteServiceTypes();
   const { options, error: loadError } = useQuoteServiceTypes();
   const [name, setName] = useState("");
   const [pending, setPending] = useState(false);

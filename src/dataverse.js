@@ -406,7 +406,7 @@ async function resolveEnvironmentVariableUrl(xrm, schemaName, fallback = "") {
 
 export async function loadQuoteServiceTypes() {
   const xrm = getXrm();
-  if (!xrm) return (await import("./quoteServiceTypes.js")).DEFAULT_SERVICE_TYPES.map((name, index) => ({ id: `mock-${index}`, name, archived: false, order: index }));
+  if (!xrm) return (await import("./mockQuoteServiceTypes.js")).loadMockQuoteServiceTypes();
   const rows = await retrieveMany(xrm, SERVICE_TYPE_TABLE, `?$select=${SERVICE_TYPE_TABLE}id,cr40f_name,cr40f_ordem,cr40f_arquivado&$filter=statecode eq 0&$orderby=cr40f_ordem asc,cr40f_name asc`);
   return rows.map((row) => ({ id: row[`${SERVICE_TYPE_TABLE}id`], name: row.cr40f_name, order: row.cr40f_ordem ?? 0, archived: Boolean(row.cr40f_arquivado) }));
 }
@@ -418,11 +418,12 @@ function assertServiceTypeDev(xrm) {
 
 export function canEditQuoteServiceTypes() {
   const xrm = getXrm();
-  return Boolean(xrm && xrm.Utility.getGlobalContext().getClientUrl().replace(/\/$/, "").toLowerCase() === DEV_DATAVERSE_URL.toLowerCase());
+  return !xrm || xrm.Utility.getGlobalContext().getClientUrl().replace(/\/$/, "").toLowerCase() === DEV_DATAVERSE_URL.toLowerCase();
 }
 
 export async function createQuoteServiceType(name) {
   const xrm = getXrm();
+  if (!xrm) return (await import("./mockQuoteServiceTypes.js")).createMockQuoteServiceType(name);
   assertServiceTypeDev(xrm);
   const cleanName = String(name || "").trim();
   if (!cleanName) throw new Error("Informe o nome do tipo de serviço.");
@@ -434,6 +435,7 @@ export async function createQuoteServiceType(name) {
 
 export async function updateQuoteServiceType(id, patch) {
   const xrm = getXrm();
+  if (!xrm) return (await import("./mockQuoteServiceTypes.js")).updateMockQuoteServiceType(id, patch);
   assertServiceTypeDev(xrm);
   const current = await loadQuoteServiceTypes();
   if (!current.some((item) => item.id === id)) throw new Error("Tipo de serviço não encontrado.");
