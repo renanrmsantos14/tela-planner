@@ -3903,6 +3903,7 @@ function formatRelativeTimestamp(value) {
   if (minutes < 1) return "agora";
   if (minutes < 60) return `há ${minutes} min`;
   const hours = Math.floor(minutes / 60);
+  const [showAllHistory, setShowAllHistory] = useState(false);
   if (hours < 24) return `há ${hours} h`;
   return `há ${Math.floor(hours / 24)} d`;
 }
@@ -4001,6 +4002,7 @@ function TaskDrawerContent({
       total: 1,
     });
     setValidationError("");
+  const visibleHistory = showAllHistory ? history : history.slice(0, 5);
     setShowDiscardPrompt(false);
     setShowUnassignedPrompt(false);
     setDraftAttachments([]);
@@ -4748,21 +4750,32 @@ function TaskDrawerContent({
           <section className="drawer-section history-section">
             <div className="drawer-section-heading">
               <button className="history-toggle" type="button" onClick={() => setShowHistory((current) => !current)} aria-expanded={showHistory}>
-                <h3>Histórico da tarefa</h3>
+                <span className="history-heading"><strong>Histórico da tarefa</strong><small>Alterações registradas nesta tarefa</small></span>
                 <span className="section-count">{history.length}</span>
                 {showHistory ? <ChevronUp size={14} aria-hidden="true" /> : <ChevronDown size={14} aria-hidden="true" />}
               </button>
             </div>
             {showHistory && (
-              history.length ? history.slice(0, 5).map((item) => (
-                <div className="history-row" key={item.id}>
-                  <span className="history-dot" />
-                  <div>
-                    <strong>{item.text}</strong>
-                    <small>{item.author} · {formatCommentTimestamp(item.createdAt)}</small>
-                  </div>
-                </div>
-              )) : <div className="empty-inline">Nenhuma alteração registrada.</div>
+              history.length ? <div className="task-history-list">
+                {visibleHistory.map((item, index) => {
+                  const date = new Date(item.createdAt);
+                  const day = Number.isNaN(date.getTime()) ? "Data não informada" : date.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
+                  const previous = visibleHistory[index - 1];
+                  const previousDate = previous && new Date(previous.createdAt);
+                  const previousDay = previousDate && !Number.isNaN(previousDate.getTime()) ? previousDate.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" }) : "Data não informada";
+                  return <React.Fragment key={item.id || `${item.createdAt}-${index}`}>
+                    {day !== previousDay && <div className="task-history-day">{day}</div>}
+                    <div className="task-history-event">
+                      <span className="task-history-marker" aria-hidden="true" />
+                      <div className="task-history-content">
+                        <p>{item.text || "Alteração registrada"}</p>
+                        <div className="task-history-meta"><span>{item.author || "Sistema"}</span><time dateTime={item.createdAt || undefined}>{Number.isNaN(date.getTime()) ? "Horário não informado" : date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</time></div>
+                      </div>
+                    </div>
+                  </React.Fragment>;
+                })}
+                {history.length > 5 && <button className="task-history-more" type="button" onClick={() => setShowAllHistory((current) => !current)}>{showAllHistory ? "Mostrar menos" : `Mostrar mais ${history.length - 5} alterações`}</button>}
+              </div> : <div className="task-history-empty">Nenhuma alteração registrada nesta tarefa.</div>
             )}
           </section>
         </div>

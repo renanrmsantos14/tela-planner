@@ -2174,6 +2174,26 @@ button { cursor: pointer; }
 .workload-card.is-expanded { border-color: rgba(40, 107, 99, .28); }
 .workload-card:hover { border-color: rgba(40, 107, 99, .32); box-shadow: 0 8px 18px rgba(34, 58, 64, .06); transform: translateY(-1px); }
 .workload-card-heading { min-width: 0; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; }
+.task-drawer .history-section { padding-top: 18px; }
+.task-drawer .history-section .drawer-section-heading { margin-bottom: 0; }
+.task-drawer .history-toggle { width: 100%; min-height: 48px; gap: 10px; }
+.task-drawer .history-toggle:focus-visible, .task-history-more:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; border-radius: 6px; }
+.history-heading { display: grid; flex: 1; gap: 2px; }
+.history-heading strong { color: var(--navy); font-size: 12px; }
+.history-heading small { color: var(--muted); font-size: 10px; font-weight: 500; }
+.task-drawer .history-toggle .section-count { min-width: 22px; padding: 3px 6px; border-radius: 999px; background: #eef3f9; color: var(--navy); text-align: center; font-size: 10px; font-weight: 800; }
+.task-history-list { padding: 7px 0 0; }
+.task-history-day { margin: 12px 0 7px; color: var(--muted); font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; }
+.task-history-event { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 8px; min-width: 0; }
+.task-history-marker { position: relative; width: 8px; height: 8px; margin: 13px 0 0 3px; border-radius: 50%; background: var(--blue); box-shadow: 0 0 0 3px var(--blue-soft); }
+.task-history-event:not(:last-of-type) .task-history-marker::after { content: ""; position: absolute; top: 12px; left: 3px; width: 1px; height: calc(100% + 33px); background: #dbe5f1; }
+.task-history-content { min-width: 0; margin-bottom: 7px; padding: 9px 11px; border: 1px solid #e5ebf2; border-radius: 9px; background: #fbfcfe; }
+.task-history-content p { margin: 0 0 6px; color: var(--control); font-size: 11px; font-weight: 700; line-height: 1.45; overflow-wrap: anywhere; }
+.task-history-meta { display: flex; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 10px; }
+.task-history-meta time { white-space: nowrap; }
+.task-history-more { width: 100%; min-height: 36px; margin-top: 6px; border: 1px solid #dbe5f1; border-radius: 8px; color: var(--blue); background: var(--blue-soft); font-size: 10px; font-weight: 800; }
+.task-history-more:hover { background: #e7f0ff; }
+.task-history-empty { padding: 12px; border-radius: 8px; color: var(--muted); background: #f6f8fb; font-size: 11px; }
 .workload-icon { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 10px; background: #e8f0ed; color: #286b63; }
 .workload-card-heading div { min-width: 0; display: grid; gap: 2px; }
 .workload-card-heading small { color: #758589; font-size: 12px; }
