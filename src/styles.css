@@ -234,13 +234,21 @@ button { cursor: pointer; }
 
 /* Cotações híbridas V3 */
 .quote-v3-page { --quote-v3-border: rgba(12, 46, 63, .13); }
-.quote-v3-metrics { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
-.quote-v3-metrics button { min-width: 0; padding: 14px 16px; border: 1px solid var(--quote-v3-border); border-radius: 14px; background: #fff; color: var(--navy); text-align: left; cursor: pointer; transition: transform 150ms ease, border-color 150ms ease; }
-.quote-v3-metrics button:hover { transform: translateY(-2px); border-color: rgba(14, 100, 122, .38); }
-.quote-v3-metrics span { display: block; min-height: 32px; color: var(--muted); font-size: 12px; line-height: 1.25; }
-.quote-v3-metrics strong { display: block; margin-top: 4px; font-size: 24px; }
-.quote-v3-panel { overflow: hidden; }
-.quote-v3-toolbar { display: grid; grid-template-columns: minmax(240px, 1.5fr) repeat(4, minmax(130px, .65fr)) auto; gap: 8px; padding: 14px; border-bottom: 1px solid var(--quote-v3-border); }
+.quote-v3-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 6px; margin-bottom: 18px; padding: 6px; border: 1px solid #dce5eb; border-radius: 16px; background: #edf2f5; }
+.quote-v3-metrics:has(.quote-v3-metric-unassigned) { grid-template-columns: .85fr .85fr .9fr 1.1fr 1.3fr; }
+.quote-v3-metrics button { display: flex; align-items: center; gap: 9px; min-width: 0; min-height: 54px; padding: 8px 11px; border: 1px solid transparent; border-radius: 11px; background: #fff; color: var(--navy); text-align: left; cursor: pointer; transition: border-color 150ms ease, background-color 150ms ease; }
+.quote-v3-metrics button:hover { border-color: #b8cbd8; background: #fbfdff; }
+.quote-v3-metrics button:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.quote-v3-metric-icon { display: grid; flex: 0 0 30px; width: 30px; height: 30px; place-items: center; border-radius: 9px; color: var(--metric-color); background: var(--metric-soft); }
+.quote-v3-metric-label { overflow: hidden; color: var(--muted); font-size: 12px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+.quote-v3-metrics strong { margin-left: auto; color: var(--metric-color); font-size: 20px; line-height: 1; font-variant-numeric: tabular-nums; }
+.quote-v3-metric-active { --metric-color: var(--blue); --metric-soft: var(--blue-soft); }
+.quote-v3-metric-overdue { --metric-color: var(--red); --metric-soft: var(--red-soft); }
+.quote-v3-metric-today { --metric-color: var(--amber); --metric-soft: var(--amber-soft); }
+.quote-v3-metric-waiting { --metric-color: #08758c; --metric-soft: #e6f6f8; }
+.quote-v3-metric-unassigned { --metric-color: #526579; --metric-soft: #edf1f5; }
+.quote-v3-panel { overflow: hidden; border-color: #dce5eb; border-radius: 16px; box-shadow: 0 12px 30px rgba(0, 26, 61, .065); }
+.quote-v3-toolbar { display: grid; grid-template-columns: minmax(180px, 1.5fr) repeat(4, minmax(112px, .65fr)) auto; gap: 8px; padding: 14px; border-bottom: 1px solid var(--quote-v3-border); }
 .quote-v3-toolbar > select { min-width: 0; }
 .quote-v3-view-toggle { display: flex; padding: 3px; border: 1px solid var(--quote-v3-border); border-radius: 10px; background: #f4f7f8; }
 .quote-v3-view-toggle button { display: inline-flex; align-items: center; gap: 6px; padding: 7px 9px; border: 0; border-radius: 7px; background: transparent; color: var(--muted); cursor: pointer; }
@@ -342,7 +350,10 @@ button { cursor: pointer; }
 @keyframes quote-v3-spin { to { transform: rotate(360deg); } }
 
 @media (max-width: 980px) {
-  .quote-v3-metrics { grid-template-columns: repeat(3, 1fr); }
+  .quote-v3-metrics { display: flex; overflow-x: auto; scrollbar-width: none; scroll-snap-type: x proximity; }
+  .quote-v3-metrics::-webkit-scrollbar { display: none; }
+  .quote-v3-metrics button { flex: 0 0 174px; scroll-snap-align: start; }
+  .quote-v3-metrics .quote-v3-metric-unassigned { flex-basis: 196px; }
   .quote-v3-toolbar { grid-template-columns: repeat(2, 1fr); }
   .quote-v3-toolbar .search-field { grid-column: 1 / -1; }
   .quote-v3-view-toggle { justify-self: stretch; }
@@ -352,8 +363,6 @@ button { cursor: pointer; }
 @media (max-width: 640px) {
   .quote-v3-page .page-header { align-items: flex-start; }
   .quote-v3-page .page-header > .button { display: inline-flex !important; width: 100%; justify-content: center; margin-top: 14px; }
-  .quote-v3-metrics { display: flex; overflow-x: auto; scroll-snap-type: x proximity; }
-  .quote-v3-metrics button { min-width: 132px; scroll-snap-align: start; }
   .quote-v3-toolbar { grid-template-columns: 1fr 1fr; padding: 10px; }
   .quote-v3-toolbar > select { font-size: 11px; }
   .quote-v3-list-head { display: none; }
