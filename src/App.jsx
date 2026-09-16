@@ -1476,6 +1476,9 @@ const TaskCard = memo(function TaskCard({
   const waitingActionRequired = isTaskWaitingForEmployee(taskItem, currentEmployee);
   const canRegisterReturn = canRegisterWaitingReturn(taskItem, currentEmployee, teams);
   const executionActor = deriveExecutionActor(taskItem);
+  const executionFirstName = executionActor?.name === "Executor não identificado"
+    ? "Não identificado"
+    : executionActor?.name.trim().split(/\s+/)[0];
   const canOpen = !taskItem.id.startsWith("optimistic-");
   const importedChecklist = Array.isArray(taskItem.checklist)
     ? taskItem.checklist.filter((item) => item?.title).map((item) => ({
@@ -1577,13 +1580,19 @@ const TaskCard = memo(function TaskCard({
       {executionActor && (
         <div
           className="task-execution-chip"
-          title={`Execução iniciada por ${executionActor.name} em ${formatCommentTimestamp(executionActor.occurredAt)}`}
-          aria-label={`Em andamento por ${executionActor.name}, ${formatRelativeTimestamp(executionActor.occurredAt)}`}
+          role="group"
+          aria-label={`Em andamento por ${executionFirstName}, ${formatRelativeTimestamp(executionActor.occurredAt)}`}
         >
-          <Play size={11} fill="currentColor" aria-hidden="true" />
-          <Avatar name={executionActor.name} small />
-          <span><strong>Em andamento por</strong> {executionActor.name}</span>
-          <time dateTime={executionActor.occurredAt}>{formatRelativeTimestamp(executionActor.occurredAt)}</time>
+          <div className="task-execution-when">
+            <span>{formatExecutionDay(executionActor.occurredAt)}</span>
+            <time dateTime={executionActor.occurredAt} title={formatCommentTimestamp(executionActor.occurredAt)}>
+              {formatRelativeTimestamp(executionActor.occurredAt).replace(/^há\s*/, "").replace(/\s+/g, "")}
+            </time>
+          </div>
+          <div className="task-execution-description">
+            <strong>Em andamento</strong>
+            <span>{executionFirstName}</span>
+          </div>
         </div>
       )}
       {(showChecklistOnCard || importedChecklist.length > 0) && checklistItems.length > 0 && (
@@ -3906,6 +3915,16 @@ function formatRelativeTimestamp(value) {
   const [showAllHistory, setShowAllHistory] = useState(false);
   if (hours < 24) return `há ${hours} h`;
   return `há ${Math.floor(hours / 24)} d`;
+}
+
+function formatExecutionDay(value) {
+  const date = new Date(value);
+  if (!value || Number.isNaN(date.getTime())) return "RECENTE";
+  const today = new Date();
+  const yesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
+  if (date.toDateString() === today.toDateString()) return "HOJE";
+  if (date.toDateString() === yesterday.toDateString()) return "ONTEM";
+  return date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
 }
 
 function TaskDrawerContent({
