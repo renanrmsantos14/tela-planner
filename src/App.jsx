@@ -100,6 +100,7 @@ import {
 } from "./domain";
 import { QUOTE_STATUSES as QUOTE_WORKFLOW_STATUSES } from "./quoteDomain";
 import { isQuoteTask, quoteStatusForTaskStatus, taskStatusForQuoteStatus } from "./quoteTaskFlow";
+import { taskHistoryDetails, visibleTaskHistory } from "./taskHistory";
 import { playCompletionSound, prepareCompletionSound } from "./completionSound";
 import { createDataStore } from "./dataverse";
 import { saveQuoteServiceTypes } from "./dataverse";
@@ -4034,7 +4035,8 @@ function TaskDrawerContent({
   const subtasks = isQuoteTask(taskItem) ? [] : state.tasks.filter(
     (item) => item.parentTaskId === taskItem.id,
   );
-  const history = [...(taskItem.history || [])].reverse();
+  const history = visibleTaskHistory(taskItem.history);
+  const visibleHistory = showAllHistory ? history : history.slice(0, 5);
   const executionActor = deriveExecutionActor(taskItem);
   const comments = taskItem.comments || [];
   const returns = [...(taskItem.returns || [])].sort((left, right) => String(left.createdAt || "").localeCompare(String(right.createdAt || "")));
@@ -4757,6 +4759,7 @@ function TaskDrawerContent({
             {showHistory && (
               history.length ? <div className="task-history-list">
                 {visibleHistory.map((item, index) => {
+                  const details = taskHistoryDetails(item, state.employees);
                   const date = new Date(item.createdAt);
                   const day = Number.isNaN(date.getTime()) ? "Data não informada" : date.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
                   const previous = visibleHistory[index - 1];
@@ -4767,7 +4770,9 @@ function TaskDrawerContent({
                     <div className="task-history-event">
                       <span className="task-history-marker" aria-hidden="true" />
                       <div className="task-history-content">
-                        <p>{item.text || "Alteração registrada"}</p>
+                        <p>{details.title}</p>
+                        {details.before !== undefined && <div className="task-history-change"><span>{details.before}</span><ChevronRight size={13} aria-hidden="true" /><strong>{details.after}</strong></div>}
+                        {details.detail && <div className="task-history-detail">{details.detail}</div>}
                         <div className="task-history-meta"><span>{item.author || "Sistema"}</span><time dateTime={item.createdAt || undefined}>{Number.isNaN(date.getTime()) ? "Horário não informado" : date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</time></div>
                       </div>
                     </div>

@@ -90,7 +90,7 @@ const WAITING_CONTEXT_FIELDS = Object.freeze({
 const EMPLOYEE_TABLE = "cr40f_funcionarios";
 const EMPLOYEE_ASSIGNEE_FIELD = "cr40f_cr40f_funcionarioresponsavel";
 const EVENT_TABLE = "cr40f_plannertarefaevento";
-const PLANNER_EVENTS_QUERY = "?$select=cr40f_plannertarefaeventoid,_cr40f_tarefa_value,cr40f_tipo,cr40f_campo,cr40f_descricao,cr40f_valornovo,cr40f_ocorridoem,_cr40f_autor_value,_createdby_value&$orderby=cr40f_ocorridoem desc";
+const PLANNER_EVENTS_QUERY = "?$select=cr40f_plannertarefaeventoid,_cr40f_tarefa_value,cr40f_tipo,cr40f_campo,cr40f_descricao,cr40f_valoranterior,cr40f_valornovo,cr40f_ocorridoem,_cr40f_autor_value,_createdby_value&$orderby=cr40f_ocorridoem desc";
 const RELATION_TABLE = "cr40f_plannertarearelacao";
 const ASSIGNEE_RELATION_TABLE = "cr40f_plannertarearesponsavel";
 const TASK_TEAM_RELATION_TABLE = "cr40f_plannertarefaequipe";
