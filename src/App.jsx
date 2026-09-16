@@ -103,8 +103,7 @@ import { isQuoteTask, quoteStatusForTaskStatus, taskStatusForQuoteStatus } from 
 import { taskHistoryDetails, visibleTaskHistory } from "./taskHistory";
 import { playCompletionSound, prepareCompletionSound } from "./completionSound";
 import { createDataStore } from "./dataverse";
-import { saveQuoteServiceTypes } from "./dataverse";
-import { useQuoteServiceTypes } from "./useQuoteServiceTypes.js";
+import ServiceTypeManager from "./ServiceTypeManager.jsx";
 import { plannerNavigationWindow, plannerUrlForState, readPlannerUrlState } from "./plannerUrl";
 import SearchableSelect, {
   SearchableMultiSelect,
@@ -3101,18 +3100,6 @@ function TeamManager({ teams = [], tasks = [], employees = [], onSave, onDelete 
 }
 
 function SettingsView({ onReset, onAdminCleanup, onSendNotificationTest, live, teams = [], tasks = [], contacts = [], notifications = [], employees = [], personalTags = [], onSaveTeam, onDeleteTeam, onImportPlannerTasks, onCreatePersonalTag, onUpdatePersonalTag, onArchivePersonalTag, onReorderPersonalTags }) {
-
-  const { options, error: loadError } = useQuoteServiceTypes();
-  const [serviceDraft, setServiceDraft] = useState("");
-  const [serviceSaving, setServiceSaving] = useState(false);
-  const [serviceMessage, setServiceMessage] = useState("");
-  useEffect(() => { setServiceDraft(options.join("\n")); }, [options]);
-  const saveServiceTypes = async (event) => {
-    event.preventDefault(); setServiceSaving(true); setServiceMessage("");
-    try { await saveQuoteServiceTypes(serviceDraft); window.dispatchEvent(new Event("planner-service-types-changed")); setServiceMessage("Tipos de serviço salvos no Dataverse."); }
-    catch (failure) { setServiceMessage(failure.message); }
-    finally { setServiceSaving(false); }
-  };
   return (
     <div className="page-content">
       <PageHeader
@@ -3125,9 +3112,7 @@ function SettingsView({ onReset, onAdminCleanup, onSendNotificationTest, live, t
         }
       />
       <section className="settings-grid">
-        <form className="panel setting-card" onSubmit={saveServiceTypes}>
-          <div><h2>Tipos de serviço</h2><p>Uma opção por linha. Salvo no Dataverse para todos os usuários.</p><textarea className="form-general-input" aria-label="Tipos de serviço" rows={9} value={serviceDraft} onChange={(event) => setServiceDraft(event.target.value)} disabled={!live || serviceSaving} /><button className="button button-primary" type="submit" disabled={!live || serviceSaving}>{serviceSaving ? "Salvando…" : "Salvar tipos"}</button>{(loadError || serviceMessage) && <p role="status">{serviceMessage || loadError}</p>}</div>
-        </form>
+        <ServiceTypeManager live={live} />
         <div className="panel setting-card">
           <div className="setting-icon">
             <RotateCcw size={19} />

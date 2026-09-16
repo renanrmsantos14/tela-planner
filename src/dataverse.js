@@ -104,7 +104,8 @@ const PERSONAL_TAG_TABLE = "cr40f_plannertagpessoal";
 const PERSONAL_TAG_TASK_TABLE = "cr40f_plannertagpessoaltarefa";
 const ENVIRONMENT_VARIABLE_DEFINITION_TABLE = "environmentvariabledefinition";
 const ENVIRONMENT_VARIABLE_VALUE_TABLE = "environmentvariablevalue";
-const SERVICE_TYPES_SCHEMA = "cr40f_PlannerTiposServico";
+const SERVICE_TYPE_TABLE = "cr40f_tiposervicoplanner";
+const SERVICE_TYPE_LOOKUP = "cr40f_tiposervicoplanner";
 const serviceTypeValues = new Map();
 
 async function quoteServiceMetadata(xrm) {
@@ -154,6 +155,7 @@ const IMAGE_OPTIMIZER_WORKER_SOURCE = `
 `;
 const ENTITY_SETS = Object.freeze({
   [QUOTE_TABLE]: "cr40f_pedidodecotacaos",
+  [SERVICE_TYPE_TABLE]: "cr40f_tiposervicoplanners",
   [QUALITY_ERROR_TABLE]: "cr40f_errooperacionals",
   [QUALITY_ACTION_TABLE]: "cr40f_acaooperacionals",
   [TASK_TABLE]: "cr40f_plannertarefas",
@@ -191,6 +193,8 @@ const QUOTE_STATUS_VALUES = Object.freeze({
 const QUOTE_PRIORITY_VALUES = Object.freeze({ low: 100003000, medium: 100003001, high: 100003002, urgent: 100003003 });
 const QUOTE_CHANNEL_VALUES = Object.freeze({ WhatsApp: 100001000, Telefone: 100001001, "E-mail": 100001002 });
 const lookupCache = new Map();
+let quoteServiceLookupAvailable = false;
+let quoteServiceLookupChecked = false;
 
 function sanitizePathSegment(value, fallback = "sem-codigo") {
   const sanitized = String(value || "").trim().replace(/[<>:\"/\\|?*\x00-\x1F]/g, "-").replace(/\s+/g, " ").replace(/\.+$/g, "");
@@ -402,51 +406,46 @@ async function resolveEnvironmentVariableUrl(xrm, schemaName, fallback = "") {
 
 export async function loadQuoteServiceTypes() {
   const xrm = getXrm();
-  if (!xrm) return (await import("./quoteServiceTypes.js")).DEFAULT_SERVICE_TYPES;
-  const { normalizeServiceTypes } = await import("./quoteServiceTypes.js");
-  const choices = await quoteServiceMetadata(xrm);
-  serviceTypeValues.clear();
-  choices.forEach(({ label, value }) => serviceTypeValues.set(label, value));
-  const definitions = await retrieveMany(xrm, ENVIRONMENT_VARIABLE_DEFINITION_TABLE, `?$select=environmentvariabledefinitionid,defaultvalue&$filter=schemaname eq '${SERVICE_TYPES_SCHEMA}'&$top=1`);
-  if (!definitions.length) return choices.map((option) => option.label);
-  const values = await retrieveMany(xrm, ENVIRONMENT_VARIABLE_VALUE_TABLE, `?$select=value&$filter=_environmentvariabledefinitionid_value eq ${definitions[0].environmentvariabledefinitionid}&$top=1`);
-  const raw = values[0]?.value || definitions[0].defaultvalue;
-  try {
-    const labels = new Map(choices.map(({ label }) => [label.toLocaleLowerCase("pt-BR"), label]));
-    return normalizeServiceTypes(JSON.parse(raw)).map((label) => labels.get(label.toLocaleLowerCase("pt-BR"))).filter(Boolean);
-  }
-  catch { throw new Error("Configuração de tipos de serviço inválida no Dataverse."); }
+  if (!xrm) return (await import("./quoteServiceTypes.js")).DEFAULT_SERVICE_TYPES.map((name, index) => ({ id: `mock-${index}`, name, archived: false, order: index }));
+  const rows = await retrieveMany(xrm, SERVICE_TYPE_TABLE, `?$select=${SERVICE_TYPE_TABLE}id,cr40f_name,cr40f_ordem,cr40f_arquivado&$filter=statecode eq 0&$orderby=cr40f_ordem asc,cr40f_name asc`);
+  return rows.map((row) => ({ id: row[`${SERVICE_TYPE_TABLE}id`], name: row.cr40f_name, order: row.cr40f_ordem ?? 0, archived: Boolean(row.cr40f_arquivado) }));
 }
 
-export async function saveQuoteServiceTypes(input) {
-  const xrm = getXrm();
-  if (!xrm) throw new Error("Salvar tipos de serviço exige Dataverse conectado.");
+function assertServiceTypeDev(xrm) {
+  if (!xrm) throw new Error("Gerenciar tipos de serviço exige Dataverse conectado.");
   if (xrm.Utility.getGlobalContext().getClientUrl().replace(/\/$/, "").toLowerCase() !== DEV_DATAVERSE_URL.toLowerCase()) throw new Error("Tipos de serviço só podem ser alterados no DEV.");
-  const { normalizeServiceTypes } = await import("./quoteServiceTypes.js");
-  const options = normalizeServiceTypes(input);
-  if (!options.length) throw new Error("Informe pelo menos um tipo de serviço.");
-  const choices = await quoteServiceMetadata(xrm);
-  const byLabel = new Map(choices.map(({ label, value }) => [label.toLocaleLowerCase("pt-BR"), value]));
-  let nextValue = Math.max(100002000, ...choices.map((choice) => choice.value)) + 1;
-  let changed = false;
-  for (const label of options) {
-    if (byLabel.has(label.toLocaleLowerCase("pt-BR"))) continue;
-    await request(xrm, "/InsertOptionValue", { method: "POST", body: JSON.stringify({ EntityLogicalName: QUOTE_TABLE, AttributeLogicalName: "cr40f_tiposervico", Value: nextValue, Label: { "@odata.type": "Microsoft.Dynamics.CRM.Label", LocalizedLabels: [{ "@odata.type": "Microsoft.Dynamics.CRM.LocalizedLabel", Label: label, LanguageCode: 1046 }] } }) });
-    byLabel.set(label.toLocaleLowerCase("pt-BR"), nextValue++);
-    changed = true;
+}
+
+export function canEditQuoteServiceTypes() {
+  const xrm = getXrm();
+  return Boolean(xrm && xrm.Utility.getGlobalContext().getClientUrl().replace(/\/$/, "").toLowerCase() === DEV_DATAVERSE_URL.toLowerCase());
+}
+
+export async function createQuoteServiceType(name) {
+  const xrm = getXrm();
+  assertServiceTypeDev(xrm);
+  const cleanName = String(name || "").trim();
+  if (!cleanName) throw new Error("Informe o nome do tipo de serviço.");
+  const current = await loadQuoteServiceTypes();
+  if (current.some((item) => item.name.localeCompare(cleanName, "pt-BR", { sensitivity: "base" }) === 0)) throw new Error("Já existe um tipo de serviço com esse nome.");
+  await request(xrm, `/${entitySetName(SERVICE_TYPE_TABLE)}`, { method: "POST", body: JSON.stringify({ cr40f_name: cleanName, cr40f_ordem: Math.max(-1, ...current.map((item) => item.order)) + 1, cr40f_arquivado: false }) });
+  return loadQuoteServiceTypes();
+}
+
+export async function updateQuoteServiceType(id, patch) {
+  const xrm = getXrm();
+  assertServiceTypeDev(xrm);
+  const current = await loadQuoteServiceTypes();
+  if (!current.some((item) => item.id === id)) throw new Error("Tipo de serviço não encontrado.");
+  const payload = {};
+  if (Object.hasOwn(patch, "name")) {
+    const name = String(patch.name || "").trim();
+    if (!name) throw new Error("Informe o nome do tipo de serviço.");
+    if (current.some((item) => item.id !== id && item.name.localeCompare(name, "pt-BR", { sensitivity: "base" }) === 0)) throw new Error("Já existe um tipo de serviço com esse nome.");
+    payload.cr40f_name = name;
   }
-  if (changed) await request(xrm, "/PublishXml", { method: "POST", body: JSON.stringify({ ParameterXml: `<importexportxml><entities><entity>${QUOTE_TABLE}</entity></entities></importexportxml>` }) });
-  const definitions = await retrieveMany(xrm, ENVIRONMENT_VARIABLE_DEFINITION_TABLE, `?$select=environmentvariabledefinitionid&$filter=schemaname eq '${SERVICE_TYPES_SCHEMA}'&$top=1`);
-  let id = definitions[0]?.environmentvariabledefinitionid;
-  if (!id) {
-    const created = await request(xrm, `/${entitySetName(ENVIRONMENT_VARIABLE_DEFINITION_TABLE)}`, { method: "POST", body: JSON.stringify({ schemaname: SERVICE_TYPES_SCHEMA, displayname: "Planner - Tipos de serviço", type: 100000000, defaultvalue: JSON.stringify(options) }) });
-    id = created?.environmentvariabledefinitionid;
-    if (!id) throw new Error("Dataverse não retornou o ID da configuração criada.");
-  }
-  const values = await retrieveMany(xrm, ENVIRONMENT_VARIABLE_VALUE_TABLE, `?$select=environmentvariablevalueid&$filter=_environmentvariabledefinitionid_value eq ${id}&$top=1`);
-  const value = JSON.stringify(options);
-  if (values.length) await request(xrm, `/${entitySetName(ENVIRONMENT_VARIABLE_VALUE_TABLE)}(${values[0].environmentvariablevalueid})`, { method: "PATCH", body: JSON.stringify({ value }) });
-  else await request(xrm, `/${entitySetName(ENVIRONMENT_VARIABLE_VALUE_TABLE)}`, { method: "POST", body: JSON.stringify({ schemaname: SERVICE_TYPES_SCHEMA, value, "environmentvariabledefinitionid@odata.bind": `/${entitySetName(ENVIRONMENT_VARIABLE_DEFINITION_TABLE)}(${id})` }) });
+  if (Object.hasOwn(patch, "archived")) payload.cr40f_arquivado = Boolean(patch.archived);
+  await request(xrm, `/${entitySetName(SERVICE_TYPE_TABLE)}(${cleanId(id)})`, { method: "PATCH", body: JSON.stringify(payload) });
   return loadQuoteServiceTypes();
 }
 
@@ -638,7 +637,8 @@ function normalizeQuote(row) {
     clientContact: row.cr40f_contatocliente || "",
     clientEmail: row.cr40f_emailcliente || "",
     clientPhone: row.cr40f_telefonewhatsapp || "",
-    serviceType: row["cr40f_tiposervico@OData.Community.Display.V1.FormattedValue"] || [...serviceTypeValues].find(([, value]) => value === row.cr40f_tiposervico)?.[0] || "",
+    serviceTypeId: row[`_${SERVICE_TYPE_LOOKUP}_value`] || "",
+    serviceType: row[`_${SERVICE_TYPE_LOOKUP}_value@OData.Community.Display.V1.FormattedValue`] || row["cr40f_tiposervico@OData.Community.Display.V1.FormattedValue"] || [...serviceTypeValues].find(([, value]) => value === row.cr40f_tiposervico)?.[0] || "",
     vehicleType: row.cr40f_tipoveiculo || "",
     origin: row.cr40f_origem || "",
     destination: row.cr40f_destino || "",
@@ -663,6 +663,15 @@ function normalizeQuote(row) {
 const QUOTE_SELECT = [
   "cr40f_pedidodecotacaoid", "cr40f_numerodacotacao", "cr40f_titulo", "cr40f_clienteempresa", "cr40f_contatocliente", "cr40f_telefonewhatsapp", "cr40f_emailcliente", "cr40f_canalentrada", "cr40f_tiposervico", "cr40f_tipoveiculo", "cr40f_origem", "cr40f_destino", "cr40f_datahoraservico", "cr40f_retorno", "cr40f_datahoraretorno", "cr40f_quantidadepassageiros", "cr40f_observacoespedido", "cr40f_prioridade", "cr40f_statuscotacao", "cr40f_prazoresponder", "cr40f_valorcotado", "cr40f_condicaocomercial", "cr40f_respostaenviadacliente", "cr40f_datahorafinalizacao", "cr40f_plannertaskid", "cr40f_linktarefaplanner", "cr40f_linkmensagemteams",
 ].join(",");
+
+async function quoteSelect(xrm) {
+  if (!quoteServiceLookupChecked) {
+    try { await request(xrm, `/EntityDefinitions(LogicalName='${QUOTE_TABLE}')/Attributes(LogicalName='${SERVICE_TYPE_LOOKUP}')?$select=LogicalName`); quoteServiceLookupAvailable = true; }
+    catch { quoteServiceLookupAvailable = false; }
+    quoteServiceLookupChecked = true;
+  }
+  return quoteServiceLookupAvailable ? `${QUOTE_SELECT},_${SERVICE_TYPE_LOOKUP}_value` : QUOTE_SELECT;
+}
 
 async function primaryNameAttribute(xrm, table) {
   const metadata = await request(xrm, `/EntityDefinitions(LogicalName='${table}')?$select=PrimaryNameAttribute`);
@@ -1027,13 +1036,14 @@ export async function loadCoreState(xrm) {
 }
 
 export async function loadSupplementalState(xrm, state) {
+  const quoteFields = await quoteSelect(xrm);
   const quoteIds = [...new Set((state.tasks || []).map((task) => cleanId(task.quoteId)).filter(Boolean))];
   const quoteChunks = Array.from({ length: Math.ceil(quoteIds.length / 50) }, (_, index) => quoteIds.slice(index * 50, index * 50 + 50));
   const loadLinkedQuotes = () => {
-    if (!quoteIds.length) return retrieveMany(xrm, QUOTE_TABLE, `?$select=${QUOTE_SELECT}&$filter=statecode eq 0&$orderby=modifiedon desc&$top=25`);
+    if (!quoteIds.length) return retrieveMany(xrm, QUOTE_TABLE, `?$select=${quoteFields}&$filter=statecode eq 0&$orderby=modifiedon desc&$top=25`);
     return Promise.all(quoteChunks.map((chunk) => {
     const filter = chunk.map((id) => `cr40f_pedidodecotacaoid eq ${id}`).join(" or ");
-    return retrieveMany(xrm, QUOTE_TABLE, `?$select=${QUOTE_SELECT}&$filter=statecode eq 0 and (${filter})`);
+    return retrieveMany(xrm, QUOTE_TABLE, `?$select=${quoteFields}&$filter=statecode eq 0 and (${filter})`);
     })).then((pages) => pages.flat());
   };
   const [quotes, qualityErrors, qualityActions] = await Promise.all([
@@ -1057,17 +1067,19 @@ export async function loadTaskDetails(xrm, taskId) {
 }
 
 export async function searchQuotes(xrm, query) {
+  const quoteFields = await quoteSelect(xrm);
   const escaped = String(query || "").trim().replace(/'/g, "''");
   if (!escaped) return [];
   const filter = `contains(cr40f_numerodacotacao,'${escaped}') or contains(cr40f_titulo,'${escaped}') or contains(cr40f_clienteempresa,'${escaped}')`;
-  const rows = await measureStage("busca de cotações", () => retrieveMany(xrm, QUOTE_TABLE, `?$select=${QUOTE_SELECT}&$filter=statecode eq 0 and (${filter})&$orderby=modifiedon desc&$top=25`));
+  const rows = await measureStage("busca de cotações", () => retrieveMany(xrm, QUOTE_TABLE, `?$select=${quoteFields}&$filter=statecode eq 0 and (${filter})&$orderby=modifiedon desc&$top=25`));
   return rows.map(normalizeQuote);
 }
 
 async function loadLiveState(xrm) {
+  const quoteFields = await quoteSelect(xrm);
   const currentUserId = cleanId(xrm.Utility?.getGlobalContext?.().userSettings?.userId);
   const [quotes, rows, events, relations, assigneeRelations, qualityErrors, qualityActions, employees, currentUserEmail, teams, teamRelations, personalTagData] = await Promise.all([
-    retrieveMany(xrm, QUOTE_TABLE, `?$select=${QUOTE_SELECT}&$filter=statecode eq 0&$orderby=modifiedon desc`),
+    retrieveMany(xrm, QUOTE_TABLE, `?$select=${quoteFields}&$filter=statecode eq 0&$orderby=modifiedon desc`),
     retrievePlannerTasks(xrm),
     retrieveMany(xrm, EVENT_TABLE, "?$select=cr40f_plannertarefaeventoid,_cr40f_tarefa_value,cr40f_tipo,cr40f_campo,cr40f_descricao,cr40f_valornovo,cr40f_ocorridoem,_cr40f_autor_value,_createdby_value&$orderby=cr40f_ocorridoem desc"),
     retrieveMany(xrm, RELATION_TABLE, "?$select=cr40f_plannertarearelacaoid,_cr40f_tarefapai_value,_cr40f_subtarefa_value&$filter=statecode eq 0"),
@@ -1700,11 +1712,8 @@ function quotePayload(input = {}, includeUnset = false) {
   set("channel", "cr40f_canalentrada", QUOTE_CHANNEL_VALUES[input.channel] ?? input.channel);
   if (has("serviceType")) {
     const label = String(input.serviceType || "").trim();
-    const value = serviceTypeValues.get(label);
-    if (!value) throw new Error(`Tipo de serviço não configurado no Dataverse: ${label || "vazio"}.`);
-    payload.cr40f_tiposervico = value;
+    payload.cr40f_tiposervico = serviceTypeValues.get(label) || 100002008;
   }
-
   set("vehicleType", "cr40f_tipoveiculo", input.vehicleType == null ? "" : String(input.vehicleType).trim());
   set("origin", "cr40f_origem", input.origin == null ? "" : String(input.origin).trim());
   set("destination", "cr40f_destino", input.destination == null ? "" : String(input.destination).trim());
@@ -1734,9 +1743,21 @@ async function resolveFinanceTeamId(xrm, state) {
   return resolveIdByName(xrm, TEAM_TABLE, primaryName, "Financeiro");
 }
 
+async function bindQuoteServiceType(xrm, payload, input) {
+  if (!quoteServiceLookupAvailable || (!Object.hasOwn(input, "serviceTypeId") && !Object.hasOwn(input, "serviceType"))) return;
+  const types = await loadQuoteServiceTypes();
+  const type = types.find((item) => item.id === input.serviceTypeId) || types.find((item) => item.name.localeCompare(String(input.serviceType || ""), "pt-BR", { sensitivity: "base" }) === 0);
+  if (!type) throw new Error("Selecione um tipo de serviço cadastrado.");
+  await bindLookup(xrm, payload, QUOTE_TABLE, SERVICE_TYPE_LOOKUP, SERVICE_TYPE_TABLE, type.id);
+}
+
 async function createLiveQuote(xrm, state, input = {}) {
-  await loadQuoteServiceTypes();
+  await quoteSelect(xrm);
+  const legacyChoices = await quoteServiceMetadata(xrm);
+  serviceTypeValues.clear();
+  legacyChoices.forEach(({ label, value }) => serviceTypeValues.set(label, value));
   const payload = quotePayload(input, true);
+  await bindQuoteServiceType(xrm, payload, input);
   const created = await request(xrm, `/${entitySetName(QUOTE_TABLE)}`, { method: "POST", body: JSON.stringify(payload) });
   const quoteId = cleanId(created?.cr40f_pedidodecotacaoid || created?.[`${QUOTE_TABLE}id`]);
   if (!quoteId) throw new Error("Dataverse criou a cotação sem retornar o ID.");
@@ -1756,11 +1777,18 @@ async function createLiveQuote(xrm, state, input = {}) {
 }
 
 async function updateLiveQuote(xrm, state, id, patch = {}) {
-  if (Object.hasOwn(patch, "serviceType")) await loadQuoteServiceTypes();
+  await quoteSelect(xrm);
+  if (Object.hasOwn(patch, "serviceType")) {
+    const legacyChoices = await quoteServiceMetadata(xrm);
+    serviceTypeValues.clear();
+    legacyChoices.forEach(({ label, value }) => serviceTypeValues.set(label, value));
+  }
   const quoteId = cleanId(id);
   const existing = (state.quotes || []).find((quote) => cleanId(quote.id) === quoteId);
   if (!existing) throw new Error("Cotação não encontrada.");
-  await request(xrm, `/${entitySetName(QUOTE_TABLE)}(${quoteId})`, { method: "PATCH", body: JSON.stringify(quotePayload(patch)) });
+  const payload = quotePayload(patch);
+  await bindQuoteServiceType(xrm, payload, patch);
+  await request(xrm, `/${entitySetName(QUOTE_TABLE)}(${quoteId})`, { method: "PATCH", body: JSON.stringify(payload) });
   const linkedTasks = (state.tasks || []).filter((item) => cleanId(item.quoteId) === quoteId);
   const nextStatus = patch.status ?? existing.status;
   const terminal = isQuoteTerminalStatus(nextStatus);

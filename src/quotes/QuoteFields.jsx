@@ -34,9 +34,9 @@ export function QuoteClientFields({ draft, update, errors = {} }) {
 
 export function QuoteServiceFields({ draft, update, errors = {} }) {
   const { options, error } = useQuoteServiceTypes();
-  const available = draft.serviceType && !options.includes(draft.serviceType) ? [draft.serviceType, ...options] : options;
+  const available = options.filter((item) => !item.archived || item.id === draft.serviceTypeId);
   return <div className="quote-v3-form-grid">
-    <QuoteField id="quote-service" label="Tipo de serviço" required error={errors.serviceType}><select id="quote-service" className="form-general-input" required value={draft.serviceType || ""} onChange={(event) => update("serviceType", event.target.value)}><option value="">Selecione</option>{available.map((item) => <option key={item} value={item}>{item}</option>)}</select>{error && <small role="alert">{error}</small>}</QuoteField>
+    <QuoteField id="quote-service" label="Tipo de serviço" required error={errors.serviceType}><select id="quote-service" className="form-general-input" required value={draft.serviceTypeId || available.find((item) => item.name === draft.serviceType)?.id || ""} onChange={(event) => { const type = available.find((item) => item.id === event.target.value); update("serviceTypeId", type?.id || ""); update("serviceType", type?.name || ""); }}><option value="">Selecione</option>{available.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>{error && <small role="alert">{error}</small>}</QuoteField>
     <QuoteField id="quote-vehicle" label="Veículo"><FormTextInput id="quote-vehicle" value={draft.vehicleType || ""} onChange={(event) => update("vehicleType", event.target.value)} /></QuoteField>
     <QuoteField id="quote-origin" label="Origem" required error={errors.origin}><FormTextInput id="quote-origin" error={errors.origin} value={draft.origin || ""} onChange={(event) => update("origin", event.target.value)} /></QuoteField>
     <QuoteField id="quote-destination" label="Destino" required error={errors.destination}><FormTextInput id="quote-destination" error={errors.destination} value={draft.destination || ""} onChange={(event) => update("destination", event.target.value)} /></QuoteField>

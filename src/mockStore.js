@@ -1017,7 +1017,7 @@ export function createQuote(state, input = {}) {
     id: uid("quote"), code: input.code || `COT-${String(sequence).padStart(4, "0")}`,
     title: String(input.title || "Nova cotação").trim(), client: String(input.client || "").trim(),
     status: input.status || "Nova", deadline: input.deadline || "", value: input.value || "",
-    serviceType: input.serviceType || "", vehicleType: input.vehicleType || "", origin: input.origin || "", destination: input.destination || "",
+    serviceType: input.serviceType || "", serviceTypeId: input.serviceTypeId || "", vehicleType: input.vehicleType || "", origin: input.origin || "", destination: input.destination || "",
     passengers: input.passengers || "", serviceDate: input.serviceDate || "", returnDate: input.returnDate || "",
     clientContact: input.clientContact || "", clientEmail: input.clientEmail || "", clientPhone: input.clientPhone || "",
     commercialTerms: input.commercialTerms || "", notes: input.notes || "", priority: input.priority || "medium", channel: input.channel || "", hasReturn: Boolean(input.returnDate), lossReason: input.lossReason || "", responseSent: false, finalizationAt: "", plannerTaskId: "", createdAt: now, modifiedAt: now,
