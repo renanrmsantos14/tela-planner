@@ -3349,6 +3349,7 @@ function AttachmentPreview({ attachment, loadAttachmentContent, onOpen }) {
   useEffect(
     () => () => {
       if (
+        attachment?.syncStatus !== "pending" &&
         attachment?.previewUrl?.startsWith("blob:") &&
         globalThis.URL?.revokeObjectURL
       )
@@ -6473,15 +6474,40 @@ export default function App() {
     return { status: result.status, contactId: result.contactId, taskId: result.taskId };
   }, [applyPendingMutations, currentEmployee, showNotice, state, store]);
   useEffect(() => installPlannerBridge({ onIntake: handleWhatsAppIntake }), [handleWhatsAppIntake]);
-  const createQuote = useCallback((input = {}) => {
+  const createQuote = useCallback(async (input = {}) => {
     if (!store.createQuote) return Promise.resolve(false);
-    return runOptimisticMutation(
+    const { attachments = [], ...quoteInput } = input;
+    const previousIds = new Set((confirmedStateRef.current || state).quotes?.map((quote) => quote.id) || []);
+    let linkedTaskId = "";
+    const created = await runOptimisticMutation(
       (current) => current,
-      () => store.createQuote(confirmedStateRef.current || state, { ...input, actorEmployeeId: currentEmployee?.id || "" }),
+      async () => {
+        const next = await store.createQuote(confirmedStateRef.current || state, { ...quoteInput, actorEmployeeId: currentEmployee?.id || "" });
+        const quote = (next.quotes || []).find((item) => !previousIds.has(item.id));
+        linkedTaskId = (next.tasks || []).find((task) => task.quoteId === quote?.id && !task.parentTaskId)?.id || "";
+        return next;
+      },
       store.live ? "Cotação em sincronização…" : "Criando cotação no mock local…",
       store.live ? "Cotação enviada para sincronização." : "Cotação criada no mock local.",
     );
-  }, [currentEmployee, runOptimisticMutation, state, store]);
+    if (!created || !attachments.length) return created;
+    if (!linkedTaskId) { showNotice("Cotação criada, mas a tarefa para anexos não foi localizada.", 5200); return true; }
+    let failures = 0;
+    for (const file of attachments) {
+      try {
+        showNotice(`Enviando anexo ${attachments.indexOf(file) + 1} de ${attachments.length}…`);
+        const previewUrl = store.live ? "" : await fileToDataUrl(file);
+        const next = await store.addAttachment(confirmedStateRef.current || state, linkedTaskId, file, previewUrl);
+        confirmedStateRef.current = next;
+        setState(applyPendingMutations(next));
+      } catch (error) {
+        failures += 1;
+        console.warn("[Planner] anexo da cotação não enviado", error);
+      }
+    }
+    showNotice(failures ? `Cotação criada. ${failures} anexo(s) não foram enviados; abra a cotação para tentar novamente.` : `Cotação criada com ${attachments.length} anexo(s).`, failures ? 6000 : 3000);
+    return true;
+  }, [applyPendingMutations, currentEmployee, runOptimisticMutation, showNotice, state, store]);
   const updateQuote = useCallback((id, patch = {}) => {
     if (!store.updateQuote) return Promise.resolve(false);
     return runOptimisticMutation(
@@ -7175,7 +7201,7 @@ export default function App() {
         />
       );
     if (active === "quotes")
-      return <QuotesView state={viewState} onOpenTask={openTask} onCreateQuote={createQuote} onUpdateQuote={updateQuote} onMarkQuoteSent={markQuoteSent} onSetQuoteOutcome={setQuoteOutcome} onEnsureTaskDetails={ensureTaskDetails} selectedQuoteId={quoteToOpenId} onSelectQuote={setQuoteToOpenId} workspaceEnabled={QUOTE_WORKSPACE_V2_ENABLED} hybridEnabled={QUOTE_HYBRID_V3_ENABLED} />;
+      return <QuotesView state={viewState} onOpenTask={openTask} onCreateQuote={createQuote} onUpdateQuote={updateQuote} onMarkQuoteSent={markQuoteSent} onSetQuoteOutcome={setQuoteOutcome} onEnsureTaskDetails={ensureTaskDetails} onAttachment={addAttachment} onDeleteAttachment={removeAttachment} loadAttachmentContent={store.loadAttachmentContent} AttachmentSectionComponent={AttachmentSection} selectedQuoteId={quoteToOpenId} onSelectQuote={setQuoteToOpenId} workspaceEnabled={QUOTE_WORKSPACE_V2_ENABLED} hybridEnabled={QUOTE_HYBRID_V3_ENABLED} />;
     if (active === "board")
       return (
         <BoardView
