@@ -748,7 +748,7 @@ function notificationPresentation(item, task, contact) {
       context,
       icon: ClipboardList,
       label: "Nova tarefa para você",
-      message: "Você recebeu uma nova tarefa para acompanhar.",
+      message: distinctMessage || "Você recebeu uma nova tarefa para acompanhar.",
       title: taskTitle,
       tone: "success",
     };
@@ -782,7 +782,7 @@ function notificationPresentation(item, task, contact) {
       context,
       icon: CheckCircle2,
       label: "Tarefa atualizada",
-      message: statusLabel ? `Agora: ${statusLabel}` : "O andamento desta tarefa foi alterado.",
+      message: distinctMessage || (statusLabel ? `Agora: ${statusLabel}` : "O andamento desta tarefa foi alterado."),
       title: taskTitle,
       tone: "info",
     };
@@ -798,6 +798,17 @@ function notificationPresentation(item, task, contact) {
       tone: "info",
     };
   }
+  if (type === "overdue_manual") {
+    return {
+      context,
+      icon: ShieldAlert,
+      label: "Cobrança de tarefa",
+      message: distinctMessage || "O responsável recebeu uma cobrança.",
+      title: taskTitle,
+      tone: "warning",
+    };
+  }
+
 
   return {
     context,
@@ -936,6 +947,7 @@ function NotificationsPanel({
                   <div className="notification-item-content">
                     <button className="notification-item-main" type="button" onClick={() => item.contactId ? onOpenContact?.(item) : onOpenTask(item)}>
                       <span className="notification-kicker">{presentation.label}</span>
+                      {presentation.message && <span className="notification-message">{presentation.message}</span>}
                       <strong>{presentation.title}</strong>
                       <span className="notification-meta">
                         <span>{presentation.context}</span>
@@ -6910,9 +6922,9 @@ export default function App() {
       confirmedStateRef.current = next;
       setState(applyPendingMutations(next));
       const delivery = result?.emailDispatch;
-      if (delivery?.status === "sent") showNotice("E-mail de teste enviado.");
-      else if (delivery?.status === "failed" || delivery?.status === "noAddress" || delivery?.status === "unknown") showNotice(delivery.text || "E-mail de teste não enviado.", 5200);
-      else showNotice("Evento criado. O Flow ainda não confirmou o e-mail.", 4200);
+      if (delivery?.status === "sent") showNotice("Push de teste enviado.");
+      else if (delivery?.status === "failed" || delivery?.status === "noAddress" || delivery?.status === "unknown") showNotice(delivery.text || "Push de teste não enviado.", 5200);
+      else showNotice("Evento criado. O Flow ainda não confirmou o push.", 4200);
       return delivery || true;
     });
   }, [applyPendingMutations, showNotice, state, store]);

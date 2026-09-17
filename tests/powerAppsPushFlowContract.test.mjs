@@ -80,6 +80,9 @@ test("Flow piloto configura push sem navegar para o formulário da tabela", asyn
   assert.match(source, /uniquename eq '\$escapedAppUniqueName'/);
   assert.doesNotMatch(source, /PowerAppsAppId = '7c7c8fda-53d0-f011-8543-6045bd3a51ea'/);
   assert.match(source, /authentication = '@parameters\(''\$authentication''\)'/);
+  assert.match(source, /Condition_push_event/);
+  assert.match(source, /Compose_Notification_Message/);
+  assert.doesNotMatch(source, /payload\/dynamicParams\/pageType/);
   assert.doesNotMatch(source, /authentication = "@parameters\('\$authentication'\)"/);
 });
 

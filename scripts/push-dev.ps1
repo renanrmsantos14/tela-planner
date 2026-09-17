@@ -41,27 +41,18 @@ $publishScript = Join-Path $PSScriptRoot "publish-webresource.ps1"
 & $publishScript -EnvironmentUrl $EnvironmentUrl -DeviceCode:$DeviceCode
 Assert-ExitCode "publish-webresource"
 
-Write-Step "build do plugin PlannerNotifications"
-$pluginProject = Join-Path $root "power-platform\plugins\PlannerNotifications\PlannerNotifications.csproj"
-dotnet build $pluginProject --configuration Release
-Assert-ExitCode "dotnet build PlannerNotifications"
-$dllPath = Join-Path $root "power-platform\plugins\PlannerNotifications\bin\Release\net462\Betinhos.Planner.Notifications.dll"
-if (-not (Test-Path -LiteralPath $dllPath -PathType Leaf)) { throw "DLL do plugin nao foi gerada: $dllPath" }
-
-Write-Step "registro/atualizacao do plugin na solucao AppBetinhos"
-$pluginScript = Join-Path $PSScriptRoot "register-planner-notification-plugin.ps1"
-if ($TechnicalUserEmail) {
-  & $pluginScript -EnvironmentUrl $EnvironmentUrl -DllPath $dllPath -SolutionUniqueName "AppBetinhos" -TechnicalUserEmail $TechnicalUserEmail -Apply -AddExistingToSolution -DeviceCode:$DeviceCode
-}
-else {
-  & $pluginScript -EnvironmentUrl $EnvironmentUrl -DllPath $dllPath -SolutionUniqueName "AppBetinhos" -Apply -AddExistingToSolution -DeviceCode:$DeviceCode
-}
-Assert-ExitCode "registro do plugin"
-
 Write-Step "provisionamento do Flow de push Power Apps Mobile"
 $flowScript = Join-Path $PSScriptRoot "create-planner-immediate-flow.ps1"
 & $flowScript -EnvironmentUrl $EnvironmentUrl.TrimEnd('/')
 Assert-ExitCode "provisionamento do Flow de push"
 
+Write-Step "provisionamento do relatorio diario"
+& (Join-Path $PSScriptRoot "create-planner-daily-flow.ps1") -EnvironmentUrl $EnvironmentUrl.TrimEnd('/')
+Assert-ExitCode "provisionamento do relatorio diario"
+
+Write-Step "desativacao dos canais antigos"
+& (Join-Path $PSScriptRoot "disable-planner-legacy-channels.ps1") -EnvironmentUrl $EnvironmentUrl.TrimEnd('/')
+Assert-ExitCode "desativacao dos canais antigos"
+
 Write-Host "VERSAO PUBLICADA COM SUCESSO: $generatedVersion"
-Write-Step "push concluido: WebResource, plugin e Flow de push atualizados"
+Write-Step "push concluido: WebResource e Flows atualizados; canais antigos desativados"

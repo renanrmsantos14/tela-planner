@@ -372,6 +372,62 @@ $definition = $definition.Replace('__POWER_APPS_APP_DISPLAY_NAME__', $powerAppsA
 $definition = $definition.Replace('__POWER_APPS_PUSH_CHANNEL_VALUE__', [string]$powerAppsPushChannelValue)
 $definitionObject = $definition | ConvertFrom-Json
 $mainActions = $definitionObject.actions
+$mainActions.Compose_Type.inputs = "@if(equals(outputs('Compose_Context')?['collectionType'], 'manual_overdue'), 'overdue_manual', coalesce(outputs('Compose_Context')?['collectionType'], replace(triggerOutputs()?['body/cr40f_campo'], 'notification:', ''), 'update'))"
+$mainActions.For_each_recipient.foreach = "@outputs('Compose_Recipients')"
+$mainActions.Compose_Recipients.inputs = @'
+@if(equals(triggerOutputs()?['body/cr40f_campo'],'notification:test'),coalesce(outputs('Compose_Context')?['notificationRecipientIds'],json('[]')),if(equals(triggerOutputs()?['body/cr40f_campo'],'notification:assignment'),coalesce(outputs('Compose_Context')?['assigneeIds'],json('[]')),if(equals(triggerOutputs()?['body/cr40f_campo'],'notification:mention'),coalesce(outputs('Compose_Context')?['mentionedEmployeeIds'],json('[]')),if(equals(triggerOutputs()?['body/cr40f_campo'],'notification:waiting'),coalesce(outputs('Compose_Context')?['waitingTargetIds'],json('[]')),if(equals(triggerOutputs()?['body/cr40f_campo'],'notification:overdue_manual'),coalesce(outputs('Compose_Context')?['notificationRecipientIds'],json('[]')),if(equals(triggerOutputs()?['body/cr40f_campo'],'notification:assignees'),union(coalesce(outputs('Compose_Context')?['addedAssigneeIds'],json('[]')),coalesce(outputs('Compose_Context')?['removedAssigneeIds'],json('[]'))),if(equals(triggerOutputs()?['body/cr40f_campo'],'notification:status'),union(coalesce(outputs('Compose_Context')?['assigneeIds'],json('[]')),if(empty(outputs('Compose_Context')?['creatorEmployeeId']),json('[]'),createArray(outputs('Compose_Context')?['creatorEmployeeId']))),if(and(equals(triggerOutputs()?['body/cr40f_campo'],'notification:deadline'),empty(outputs('Compose_Context')?['collectionType'])),union(union(coalesce(outputs('Compose_Context')?['assigneeIds'],json('[]')),coalesce(outputs('Compose_Context')?['previousAssigneeIds'],json('[]'))),if(empty(outputs('Compose_Context')?['creatorEmployeeId']),json('[]'),createArray(outputs('Compose_Context')?['creatorEmployeeId']))),json('[]'))))))))
+)
+'@
+$mainActions.Compose_Notification_Title.inputs = @'
+@concat(if(equals(outputs('Compose_Type'),'assignment'),'Nova tarefa',if(equals(outputs('Compose_Type'),'mention'),'Menção',if(equals(outputs('Compose_Type'),'waiting'),'Aguardando retorno',if(equals(outputs('Compose_Type'),'overdue_manual'),'Cobrança de tarefa atrasada',if(equals(outputs('Compose_Type'),'assignees'),'Responsáveis atualizados',if(equals(outputs('Compose_Type'),'deadline'),'Prazo alterado',if(equals(outputs('Compose_Type'),'status'),if(equals(outputs('Compose_Context')?['nextStatus'],'done'),'Tarefa concluída','Retorno registrado'),'Teste de notificação'))))))),': ',coalesce(outputs('Get_task')?['body/cr40f_titulo'],'Tarefa'))
+'@
+$mainActions | Add-Member -NotePropertyName List_actor -NotePropertyValue ([ordered]@{
+  type = 'OpenApiConnection'
+  runAfter = [ordered]@{ Compose_Notification_Title = @('Succeeded') }
+  inputs = [ordered]@{
+    parameters = [ordered]@{
+      entityName = 'cr40f_funcionarioses'
+      '$select' = 'cr40f_nomecompleto'
+      '$filter' = "cr40f_funcionariosid eq @{if(empty(outputs('Compose_Context')?['actorEmployeeId']),'00000000-0000-0000-0000-000000000000',outputs('Compose_Context')?['actorEmployeeId'])}"
+      '$top' = 1
+    }
+    host = [ordered]@{ apiId = '/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps'; operationId = 'ListRecords'; connectionName = 'shared_commondataserviceforapps' }
+    authentication = '@parameters(''$authentication'')'
+  }
+})
+$mainActions | Add-Member -NotePropertyName Compose_Actor_Name -NotePropertyValue ([ordered]@{
+  type = 'Compose'
+  runAfter = [ordered]@{ List_actor = @('Succeeded') }
+  inputs = "@if(empty(outputs('Compose_Context')?['actorName']),if(empty(outputs('List_actor')?['body/value']),'',first(outputs('List_actor')?['body/value'])?['cr40f_nomecompleto']),outputs('Compose_Context')?['actorName'])"
+})
+$mainActions | Add-Member -NotePropertyName Compose_Notification_Message -NotePropertyValue ([ordered]@{
+  type = 'Compose'
+  runAfter = [ordered]@{ Compose_Actor_Name = @('Succeeded') }
+  inputs = "@concat(if(empty(outputs('Compose_Actor_Name')),'',concat(outputs('Compose_Actor_Name'),': ')),if(equals(outputs('Compose_Type'),'mention'),coalesce(outputs('Compose_Context')?['commentText'],'Você foi mencionado.'),if(equals(outputs('Compose_Type'),'assignees'),'Equipe responsável alterada.',if(equals(outputs('Compose_Type'),'assignment'),'Você foi designado para a tarefa.',if(equals(outputs('Compose_Type'),'overdue_manual'),'Cobrança enviada.',coalesce(triggerOutputs()?['body/cr40f_descricao'],'Tarefa atualizada.'))))))"
+})
+$mainActions.Compose_Recipients.runAfter = [ordered]@{ Compose_Notification_Message = @('Succeeded') }
+$conditionNew = $mainActions.For_each_recipient.actions.Condition_NotAuthor.actions.Condition_New
+$conditionNew.expression = [ordered]@{ and = @([ordered]@{ equals = @("@length(outputs('List_existing')?['body/value'])", 0) }) }
+$conditionNew.actions.Create_notification.inputs.parameters.'item/cr40f_mensagem' = "@if(equals(outputs('Compose_Type'),'assignees'),concat(if(empty(outputs('Compose_Actor_Name')),'',concat(outputs('Compose_Actor_Name'),': ')),if(contains(coalesce(outputs('Compose_Context')?['addedAssigneeIds'],json('[]')),item()),'Você foi adicionado como responsável.','Você foi removido dos responsáveis.')),outputs('Compose_Notification_Message'))"
+$getRecipient = $conditionNew.actions.Get_recipient
+$getRecipient.PSObject.Properties.Remove('runAfter')
+$conditionIdentity = $conditionNew.actions.Condition_has_identity
+$conditionNew.actions.PSObject.Properties.Remove('Get_recipient')
+$conditionNew.actions.PSObject.Properties.Remove('Condition_has_identity')
+$conditionNew.actions | Add-Member -NotePropertyName Condition_push_event -NotePropertyValue ([ordered]@{
+  type = 'If'
+  runAfter = [ordered]@{ Create_notification = @('Succeeded') }
+  expression = [ordered]@{ or = @(
+    [ordered]@{ equals = @("@outputs('Compose_Type')", 'test') },
+    [ordered]@{ equals = @("@outputs('Compose_Type')", 'assignment') },
+    [ordered]@{ equals = @("@outputs('Compose_Type')", 'mention') },
+    [ordered]@{ equals = @("@outputs('Compose_Type')", 'waiting') },
+    [ordered]@{ equals = @("@outputs('Compose_Type')", 'overdue_manual') },
+    [ordered]@{ and = @([ordered]@{ equals = @("@outputs('Compose_Type')", 'assignees') }, [ordered]@{ contains = @("@outputs('Compose_Context')?['addedAssigneeIds']", '@item()') }) }
+  ) }
+  actions = [ordered]@{ Get_recipient = $getRecipient; Condition_has_identity = $conditionIdentity }
+})
+$conditionIdentity.actions.Send_PowerApps_push.inputs.parameters.'payload/message' = "@concat(outputs('Compose_Notification_Title'),' · ',outputs('Compose_Notification_Message'))"
 $definitionObject.actions = [ordered]@{
   Scope_Main = [ordered]@{
     type = 'Scope'

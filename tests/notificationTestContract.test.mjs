@@ -7,8 +7,7 @@ test("módulo de teste de notificações usa o evento controlado", async () => {
   const dataverse = await readFile(new URL("../src/dataverse.js", import.meta.url), "utf8");
   const app = await readFile(new URL("../src/App.jsx", import.meta.url), "utf8");
   assert.match(component, /Módulo de teste de notificações mobile/);
-  assert.match(component, /Resumo diário/);
-  assert.match(component, /Resumo semanal/);
+  assert.doesNotMatch(component, /Resumo diário|Resumo semanal/);
   assert.match(component, /Enviar push de teste/);
   assert.match(component, /Power Apps Mobile/);
   assert.match(component, /Power Apps Mobile/);
@@ -17,8 +16,7 @@ test("módulo de teste de notificações usa o evento controlado", async () => {
   assert.match(dataverse, /sendLiveNotificationTest/);
   assert.match(dataverse, /"notification:test"/);
   assert.match(dataverse, /testNotification: true/);
-  assert.match(dataverse, /digest_daily/);
-  assert.match(dataverse, /digest_weekly/);
+  assert.match(dataverse, /testType: "push"/);
   assert.match(dataverse, /cr40f_plannerdisparo/);
   assert.match(dataverse, /waitForLiveEmailDispatch/);
   assert.match(dataverse, /Push não enviado/);

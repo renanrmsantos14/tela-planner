@@ -1315,7 +1315,7 @@ export function withNotificationEnvironment(xrm, field, next) {
     const clientUrl = globalContext?.getClientUrl?.()?.replace(/\/$/, "");
     const appUrl = globalContext?.getCurrentAppUrl?.()?.replace(/\/$/, "");
     if (!clientUrl || !context || Array.isArray(context) || typeof context !== "object") return next;
-    return JSON.stringify({ ...context, plannerBaseUrl: clientUrl, plannerAppUrl: appUrl || "" });
+    return JSON.stringify({ ...context, actorName: context.actorName || (context.actorEmployeeId ? globalContext?.userSettings?.userName || "" : ""), plannerBaseUrl: clientUrl, plannerAppUrl: appUrl || "" });
   } catch {
     return next;
   }
@@ -1363,8 +1363,6 @@ async function sendLiveNotificationTest(xrm, state, input = {}) {
   const task = (state.tasks || []).find((item) => cleanId(item.id) === taskId);
   if (!task) throw new Error("Selecione uma tarefa válida para o teste.");
   const message = String(input.message || "").trim() || "Teste de notificação do Planner.";
-  const type = ["digest_daily", "digest_weekly", "update", "mention", "deadline", "status"].includes(input.type) ? input.type : "digest_daily";
-  const typeLabel = type === "digest_weekly" ? "Resumo semanal" : type === "digest_daily" ? "Resumo diário" : type;
   const currentEmail = String(state.currentUserEmail || "").trim().toLowerCase();
   const testRecipient = (state.employees || []).find((employee) => String(employee.emailMicrosoft || "").trim().toLowerCase() === currentEmail);
   if (!testRecipient?.id) throw new Error("Seu usuário Microsoft não está vinculado a um funcionário ativo do Planner.");
@@ -1372,15 +1370,15 @@ async function sendLiveNotificationTest(xrm, state, input = {}) {
     xrm,
     taskId,
     100000001,
-    `[Teste] ${typeLabel}: ${message}`,
+    `[Teste] Push: ${message}`,
     "notification:test",
     "",
-    JSON.stringify({ testNotification: true, testType: type, collectionType: type, actorEmail: currentEmail, notificationRecipientIds: [testRecipient.id] }),
+    JSON.stringify({ testNotification: true, testType: "push", actorEmail: currentEmail, notificationRecipientIds: [testRecipient.id] }),
   );
   const eventId = cleanId(event?.cr40f_plannertarefaeventoid || event?.[`${EVENT_TABLE}id`]);
   const dispatch = eventId
     ? await waitForLiveEmailDispatch(xrm, eventId)
-    : { status: "unknown", type: "error", text: "Evento criado, mas a API não devolveu o identificador para confirmar o e-mail." };
+    : { status: "unknown", type: "error", text: "Evento criado, mas a API não devolveu o identificador para confirmar o push." };
   return { state: await loadLiveState(xrm), emailDispatch: dispatch };
 }
 
@@ -1555,7 +1553,7 @@ async function updateLiveTask(xrm, state, id, patch) {
 
 async function addLiveComment(xrm, taskId, text, context = {}) {
   await createEvent(xrm, taskId, 100000001, "Comentário adicionado.", "comentario", "", text.trim());
-  if (context.mentionedEmployeeIds?.length) await createEvent(xrm, taskId, 100000001, "Menção em comentário.", "notification:mention", "", JSON.stringify(context));
+  if (context.mentionedEmployeeIds?.length) await createEvent(xrm, taskId, 100000001, "Menção em comentário.", "notification:mention", "", JSON.stringify({ ...context, commentText: text.trim().slice(0, 160) }));
   return loadLiveState(xrm);
 }
 

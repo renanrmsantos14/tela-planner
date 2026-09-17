@@ -11,10 +11,7 @@ $token = az account get-access-token --resource $EnvironmentUrl --query accessTo
 if (-not $token) { throw 'Azure CLI não retornou token para o ambiente Dataverse.' }
 $headers = @{ Authorization = "Bearer $token"; Accept = 'application/json'; 'Content-Type' = 'application/json; charset=utf-8'; Prefer = 'return=representation' }
 
-# Fluxo idempotente: D0 notifica o responsável principal; cada dia útil atrasado repete a cobrança
-# e inclui o criador no primeiro dia útil após o vencimento. Consultores recebem eventos de
-# atribuição/status/prazo, mas não entram na cobrança diária. A cobrança diária cria a linha
-# da caixa e um evento de prazo para push/Toast; o relatório por e-mail sai em todos os dias úteis.
+# O relatório por e-mail é o único lembrete diário de prazo. Avisos históricos permanecem na caixa.
 $definition = @'
 {
   "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
@@ -82,6 +79,7 @@ $definition = @'
 $definition = $definition.Replace('new_sharedcommondataserviceforapps_25a23', $ConnectionReferenceLogicalName)
 $definitionObject = $definition | ConvertFrom-Json
 $mainActions = $definitionObject.actions
+$mainActions.PSObject.Properties.Remove('For_each_task')
 $definitionObject.actions = [ordered]@{
   Initialize_today = [ordered]@{
     type = 'InitializeVariable'
@@ -214,7 +212,7 @@ $employeeActions.Compose_report_tasks.runAfter = [ordered]@{ Filter_direct_tasks
 $employeeActions.Compose_report_tasks.inputs = "@union(union(body('Filter_direct_tasks'),body('Filter_team_tasks')),body('Filter_assigned_tasks'))"
 $htmlTemplate = $digestConditionActions.Select_task_html | ConvertTo-Json -Depth 20 | ConvertFrom-Json
 $htmlTemplate.inputs.select = @'
-@concat('<tr><td style="padding:12px 0;border-bottom:1px solid #eef1f5"><a href="',concat('https://',uriHost(outputs('List_open_tasks')?['body/@odata.context']),'/main.aspx?pagetype=entityrecord&etn=cr40f_plannertarefa&id=',item()?['cr40f_plannertarefaid']),'" style="color:#14213d;font-weight:700;text-decoration:none">',replace(replace(replace(coalesce(item()?['cr40f_titulo'],'Sem título'),'&','&amp;'),'<','&lt;'),'>','&gt;'),'</a><br><span style="color:#667085;font-size:13px">Prazo: ',formatDateTime(item()?['cr40f_prazo'],'dd/MM/yyyy'),' · Prioridade: ',if(equals(item()?['cr40f_prioridade'],100000003),'Urgente',if(equals(item()?['cr40f_prioridade'],100000002),'Alta',if(equals(item()?['cr40f_prioridade'],100000000),'Baixa','Média'))),'</span></td></tr>')
+@concat('<tr><td style="padding:12px 0;border-bottom:1px solid #eef1f5"><a href="',concat('https://',uriHost(outputs('List_open_tasks')?['body/@odata.context']),'/main.aspx?appname=cr40f_ModelDrivenBetinhos&pagetype=webresource&webresourceName=new_TelaPlanner.html&data=taskId%3D',item()?['cr40f_plannertarefaid']),'" style="color:#14213d;font-weight:700;text-decoration:none">',replace(replace(replace(coalesce(item()?['cr40f_titulo'],'Sem título'),'&','&amp;'),'<','&lt;'),'>','&gt;'),'</a><br><span style="color:#667085;font-size:13px">Prazo: ',formatDateTime(item()?['cr40f_prazo'],'dd/MM/yyyy'),' · Prioridade: ',if(equals(item()?['cr40f_prioridade'],100000003),'Urgente',if(equals(item()?['cr40f_prioridade'],100000002),'Alta',if(equals(item()?['cr40f_prioridade'],100000000),'Baixa','Média'))),'</span></td></tr>')
 '@
 $digestConditionActions.PSObject.Properties.Remove('Select_task_html')
 foreach ($section in @(
@@ -239,6 +237,7 @@ $sendDigest.inputs.parameters.'emailMessage/Subject' = "@if(equals(outputs('Comp
 $sendDigest.inputs.parameters.'emailMessage/Body' = @'
 @concat('<!DOCTYPE html><html lang="pt-BR"><body style="font-family:Segoe UI,Arial,sans-serif;background:#f5f7fa;color:#172033"><table role="presentation" width="600" align="center" cellpadding="0" cellspacing="0" style="background:#fff;padding:32px"><tr><td><p style="font-weight:700;letter-spacing:1.8px">BETINHOS / PLANNER</p><h1>',if(equals(outputs('Compose_report_kind'),'ResumoSemanal'),'Sua semana','Suas tarefas de hoje'),'</h1><p>',if(equals(outputs('Compose_report_kind'),'ResumoSemanal'),'Previsão de segunda a sexta e pendências anteriores.','Pendências anteriores e tarefas com prazo hoje.'),'</p><h2>Atrasadas (',string(length(body('Filter_overdue_tasks'))),')</h2>',if(empty(body('Filter_overdue_tasks')),'<p>Nenhuma tarefa atrasada.</p>',join(body('Select_overdue_html'),'')),if(equals(outputs('Compose_report_kind'),'ResumoSemanal'),concat('<h2>Esta semana (',string(length(body('Filter_week_tasks'))),')</h2>',if(empty(body('Filter_week_tasks')),'<p>Nenhuma tarefa com prazo nesta semana.</p>',join(body('Select_week_html'),''))),concat('<h2>Vencem hoje (',string(length(body('Filter_today_tasks'))),')</h2>',if(empty(body('Filter_today_tasks')),'<p>Nenhuma tarefa vence hoje.</p>',join(body('Select_today_html'),'')))),'<p>Cada tarefa mostra título, prazo e prioridade.</p><p><a href="',concat('https://',uriHost(outputs('List_open_tasks')?['body/@odata.context']),'/main.aspx'),'">Abrir meu Planner</a></p></td></tr></table></body></html>')
 '@
+$sendDigest.inputs.parameters.'emailMessage/Body' = $sendDigest.inputs.parameters.'emailMessage/Body'.Replace("'/main.aspx')", "'/main.aspx?appname=cr40f_ModelDrivenBetinhos&pagetype=webresource&webresourceName=new_TelaPlanner.html')")
 $digestConditionActions.Create_digest_dispatch.inputs.parameters | Add-Member -NotePropertyName 'item/cr40f_Destinatario@odata.bind' -NotePropertyValue "@concat('/cr40f_funcionarioses(',outputs('Compose_employee_id'),')')"
 
 $digestActions.PSObject.Properties | ForEach-Object { $mainActions | Add-Member -MemberType NoteProperty -Name $_.Name -Value $_.Value -Force }
@@ -255,9 +254,9 @@ $method = if ($WorkflowId) { 'Patch' } else { 'Post' }
 $uri = if ($WorkflowId) { "$EnvironmentUrl/api/data/v9.2/workflows($WorkflowId)" } else { "$EnvironmentUrl/api/data/v9.2/workflows" }
 $body = if ($WorkflowId) { @{ clientdata = $clientData } | ConvertTo-Json -Depth 100 } else { $payload }
 if ($WorkflowId) {
-  Invoke-RestMethod -Uri $uri -Headers $headers -Method Patch -Body $body | Out-Null
+  Invoke-RestMethod -Uri $uri -Headers $headers -Method Patch -Body ([Text.Encoding]::UTF8.GetBytes($body)) | Out-Null
 } else {
-  $created = Invoke-RestMethod -Uri $uri -Headers $headers -Method Post -Body $body
+  $created = Invoke-RestMethod -Uri $uri -Headers $headers -Method Post -Body ([Text.Encoding]::UTF8.GetBytes($body))
   $WorkflowId = $created.workflowid
 }
 Write-Output "Flow atualizado: $WorkflowId (o estado de ativação não foi alterado)"

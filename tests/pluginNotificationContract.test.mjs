@@ -36,18 +36,17 @@ test("registro do plugin é idempotente e inclui assembly e step na AppBetinhos"
   assert.match(script, /Get-MsalToken[^\n]+-DeviceCode/);
 });
 
-test("npm run push executa build, publicação e atualização do plugin", async () => {
+test("npm run push publica os canais atuais e desativa os canais antigos", async () => {
   const packageJson = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
   const pushScript = await readFile(new URL("../scripts/push-dev.ps1", import.meta.url), "utf8");
   assert.match(packageJson.scripts.push, /push-dev\.ps1/);
   assert.match(pushScript, /npm test/);
   assert.match(pushScript, /publish-webresource\.ps1/);
-  assert.match(pushScript, /PlannerNotifications\.csproj/);
-  assert.match(pushScript, /register-planner-notification-plugin\.ps1/);
+  assert.doesNotMatch(pushScript, /register-planner-notification-plugin\.ps1/);
   assert.match(pushScript, /create-planner-immediate-flow\.ps1/);
+  assert.match(pushScript, /create-planner-daily-flow\.ps1/);
+  assert.match(pushScript, /disable-planner-legacy-channels\.ps1/);
   assert.match(pushScript, /EnvironmentUrl\.TrimEnd\('\/'\)/);
   assert.match(pushScript, /provisionamento do Flow de push/);
   assert.match(pushScript, /-DeviceCode:\$DeviceCode/);
-  assert.match(pushScript, /\s-Apply\s/);
-  assert.match(pushScript, /\s-AddExistingToSolution\s/);
 });

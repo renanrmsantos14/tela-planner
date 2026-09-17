@@ -27,7 +27,7 @@ test("npm run push usa Windows PowerShell para carregar MSAL.PS", () => {
   assert.match(packageJson.scripts.push, /push-dev\.ps1/);
   assert.match(pushDev, /windowsPowerShell/);
   assert.match(pushDev, /publish-webresource\.ps1/);
-  assert.match(pushDev, /register-planner-notification-plugin\.ps1/);
+  assert.match(pushDev, /disable-planner-legacy-channels\.ps1/);
   assert.match(wrapper, /WindowsPowerShell\\v1\.0\\powershell\.exe/);
   assert.match(wrapper, /-DeviceCode/);
   assert.match(script, /Import-Module Microsoft\.PowerShell\.Utility/);
