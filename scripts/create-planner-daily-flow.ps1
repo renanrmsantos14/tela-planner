@@ -1,4 +1,4 @@
-param(
+﻿param(
   [string]$EnvironmentUrl = 'https://org23b93544.crm2.dynamics.com',
   [string]$ConnectionReferenceLogicalName = 'new_sharedcommondataserviceforapps_25a23',
   [string]$OutlookConnectionReferenceLogicalName = 'new_sharedoffice365_f87d5',
@@ -14,7 +14,7 @@ $headers = @{ Authorization = "Bearer $token"; Accept = 'application/json'; 'Con
 # Fluxo idempotente: D0 notifica o responsável principal; cada dia útil atrasado repete a cobrança
 # e inclui o criador no primeiro dia útil após o vencimento. Consultores recebem eventos de
 # atribuição/status/prazo, mas não entram na cobrança diária. A cobrança diária cria a linha
-# da caixa e um evento de prazo para push/Toast; o resumo por e-mail existe somente na segunda.
+# da caixa e um evento de prazo para push/Toast; o relatório por e-mail sai em todos os dias úteis.
 $definition = @'
 {
   "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
@@ -31,11 +31,10 @@ $definition = @'
       "type": "OpenApiConnection",
       "inputs": { "parameters": { "entityName": "cr40f_plannertarefas", "$select": "cr40f_plannertarefaid,cr40f_titulo,cr40f_prazo,cr40f_status,cr40f_prioridade,cr40f_status@OData.Community.Display.V1.FormattedValue,cr40f_prioridade@OData.Community.Display.V1.FormattedValue,_cr40f_cr40f_funcionarioresponsavel_value,_cr40f_equipeplanner_value", "$filter": "statecode eq 0 and cr40f_status ne 100000003 and cr40f_status ne 100000004 and cr40f_prazo ne null", "accept": "application/json;odata.metadata=minimal", "x-ms-page-size": 5000 }, "host": { "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps", "operationId": "ListRecords", "connectionName": "shared_commondataserviceforapps" }, "authentication": "@parameters('$authentication')" }
     },
-    "Initialize_today": { "type": "InitializeVariable", "inputs": { "variables": [{ "name": "Today", "type": "string", "value": "@formatDateTime(convertTimeZone(utcNow(),'UTC','E. South America Standard Time'),'yyyy-MM-dd')" }] }, "runAfter": { "List_open_tasks": ["Succeeded"] } },
     "For_each_task": {
       "type": "Foreach",
       "foreach": "@outputs('List_open_tasks')?['body/value']",
-      "runAfter": { "Initialize_today": ["Succeeded"] },
+      "runAfter": { "List_open_tasks": ["Succeeded"] },
       "actions": {
         "Condition_due": {
           "type": "If",
@@ -84,8 +83,13 @@ $definition = $definition.Replace('new_sharedcommondataserviceforapps_25a23', $C
 $definitionObject = $definition | ConvertFrom-Json
 $mainActions = $definitionObject.actions
 $definitionObject.actions = [ordered]@{
+  Initialize_today = [ordered]@{
+    type = 'InitializeVariable'
+    inputs = [ordered]@{ variables = @([ordered]@{ name = 'Today'; type = 'string'; value = "@formatDateTime(convertTimeZone(utcNow(),'UTC','E. South America Standard Time'),'yyyy-MM-dd')" }) }
+  }
   Scope_Main = [ordered]@{
     type = 'Scope'
+    runAfter = [ordered]@{ Initialize_today = @('Succeeded') }
     actions = $mainActions
   }
   Scope_ErrorNotification = [ordered]@{
@@ -130,22 +134,22 @@ $digestActions = @'
     "runAfter": { "List_task_team_relations": [ "Succeeded" ] },
     "inputs": { "parameters": { "entityName": "cr40f_plannerequipemembro", "$select": "_cr40f_equipe_value,_cr40f_funcionario_value", "$filter": "statecode eq 0", "x-ms-page-size": 5000 }, "host": { "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps", "operationId": "ListRecords", "connectionName": "shared_commondataserviceforapps" }, "authentication": "@parameters('$authentication')" }
   },
-  "Initialize_today": { "type": "InitializeVariable", "runAfter": { "List_team_members": [ "Succeeded" ] }, "inputs": { "variables": [{ "name": "Today", "type": "string", "value": "@formatDateTime(convertTimeZone(utcNow(),'UTC','E. South America Standard Time'),'yyyy-MM-dd')" }] } },
   "For_each_employee": {
     "type": "Foreach",
     "foreach": "@outputs('List_active_employees')?['body/value']",
-    "runAfter": { "Initialize_today": [ "Succeeded" ] },
+    "runAfter": { "List_team_members": [ "Succeeded" ] },
     "runtimeConfiguration": { "concurrency": { "repetitions": 1 } },
     "actions": {
       "Compose_employee_id": { "type": "Compose", "inputs": "@items('For_each_employee')?['cr40f_funcionariosid']" },
       "Filter_direct_tasks": { "type": "Query", "runAfter": { "Compose_employee_id": [ "Succeeded" ] }, "inputs": { "from": "@outputs('List_open_tasks')?['body/value']", "where": "@and(equals(item()?['_cr40f_cr40f_funcionarioresponsavel_value'],outputs('Compose_employee_id')),or(less(formatDateTime(item()?['cr40f_prazo'],'yyyy-MM-dd'),variables('Today')),and(greaterOrEquals(formatDateTime(item()?['cr40f_prazo'],'yyyy-MM-dd'),variables('Today')),lessOrEquals(formatDateTime(item()?['cr40f_prazo'],'yyyy-MM-dd'),addDays(variables('Today'),if(equals(dayOfWeek(variables('Today')),1),4,0))))))" } },
-      "Select_employee_teams": { "type": "Select", "runAfter": { "Compose_employee_id": [ "Succeeded" ] }, "inputs": { "from": "@filter(outputs('List_team_members')?['body/value'],equals(item()?['_cr40f_funcionario_value'],outputs('Compose_employee_id')))", "select": "@item()?['_cr40f_equipe_value']" } },
-      "Filter_team_tasks": { "type": "Query", "runAfter": { "Select_employee_teams": [ "Succeeded" ] }, "inputs": { "from": "@outputs('List_open_tasks')?['body/value']", "where": "@and(equals(item()?['_cr40f_cr40f_funcionarioresponsavel_value'],outputs('Compose_employee_id')),or(less(formatDateTime(item()?['cr40f_prazo'],'yyyy-MM-dd'),variables('Today')),and(greaterOrEquals(formatDateTime(item()?['cr40f_prazo'],'yyyy-MM-dd'),variables('Today')),lessOrEquals(formatDateTime(item()?['cr40f_prazo'],'yyyy-MM-dd'),addDays(variables('Today'),if(equals(dayOfWeek(variables('Today')),1),4,0))))))" } },
+      "Select_employee_teams": { "type": "Query", "runAfter": { "Compose_employee_id": [ "Succeeded" ] }, "inputs": { "from": "@outputs('List_team_members')?['body/value']", "where": "@equals(item()?['_cr40f_funcionario_value'],outputs('Compose_employee_id'))" } },
+      "Filter_task_team_relations": { "type": "Query", "runAfter": { "Select_employee_teams": [ "Succeeded" ] }, "inputs": { "from": "@outputs('List_task_team_relations')?['body/value']", "where": "@contains(string(body('Select_employee_teams')),item()?['_cr40f_equipe_value'])" } },
+      "Filter_team_tasks": { "type": "Query", "runAfter": { "Filter_task_team_relations": [ "Succeeded" ] }, "inputs": { "from": "@outputs('List_open_tasks')?['body/value']", "where": "@and(contains(string(body('Filter_task_team_relations')),item()?['cr40f_plannertarefaid']),or(less(formatDateTime(item()?['cr40f_prazo'],'yyyy-MM-dd'),variables('Today')),and(greaterOrEquals(formatDateTime(item()?['cr40f_prazo'],'yyyy-MM-dd'),variables('Today')),lessOrEquals(formatDateTime(item()?['cr40f_prazo'],'yyyy-MM-dd'),addDays(variables('Today'),if(equals(dayOfWeek(variables('Today')),1),4,0))))))" } },
       "Compose_report_tasks": { "type": "Compose", "runAfter": { "Filter_direct_tasks": [ "Succeeded" ], "Filter_team_tasks": [ "Succeeded" ] }, "inputs": "@union(body('Filter_direct_tasks'),body('Filter_team_tasks'))" },
       "Condition_has_tasks": {
         "type": "If",
         "runAfter": { "Compose_report_tasks": [ "Succeeded" ] },
-        "expression": { "and": [{ "greater": [ "@length(outputs('Compose_report_tasks'))", 0 ] }, { "equals": [ "@dayOfWeek(variables('Today'))", 1 ] }, { "not": { "equals": [ "@empty(items('For_each_employee')?['cr40f_emailbetinhos'])", true ] } }] },
+        "expression": { "not": { "equals": [ "@empty(items('For_each_employee')?['cr40f_emailbetinhos'])", true ] } },
         "actions": {
           "Compose_report_kind": { "type": "Compose", "inputs": "@if(equals(dayOfWeek(variables('Today')),1),'ResumoSemanal','ResumoDiario')" },
           "List_existing_digest": { "type": "OpenApiConnection", "runAfter": { "Compose_report_kind": [ "Succeeded" ] }, "inputs": { "parameters": { "entityName": "cr40f_plannerdisparos", "$filter": "cr40f_chaveidempotente eq '@{concat(outputs('Compose_employee_id'),'|',variables('Today'),'|',if(equals(outputs('Compose_report_kind'),'ResumoSemanal'),'ResumoSemanal',''),'|Email')}'", "$top": 1 }, "host": { "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps", "operationId": "ListRecords", "connectionName": "shared_commondataserviceforapps" }, "authentication": "@parameters('$authentication')" } },
@@ -177,6 +181,66 @@ $digestActions = @'
   }
 }
 '@ | ConvertFrom-Json
+
+$digestConditionActions = $digestActions.For_each_employee.actions.Condition_has_tasks.actions.Condition_not_sent.actions
+$digestActions.PSObject.Properties.Remove('For_each_missing_email')
+$digestActions.List_active_employees.inputs.parameters.entityName = 'cr40f_funcionarioses'
+$digestActions.List_task_team_relations.inputs.parameters.entityName = 'cr40f_plannertarefaequipes'
+$digestActions.List_team_members.inputs.parameters.entityName = 'cr40f_plannerequipemembros'
+foreach ($listAction in @($digestActions.List_active_employees, $digestActions.List_task_team_relations, $digestActions.List_team_members)) {
+  $listAction.inputs.parameters.PSObject.Properties.Remove('x-ms-page-size')
+}
+$digestActions.List_active_employees.inputs.parameters.'$select' = 'cr40f_funcionariosid,cr40f_nomecompleto,cr40f_emailbetinhos'
+$mainActions.List_open_tasks.inputs.parameters.'$select' = 'cr40f_plannertarefaid,cr40f_titulo,cr40f_prazo,cr40f_status,cr40f_prioridade,_cr40f_cr40f_funcionarioresponsavel_value,_cr40f_equipeplanner_value'
+$mainActions.List_open_tasks.inputs.parameters.PSObject.Properties.Remove('x-ms-page-size')
+$assigneeList = $digestActions.List_task_team_relations | ConvertTo-Json -Depth 20 | ConvertFrom-Json
+$assigneeList.runAfter = [ordered]@{ List_team_members = @('Succeeded') }
+$assigneeList.inputs.parameters.entityName = 'cr40f_plannertarearesponsavels'
+$assigneeList.inputs.parameters.'$select' = '_cr40f_tarefa_value,_cr40f_funcionario_value'
+$digestActions | Add-Member -NotePropertyName List_assignee_relations -NotePropertyValue $assigneeList
+$digestActions.For_each_employee.runAfter = [ordered]@{ List_assignee_relations = @('Succeeded') }
+$employeeActions = $digestActions.For_each_employee.actions
+$employeeActions | Add-Member -NotePropertyName Filter_employee_assignees -NotePropertyValue ([ordered]@{
+  type = 'Query'
+  runAfter = [ordered]@{ Compose_employee_id = @('Succeeded') }
+  inputs = [ordered]@{ from = "@outputs('List_assignee_relations')?['body/value']"; where = "@equals(item()?['_cr40f_funcionario_value'],outputs('Compose_employee_id'))" }
+})
+$employeeActions | Add-Member -NotePropertyName Filter_assigned_tasks -NotePropertyValue ([ordered]@{
+  type = 'Query'
+  runAfter = [ordered]@{ Filter_employee_assignees = @('Succeeded') }
+  inputs = [ordered]@{ from = "@outputs('List_open_tasks')?['body/value']"; where = "@and(contains(string(body('Filter_employee_assignees')),item()?['cr40f_plannertarefaid']),or(less(formatDateTime(item()?['cr40f_prazo'],'yyyy-MM-dd'),variables('Today')),lessOrEquals(formatDateTime(item()?['cr40f_prazo'],'yyyy-MM-dd'),addDays(variables('Today'),if(equals(dayOfWeek(variables('Today')),1),4,0)))))" }
+})
+$employeeActions.Compose_report_tasks.runAfter = [ordered]@{ Filter_direct_tasks = @('Succeeded'); Filter_team_tasks = @('Succeeded'); Filter_assigned_tasks = @('Succeeded') }
+$employeeActions.Compose_report_tasks.inputs = "@union(union(body('Filter_direct_tasks'),body('Filter_team_tasks')),body('Filter_assigned_tasks'))"
+$htmlTemplate = $digestConditionActions.Select_task_html | ConvertTo-Json -Depth 20 | ConvertFrom-Json
+$htmlTemplate.inputs.select = @'
+@concat('<tr><td style="padding:12px 0;border-bottom:1px solid #eef1f5"><a href="',concat('https://',uriHost(outputs('List_open_tasks')?['body/@odata.context']),'/main.aspx?pagetype=entityrecord&etn=cr40f_plannertarefa&id=',item()?['cr40f_plannertarefaid']),'" style="color:#14213d;font-weight:700;text-decoration:none">',replace(replace(replace(coalesce(item()?['cr40f_titulo'],'Sem título'),'&','&amp;'),'<','&lt;'),'>','&gt;'),'</a><br><span style="color:#667085;font-size:13px">Prazo: ',formatDateTime(item()?['cr40f_prazo'],'dd/MM/yyyy'),' · Prioridade: ',if(equals(item()?['cr40f_prioridade'],100000003),'Urgente',if(equals(item()?['cr40f_prioridade'],100000002),'Alta',if(equals(item()?['cr40f_prioridade'],100000000),'Baixa','Média'))),'</span></td></tr>')
+'@
+$digestConditionActions.PSObject.Properties.Remove('Select_task_html')
+foreach ($section in @(
+  @{ Name = 'overdue'; Where = "@less(formatDateTime(item()?['cr40f_prazo'],'yyyy-MM-dd'),variables('Today'))" },
+  @{ Name = 'today'; Where = "@equals(formatDateTime(item()?['cr40f_prazo'],'yyyy-MM-dd'),variables('Today'))" },
+  @{ Name = 'week'; Where = "@and(greaterOrEquals(formatDateTime(item()?['cr40f_prazo'],'yyyy-MM-dd'),variables('Today')),lessOrEquals(formatDateTime(item()?['cr40f_prazo'],'yyyy-MM-dd'),addDays(variables('Today'),4)))" }
+)) {
+  $filterName = "Filter_$($section.Name)_tasks"
+  $htmlName = "Select_$($section.Name)_html"
+  $digestConditionActions | Add-Member -NotePropertyName $filterName -NotePropertyValue ([ordered]@{
+    type = 'Query'
+    inputs = [ordered]@{ from = "@outputs('Compose_report_tasks')"; where = $section.Where }
+  })
+  $htmlAction = $htmlTemplate | ConvertTo-Json -Depth 20 | ConvertFrom-Json
+  $htmlAction.inputs.from = "@body('$filterName')"
+  $htmlAction | Add-Member -NotePropertyName runAfter -NotePropertyValue ([ordered]@{ $filterName = @('Succeeded') })
+  $digestConditionActions | Add-Member -NotePropertyName $htmlName -NotePropertyValue $htmlAction
+}
+$sendDigest = $digestConditionActions.Send_digest_email
+$sendDigest.runAfter = [ordered]@{ Select_overdue_html = @('Succeeded'); Select_today_html = @('Succeeded'); Select_week_html = @('Succeeded') }
+$sendDigest.inputs.parameters.'emailMessage/Subject' = "@if(equals(outputs('Compose_report_kind'),'ResumoSemanal'),concat('[Planner] Relatório da semana — ',formatDateTime(variables('Today'),'dd/MM')),concat('[Planner] Atrasadas e tarefas de hoje — ',formatDateTime(variables('Today'),'dd/MM')))"
+$sendDigest.inputs.parameters.'emailMessage/Body' = @'
+@concat('<!DOCTYPE html><html lang="pt-BR"><body style="font-family:Segoe UI,Arial,sans-serif;background:#f5f7fa;color:#172033"><table role="presentation" width="600" align="center" cellpadding="0" cellspacing="0" style="background:#fff;padding:32px"><tr><td><p style="font-weight:700;letter-spacing:1.8px">BETINHOS / PLANNER</p><h1>',if(equals(outputs('Compose_report_kind'),'ResumoSemanal'),'Sua semana','Suas tarefas de hoje'),'</h1><p>',if(equals(outputs('Compose_report_kind'),'ResumoSemanal'),'Previsão de segunda a sexta e pendências anteriores.','Pendências anteriores e tarefas com prazo hoje.'),'</p><h2>Atrasadas (',string(length(body('Filter_overdue_tasks'))),')</h2>',if(empty(body('Filter_overdue_tasks')),'<p>Nenhuma tarefa atrasada.</p>',join(body('Select_overdue_html'),'')),if(equals(outputs('Compose_report_kind'),'ResumoSemanal'),concat('<h2>Esta semana (',string(length(body('Filter_week_tasks'))),')</h2>',if(empty(body('Filter_week_tasks')),'<p>Nenhuma tarefa com prazo nesta semana.</p>',join(body('Select_week_html'),''))),concat('<h2>Vencem hoje (',string(length(body('Filter_today_tasks'))),')</h2>',if(empty(body('Filter_today_tasks')),'<p>Nenhuma tarefa vence hoje.</p>',join(body('Select_today_html'),'')))),'<p>Cada tarefa mostra título, prazo e prioridade.</p><p><a href="',concat('https://',uriHost(outputs('List_open_tasks')?['body/@odata.context']),'/main.aspx'),'">Abrir meu Planner</a></p></td></tr></table></body></html>')
+'@
+$digestConditionActions.Create_digest_dispatch.inputs.parameters | Add-Member -NotePropertyName 'item/cr40f_Destinatario@odata.bind' -NotePropertyValue "@concat('/cr40f_funcionarioses(',outputs('Compose_employee_id'),')')"
+
 $digestActions.PSObject.Properties | ForEach-Object { $mainActions | Add-Member -MemberType NoteProperty -Name $_.Name -Value $_.Value -Force }
 $definition = $definitionObject | ConvertTo-Json -Depth 100 -Compress
 $clientData = @{ properties = @{ connectionReferences = @{
