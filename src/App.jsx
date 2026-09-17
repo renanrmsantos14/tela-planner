@@ -539,28 +539,63 @@ function StatusPicker({ value, onChange }) {
   );
 }
 
-function QuoteCompletionDialog({ quote, onCancel, onConfirm }) {
+function QuoteCompletionDialog({ quote, taskId, onUpload, onCancel, onConfirm }) {
   const [result, setResult] = useState(quote?.responseSent ? "sent" : "ready");
   const [value, setValue] = useState(quote?.value || "");
   const [commercialTerms, setCommercialTerms] = useState(quote?.commercialTerms || "");
+  const [draftAttachments, setDraftAttachments] = useState([]);
+  const [uploadedCount, setUploadedCount] = useState(0);
+  const uploadedIdsRef = useRef(new Set());
+  const draftAttachmentsRef = useRef([]);
+  draftAttachmentsRef.current = draftAttachments;
+  useEffect(() => () => draftAttachmentsRef.current.forEach(releaseDraftAttachment), []);
   const [sentConfirmed, setSentConfirmed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const validation = validateQuoteCommercial({ value, commercialTerms });
+  const addDraftAttachments = (_, filesOrFile) => {
+    const files = toAttachmentFiles(filesOrFile);
+    if (files.some((file) => file.size > 5 * 1024 * 1024)) {
+      setError("Cada anexo deve ter no máximo 5 MB.");
+      return;
+    }
+    setError("");
+    setDraftAttachments((current) => [...current, ...files.map((file) => createDraftAttachment(file, "quote-completion"))]);
+  };
+  const removeDraftAttachment = (_, attachment) => {
+    releaseDraftAttachment(attachment);
+    setDraftAttachments((current) => current.filter((item) => item.id !== attachment.id));
+  };
+  const handlePaste = (event) => {
+    const files = filesFromClipboard(event);
+    if (!files.length) return;
+    event.preventDefault();
+    event.stopPropagation();
+    addDraftAttachments(taskId, files);
+  };
   const confirm = async (event) => {
     event.preventDefault();
     if (!validation.valid || (result === "sent" && !sentConfirmed) || busy) return;
     setBusy(true);
     setError("");
     try {
+      for (const attachment of draftAttachments) {
+        if (uploadedIdsRef.current.has(attachment.id)) continue;
+        const uploaded = await onUpload(attachment.file);
+        if (!uploaded) throw new Error(`Não foi possível enviar ${attachment.name || "um anexo"}.`);
+        uploadedIdsRef.current.add(attachment.id);
+        releaseDraftAttachment(attachment);
+        setDraftAttachments((current) => current.filter((item) => item.id !== attachment.id));
+        setUploadedCount((current) => current + 1);
+      }
       const saved = await onConfirm({ status: "done", quoteStatus: result === "sent" ? "Respondida ao cliente" : "Cotada", responseSent: result === "sent", value, commercialTerms });
-      if (saved === false) setError("Não foi possível concluir. Confira os dados e tente novamente.");
+      if (saved === false) throw new Error("Não foi possível concluir. Confira os dados e tente novamente.");
     } catch (failure) { setError(failure.message || "Não foi possível concluir a tarefa."); }
     finally { setBusy(false); }
   };
   return (
     <div className="drawer-confirm-layer" onMouseDown={(event) => event.stopPropagation()}>
-      <form className="drawer-confirm quote-completion-dialog" role="dialog" aria-modal="true" aria-labelledby="quote-completion-title" onSubmit={confirm}>
+      <form className="drawer-confirm quote-completion-dialog" role="dialog" aria-modal="true" aria-labelledby="quote-completion-title" onSubmit={confirm} onPaste={handlePaste}>
         <h2 id="quote-completion-title">Concluir tarefa da cotação</h2>
         <p>Informe o resultado comercial antes de concluir a tarefa.</p>
         <div className="quote-completion-checks">
@@ -570,6 +605,9 @@ function QuoteCompletionDialog({ quote, onCancel, onConfirm }) {
         <label className="quote-completion-field" htmlFor="quote-completion-value">Valor total (BRL)<FormMoneyInput id="quote-completion-value" value={value} onChange={(event) => setValue(event.target.value)} error={value && validation.errors.value} required /></label>
         <label className="quote-completion-field" htmlFor="quote-completion-terms">Condições comerciais<FormTextArea id="quote-completion-terms" rows={3} value={commercialTerms} onChange={(event) => setCommercialTerms(event.target.value)} error={commercialTerms && validation.errors.commercialTerms} required /></label>
         {result === "sent" && <label className="quote-completion-sent"><input type="checkbox" checked={sentConfirmed} onChange={(event) => setSentConfirmed(event.target.checked)} />Confirmo que a proposta já foi enviada ao cliente.</label>}
+        <AttachmentSection taskId={taskId} attachments={draftAttachments} onAttachment={addDraftAttachments} onDeleteAttachment={removeDraftAttachment} helperText="Os anexos serão enviados antes de concluir a tarefa." showPreview={false} allowOpen={false} compact />
+        <p className="quote-completion-uploaded">Clique, arraste ou cole um arquivo com Ctrl+V. Os anexos são enviados antes da conclusão.</p>
+        {uploadedCount > 0 && <p className="quote-completion-uploaded" role="status">{uploadedCount} {uploadedCount === 1 ? "anexo já salvo" : "anexos já salvos"} na tarefa.</p>}
         {error && <p className="quote-completion-error" role="alert">{error}</p>}
         <div className="drawer-confirm-actions">
           <button className="button button-quiet" type="button" onClick={onCancel} disabled={busy}>Cancelar</button>
@@ -4892,6 +4930,8 @@ function TaskDrawerContent({
         {showQuoteCompletionPrompt && (
           <QuoteCompletionDialog
             quote={(state.quotes || []).find((item) => item.id === taskItem.quoteId)}
+            taskId={taskItem.id}
+            onUpload={(file) => onAttachment(taskItem.id, file)}
             onCancel={() => setShowQuoteCompletionPrompt(false)}
             onConfirm={(completion) => handleSave(true, completion).then((success) => { if (success) setShowQuoteCompletionPrompt(false); return success; })}
           />
@@ -5704,6 +5744,7 @@ export default function App() {
   const [pendingTaskDraft, setPendingTaskDraft] = useState(null);
   const [pendingUnassignedCreate, setPendingUnassignedCreate] = useState(null);
   const [quoteCompletionRequest, setQuoteCompletionRequest] = useState(null);
+  const quoteAttachmentUploadRef = useRef(null);
   const [refreshing, setRefreshing] = useState(false);
   const confirmedStateRef = useRef(null);
   const pendingMutationsRef = useRef(new Map());
@@ -6135,6 +6176,8 @@ export default function App() {
     if (!quote) { showNotice("Cotação vinculada não encontrada."); resolve(false); return; }
     setQuoteCompletionRequest({
       quote,
+      taskId: task.id,
+      onUpload: (file) => quoteAttachmentUploadRef.current?.(task.id, file) || Promise.resolve(false),
       onConfirm: async (completion) => {
         const success = await commit(completion);
         if (success) { setQuoteCompletionRequest(null); resolve(true); }
@@ -6191,8 +6234,8 @@ export default function App() {
       const persist = async () => {
         const { personalTagIds, ...taskPatch } = patch;
         const nextState = Object.keys(taskPatch).length
-          ? await store.updateTask(state, id, taskPatch)
-          : state;
+          ? await store.updateTask(confirmedStateRef.current || state, id, taskPatch)
+          : confirmedStateRef.current || state;
         return personalTagIds !== undefined && store.replaceTaskPersonalTags
           ? store.replaceTaskPersonalTags(nextState, id, personalTagIds, state.currentUserId || currentEmployee?.userId || "")
           : nextState;
@@ -6311,7 +6354,7 @@ export default function App() {
         (current) => isCompleting && isQuoteTask(existingTask) ? current : applyOptimisticTaskPatch(current, id, nextPatch),
         async () => {
       const { personalTagIds: _personalTagIds, ...taskPatch } = nextPatch;
-      const nextState = await store.updateTask(state, id, taskPatch);
+      const nextState = await store.updateTask(confirmedStateRef.current || state, id, taskPatch);
           return nextPatch.personalTagIds !== undefined && store.replaceTaskPersonalTags
             ? store.replaceTaskPersonalTags(nextState, id, nextPatch.personalTagIds, state.currentUserId || currentEmployee?.userId || "")
             : nextState;
@@ -7015,6 +7058,7 @@ export default function App() {
     },
     [state, store, runOptimisticMutation],
   );
+  quoteAttachmentUploadRef.current = addAttachment;
   const removeAttachment = useCallback(
     (taskId, attachment) =>
       runOptimisticMutation(
@@ -7456,6 +7500,8 @@ export default function App() {
       {quoteCompletionRequest && (
         <QuoteCompletionDialog
           quote={quoteCompletionRequest.quote}
+          taskId={quoteCompletionRequest.taskId}
+          onUpload={quoteCompletionRequest.onUpload}
           onCancel={quoteCompletionRequest.onCancel}
           onConfirm={quoteCompletionRequest.onConfirm}
         />

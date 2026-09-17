@@ -976,7 +976,7 @@ button { cursor: pointer; }
 .drawer-confirm-missing li strong { font-size: 12px; }
 .drawer-confirm-missing li small { color: var(--muted); font-size: 10px; }
 .drawer-confirm-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
-.quote-completion-dialog { width: min(100%, 440px); max-height: calc(100vh - 32px); overflow-y: auto; }
+.quote-completion-dialog { width: min(100%, 600px); max-height: calc(100dvh - 32px); min-width: 0; overflow-y: auto; overscroll-behavior: contain; }
 .quote-completion-checks { display: grid; gap: 8px; margin: 15px 0; }
 .quote-completion-checks label { display: flex; align-items: center; gap: 9px; min-height: 42px; padding: 9px 11px; border: 1px solid var(--line); border-radius: 10px; color: var(--navy); font-size: 12px; font-weight: 700; cursor: pointer; }
 .quote-completion-checks input { width: 16px; height: 16px; margin: 0; accent-color: var(--blue); }
@@ -984,6 +984,11 @@ button { cursor: pointer; }
 .quote-completion-sent { display: flex; align-items: flex-start; gap: 8px; margin-top: 14px; color: var(--navy); font-size: 12px; }
 .quote-completion-sent input { margin: 2px 0 0; accent-color: var(--blue); }
 .quote-completion-dialog .quote-completion-error { margin-top: 10px; color: var(--red); font-size: 12px; }
+.quote-completion-dialog .attachment-section { min-width: 0; margin-top: 16px; }
+.quote-completion-dialog .attachment-list { grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr)); min-width: 0; }
+.quote-completion-dialog .attachment-item, .quote-completion-dialog .attachment-card, .quote-completion-dialog .attachment-file-main { min-width: 0; }
+.quote-completion-dialog .attachment-file-main strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.quote-completion-uploaded { margin: 10px 0 0; color: var(--muted); font-size: 11px; }
 .button-danger { border-color: #efc0c7; color: var(--red); background: var(--red-soft); }
 .task-delete-button { margin-right: auto; }
 .button-danger:hover, .button-danger:focus-visible { border-color: #df8e99; background: #ffe5e9; }
