@@ -20,6 +20,10 @@ test("deriva executor atual pela entrada mais recente em Em andamento", () => {
   assert.deepEqual(deriveExecutionActor(task), { id: "e3", userId: "", name: "Camila", occurredAt: "2026-09-14T12:00:00Z", eventId: "h3" });
   assert.equal(deriveExecutionActor({ ...task, status: "waiting" }), null);
   assert.equal(deriveExecutionActor({ status: "doing", history: [] }), null);
+  const employees = [{ id: "employee-keila", userId: "e3", emailMicrosoft: "keila@empresa.com", name: "Ana Souza" }];
+  assert.equal(deriveExecutionActor(task, employees).name, "Ana Souza");
+  assert.equal(deriveExecutionActor(task, employees).id, "employee-keila");
+  assert.equal(deriveExecutionActor(task, [{ id: "other", userId: "other", name: "Outra" }]).name, "Executor não identificado");
 });
 
 test("identifica atraso sem marcar tarefa concluída", () => {

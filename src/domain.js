@@ -482,17 +482,22 @@ export function applyOptimisticTaskPatch(state, taskId, patch) {
   return updateTaskInState(state, taskId, (task) => ({ ...task, ...patch, syncStatus: "syncing" }));
 }
 
-export function deriveExecutionActor(task) {
+export function deriveExecutionActor(task, employees = null) {
   if (!task || task.status !== "doing") return null;
   const event = [...(task.history || [])]
     .filter((item) => item.field === "status" && item.nextValue === "doing")
     .sort((left, right) => String(left.createdAt || "").localeCompare(String(right.createdAt || "")))
     .at(-1);
   if (!event) return null;
+  const authorId = String(event.authorId || event.actorEmployeeId || "").replace(/[{}]/g, "").toLowerCase();
+  const userId = String(event.authorUserId || "").replace(/[{}]/g, "").toLowerCase();
+  const employee = (employees || []).find((item) =>
+    (authorId && (String(item.userId || "").replace(/[{}]/g, "").toLowerCase() === authorId || String(item.id || "").replace(/[{}]/g, "").toLowerCase() === authorId)) ||
+    (userId && String(item.userId || "").replace(/[{}]/g, "").toLowerCase() === userId));
   return {
-    id: event.authorId || event.actorEmployeeId || "",
+    id: employee?.id || event.authorId || event.actorEmployeeId || "",
     userId: event.authorUserId || "",
-    name: event.author || "Executor não identificado",
+    name: employees ? employee?.name || "Executor não identificado" : event.author || "Executor não identificado",
     occurredAt: event.createdAt || "",
     eventId: event.id || "",
   };

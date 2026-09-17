@@ -1418,6 +1418,7 @@ function DataLoadingView({ loading, error, view }) {
 
 const TaskCard = memo(function TaskCard({
   task: taskItem,
+  employees = [],
   subtasks = [],
   currentEmployee,
   teams = [],
@@ -1439,7 +1440,7 @@ const TaskCard = memo(function TaskCard({
   const overdue = getDueBucketForEmployee(taskItem, currentEmployee, teams) === "overdue";
   const waitingActionRequired = isTaskWaitingForEmployee(taskItem, currentEmployee);
   const canRegisterReturn = canRegisterWaitingReturn(taskItem, currentEmployee, teams);
-  const executionActor = deriveExecutionActor(taskItem);
+  const executionActor = deriveExecutionActor(taskItem, employees);
   const executionFirstName = executionActor?.name === "Executor não identificado"
     ? "Não identificado"
     : executionActor?.name.trim().split(/\s+/)[0];
@@ -1685,6 +1686,7 @@ function getDropIndex(tasksByColumn, columnId, draggedTask, employee, teams) {
 
 const Board = memo(function Board({
   tasks,
+  employees = [],
   columns,
   tasksByColumn,
   groupBy,
@@ -1746,6 +1748,7 @@ const Board = memo(function Board({
       renderCard={(taskItem, dragProps) => (
         <TaskCard
           task={taskItem}
+          employees={employees}
           subtasks={subtasksByParent.get(taskItem.id) || []}
           currentEmployee={currentEmployee}
           teams={teams}
@@ -2188,6 +2191,7 @@ const FilterBar = memo(function FilterBar({
 
 function MobileBoardList({
   columns,
+  employees = [],
   tasksByColumn,
   subtasksByParent,
   currentEmployee,
@@ -2221,6 +2225,7 @@ function MobileBoardList({
             <TaskCard
               key={taskItem.id}
               task={taskItem}
+              employees={employees}
               subtasks={subtasksByParent.get(taskItem.id) || []}
               currentEmployee={currentEmployee}
               teams={teams}
@@ -2399,6 +2404,7 @@ function BoardView({
       ) : (
         <Board
           tasks={filtered}
+          employees={state.employees}
           columns={columns}
           tasksByColumn={tasksByColumn}
           groupBy={groupBy}
@@ -4042,7 +4048,7 @@ function TaskDrawerContent({
   );
   const history = visibleTaskHistory(taskItem.history);
   const visibleHistory = showAllHistory ? history : history.slice(0, 5);
-  const executionActor = deriveExecutionActor(taskItem);
+  const executionActor = deriveExecutionActor(taskItem, state.employees);
   const comments = taskItem.comments || [];
   const visibleComments = showAllComments ? comments : comments.slice(-10);
   const olderCommentsCount = comments.length - visibleComments.length;
