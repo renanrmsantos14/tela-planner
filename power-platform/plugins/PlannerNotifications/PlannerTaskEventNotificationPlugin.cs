@@ -59,7 +59,9 @@ namespace Betinhos.Planner.Notifications
             var users = ResolveUsers(service, recipientEmployeeIds);
             var taskTitle = ResolveTaskTitle(initiatingService, eventRow);
             var title = NotificationTitle(field);
-            var body = BuildBody(eventRow.GetAttributeValue<string>("cr40f_descricao"), taskTitle);
+            var body = field.EndsWith(":assignment", StringComparison.OrdinalIgnoreCase)
+                ? (string.IsNullOrWhiteSpace(taskTitle) ? "Tarefa" : taskTitle)
+                : BuildBody(eventRow.GetAttributeValue<string>("cr40f_descricao"), taskTitle);
             var iconType = NotificationIcon(field, contextJson);
 
             foreach (var userId in users)
@@ -252,7 +254,7 @@ namespace Betinhos.Planner.Notifications
         {
             if (field.EndsWith(":test", StringComparison.OrdinalIgnoreCase)) return "Teste de notificação";
             if (field.EndsWith(":deadline", StringComparison.OrdinalIgnoreCase)) return "Prazo alterado";
-            if (field.EndsWith(":assignment", StringComparison.OrdinalIgnoreCase)) return "Nova tarefa atribuída";
+            if (field.EndsWith(":assignment", StringComparison.OrdinalIgnoreCase)) return "Nova tarefa:";
             if (field.EndsWith(":mention", StringComparison.OrdinalIgnoreCase)) return "Você foi mencionado";
             if (field.EndsWith(":status", StringComparison.OrdinalIgnoreCase)) return "Status alterado";
             if (field.EndsWith(":waiting", StringComparison.OrdinalIgnoreCase)) return "Retorno aguardado";

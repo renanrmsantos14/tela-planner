@@ -8,6 +8,8 @@ test("plugin de notificação é server-side e executa SendAppNotification", asy
   assert.match(source, /context\.MessageName, "Create"/);
   assert.match(source, /cr40f_plannertarefaevento/);
   assert.match(source, /new OrganizationRequest\("SendAppNotification"\)/);
+  assert.match(source, /return "Nova tarefa:"/);
+  assert.match(source, /string\.IsNullOrWhiteSpace\(taskTitle\) \? "Tarefa" : taskTitle/);
   assert.match(source, /new EntityReference\("systemuser", userId\)/);
   assert.match(source, /cr40f_usuariodataverse/);
   assert.match(source, /ActorMatchesInitiatingUser/);

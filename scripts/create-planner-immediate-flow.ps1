@@ -1,4 +1,4 @@
-param(
+﻿param(
   [string]$EnvironmentUrl = 'https://org23b93544.crm2.dynamics.com',
   [string]$ConnectionReferenceLogicalName = 'new_sharedcommondataserviceforapps_25a23',
   [string]$TeamsConnectionReferenceLogicalName = 'new_sharedteams_80676',
@@ -39,7 +39,7 @@ function Invoke-DataverseRequest {
   for ($attempt = 1; $attempt -le 3; $attempt++) {
     try {
       $request = @{ Uri = $Uri; Headers = $headers; Method = $Method }
-      if ($PSBoundParameters.ContainsKey('Body')) { $request.Body = $Body }
+      if ($PSBoundParameters.ContainsKey('Body')) { $request.Body = [Text.Encoding]::UTF8.GetBytes($Body) }
       return Invoke-RestMethod @request
     } catch {
       if ($attempt -eq 3) { throw }
@@ -131,8 +131,17 @@ $definition = @'
     },
     "Compose_Notification_Title": {
       "type": "Compose",
-      "inputs": "@if(equals(outputs('Compose_Type'), 'test'), 'Teste de notificação', if(equals(outputs('Compose_Type'), 'assignment'), 'Nova tarefa atribuída a você', if(equals(outputs('Compose_Type'), 'mention'), 'Você foi mencionado em uma tarefa', if(equals(outputs('Compose_Type'), 'waiting'), 'Tarefa aguardando retorno', if(equals(outputs('Compose_Type'), 'assignees'), 'Você foi adicionado como responsável', if(equals(outputs('Compose_Type'), 'due_today'), 'Tarefa vence hoje', if(equals(outputs('Compose_Type'), 'overdue'), 'Tarefa atrasada', if(equals(outputs('Compose_Type'), 'deadline'), 'Prazo da tarefa alterado', if(equals(outputs('Compose_Type'), 'status'), 'Status da tarefa alterado', 'Atualização da tarefa')))))))))",
-      "runAfter": { "Compose_Type": [ "Succeeded" ] }
+      "inputs": "@if(equals(outputs('Compose_Type'), 'test'), 'Teste de notificação', if(equals(outputs('Compose_Type'), 'assignment'), concat('Nova tarefa: ', coalesce(outputs('Get_task')?['body/cr40f_titulo'], 'Tarefa')), if(equals(outputs('Compose_Type'), 'mention'), 'Você foi mencionado em uma tarefa', if(equals(outputs('Compose_Type'), 'waiting'), 'Tarefa aguardando retorno', if(equals(outputs('Compose_Type'), 'assignees'), 'Você foi adicionado como responsável', if(equals(outputs('Compose_Type'), 'due_today'), 'Tarefa vence hoje', if(equals(outputs('Compose_Type'), 'overdue'), 'Tarefa atrasada', if(equals(outputs('Compose_Type'), 'deadline'), 'Prazo da tarefa alterado', if(equals(outputs('Compose_Type'), 'status'), 'Status da tarefa alterado', 'Atualização da tarefa')))))))))",
+      "runAfter": { "Get_task": [ "Succeeded" ] }
+    },
+    "Get_task": {
+      "type": "OpenApiConnection",
+      "runAfter": { "Compose_Type": [ "Succeeded" ] },
+      "inputs": {
+        "parameters": { "entityName": "cr40f_plannertarefas", "recordId": "@triggerOutputs()?['body/_cr40f_tarefa_value']", "$select": "cr40f_titulo" },
+        "host": { "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps", "operationId": "GetItem", "connectionName": "shared_commondataserviceforapps" },
+        "authentication": "@parameters('$authentication')"
+      }
     },
     "Compose_Recipients": {
       "type": "Compose",
@@ -188,7 +197,7 @@ $definition = @'
                     "parameters": {
                       "entityName": "cr40f_plannernotificacaos",
                       "item/cr40f_titulo": "@outputs('Compose_Notification_Title')",
-                      "item/cr40f_mensagem": "@triggerOutputs()?['body/cr40f_descricao']",
+                      "item/cr40f_mensagem": "@if(equals(outputs('Compose_Type'), 'assignment'), outputs('Get_task')?['body/cr40f_titulo'], triggerOutputs()?['body/cr40f_descricao'])",
                       "item/cr40f_tipo": "@outputs('Compose_Type')",
                       "item/cr40f_ocorridoem": "@coalesce(triggerOutputs()?['body/cr40f_ocorridoem'], utcNow())",
                       "item/cr40f_chavededupe": "@concat(triggerOutputs()?['body/cr40f_plannertarefaeventoid'], '|', item(), '|', outputs('Compose_Type'))",
@@ -254,7 +263,7 @@ $definition = @'
                           "payload/playerType": "PowerApps",
                           "payload/app": "{\"appIdentifier\":\"__POWER_APPS_APP_UNIQUE_NAME__\",\"displayName\":\"__POWER_APPS_APP_DISPLAY_NAME__\",\"type\":\"AppModule\"}",
                           "payload/recipients": "@createArray(outputs('Get_system_user')?['body/internalemailaddress'])",
-                          "payload/message": "@concat(outputs('Compose_Notification_Title'), ': ', coalesce(triggerOutputs()?['body/cr40f_descricao'], 'Tarefa atualizada.'))",
+                          "payload/message": "@if(equals(outputs('Compose_Type'), 'assignment'), outputs('Compose_Notification_Title'), concat(outputs('Compose_Notification_Title'), ': ', coalesce(triggerOutputs()?['body/cr40f_descricao'], 'Tarefa atualizada.')))",
                           "payload/openApp": true,
                           "payload/dynamicParams/entityLogicalName": "cr40f_plannertarefa"
                         },

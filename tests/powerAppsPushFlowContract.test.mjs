@@ -27,9 +27,12 @@ test("Flow piloto configura push sem navegar para o formulário da tabela", asyn
   const source = await readFile(new URL("../scripts/create-planner-immediate-flow.ps1", import.meta.url), "utf8");
   const definition = compileFlowDefinition(source);
   const push = findAction(definition, "Send_PowerApps_push");
+  const getTask = findAction(definition, "Get_task");
   const notificationTitle = findAction(definition, "Compose_Notification_Title");
   const createNotification = findAction(definition, "Create_notification");
   assert.ok(push, "ação Send_PowerApps_push não encontrada");
+  assert.equal(getTask.inputs.parameters.entityName, "cr40f_plannertarefas");
+  assert.equal(getTask.inputs.parameters["$select"], "cr40f_titulo");
   assert.ok(notificationTitle, "rótulo contextual da notificação não encontrado");
   assert.equal(createNotification.inputs.parameters["item/cr40f_titulo"], "@outputs('Compose_Notification_Title')");
   assert.equal(push.inputs.host.operationId, "SendPushNotificationV2");
@@ -46,11 +49,12 @@ test("Flow piloto configura push sem navegar para o formulário da tabela", asyn
   assert.equal(push.inputs.parameters["payload/dynamicParams/recordId"], undefined);
   assert.equal(
     push.inputs.parameters["payload/message"],
-    "@concat(outputs('Compose_Notification_Title'), ': ', coalesce(triggerOutputs()?['body/cr40f_descricao'], 'Tarefa atualizada.'))",
+    "@if(equals(outputs('Compose_Type'), 'assignment'), outputs('Compose_Notification_Title'), concat(outputs('Compose_Notification_Title'), ': ', coalesce(triggerOutputs()?['body/cr40f_descricao'], 'Tarefa atualizada.')))",
   );
+  assert.match(notificationTitle.inputs, /concat\('Nova tarefa: ', coalesce\(outputs\('Get_task'\)\?\['body\/cr40f_titulo'\]/);
+  assert.match(createNotification.inputs.parameters["item/cr40f_mensagem"], /outputs\('Get_task'\)\?\['body\/cr40f_titulo'\]/);
   for (const label of [
     "Teste de notificação",
-    "Nova tarefa atribuída a você",
     "Você foi mencionado em uma tarefa",
     "Tarefa aguardando retorno",
     "Você foi adicionado como responsável",
