@@ -17,7 +17,7 @@ test("define o fluxo comercial único da cotação", () => {
     "Respondida ao cliente",
   ]);
   assert.deepEqual(QUOTE_TERMINAL_STATUSES, [
-    "Convertida em serviço",
+    "Aceita pelo cliente",
     "Perdida",
     "Cancelada",
   ]);

@@ -6,7 +6,7 @@ export const QUOTE_STATUSES = [
   "Respondida ao cliente",
   "Perdida",
   "Cancelada",
-  "Convertida em serviço",
+  "Aceita pelo cliente",
 ];
 
 export const QUOTE_PRIORITIES = [
@@ -124,7 +124,7 @@ export function getQuoteNextAction(quote = {}) {
     "Em análise pelo financeiro": { primary: { id: "transition", label: "Marcar cotada", status: "Cotada" }, secondary: [{ id: "transition", label: "Aguardar informação", status: "Aguardando informação" }] },
     "Aguardando informação": { primary: { id: "transition", label: "Retomar análise", status: "Em análise pelo financeiro" }, secondary: [] },
     Cotada: { primary: { id: "copy", label: "Copiar proposta" }, secondary: [{ id: "sent", label: "Marcar enviada", status: "Respondida ao cliente" }] },
-    "Respondida ao cliente": { primary: { id: "outcome", label: "Registrar conversão", status: "Convertida em serviço" }, secondary: [{ id: "outcome", label: "Registrar perda", status: "Perdida" }, { id: "outcome", label: "Cancelar", status: "Cancelada" }] },
+    "Respondida ao cliente": { primary: { id: "outcome", label: "Registrar aceite", status: "Aceita pelo cliente" }, secondary: [{ id: "outcome", label: "Registrar perda", status: "Perdida" }, { id: "outcome", label: "Cancelar", status: "Cancelada" }] },
   };
   return actions[quote.status] || { primary: { id: "transition", label: "Reabrir como Nova", status: "Nova" }, secondary: [] };
 }

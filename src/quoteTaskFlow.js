@@ -7,7 +7,7 @@ export const QUOTE_STATUS_FLOW = Object.freeze([
 ]);
 
 export const QUOTE_TERMINAL_STATUSES = Object.freeze([
-  "Convertida em serviço",
+  "Aceita pelo cliente",
   "Perdida",
   "Cancelada",
 ]);
@@ -16,9 +16,9 @@ const QUOTE_STATUS_TO_TASK_STATUS = Object.freeze({
   Nova: "todo",
   "Em análise pelo financeiro": "doing",
   "Aguardando informação": "waiting",
-  Cotada: "doing",
-  "Respondida ao cliente": "waiting",
-  "Convertida em serviço": "done",
+  Cotada: "done",
+  "Respondida ao cliente": "done",
+  "Aceita pelo cliente": "done",
   Perdida: "done",
   Cancelada: "done",
 });
@@ -36,7 +36,7 @@ export function taskStatusForQuoteStatus(status) {
 }
 
 export function quoteStatusForTaskStatus(taskStatus, currentQuoteStatus = "") {
-  if (taskStatus === "done") return isQuoteTerminalStatus(currentQuoteStatus) ? currentQuoteStatus : "Respondida ao cliente";
+  if (taskStatus === "done") return ["Cotada", "Respondida ao cliente", ...QUOTE_TERMINAL_STATUSES].includes(currentQuoteStatus) ? currentQuoteStatus : "Cotada";
   if (taskStatus === "waiting") return currentQuoteStatus === "Respondida ao cliente" ? currentQuoteStatus : "Aguardando informação";
   if (taskStatus === "doing") return currentQuoteStatus === "Cotada" ? "Cotada" : "Em análise pelo financeiro";
   return "Nova";

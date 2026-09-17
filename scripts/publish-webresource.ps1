@@ -238,6 +238,7 @@ function Ensure-PlannerAlternateKey([hashtable] $Headers, [string] $ApiBaseUrl, 
 }
 
 function Ensure-PlannerSchemaAttributes([hashtable] $Headers, [string] $ApiBaseUrl) {
+  Ensure-PlannerStringAttribute $Headers $ApiBaseUrl "cr40f_pedidodecotacao" "cr40f_MotivoPerda" "Motivo da perda" 1000
   $team = "cr40f_plannerequipe"
   Ensure-PlannerStringAttribute $Headers $ApiBaseUrl $team "cr40f_Icone" "Ícone da equipe" 100
   $task = "cr40f_plannertarefa"
