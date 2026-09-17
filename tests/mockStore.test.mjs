@@ -208,7 +208,9 @@ test("registra envio e resultados da cotação sem criar reserva", () => {
   withStorage();
   const initial = createQuote(seedState(), { title: "Transfer", client: "Cliente", clientContact: "Contato", channel: "WhatsApp", serviceType: "Transfer", origin: "A", destination: "B", serviceDate: "2026-09-20T10:00", deadline: "2026-09-19" });
   const quote = initial.quotes[0];
-  const sent = markQuoteSent(initial, quote.id);
+  assert.throws(() => markQuoteSent(initial, quote.id), /Finalize/);
+  const priced = updateQuote(initial, quote.id, { status: "Cotada", value: "R$ 800,00", commercialTerms: "Pagamento em 30 dias" });
+  const sent = markQuoteSent(priced, quote.id);
   assert.equal(sent.quotes[0].status, "Respondida ao cliente");
   assert.equal(sent.quotes[0].responseSent, true);
   const lost = setQuoteOutcome(sent, quote.id, "Perdida", "Preço acima do orçamento");
@@ -232,10 +234,12 @@ test("sincroniza status comercial da cotação com sua tarefa principal", () => 
   assert.equal(waitingTask.status, "waiting");
   assert.equal(waitingTask.waitingContext.subject, waitingContext.subject);
 
-  const sent = markQuoteSent(waiting, quote.id);
+  const priced = updateQuote(waiting, quote.id, { status: "Cotada", value: "R$ 800,00", commercialTerms: "Pagamento em 30 dias" });
+  assert.equal(priced.tasks.find((item) => item.id === task.id).status, "done");
+  const sent = markQuoteSent(priced, quote.id);
   const sentTask = sent.tasks.find((item) => item.id === task.id);
   assert.equal(sentTask.quoteStatus, "Respondida ao cliente");
-  assert.notEqual(sentTask.status, "done");
+  assert.equal(sentTask.status, "done");
 });
 
 test("sincroniza alteração de status da tarefa de cotação de volta para a cotação", () => {
@@ -244,9 +248,9 @@ test("sincroniza alteração de status da tarefa de cotação de volta para a co
   const quote = created.quotes[0];
   const task = created.tasks.find((item) => item.quoteId === quote.id && !item.parentTaskId);
 
-  const next = updateTask(created, task.id, { quoteStatus: "Cotada" });
+  const next = updateTask(created, task.id, { quoteStatus: "Cotada", value: "R$ 800,00", commercialTerms: "Pagamento em 30 dias" });
   assert.equal(next.quotes.find((item) => item.id === quote.id).status, "Cotada");
-  assert.equal(next.tasks.find((item) => item.id === task.id).status, "doing");
+  assert.equal(next.tasks.find((item) => item.id === task.id).status, "done");
 });
 
 test("concluir tarefa vinculada mantém a tarefa concluída e marca a cotação como respondida", () => {
@@ -255,10 +259,11 @@ test("concluir tarefa vinculada mantém a tarefa concluída e marca a cotação 
   const quote = created.quotes[0];
   const task = created.tasks.find((item) => item.quoteId === quote.id && !item.parentTaskId);
 
-  const next = updateTask(created, task.id, { status: "done" });
-  assert.equal(next.tasks.find((item) => item.id === task.id).status, "done");
-  assert.equal(next.tasks.find((item) => item.id === task.id).quoteStatus, "Respondida ao cliente");
-  assert.equal(next.quotes.find((item) => item.id === quote.id).status, "Respondida ao cliente");
+  assert.throws(() => updateTask(created, task.id, { status: "done" }), /valor maior que zero/);
+  assert.equal(created.tasks.find((item) => item.id === task.id).status, "todo");
+  assert.equal(created.quotes.find((item) => item.id === quote.id).status, "Nova");
+  assert.throws(() => updateTask(created, task.id, { status: "done", quoteStatus: "Cotada", value: "R$ 0,00", commercialTerms: "À vista" }), /valor maior que zero/);
+  assert.throws(() => updateQuote(created, quote.id, { status: "Respondida ao cliente", value: "R$ 800,00", commercialTerms: "À vista" }), /Confirme o envio/);
 });
 
 test("confirmação de envio ao concluir tarefa atualiza a cotação vinculada", () => {
@@ -267,13 +272,14 @@ test("confirmação de envio ao concluir tarefa atualiza a cotação vinculada",
   const quote = created.quotes[0];
   const task = created.tasks.find((item) => item.quoteId === quote.id && !item.parentTaskId);
 
-  const completed = updateTask(created, task.id, { status: "done", quoteStatus: "Respondida ao cliente", responseSent: true });
+  assert.throws(() => updateTask(created, task.id, { status: "done", quoteStatus: "Respondida ao cliente", value: "R$ 800,00", commercialTerms: "Pagamento em 30 dias" }), /Confirme o envio/);
+  const completed = updateTask(created, task.id, { status: "done", quoteStatus: "Respondida ao cliente", responseSent: true, value: "R$ 800,00", commercialTerms: "Pagamento em 30 dias" });
   assert.equal(completed.tasks.find((item) => item.id === task.id).status, "done");
   assert.equal(completed.quotes.find((item) => item.id === quote.id).status, "Respondida ao cliente");
   assert.equal(completed.quotes.find((item) => item.id === quote.id).responseSent, true);
 
-  const alreadyResponded = updateTask(created, task.id, { status: "done" });
-  const confirmed = updateTask(alreadyResponded, task.id, { responseSent: true });
+  const alreadyResponded = updateTask(created, task.id, { status: "done", value: "R$ 800,00", commercialTerms: "Pagamento em 30 dias" });
+  const confirmed = markQuoteSent(alreadyResponded, quote.id);
   assert.equal(confirmed.quotes.find((item) => item.id === quote.id).responseSent, true);
 });
 
@@ -283,7 +289,7 @@ test("conclusão só com cotação realizada mantém a cotação cotada e não e
   const quote = created.quotes[0];
   const task = created.tasks.find((item) => item.quoteId === quote.id && !item.parentTaskId);
 
-  const completed = updateTask(created, task.id, { status: "done", quoteStatus: "Cotada", responseSent: false });
+  const completed = updateTask(created, task.id, { status: "done", quoteStatus: "Cotada", responseSent: false, value: "R$ 800,00", commercialTerms: "Pagamento em 30 dias" });
   assert.equal(completed.tasks.find((item) => item.id === task.id).status, "done");
   assert.equal(completed.tasks.find((item) => item.id === task.id).quoteStatus, "Cotada");
   assert.equal(completed.quotes.find((item) => item.id === quote.id).status, "Cotada");
@@ -292,6 +298,17 @@ test("conclusão só com cotação realizada mantém a cotação cotada e não e
   const edited = updateQuote(completed, quote.id, { title: "Transfer revisado", status: "Cotada" });
   assert.equal(edited.tasks.find((item) => item.id === task.id).status, "done");
   assert.equal(edited.quotes.find((item) => item.id === quote.id).status, "Cotada");
+});
+
+test("falha ao persistir conclusão não modifica tarefa nem cotação originais", () => {
+  withStorage();
+  const created = createQuote(seedState(), { title: "Transfer", client: "Cliente" });
+  const quote = created.quotes[0];
+  const task = created.tasks.find((item) => item.quoteId === quote.id && !item.parentTaskId);
+  globalThis.localStorage.setItem = () => { throw new Error("Falha de gravação"); };
+  assert.throws(() => updateTask(created, task.id, { status: "done", quoteStatus: "Cotada", responseSent: false, value: "R$ 800,00", commercialTerms: "À vista" }), /Falha de gravação/);
+  assert.equal(created.tasks.find((item) => item.id === task.id).status, "todo");
+  assert.equal(created.quotes.find((item) => item.id === quote.id).status, "Nova");
 });
 
 test("reabrir cotação reativa sua tarefa principal e limpa encerramento", () => {

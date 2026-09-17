@@ -23,6 +23,29 @@ export const FormTextInput = forwardRef(function FormTextInput({ error, classNam
   return <input ref={ref} {...props} className={`form-general-input${className ? ` ${className}` : ""}`} aria-invalid={error ? true : undefined} aria-describedby={errorId || props["aria-describedby"]} />;
 });
 
+function formatBRL(value) {
+  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
+}
+
+function moneyDisplay(value) {
+  if (value === "" || value === null || value === undefined) return "";
+  if (typeof value === "number") return formatBRL(value);
+  const text = String(value).trim();
+  if (!text) return "";
+  const normalized = text.replace(/R\$\s?/i, "").replace(/\./g, "").replace(",", ".");
+  const number = Number(normalized);
+  return Number.isFinite(number) ? formatBRL(number) : text;
+}
+
+export const FormMoneyInput = forwardRef(function FormMoneyInput({ error, className = "", value, onChange, ...props }, ref) {
+  const handleChange = (event) => {
+    const digits = String(event.target.value || "").replace(/\D/g, "");
+    const cents = digits ? Number(digits) / 100 : 0;
+    onChange?.({ target: { value: digits ? formatBRL(cents) : "" } });
+  };
+  return <FormTextInput ref={ref} {...props} value={moneyDisplay(value)} onChange={handleChange} error={error} inputMode="numeric" type="text" className={className} />;
+});
+
 const FormDateInput = forwardRef(function FormDateInput({ error, className = "", ...props }, ref) {
   const errorId = props.id && error ? `${props.id}-error` : undefined;
   return <DateInput ref={ref} {...props} className={`form-general-input${className ? ` ${className}` : ""}`} aria-invalid={error ? true : undefined} aria-describedby={errorId || props["aria-describedby"]} />;

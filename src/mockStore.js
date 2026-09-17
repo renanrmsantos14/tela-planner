@@ -26,7 +26,7 @@ import {
   validateContact,
 } from "./contactDomain.js";
 import { isQuoteTask, isQuoteTerminalStatus, quoteStatusForTaskStatus, taskStatusForQuoteStatus } from "./quoteTaskFlow.js";
-import { resetMockQuoteServiceTypes } from "./mockQuoteServiceTypes.js";
+import { QUOTE_COMPLETED_STATUSES, validateQuoteCommercial } from "./quoteDomain.js";
 
 export const STORAGE_KEY = "betinhos-tela-planner-mock-v3-calendar";
 
@@ -370,6 +370,13 @@ export function updateTask(state, id, patch) {
   const nextQuoteStatus = quoteTask && (patch.quoteStatus !== undefined || patch.status !== undefined)
     ? (patch.quoteStatus !== undefined ? patch.quoteStatus : quoteStatusForTaskStatus(patch.status, currentQuoteStatus))
     : currentQuoteStatus;
+  if (quoteTask && patch.responseSent === true && nextQuoteStatus !== "Respondida ao cliente") throw new Error("Envio só pode ser confirmado na cotação respondida.");
+  if (quoteTask && QUOTE_COMPLETED_STATUSES.includes(nextQuoteStatus) && (patch.status === "done" || patch.quoteStatus !== undefined || patch.responseSent !== undefined || patch.value !== undefined || patch.commercialTerms !== undefined)) {
+    const commercial = { value: patch.value ?? quote.value, commercialTerms: patch.commercialTerms ?? quote.commercialTerms };
+    const validation = validateQuoteCommercial(commercial);
+    if (!validation.valid) throw new Error(Object.values(validation.errors).join(" "));
+    if (nextQuoteStatus === "Respondida ao cliente" && (patch.responseSent === false || (patch.responseSent !== true && !quote.responseSent))) throw new Error("Confirme o envio da proposta ao cliente.");
+  }
   const nextStatus = patch.status ?? (quoteTask && patch.quoteStatus !== undefined
     ? taskStatusForQuoteStatus(nextQuoteStatus)
     : existing?.status);
@@ -402,7 +409,7 @@ export function updateTask(state, id, patch) {
     const assignment = patch.assignmentMode !== undefined || patch.teamIds !== undefined || patch.teamId !== undefined || patch.assigneeIds !== undefined || patch.assigneeNames !== undefined || patch.assigneeName !== undefined || patch.primaryAssigneeId !== undefined || patch.consultantIds !== undefined
       ? resolveTaskAssignment({ ...taskItem, ...patch }, state.teams || [], state.employees || [])
       : null;
-    const { responseSent: _responseSent, ...taskPatch } = patch;
+    const { responseSent: _responseSent, value: _value, commercialTerms: _commercialTerms, ...taskPatch } = patch;
     return { ...taskItem, ...taskPatch, ...(assignment || {}), assigneeName: assignment ? assignment.assigneeNames.join(", ") : taskItem.assigneeName, status: nextStatus, ...(quoteTask ? { quoteStatus: nextQuoteStatus } : {}), waitingContext, history };
   });
   if (!existing) return saveState({ ...state, tasks });
@@ -424,10 +431,12 @@ export function updateTask(state, id, patch) {
     notifications.unshift({ id: uid("notification"), taskId: id, recipientEmployeeId, type: "mention", title: "Você foi mencionado", message: next.title, occurredAt: new Date().toISOString(), readAt: "", dedupeKey: notificationDedupeKey({ recipientId: recipientEmployeeId, taskId: id, type: "mention", eventId }) });
   });
   const quoteStatusIsTerminal = isQuoteTerminalStatus(nextQuoteStatus);
-  const nextQuotes = quoteTask && (quoteStatusChanged || quoteResponseSentChanged)
+  const nextQuotes = quoteTask && (quoteStatusChanged || quoteResponseSentChanged || patch.value !== undefined || patch.commercialTerms !== undefined)
     ? state.quotes.map((quoteItem) => quoteItem.id === existing.quoteId ? {
       ...quoteItem,
       status: nextQuoteStatus,
+      value: patch.value ?? quoteItem.value,
+      commercialTerms: patch.commercialTerms ?? quoteItem.commercialTerms,
       responseSent: nextResponseSent,
       finalizationAt: quoteStatusIsTerminal ? (quoteItem.finalizationAt || new Date().toISOString()) : "",
       modifiedAt: new Date().toISOString(),
@@ -1024,13 +1033,14 @@ export function ensureQuoteTask(state, quote) {
 }
 
 export function createQuote(state, input = {}) {
+  if (QUOTE_COMPLETED_STATUSES.includes(input.status)) throw new Error("Crie a cotação como Nova e registre o resultado comercial depois.");
   const now = new Date().toISOString();
   const sequence = Math.max(0, ...(state.quotes || []).map((quote) => Number.parseInt(String(quote.code || "").replace(/\D/g, ""), 10) || 0)) + 1;
   const quote = {
     id: uid("quote"), code: input.code || `COT-${String(sequence).padStart(4, "0")}`,
     title: String(input.title || "Nova cotação").trim(), client: String(input.client || "").trim(),
     status: input.status || "Nova", deadline: input.deadline || "", value: input.value || "",
-    serviceType: input.serviceType || "", serviceTypeId: input.serviceTypeId || "", vehicleType: input.vehicleType || "", origin: input.origin || "", destination: input.destination || "",
+    vehicleType: input.vehicleType || "", origin: input.origin || "", destination: input.destination || "",
     passengers: input.passengers || "", serviceDate: input.serviceDate || "", returnDate: input.returnDate || "",
     clientContact: input.clientContact || "", clientEmail: input.clientEmail || "", clientPhone: input.clientPhone || "",
     commercialTerms: input.commercialTerms || "", notes: input.notes || "", priority: input.priority || "medium", channel: input.channel || "", hasReturn: Boolean(input.returnDate), lossReason: input.lossReason || "", responseSent: false, finalizationAt: "", plannerTaskId: "", createdAt: now, modifiedAt: now,
@@ -1046,12 +1056,20 @@ export function createQuote(state, input = {}) {
 export function updateQuote(state, id, patch = {}) {
   const existing = (state.quotes || []).find((quote) => quote.id === id);
   if (!existing) throw new Error("Cotação não encontrada.");
+  const nextStatus = patch.status ?? existing.status;
+  if (patch.responseSent === true && nextStatus !== "Respondida ao cliente") throw new Error("Envio só pode ser confirmado na cotação respondida.");
+  if (QUOTE_COMPLETED_STATUSES.includes(nextStatus) && (patch.status !== undefined || patch.value !== undefined || patch.commercialTerms !== undefined || patch.responseSent !== undefined)) {
+    const validation = validateQuoteCommercial({ ...existing, ...patch });
+    if (!validation.valid) throw new Error(Object.values(validation.errors).join(" "));
+    if (nextStatus === "Respondida ao cliente" && (patch.responseSent === false || (patch.responseSent !== true && !existing.responseSent))) throw new Error("Confirme o envio da proposta ao cliente.");
+  }
   if (patch.status === "Aguardando informação" && existing.status !== patch.status) {
     const validation = validateWaitingContext("waiting", patch.waitingContext);
     if (!validation.allowed) throw new Error(validation.error);
     if (!(state.tasks || []).some((task) => task.quoteId === id && !task.parentTaskId)) throw new Error("Tarefa vinculada à cotação não encontrada.");
   }
   const nextQuote = { ...existing, ...patch, id, modifiedAt: new Date().toISOString() };
+  if (patch.status && patch.status !== "Respondida ao cliente") nextQuote.responseSent = false;
   const outcomeStatus = nextQuote.status;
   const statusChanged = outcomeStatus !== existing.status;
   const terminal = isQuoteTerminalStatus(outcomeStatus);
@@ -1099,6 +1117,8 @@ export function updateQuote(state, id, patch = {}) {
 }
 
 export function markQuoteSent(state, id) {
+  const quote = (state.quotes || []).find((item) => item.id === id);
+  if (!quote || !QUOTE_COMPLETED_STATUSES.includes(quote.status)) throw new Error("Finalize a cotação antes de registrar o envio.");
   return updateQuote(state, id, { responseSent: true, status: "Respondida ao cliente", finalizationAt: "" });
 }
 
@@ -1109,7 +1129,6 @@ export function setQuoteOutcome(state, id, outcome, reason = "") {
 }
 
 export function resetState() {
-  resetMockQuoteServiceTypes();
   const next = seedState();
   localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
   return next;

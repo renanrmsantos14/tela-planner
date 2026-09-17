@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { AlarmClock, CalendarDays, ChevronDown, CircleHelp, FileText, LayoutGrid, List, ListFilter, Plus, Search, UserRound, X } from "lucide-react";
 import { formatDate } from "../domain";
-import { filterQuotes, getQuoteMetrics, QUOTE_PRIORITIES, QUOTE_STATUSES, QUOTE_TERMINAL_STATUSES } from "../quoteDomain";
+import { filterQuotes, getQuoteMetrics, QUOTE_PRIORITIES, QUOTE_STATUSES, QUOTE_TERMINAL_STATUSES, validateQuoteCommercial } from "../quoteDomain";
 import QuoteCreateDrawer from "./QuoteCreateDrawer";
 import QuoteKanban from "./QuoteKanban";
 import QuoteManagementDrawer from "./QuoteManagementDrawer";
@@ -15,21 +15,22 @@ function MoveDialog({ move, task, saving, onCancel, onConfirm, onAttachment, onD
   const [reason, setReason] = useState("");
   const [value, setValue] = useState(move.quote.value || "");
   const [commercialTerms, setCommercialTerms] = useState(move.quote.commercialTerms || "");
+  const [sentConfirmed, setSentConfirmed] = useState(false);
   const terminal = QUOTE_TERMINAL_STATUSES.includes(move.status);
   const loss = move.status === "Perdida";
-  const cotada = move.status === "Cotada";
-  const validCommercial = String(value).trim() && String(commercialTerms).trim();
-  return <div className="quote-v3-confirm-layer"><form className="quote-v3-dialog" role="dialog" aria-modal="true" onSubmit={(event) => { event.preventDefault(); if ((!loss || reason.trim()) && (!cotada || validCommercial)) onConfirm(reason.trim(), { value, commercialTerms }); }}><h3>{cotada ? "Informar dados comerciais" : terminal ? `Mover para ${move.status}?` : "Alterar status?"}</h3><p>{cotada ? "Informe o valor total e as condições comerciais para marcar a cotação como cotada." : terminal ? "A cotação e a tarefa vinculada serão encerradas." : `${move.quote.code} passará para ${move.status}.`}</p>{cotada && <><label htmlFor="quote-move-value">Valor total (BRL)<FormMoneyInput id="quote-move-value" autoFocus required value={value} onChange={(event) => setValue(event.target.value)} placeholder="R$ 0,00" /></label><label htmlFor="quote-move-terms">Condições comerciais<FormTextArea id="quote-move-terms" required rows="4" value={commercialTerms} onChange={(event) => setCommercialTerms(event.target.value)} /></label>{task && AttachmentSectionComponent && <AttachmentSectionComponent taskId={task.id} attachments={task.attachments || []} loadAttachmentContent={loadAttachmentContent} onAttachment={onAttachment} onDeleteAttachment={onDeleteAttachment} itemLabel="à cotação" helperText="" showPreview={false} allowOpen={false} compact />}</>}{loss && <label htmlFor="quote-move-reason">Motivo da perda<FormTextArea id="quote-move-reason" autoFocus required value={reason} onChange={(event) => setReason(event.target.value)} /></label>}<div><button className="button button-secondary" type="button" onClick={onCancel}>Voltar</button><button className="button button-primary" type="submit" disabled={saving || (loss && !reason.trim()) || (cotada && !validCommercial)}>{saving ? "Atualizando…" : "Confirmar"}</button></div></form></div>;
+  const commercial = ["Cotada", "Respondida ao cliente"].includes(move.status);
+  const validCommercial = validateQuoteCommercial({ value, commercialTerms }).valid;
+  return <div className="quote-v3-confirm-layer"><form className="quote-v3-dialog" role="dialog" aria-modal="true" onSubmit={(event) => { event.preventDefault(); if ((!loss || reason.trim()) && (!commercial || validCommercial) && (move.status !== "Respondida ao cliente" || sentConfirmed)) onConfirm(reason.trim(), commercial ? { value, commercialTerms, ...(move.status === "Respondida ao cliente" ? { responseSent: true } : {}) } : {}); }}><h3>{commercial ? "Informar dados comerciais" : terminal ? `Mover para ${move.status}?` : "Alterar status?"}</h3><p>{commercial ? "Informe o valor total e as condições comerciais da proposta." : terminal ? "A cotação e a tarefa vinculada serão encerradas." : `${move.quote.code} passará para ${move.status}.`}</p>{commercial && <><label htmlFor="quote-move-value">Valor total (BRL)<FormMoneyInput id="quote-move-value" autoFocus required value={value} onChange={(event) => setValue(event.target.value)} placeholder="R$ 0,00" /></label><label htmlFor="quote-move-terms">Condições comerciais<FormTextArea id="quote-move-terms" required rows="4" value={commercialTerms} onChange={(event) => setCommercialTerms(event.target.value)} /></label>{move.status === "Respondida ao cliente" && <label><input type="checkbox" checked={sentConfirmed} onChange={(event) => setSentConfirmed(event.target.checked)} />Confirmo que a proposta já foi enviada ao cliente.</label>}{task && AttachmentSectionComponent && <AttachmentSectionComponent taskId={task.id} attachments={task.attachments || []} loadAttachmentContent={loadAttachmentContent} onAttachment={onAttachment} onDeleteAttachment={onDeleteAttachment} itemLabel="à cotação" helperText="" showPreview={false} allowOpen={false} compact />}</>}{loss && <label htmlFor="quote-move-reason">Motivo da perda<FormTextArea id="quote-move-reason" autoFocus required rows="4" value={reason} onChange={(event) => setReason(event.target.value)} /></label>}<div><button className="button button-secondary" type="button" onClick={onCancel}>Voltar</button><button className="button button-primary" type="submit" disabled={saving || (loss && !reason.trim()) || (commercial && !validCommercial) || (move.status === "Respondida ao cliente" && !sentConfirmed)}>{saving ? "Atualizando…" : "Confirmar"}</button></div></form></div>;
 }
 
-export default function HybridQuotesView({ state, currentEmployee, WaitingContextFieldsComponent, ReturnsSectionComponent, onOpenTask, onCreateQuote, onUpdateQuote, onRequestWaitingQuote, onRegisterWaitingReturn, onMarkQuoteSent, onSetQuoteOutcome, selectedQuoteId, onSelectQuote, onEnsureTaskDetails, onAttachment, onDeleteAttachment, loadAttachmentContent, AttachmentSectionComponent }) {
+export default function HybridQuotesView({ state, currentEmployee, WaitingContextFieldsComponent, ReturnsSectionComponent, onOpenTask, onCreateQuote, onUpdateQuote, onDeleteQuote, onRequestWaitingQuote, onRegisterWaitingReturn, onMarkQuoteSent, onSetQuoteOutcome, selectedQuoteId, onSelectQuote, onEnsureTaskDetails, onAttachment, onDeleteAttachment, loadAttachmentContent, AttachmentSectionComponent }) {
   const [creating, setCreating] = useState(false);
   const [filtersExpanded, setFiltersExpanded] = useState(false);
   const [view, setView] = useState(readQuoteViewPreference);
   const [filters, setFilters] = useState({ query: "", responsible: [], priority: [], status: [], deadline: [] });
   const [pendingMove, setPendingMove] = useState(null);
   const [moving, setMoving] = useState(false);
-  const quotes = state.quotes || [];
+  const quotes = (state.quotes || []).filter((quote) => isQuoteOpen(quote.status));
   const tasks = state.tasks || [];
   const tasksByQuote = useMemo(() => new Map(tasks.filter((task) => task.quoteId && !task.parentTaskId).map((task) => [task.quoteId, task])), [tasks]);
   const filtered = useMemo(() => filterQuotes(quotes, tasks, filters), [filters, quotes, tasks]);
@@ -38,8 +39,8 @@ export default function HybridQuotesView({ state, currentEmployee, WaitingContex
   const selectedTask = selectedQuote ? tasksByQuote.get(selectedQuote.id) : null;
   const setFilter = (key, value) => setFilters((current) => ({ ...current, [key]: value }));
   const changeView = (next) => { setView(next); saveQuoteViewPreference(next); };
-  const requestMove = (quote, status) => { if (status === "Aguardando informação") onRequestWaitingQuote?.(quote.id); else if (status === "Cotada" || QUOTE_TERMINAL_STATUSES.includes(status)) setPendingMove({ quote, status }); else onUpdateQuote?.(quote.id, { status }); };
-  const confirmMove = async (reason, commercial = {}) => { setMoving(true); try { const result = pendingMove.status === "Cotada" ? await onUpdateQuote?.(pendingMove.quote.id, { status: "Cotada", ...commercial }) : await onSetQuoteOutcome?.(pendingMove.quote.id, pendingMove.status, reason); if (result !== false) setPendingMove(null); } finally { setMoving(false); } };
+  const requestMove = (quote, status) => { if (status === "Aguardando informação") onRequestWaitingQuote?.(quote.id); else if (["Cotada", "Respondida ao cliente"].includes(status) || QUOTE_TERMINAL_STATUSES.includes(status)) setPendingMove({ quote, status }); else onUpdateQuote?.(quote.id, { status }); };
+  const confirmMove = async (reason, commercial = {}) => { setMoving(true); try { const result = ["Cotada", "Respondida ao cliente"].includes(pendingMove.status) ? await onUpdateQuote?.(pendingMove.quote.id, { status: pendingMove.status, ...commercial }) : await onSetQuoteOutcome?.(pendingMove.quote.id, pendingMove.status, reason); if (result !== false) setPendingMove(null); } finally { setMoving(false); } };
 
   return <div className="page-content quotes-page quote-v3-page" data-view="quotes"><div className="page-header"><div><span className="eyebrow">ACOMPANHAMENTO COMERCIAL</span><h1>Cotações</h1><p>Cadastre, priorize e acompanhe a resposta sem sair da gestão.</p></div><button className="button button-primary" type="button" onClick={() => setCreating(true)}><Plus size={15} />Nova cotação</button></div>
     <div className="quote-v3-metrics" aria-label="Indicadores de cotações">{[

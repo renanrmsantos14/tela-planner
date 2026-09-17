@@ -11,6 +11,7 @@ import {
   isQuoteTransitionAllowed,
   validateQuoteStep,
   validateQuoteDraft,
+  validateQuoteCommercial,
 } from "../src/quoteDomain.js";
 
 const base = {
@@ -69,6 +70,14 @@ test("valida cada etapa e o contato exigido pelo canal", () => {
   assert.equal(validateQuoteDraft({ ...base, channel: "Telefone", clientPhone: "11999999999", deadline: "" }).valid, true);
   assert.equal(validateQuoteStep(base, "review").valid, false);
   assert.equal(validateQuoteStep({ ...base, channel: "Telefone", clientPhone: "11999999999" }, "review").valid, true);
+});
+
+test("exige valor positivo e condições comerciais para status de proposta", () => {
+  for (const value of ["", "R$ 0,00", "-1", "abc"]) assert.equal(validateQuoteCommercial({ value, commercialTerms: "À vista" }).valid, false);
+  assert.equal(validateQuoteCommercial({ value: "R$ 1.092,30", commercialTerms: "  " }).valid, false);
+  assert.equal(validateQuoteCommercial({ value: "R$ 1.092,30", commercialTerms: "À vista" }).valid, true);
+  assert.equal(validateQuoteStep({ ...base, value: "R$ 0,00", status: "Cotada" }, "commercial").valid, false);
+  assert.equal(validateQuoteStep({ ...base, status: "Respondida ao cliente" }, "commercial").valid, true);
 });
 
 test("aceita origem e destino com até 10.000 caracteres", () => {

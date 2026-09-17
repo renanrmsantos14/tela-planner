@@ -101,6 +101,8 @@ import {
   waitingContextSummary,
 } from "./domain";
 import { isQuoteTask, quoteStatusForTaskStatus, taskStatusForQuoteStatus } from "./quoteTaskFlow";
+import { validateQuoteCommercial } from "./quoteDomain";
+import { FormMoneyInput, FormTextArea } from "./quotes/QuoteFields";
 import { taskHistoryDetails, visibleTaskHistory } from "./taskHistory";
 import { playCompletionSound, prepareCompletionSound } from "./completionSound";
 import { createDataStore } from "./dataverse";
@@ -537,21 +539,43 @@ function StatusPicker({ value, onChange }) {
   );
 }
 
-function QuoteCompletionDialog({ checked, onChange, onCancel, onConfirm }) {
+function QuoteCompletionDialog({ quote, onCancel, onConfirm }) {
+  const [result, setResult] = useState(quote?.responseSent ? "sent" : "ready");
+  const [value, setValue] = useState(quote?.value || "");
+  const [commercialTerms, setCommercialTerms] = useState(quote?.commercialTerms || "");
+  const [sentConfirmed, setSentConfirmed] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const validation = validateQuoteCommercial({ value, commercialTerms });
+  const confirm = async (event) => {
+    event.preventDefault();
+    if (!validation.valid || (result === "sent" && !sentConfirmed) || busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      const saved = await onConfirm({ status: "done", quoteStatus: result === "sent" ? "Respondida ao cliente" : "Cotada", responseSent: result === "sent", value, commercialTerms });
+      if (saved === false) setError("Não foi possível concluir. Confira os dados e tente novamente.");
+    } catch (failure) { setError(failure.message || "Não foi possível concluir a tarefa."); }
+    finally { setBusy(false); }
+  };
   return (
     <div className="drawer-confirm-layer" onMouseDown={(event) => event.stopPropagation()}>
-      <div className="drawer-confirm quote-completion-dialog" role="dialog" aria-modal="true" aria-labelledby="quote-completion-title">
+      <form className="drawer-confirm quote-completion-dialog" role="dialog" aria-modal="true" aria-labelledby="quote-completion-title" onSubmit={confirm}>
         <h2 id="quote-completion-title">Concluir tarefa da cotação</h2>
-        <p>Confirme a cotação realizada. Marque o envio somente se a resposta já foi enviada ao cliente.</p>
+        <p>Informe o resultado comercial antes de concluir a tarefa.</p>
         <div className="quote-completion-checks">
-          <label><input type="checkbox" checked={checked.realized} onChange={(event) => onChange({ ...checked, realized: event.target.checked, sent: event.target.checked && checked.sent })} />Cotação realizada</label>
-          <label><input type="checkbox" checked={checked.sent} onChange={(event) => onChange({ ...checked, realized: checked.realized || event.target.checked, sent: event.target.checked })} />Enviada ao cliente</label>
+          <label><input type="radio" name="quote-completion-result" checked={result === "ready"} onChange={() => setResult("ready")} />Cotação pronta, ainda não enviada</label>
+          <label><input type="radio" name="quote-completion-result" checked={result === "sent"} onChange={() => setResult("sent")} />Proposta já enviada ao cliente</label>
         </div>
+        <label className="quote-completion-field" htmlFor="quote-completion-value">Valor total (BRL)<FormMoneyInput id="quote-completion-value" value={value} onChange={(event) => setValue(event.target.value)} error={value && validation.errors.value} required /></label>
+        <label className="quote-completion-field" htmlFor="quote-completion-terms">Condições comerciais<FormTextArea id="quote-completion-terms" rows={3} value={commercialTerms} onChange={(event) => setCommercialTerms(event.target.value)} error={commercialTerms && validation.errors.commercialTerms} required /></label>
+        {result === "sent" && <label className="quote-completion-sent"><input type="checkbox" checked={sentConfirmed} onChange={(event) => setSentConfirmed(event.target.checked)} />Confirmo que a proposta já foi enviada ao cliente.</label>}
+        {error && <p className="quote-completion-error" role="alert">{error}</p>}
         <div className="drawer-confirm-actions">
-          <button className="button button-quiet" type="button" onClick={onCancel}>Cancelar</button>
-          <button className="button button-primary" type="button" disabled={!checked.realized} onClick={onConfirm}>Confirmar conclusão</button>
+          <button className="button button-quiet" type="button" onClick={onCancel} disabled={busy}>Cancelar</button>
+          <button className="button button-primary" type="submit" disabled={busy || !validation.valid || (result === "sent" && !sentConfirmed)}>{busy ? "Salvando…" : "Confirmar conclusão"}</button>
         </div>
-      </div>
+      </form>
     </div>
   );
 }
@@ -3982,7 +4006,6 @@ function TaskDrawerContent({
   const [showDiscardPrompt, setShowDiscardPrompt] = useState(false);
   const [showUnassignedPrompt, setShowUnassignedPrompt] = useState(false);
   const [showQuoteCompletionPrompt, setShowQuoteCompletionPrompt] = useState(false);
-  const [quoteCompletionChecks, setQuoteCompletionChecks] = useState({ realized: false, sent: false });
   const [draftAttachments, setDraftAttachments] = useState([]);
   const [pendingAttachmentRemovals, setPendingAttachmentRemovals] = useState(
     [],
@@ -4036,7 +4059,6 @@ function TaskDrawerContent({
     setShowDiscardPrompt(false);
     setShowUnassignedPrompt(false);
     setShowQuoteCompletionPrompt(false);
-    setQuoteCompletionChecks({ realized: false, sent: false });
     setDraftAttachments([]);
     setPendingAttachmentRemovals([]);
     if (saveCloseTimerRef.current)
@@ -4104,11 +4126,6 @@ function TaskDrawerContent({
     setForm((current) => ({ ...current, [key]: value }));
   const setTaskStatus = (value) => {
     if (value === "done" && taskItem.status !== "done" && isQuoteTask(taskItem) && !taskItem.parentTaskId) {
-      const quote = (state.quotes || []).find((item) => item.id === taskItem.quoteId);
-      setQuoteCompletionChecks({
-        realized: ["Cotada", "Respondida ao cliente", "Convertida em serviço"].includes(quote?.status),
-        sent: Boolean(quote?.responseSent),
-      });
       setShowQuoteCompletionPrompt(true);
       return;
     }
@@ -4200,16 +4217,16 @@ function TaskDrawerContent({
       current.includes(attachment.id) ? current : [...current, attachment.id],
     );
   };
-  const handleSave = (allowUnassigned = false) => {
-    if (saveState !== "idle") return;
+  const handleSave = (allowUnassigned = false, quoteCompletion = null) => {
+    if (saveState !== "idle") return Promise.resolve(false);
     setValidationError("");
     if (dueDateChanged && !deadlineValidation.allowed) {
       setValidationError(deadlineValidation.error);
-      return;
+      return Promise.resolve(false);
     }
     if (!waitingValidation.allowed) {
       setValidationError(waitingValidation.error);
-      return;
+      return Promise.resolve(false);
     }
     const nextAssignment = resolveTaskAssignment(
       { ...form, assigneeNames: form.assigneeName },
@@ -4220,7 +4237,7 @@ function TaskDrawerContent({
     const missingDueDate = !String(form.dueDate || "").trim();
     if (!allowUnassigned && (missingResponsible || missingDueDate)) {
       setShowUnassignedPrompt(true);
-      return;
+      return Promise.resolve(false);
     }
     const removals = pendingAttachmentRemovals
       .map((attachmentId) =>
@@ -4240,11 +4257,11 @@ function TaskDrawerContent({
       saveOverlayTimerRef.current = null;
       setShowSaveOverlay(true);
     }, 180);
-    Promise.resolve(
+    return Promise.resolve(
       onSave(taskItem.id, {
         title: form.title,
-        status: form.status,
-        ...(isQuoteTask(taskItem) && form.status === "done" && taskItem.status !== "done" ? { quoteStatus: quoteCompletionChecks.sent ? "Respondida ao cliente" : "Cotada", responseSent: quoteCompletionChecks.sent } : {}),
+        status: quoteCompletion ? "done" : form.status,
+        ...(quoteCompletion || {}),
         priority: form.priority,
         assignmentMode: form.assignmentMode,
         teamIds: form.teamIds || [],
@@ -4340,6 +4357,7 @@ function TaskDrawerContent({
         setShowSaveOverlay(false);
         setSaveState("success");
         saveCloseTimerRef.current = window.setTimeout(onClose, 620);
+        return true;
       })
       .catch((error) => {
         if (saveOverlayTimerRef.current)
@@ -4350,6 +4368,7 @@ function TaskDrawerContent({
         setValidationError(
           error.message || "Não foi possível salvar as alterações.",
         );
+        return false;
       });
   };
   return (
@@ -4872,13 +4891,9 @@ function TaskDrawerContent({
         )}
         {showQuoteCompletionPrompt && (
           <QuoteCompletionDialog
-            checked={quoteCompletionChecks}
-            onChange={setQuoteCompletionChecks}
+            quote={(state.quotes || []).find((item) => item.id === taskItem.quoteId)}
             onCancel={() => setShowQuoteCompletionPrompt(false)}
-            onConfirm={() => {
-              set("status", "done");
-              setShowQuoteCompletionPrompt(false);
-            }}
+            onConfirm={(completion) => handleSave(true, completion).then((success) => { if (success) setShowQuoteCompletionPrompt(false); return success; })}
           />
         )}
         {showDeletePrompt && (
@@ -5689,7 +5704,6 @@ export default function App() {
   const [pendingTaskDraft, setPendingTaskDraft] = useState(null);
   const [pendingUnassignedCreate, setPendingUnassignedCreate] = useState(null);
   const [quoteCompletionRequest, setQuoteCompletionRequest] = useState(null);
-  const quoteCompletionResolveRef = useRef(null);
   const [refreshing, setRefreshing] = useState(false);
   const confirmedStateRef = useRef(null);
   const pendingMutationsRef = useRef(new Map());
@@ -6116,21 +6130,19 @@ export default function App() {
     setSelectedId("");
     setPendingTaskDraft(null);
   }, []);
-  const requestQuoteCompletion = useCallback((task) => new Promise((resolve) => {
+  const requestQuoteCompletion = useCallback((task, commit) => new Promise((resolve) => {
     const quote = (state.quotes || []).find((item) => item.id === task.quoteId);
-    quoteCompletionResolveRef.current = resolve;
+    if (!quote) { showNotice("Cotação vinculada não encontrada."); resolve(false); return; }
     setQuoteCompletionRequest({
-      checked: {
-        realized: ["Cotada", "Respondida ao cliente", "Convertida em serviço"].includes(quote?.status),
-        sent: Boolean(quote?.responseSent),
+      quote,
+      onConfirm: async (completion) => {
+        const success = await commit(completion);
+        if (success) { setQuoteCompletionRequest(null); resolve(true); }
+        return success;
       },
+      onCancel: () => { setQuoteCompletionRequest(null); resolve(false); },
     });
-  }), [state.quotes]);
-  const finishQuoteCompletion = useCallback((checked) => {
-    quoteCompletionResolveRef.current?.(checked);
-    quoteCompletionResolveRef.current = null;
-    setQuoteCompletionRequest(null);
-  }, []);
+  }), [state.quotes, showNotice]);
   const closeContact = useCallback(() => setSelectedContactId(""), []);
   const openCreate = useCallback((status = "todo", initialInput = {}) => {
     const nextStatus = STATUSES.some((item) => item.id === status)
@@ -6193,15 +6205,12 @@ export default function App() {
           return Promise.resolve(false);
         }
       }
-      return (isCompleting && isQuoteTask(task) && !task.parentTaskId
-        ? requestQuoteCompletion(task)
-        : Promise.resolve(true)).then((confirmed) => {
-        if (!confirmed) return false;
-        if (isCompleting && isQuoteTask(task) && !task.parentTaskId)
-          patch = { ...patch, quoteStatus: confirmed.sent ? "Respondida ao cliente" : "Cotada", responseSent: confirmed.sent };
+      const quoteCompletion = isCompleting && isQuoteTask(task) && !task.parentTaskId;
+      const complete = (completion) => {
+        if (completion) patch = { ...patch, ...completion };
         if (isCompleting) prepareCompletionSound();
         return runOptimisticMutation(
-          (current) => applyOptimisticTaskPatch(current, id, patch),
+          (current) => quoteCompletion ? current : applyOptimisticTaskPatch(current, id, patch),
           persist,
           store.live
             ? `${successMessage} Sincronizando...`
@@ -6211,7 +6220,8 @@ export default function App() {
           if (success && isCompleting) playCompletionSound();
           return success;
         });
-      });
+      };
+      return quoteCompletion ? requestQuoteCompletion(task, complete) : complete();
     },
     [currentEmployee?.userId, state, store, runOptimisticMutation, showNotice, requestQuoteCompletion],
   );
@@ -6271,9 +6281,7 @@ export default function App() {
     (id, patch) => {
       const existingTask = state.tasks.find((taskItem) => taskItem.id === id);
       if (existingTask && isQuoteTask(existingTask) && !existingTask.parentTaskId && existingTask.status !== "done" && patch.status === "done" && patch.responseSent === undefined) {
-        return requestQuoteCompletion(existingTask).then((checked) => checked
-          ? saveTask(id, { ...patch, quoteStatus: checked.sent ? "Respondida ao cliente" : "Cotada", responseSent: checked.sent })
-          : false);
+        return requestQuoteCompletion(existingTask, (completion) => saveTask(id, { ...patch, ...completion }));
       }
       const mentionText = [
         patch.title !== existingTask?.title ? patch.title : "",
@@ -6300,7 +6308,7 @@ export default function App() {
       if (isCompleting) prepareCompletionSound();
       const shouldReopen = id === selectedId;
       return runOptimisticMutation(
-        (current) => applyOptimisticTaskPatch(current, id, nextPatch),
+        (current) => isCompleting && isQuoteTask(existingTask) ? current : applyOptimisticTaskPatch(current, id, nextPatch),
         async () => {
       const { personalTagIds: _personalTagIds, ...taskPatch } = nextPatch;
       const nextState = await store.updateTask(state, id, taskPatch);
@@ -6584,7 +6592,7 @@ export default function App() {
   const updateQuote = useCallback((id, patch = {}) => {
     if (!store.updateQuote) return Promise.resolve(false);
     return runOptimisticMutation(
-      (current) => ({ ...current, quotes: (current.quotes || []).map((quote) => quote.id === id ? { ...quote, ...patch, syncStatus: "syncing" } : quote), tasks: patch.status && patch.status !== current.quotes?.find((quote) => quote.id === id)?.status ? (current.tasks || []).map((task) => task.quoteId === id && !task.parentTaskId ? { ...task, status: taskStatusForQuoteStatus(patch.status), quoteStatus: patch.status, ...(patch.waitingContext ? { waitingContext: normalizeWaitingContext(patch.waitingContext) } : {}) } : task) : current.tasks }),
+      (current) => ["Cotada", "Respondida ao cliente"].includes(patch.status) ? current : ({ ...current, quotes: (current.quotes || []).map((quote) => quote.id === id ? { ...quote, ...patch, syncStatus: "syncing" } : quote), tasks: patch.status && patch.status !== current.quotes?.find((quote) => quote.id === id)?.status ? (current.tasks || []).map((task) => task.quoteId === id && !task.parentTaskId ? { ...task, status: taskStatusForQuoteStatus(patch.status), quoteStatus: patch.status, ...(patch.waitingContext ? { waitingContext: normalizeWaitingContext(patch.waitingContext) } : {}) } : task) : current.tasks }),
       () => store.updateQuote(confirmedStateRef.current || state, id, { ...patch, actorEmployeeId: currentEmployee?.id || "" }),
       store.live ? "Cotação em sincronização…" : "Cotação atualizada no mock local.",
       store.live ? "Cotação sincronizada." : "Cotação atualizada.",
@@ -6600,7 +6608,7 @@ export default function App() {
   const markQuoteSent = useCallback((id) => {
     if (!store.markQuoteSent) return Promise.resolve(false);
     return runOptimisticMutation(
-      (current) => ({ ...current, quotes: (current.quotes || []).map((quote) => quote.id === id ? { ...quote, responseSent: true, status: "Respondida ao cliente", finalizationAt: "" } : quote), tasks: (current.tasks || []).map((task) => task.quoteId === id && !task.parentTaskId ? { ...task, status: "waiting", quoteStatus: "Respondida ao cliente" } : task) }),
+      (current) => ({ ...current, quotes: (current.quotes || []).map((quote) => quote.id === id ? { ...quote, responseSent: true, status: "Respondida ao cliente", finalizationAt: "" } : quote), tasks: (current.tasks || []).map((task) => task.quoteId === id && !task.parentTaskId ? { ...task, status: "done", quoteStatus: "Respondida ao cliente" } : task) }),
       () => store.markQuoteSent(confirmedStateRef.current || state, id),
       store.live ? "Registrando envio…" : "Registrando envio no mock…",
       store.live ? "Envio registrado." : "Envio registrado no mock.",
@@ -7447,10 +7455,9 @@ export default function App() {
       )}
       {quoteCompletionRequest && (
         <QuoteCompletionDialog
-          checked={quoteCompletionRequest.checked}
-          onChange={(checked) => setQuoteCompletionRequest((current) => ({ ...current, checked }))}
-          onCancel={() => finishQuoteCompletion(null)}
-          onConfirm={() => finishQuoteCompletion(quoteCompletionRequest.checked)}
+          quote={quoteCompletionRequest.quote}
+          onCancel={quoteCompletionRequest.onCancel}
+          onConfirm={quoteCompletionRequest.onConfirm}
         />
       )}
       {waitingTask && (

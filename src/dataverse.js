@@ -55,7 +55,7 @@ import {
   waitingContextSummary,
 } from "./domain.js";
 import { isQuoteTask, isQuoteTerminalStatus, quoteStatusForTaskStatus, taskStatusForQuoteStatus } from "./quoteTaskFlow.js";
-import { QUOTE_VEHICLE_VALUES } from "./quoteDomain.js";
+import { QUOTE_COMPLETED_STATUSES, QUOTE_VEHICLE_VALUES, validateQuoteCommercial } from "./quoteDomain.js";
 import { localDateKey, manualCollectionKey } from "./management.js";
 import { normalizeContact } from "./contactDomain.js";
 
@@ -1436,6 +1436,12 @@ async function updateLiveTask(xrm, state, id, patch) {
   const nextQuoteStatus = quoteTask && (patch.quoteStatus !== undefined || patch.status !== undefined)
     ? (patch.quoteStatus !== undefined ? patch.quoteStatus : quoteStatusForTaskStatus(patch.status, currentQuoteStatus))
     : currentQuoteStatus;
+  if (quoteTask && patch.responseSent === true && nextQuoteStatus !== "Respondida ao cliente") throw new Error("Envio só pode ser confirmado na cotação respondida.");
+  if (quoteTask && QUOTE_COMPLETED_STATUSES.includes(nextQuoteStatus) && (patch.status === "done" || patch.quoteStatus !== undefined || patch.responseSent !== undefined || patch.value !== undefined || patch.commercialTerms !== undefined)) {
+    const validation = validateQuoteCommercial({ value: patch.value ?? linkedQuote.value, commercialTerms: patch.commercialTerms ?? linkedQuote.commercialTerms });
+    if (!validation.valid) throw new Error(Object.values(validation.errors).join(" "));
+    if (nextQuoteStatus === "Respondida ao cliente" && (patch.responseSent === false || (patch.responseSent !== true && !linkedQuote.responseSent))) throw new Error("Confirme o envio da proposta ao cliente.");
+  }
   const nextStatus = patch.status ?? (quoteTask && patch.quoteStatus !== undefined
     ? taskStatusForQuoteStatus(nextQuoteStatus)
     : previousStatus);
@@ -1485,11 +1491,27 @@ async function updateLiveTask(xrm, state, id, patch) {
     })());
   }
   await Promise.all(relationUpdates);
-  await Promise.all([
-    request(xrm, `/${entitySetName(TASK_TABLE)}(${cleanId(id)})`, { method: "PATCH", body: JSON.stringify(payload) }),
-    ...(quoteTask && (nextQuoteStatus !== currentQuoteStatus || quoteResponseSentChanged) ? [request(xrm, `/${entitySetName(QUOTE_TABLE)}(${cleanId(existing.quoteId)})`, { method: "PATCH", body: JSON.stringify(quotePayload({ status: nextQuoteStatus, responseSent: nextResponseSent, finalizationAt: isQuoteTerminalStatus(nextQuoteStatus) ? (linkedQuote.finalizationAt || new Date().toISOString()) : "" })) })] : []),
-    markQuoteOrigin(xrm, existing?.quoteId),
-  ]);
+  const quoteSyncPayload = quoteTask && !patch.suppressQuoteSync && (nextQuoteStatus !== currentQuoteStatus || quoteResponseSentChanged || patch.value !== undefined || patch.commercialTerms !== undefined)
+    ? quotePayload({ status: nextQuoteStatus, responseSent: nextResponseSent, value: patch.value ?? linkedQuote.value, commercialTerms: patch.commercialTerms ?? linkedQuote.commercialTerms, finalizationAt: isQuoteTerminalStatus(nextQuoteStatus) ? (linkedQuote.finalizationAt || new Date().toISOString()) : "", ...(isQuoteTerminalStatus(linkedQuote?.status) && !isQuoteTerminalStatus(nextQuoteStatus) ? { lossReason: "" } : {}) })
+    : null;
+  const taskPath = `/${entitySetName(TASK_TABLE)}(${cleanId(id)})`;
+  const quotePath = quoteTask ? `/${entitySetName(QUOTE_TABLE)}(${cleanId(existing.quoteId)})` : "";
+  if (quoteTask && nextStatus === "done" && quoteSyncPayload) {
+    await request(xrm, quotePath, { method: "PATCH", body: JSON.stringify(quoteSyncPayload) });
+    try { await request(xrm, taskPath, { method: "PATCH", body: JSON.stringify(payload) }); }
+    catch (error) {
+      try { await request(xrm, quotePath, { method: "PATCH", body: JSON.stringify(quotePayload({ status: linkedQuote.status, responseSent: linkedQuote.responseSent, value: linkedQuote.value, commercialTerms: linkedQuote.commercialTerms, finalizationAt: linkedQuote.finalizationAt })) }); }
+      catch (rollbackError) { console.warn("[Planner] falha ao restaurar cotação após erro na tarefa", rollbackError); }
+      throw error;
+    }
+    await markQuoteOrigin(xrm, existing?.quoteId).catch((error) => console.warn("[Planner] tarefa concluída; vínculo de origem não atualizado", error));
+  } else {
+    await Promise.all([
+      request(xrm, taskPath, { method: "PATCH", body: JSON.stringify(payload) }),
+      ...(quoteSyncPayload ? [request(xrm, quotePath, { method: "PATCH", body: JSON.stringify(quoteSyncPayload) })] : []),
+      markQuoteOrigin(xrm, existing?.quoteId),
+    ]);
+  }
   const statusChanged = nextStatus !== previousStatus;
   const dueDateChanged = patch.dueDate !== undefined && patch.dueDate !== previousDueDate;
   const waitingChanged = patch.waitingContext !== undefined && JSON.stringify(waitingContext) !== JSON.stringify(normalizeWaitingContext(existing?.waitingContext));
@@ -1509,7 +1531,8 @@ async function updateLiveTask(xrm, state, id, patch) {
     if (assigneesChanged) eventWrites.push(createEvent(xrm, id, 100000002, "Responsáveis alterados.", "notification:assignees", JSON.stringify(previousAssigneeIds), JSON.stringify({ ...eventContext, addedAssigneeIds: nextAssigneeIds.filter((assigneeId) => !previousAssigneeIds.includes(assigneeId)), removedAssigneeIds: previousAssigneeIds.filter((assigneeId) => !nextAssigneeIds.includes(assigneeId)) })));
     if (!statusChanged && !dueDateChanged && !assigneesChanged && !waitingChanged) eventWrites.push(createEvent(xrm, id, patch.status !== undefined ? 100000002 : 100000001, "Tarefa atualizada."));
   }
-  await Promise.all(eventWrites);
+  if (quoteTask && nextStatus === "done") await Promise.all(eventWrites).catch((error) => console.warn("[Planner] tarefa concluída; evento de histórico não registrado", error));
+  else await Promise.all(eventWrites);
   const confirmedPatch = Object.fromEntries(Object.entries({ ...patch, ...(quoteTask ? { status: nextStatus, quoteStatus: nextQuoteStatus } : {}) }).filter(([key]) => !["actorEmployeeId", "actorUserId", "mentionedEmployeeIds", "deadlineChangeReason", "suppressNotifications", "responseSent"].includes(key)));
   const nextState = applyOptimisticTaskPatch(state, id, confirmedPatch);
   if (quoteTask && (nextQuoteStatus !== currentQuoteStatus || quoteResponseSentChanged)) {
@@ -1811,21 +1834,10 @@ async function resolveFinanceTeamId(xrm, state) {
   return resolveIdByName(xrm, TEAM_TABLE, primaryName, "Financeiro");
 }
 
-async function bindQuoteServiceType(xrm, payload, input) {
-  if (!quoteServiceLookupAvailable || (!Object.hasOwn(input, "serviceTypeId") && !Object.hasOwn(input, "serviceType"))) return;
-  const types = await loadQuoteServiceTypes();
-  const type = types.find((item) => item.id === input.serviceTypeId) || types.find((item) => item.name.localeCompare(String(input.serviceType || ""), "pt-BR", { sensitivity: "base" }) === 0);
-  if (!type) throw new Error("Selecione um tipo de serviço cadastrado.");
-  await bindLookup(xrm, payload, QUOTE_TABLE, SERVICE_TYPE_LOOKUP, SERVICE_TYPE_TABLE, type.id);
-}
-
 async function createLiveQuote(xrm, state, input = {}) {
+  if (QUOTE_COMPLETED_STATUSES.includes(input.status)) throw new Error("Crie a cotação como Nova e registre o resultado comercial depois.");
   await quoteSelect(xrm);
-  const legacyChoices = await quoteServiceMetadata(xrm);
-  serviceTypeValues.clear();
-  legacyChoices.forEach(({ label, value }) => serviceTypeValues.set(label, value));
   const payload = quotePayload(input, true);
-  await bindQuoteServiceType(xrm, payload, input);
   const created = await request(xrm, `/${entitySetName(QUOTE_TABLE)}`, { method: "POST", body: JSON.stringify(payload) });
   const quoteId = cleanId(created?.cr40f_pedidodecotacaoid || created?.[`${QUOTE_TABLE}id`]);
   if (!quoteId) throw new Error("Dataverse criou a cotação sem retornar o ID.");
@@ -1854,23 +1866,33 @@ async function updateLiveQuote(xrm, state, id, patch = {}) {
   const quoteId = cleanId(id);
   const existing = (state.quotes || []).find((quote) => cleanId(quote.id) === quoteId);
   if (!existing) throw new Error("Cotação não encontrada.");
+  const nextStatus = patch.status ?? existing.status;
+  if (patch.responseSent === true && nextStatus !== "Respondida ao cliente") throw new Error("Envio só pode ser confirmado na cotação respondida.");
+  if (QUOTE_COMPLETED_STATUSES.includes(nextStatus) && (patch.status !== undefined || patch.value !== undefined || patch.commercialTerms !== undefined || patch.responseSent !== undefined)) {
+    const validation = validateQuoteCommercial({ ...existing, ...patch });
+    if (!validation.valid) throw new Error(Object.values(validation.errors).join(" "));
+    if (nextStatus === "Respondida ao cliente" && (patch.responseSent === false || (patch.responseSent !== true && !existing.responseSent))) throw new Error("Confirme o envio da proposta ao cliente.");
+  }
   const linkedTasks = (state.tasks || []).filter((item) => cleanId(item.quoteId) === quoteId);
+  if (patch.status && !isQuoteTerminalStatus(patch.status) && isQuoteTerminalStatus(existing.status)) patch = { ...patch, finalizationAt: "", lossReason: "", responseSent: false };
   if (patch.status === "Aguardando informação" && existing.status !== patch.status) {
     const validation = validateWaitingContext("waiting", patch.waitingContext);
     if (!validation.allowed) throw new Error(validation.error);
     if (!linkedTasks.some((task) => !task.parentTaskId)) throw new Error("Tarefa vinculada à cotação não encontrada.");
   }
-  const payload = quotePayload(patch);
-  await bindQuoteServiceType(xrm, payload, patch);
+  const payload = quotePayload({ ...patch, ...(patch.status && patch.status !== "Respondida ao cliente" ? { responseSent: false } : {}) });
   await request(xrm, `/${entitySetName(QUOTE_TABLE)}(${quoteId})`, { method: "PATCH", body: JSON.stringify(payload) });
-  const nextStatus = patch.status ?? existing.status;
   const statusChanged = nextStatus !== existing.status;
   const terminal = isQuoteTerminalStatus(nextStatus);
   const reopening = !terminal && isQuoteTerminalStatus(existing.status);
-  await Promise.all(linkedTasks.map((task) => {
+  try { await Promise.all(linkedTasks.map((task) => {
     if (task.parentTaskId && ["done", "cancelled"].includes(task.status)) return Promise.resolve();
     if (task.parentTaskId) return statusChanged && terminal ? updateLiveTask(xrm, state, task.id, { status: "done" }) : Promise.resolve();
     return updateLiveTask(xrm, state, task.id, {
+      suppressQuoteSync: true,
+      value: patch.value ?? existing.value,
+      commercialTerms: patch.commercialTerms ?? existing.commercialTerms,
+      responseSent: patch.status === "Respondida ao cliente" ? true : Boolean(patch.responseSent ?? existing.responseSent),
       status: statusChanged ? taskStatusForQuoteStatus(nextStatus) : undefined,
       quoteStatus: statusChanged ? nextStatus : undefined,
       waitingContext: patch.waitingContext,
@@ -1880,11 +1902,20 @@ async function updateLiveQuote(xrm, state, id, patch = {}) {
       assigneeIds: patch.assigneeIds,
       assigneeNames: patch.assigneeNames,
     });
-  }));
+  })); }
+  catch (error) {
+    if (QUOTE_COMPLETED_STATUSES.includes(nextStatus)) {
+      try { await request(xrm, `/${entitySetName(QUOTE_TABLE)}(${quoteId})`, { method: "PATCH", body: JSON.stringify(quotePayload({ status: existing.status, responseSent: existing.responseSent, value: existing.value, commercialTerms: existing.commercialTerms, finalizationAt: existing.finalizationAt })) }); }
+      catch (rollbackError) { console.warn("[Planner] falha ao restaurar cotação após erro na tarefa", rollbackError); }
+    }
+    throw error;
+  }
   return loadLiveState(xrm);
 }
 
 async function markLiveQuoteSent(xrm, state, id) {
+  const quote = (state.quotes || []).find((item) => cleanId(item.id) === cleanId(id));
+  if (!quote || !QUOTE_COMPLETED_STATUSES.includes(quote.status)) throw new Error("Finalize a cotação antes de registrar o envio.");
   return updateLiveQuote(xrm, state, id, { responseSent: true, status: "Respondida ao cliente", finalizationAt: "" });
 }
 

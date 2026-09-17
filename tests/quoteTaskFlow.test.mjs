@@ -23,17 +23,19 @@ test("define o fluxo comercial único da cotação", () => {
   ]);
 });
 
-test("mapeia status da cotação para o painel sem concluir ao enviar", () => {
+test("mapeia Cotada e Respondida como tarefa concluída", () => {
   assert.equal(taskStatusForQuoteStatus("Nova"), "todo");
   assert.equal(taskStatusForQuoteStatus("Em análise pelo financeiro"), "doing");
   assert.equal(taskStatusForQuoteStatus("Aguardando informação"), "waiting");
-  assert.equal(taskStatusForQuoteStatus("Cotada"), "doing");
-  assert.equal(taskStatusForQuoteStatus("Respondida ao cliente"), "waiting");
+  assert.equal(taskStatusForQuoteStatus("Cotada"), "done");
+  assert.equal(taskStatusForQuoteStatus("Respondida ao cliente"), "done");
   assert.equal(taskStatusForQuoteStatus("Perdida"), "done");
 });
 
 test("preserva etapa comercial ao reabrir uma tarefa encerrada", () => {
   assert.equal(quoteStatusForTaskStatus("done", "Perdida"), "Perdida");
+  assert.equal(quoteStatusForTaskStatus("done", "Cotada"), "Cotada");
+  assert.equal(quoteStatusForTaskStatus("done", "Nova"), "Cotada");
   assert.equal(quoteStatusForTaskStatus("todo", ""), "Nova");
   assert.equal(isQuoteTask({ quoteId: "quote-1" }), true);
   assert.equal(isQuoteTask({ sourceType: "manual" }), false);

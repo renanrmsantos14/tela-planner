@@ -30,11 +30,23 @@ export const QUOTE_VEHICLE_VALUES = Object.freeze({
 
 export const QUOTE_OPEN_STATUSES = QUOTE_STATUSES.slice(0, 5);
 export const QUOTE_TERMINAL_STATUSES = QUOTE_STATUSES.slice(5);
+export const QUOTE_COMPLETED_STATUSES = ["Cotada", "Respondida ao cliente"];
+
+export function validateQuoteCommercial(input = {}) {
+  const errors = {};
+  const raw = String(input.value ?? "").trim();
+  const normalized = raw.replace(/^R\$\s*/i, "").replace(/\s/g, "");
+  const number = normalized.includes(",")
+    ? Number(normalized.replace(/\./g, "").replace(",", "."))
+    : Number(normalized);
+  if (!raw || !/^[\d.,]+$/.test(normalized) || !Number.isFinite(number) || number <= 0) errors.value = "Informe um valor maior que zero.";
+  if (!String(input.commercialTerms ?? "").trim()) errors.commercialTerms = "Informe as condições comerciais.";
+  return { valid: Object.keys(errors).length === 0, errors };
+}
 export const QUOTE_CREATE_STEPS = [
   { id: "client", label: "Cliente" },
   { id: "service", label: "Serviço" },
   { id: "commercial", label: "Prazo e comercial" },
-  { id: "review", label: "Revisão" },
 ];
 
 const STEP_FIELDS = {
@@ -71,6 +83,7 @@ export function validateQuoteStep(input = {}, stepId = "review") {
     const email = String(input.clientEmail || "").trim();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.clientEmail = "Informe um e-mail válido.";
   }
+  if (stepId === "commercial" && QUOTE_COMPLETED_STATUSES.includes(input.status)) Object.assign(errors, validateQuoteCommercial(input).errors);
   return { valid: Object.keys(errors).length === 0, errors };
 }
 
@@ -204,16 +217,15 @@ export function validateQuoteDraft(input = {}) {
     ["title", "título interno"],
     ["client", "cliente/empresa"],
     ["clientContact", "nome do solicitante"],
-    ["channel", "canal de entrada"],
-    ["serviceType", "tipo de serviço"],
     ["origin", "origem"],
     ["destination", "destino"],
-    ["serviceDate", "data e hora do serviço"],
   ];
   const missing = required.filter(([key]) => !String(input[key] ?? "").trim()).map(([, label]) => label);
-  const stepErrors = validateQuoteStep(input, "review").errors;
-  if (stepErrors.clientPhone && !missing.includes("telefone")) missing.push("telefone");
+  const stepErrors = { ...validateQuoteStep(input, "review").errors, ...validateQuoteStep(input, "commercial").errors };
+  if (stepErrors.clientPhone && !missing.includes("telefone ou e-mail")) missing.push("telefone ou e-mail");
   if (stepErrors.clientEmail && !missing.includes("e-mail válido")) missing.push("e-mail válido");
+  if (stepErrors.value) missing.push("valor total maior que zero");
+  if (stepErrors.commercialTerms) missing.push("condições comerciais");
   if (String(input.status || "") === "Perdida" && !String(input.lossReason || "").trim()) missing.push("motivo da perda");
   return missing.length ? { valid: false, missing, error: `Informe: ${missing.join(", ")}.` } : { valid: true, missing: [], error: "" };
 }
