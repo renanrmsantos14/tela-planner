@@ -11,16 +11,6 @@ function normalizeProfiles(value) {
   return unique.length ? unique : [{ id: "unassigned", name: "Não atribuído" }];
 }
 
-function initials(name) {
-  return name.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
-}
-
-function Avatar({ profile, small, className = "" }) {
-  return <span className={`avatar ${small ? "avatar-small" : ""} ${className}`.trim()} aria-hidden="true">
-    <span className="avatar-initials">{initials(profile.name)}</span>
-  </span>;
-}
-
 export default function AssigneeDisplay({ value, small = false, team = null, teamName = "", primaryName = "", consultantNames = [] }) {
   if (team || teamName) {
     const label = team?.name || teamName || "Equipe responsável";
@@ -35,7 +25,7 @@ export default function AssigneeDisplay({ value, small = false, team = null, tea
   const label = responsibilityNames.map((name) => String(name || "").trim().split(/\s+/)[0]).filter(Boolean).join(" | ") || "Não atribuído";
 
   return <span className="assignee-display" title={label} aria-label={`Responsáveis: ${label}`}>
-    <Avatar profile={profiles[0]} small={small} />
+    <span className={`team-assignee-icon ${small ? "team-assignee-icon-small" : ""}`} aria-hidden="true"><TeamIcon name="users" size={small ? 14 : 16} /></span>
     <span className="assignee-name">{label}</span>
   </span>;
 }

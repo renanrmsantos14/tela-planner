@@ -654,9 +654,9 @@ button { cursor: pointer; }
 .team-assignee-icon { width: 26px; height: 26px; display: inline-grid; place-items: center; flex: 0 0 auto; border: 1px solid #c5d7f7; border-radius: 8px; color: var(--blue); background: var(--blue-soft); }
 .team-assignee-icon-small { width: 22px; height: 22px; border-radius: 7px; }
 .assignee-display > .avatar { flex: 0 0 auto; }
-.assignee-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.assignee-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .assignee-display-multiple { gap: 0; }
-.task-card-footer > .assignee-display { flex: 1 1 auto; }
+.task-card-footer > .assignee-display { flex: 1 1 0; }
 .central-row-meta > .assignee-display { min-width: 0; width: 160px; }
 
 .task-checklist { display: grid; gap: 5px; margin-top: 8px; padding-top: 7px; border-top: 1px solid #eef1f5; }
