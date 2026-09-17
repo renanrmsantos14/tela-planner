@@ -3461,6 +3461,9 @@ function AttachmentSection({
   onDeleteAttachment,
   helperText,
   itemLabel = "à tarefa",
+  showPreview = true,
+  allowOpen = true,
+  compact = false,
 }) {
   const inputId = useId();
   const [isDragging, setIsDragging] = useState(false);
@@ -3532,7 +3535,7 @@ function AttachmentSection({
     );
   };
   return (
-    <section className="drawer-section attachment-section">
+    <section className={`drawer-section attachment-section${compact ? " is-compact" : ""}`}>
       <div className="drawer-section-heading">
         <div className="attachment-heading-copy">
           <h3>Anexos</h3>
@@ -3566,7 +3569,7 @@ function AttachmentSection({
               ? "Solte os arquivos aqui"
               : `Adicione arquivos ${itemLabel}`}
           </strong>
-          <small>Cole com Ctrl+V, clique para escolher ou arraste arquivos para cá</small>
+          <small>{compact ? "Clique ou arraste arquivos" : "Cole com Ctrl+V, clique para escolher ou arraste arquivos para cá"}</small>
         </span>
         <span className="attachment-dropzone-action">Escolher arquivos</span>
         <input
@@ -3594,13 +3597,13 @@ function AttachmentSection({
               className={`attachment-item ${item.syncStatus === "syncing" ? "item-syncing" : ""}`}
               key={item.id}
             >
-              <AttachmentPreview
+              {showPreview && <AttachmentPreview
                 attachment={item}
                 loadAttachmentContent={loadAttachmentContent}
                 onOpen={setPreviewAttachment}
-              />
+              />}
               <div className="attachment-card">
-                <button
+                {allowOpen ? <button
                   className="attachment-open-button"
                   type="button"
                   onClick={() => openAttachment(item)}
@@ -3617,7 +3620,13 @@ function AttachmentSection({
                       {formatAttachmentSize(item.size)} · Abrir em nova aba
                     </span>
                   </span>
-                </button>
+                </button> : <div className="attachment-file-summary">
+                  <AttachmentTypeIcon attachment={item} />
+                  <span className="attachment-file-main">
+                    <strong title={item.name}>{item.name || "Arquivo sem nome"}</strong>
+                    <span>{attachmentTypeLabel(item)} · {formatAttachmentSize(item.size)}</span>
+                  </span>
+                </div>}
                 <div className="attachment-card-actions">
                   <span
                     className={`attachment-status ${item.syncStatus === "syncing" ? "is-syncing" : ""} ${item.syncStatus === "pending" ? "is-pending" : ""}`}
@@ -3695,7 +3704,7 @@ function AttachmentSection({
           </span>
         </div>
       )}
-      {previewAttachment &&
+      {showPreview && previewAttachment &&
       previewUrl &&
       typeof document !== "undefined" &&
       document.body

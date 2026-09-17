@@ -20,11 +20,47 @@ test("cotações não usam prompt nativo e confirmam alterações não salvas", 
   assert.match(quoteSources, /role="alertdialog"/);
 });
 
-test("cadastro expõe progresso, resumo de erros e bloqueio durante criação", () => {
+test("cadastro expõe progresso e bloqueio durante criação sem etapa de revisão", () => {
   assert.match(quoteSources, /role="progressbar"/);
-  assert.match(quoteSources, /quote-review-errors/);
   assert.match(quoteSources, /Criando cotação…/);
-  assert.match(quoteSources, /aria-invalid/);
+  assert.match(quoteSources, /setErrors\(result\.errors\)/);
+  assert.doesNotMatch(read("../src/quotes/QuoteCreateDrawer.jsx"), /QuoteReview|id="review"|Revisão/);
+});
+
+test("formulário exibe dados comerciais apenas após cotar", () => {
+  const fields = read("../src/quotes/QuoteFields.jsx");
+  const workspace = read("../src/QuotesView.jsx");
+  assert.match(fields, /showCommercialResult/);
+  assert.match(fields, /quote-value/);
+  assert.match(fields, /quote-commercial-terms/);
+  assert.match(workspace, /Informar dados comerciais/);
+  assert.match(workspace, /\["Cotada", "Respondida ao cliente"\]\.includes\(draft\.status\)/);
+  assert.match(read("../src/quotes/HybridQuotesView.jsx"), /AttachmentSectionComponent[\s\S]*itemLabel="à cotação"[\s\S]*showPreview=\{false\}/);
+});
+
+test("footer do cadastro não exibe botão cancelar", () => {
+  const drawer = read("../src/quotes/QuoteCreateDrawer.jsx");
+  assert.doesNotMatch(drawer, /quote-v3-drawer-footer[^\n]*>.*Cancelar/);
+});
+
+test("contato da cotação não exibe canal e exige um meio de contato", () => {
+  const fields = read("../src/quotes/QuoteFields.jsx");
+  const workspace = read("../src/QuotesView.jsx");
+  assert.doesNotMatch(fields, /quote-channel|label="Canal"/);
+  assert.match(fields, /label="Telefone \/ WhatsApp"/);
+  assert.match(fields, /label="E-mail"/);
+  assert.doesNotMatch(workspace, /Canal de entrada/);
+});
+
+test("ordena passageiros após veículo e deixa data do serviço opcional", () => {
+  const fields = read("../src/quotes/QuoteFields.jsx");
+  const workspace = read("../src/QuotesView.jsx");
+  assert.match(fields, /quote-vehicle[\s\S]*quote-passengers/);
+  assert.doesNotMatch(fields, /id="quote-passengers" label="Número de passageiros" wide/);
+  assert.doesNotMatch(fields, /id="quote-passengers"[^>]*required/);
+  assert.doesNotMatch(fields, /quote-service-date[^\n]*required/);
+  assert.match(workspace, /Tipo de veículo[\s\S]*Passageiros[\s\S]*Data e hora do serviço/);
+  assert.doesNotMatch(workspace, /Data e hora do serviço" required/);
 });
 
 test("kanban de cotações move por arraste sem seletor nos cards", () => {

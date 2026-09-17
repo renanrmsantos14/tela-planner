@@ -6,16 +6,20 @@ import QuoteCreateDrawer from "./QuoteCreateDrawer";
 import QuoteKanban from "./QuoteKanban";
 import QuoteManagementDrawer from "./QuoteManagementDrawer";
 import { SearchableMultiSelect } from "../SearchableSelect.jsx";
-import { FormTextArea, FormTextInput } from "./QuoteFields";
+import { FormMoneyInput, FormTextArea, FormTextInput } from "./QuoteFields";
 import { readQuoteViewPreference, saveQuoteViewPreference } from "./quoteViewPreference";
 
 function QuoteStatus({ status }) { return <span className="quote-v3-status"><span />{status || "Sem status"}</span>; }
 
-function MoveDialog({ move, saving, onCancel, onConfirm }) {
+function MoveDialog({ move, task, saving, onCancel, onConfirm, onAttachment, onDeleteAttachment, loadAttachmentContent, AttachmentSectionComponent }) {
   const [reason, setReason] = useState("");
+  const [value, setValue] = useState(move.quote.value || "");
+  const [commercialTerms, setCommercialTerms] = useState(move.quote.commercialTerms || "");
   const terminal = QUOTE_TERMINAL_STATUSES.includes(move.status);
   const loss = move.status === "Perdida";
-  return <div className="quote-v3-confirm-layer"><form className="quote-v3-dialog" role="dialog" aria-modal="true" onSubmit={(event) => { event.preventDefault(); if (!loss || reason.trim()) onConfirm(reason.trim()); }}><h3>{terminal ? `Mover para ${move.status}?` : "Alterar status?"}</h3><p>{terminal ? "A cotação e a tarefa vinculada serão encerradas." : `${move.quote.code} passará para ${move.status}.`}</p>{loss && <label htmlFor="quote-move-reason">Motivo da perda<FormTextArea id="quote-move-reason" autoFocus required value={reason} onChange={(event) => setReason(event.target.value)} /></label>}<div><button className="button button-secondary" type="button" onClick={onCancel}>Voltar</button><button className="button button-primary" type="submit" disabled={saving || (loss && !reason.trim())}>{saving ? "Atualizando…" : "Confirmar"}</button></div></form></div>;
+  const cotada = move.status === "Cotada";
+  const validCommercial = String(value).trim() && String(commercialTerms).trim();
+  return <div className="quote-v3-confirm-layer"><form className="quote-v3-dialog" role="dialog" aria-modal="true" onSubmit={(event) => { event.preventDefault(); if ((!loss || reason.trim()) && (!cotada || validCommercial)) onConfirm(reason.trim(), { value, commercialTerms }); }}><h3>{cotada ? "Informar dados comerciais" : terminal ? `Mover para ${move.status}?` : "Alterar status?"}</h3><p>{cotada ? "Informe o valor total e as condições comerciais para marcar a cotação como cotada." : terminal ? "A cotação e a tarefa vinculada serão encerradas." : `${move.quote.code} passará para ${move.status}.`}</p>{cotada && <><label htmlFor="quote-move-value">Valor total (BRL)<FormMoneyInput id="quote-move-value" autoFocus required value={value} onChange={(event) => setValue(event.target.value)} placeholder="R$ 0,00" /></label><label htmlFor="quote-move-terms">Condições comerciais<FormTextArea id="quote-move-terms" required rows="4" value={commercialTerms} onChange={(event) => setCommercialTerms(event.target.value)} /></label>{task && AttachmentSectionComponent && <AttachmentSectionComponent taskId={task.id} attachments={task.attachments || []} loadAttachmentContent={loadAttachmentContent} onAttachment={onAttachment} onDeleteAttachment={onDeleteAttachment} itemLabel="à cotação" helperText="" showPreview={false} allowOpen={false} compact />}</>}{loss && <label htmlFor="quote-move-reason">Motivo da perda<FormTextArea id="quote-move-reason" autoFocus required value={reason} onChange={(event) => setReason(event.target.value)} /></label>}<div><button className="button button-secondary" type="button" onClick={onCancel}>Voltar</button><button className="button button-primary" type="submit" disabled={saving || (loss && !reason.trim()) || (cotada && !validCommercial)}>{saving ? "Atualizando…" : "Confirmar"}</button></div></form></div>;
 }
 
 export default function HybridQuotesView({ state, currentEmployee, WaitingContextFieldsComponent, ReturnsSectionComponent, onOpenTask, onCreateQuote, onUpdateQuote, onRequestWaitingQuote, onRegisterWaitingReturn, onMarkQuoteSent, onSetQuoteOutcome, selectedQuoteId, onSelectQuote, onEnsureTaskDetails, onAttachment, onDeleteAttachment, loadAttachmentContent, AttachmentSectionComponent }) {
@@ -34,8 +38,8 @@ export default function HybridQuotesView({ state, currentEmployee, WaitingContex
   const selectedTask = selectedQuote ? tasksByQuote.get(selectedQuote.id) : null;
   const setFilter = (key, value) => setFilters((current) => ({ ...current, [key]: value }));
   const changeView = (next) => { setView(next); saveQuoteViewPreference(next); };
-  const requestMove = (quote, status) => { if (status === "Aguardando informação") onRequestWaitingQuote?.(quote.id); else if (QUOTE_TERMINAL_STATUSES.includes(status)) setPendingMove({ quote, status }); else onUpdateQuote?.(quote.id, { status }); };
-  const confirmMove = async (reason) => { setMoving(true); try { const result = await onSetQuoteOutcome?.(pendingMove.quote.id, pendingMove.status, reason); if (result !== false) setPendingMove(null); } finally { setMoving(false); } };
+  const requestMove = (quote, status) => { if (status === "Aguardando informação") onRequestWaitingQuote?.(quote.id); else if (status === "Cotada" || QUOTE_TERMINAL_STATUSES.includes(status)) setPendingMove({ quote, status }); else onUpdateQuote?.(quote.id, { status }); };
+  const confirmMove = async (reason, commercial = {}) => { setMoving(true); try { const result = pendingMove.status === "Cotada" ? await onUpdateQuote?.(pendingMove.quote.id, { status: "Cotada", ...commercial }) : await onSetQuoteOutcome?.(pendingMove.quote.id, pendingMove.status, reason); if (result !== false) setPendingMove(null); } finally { setMoving(false); } };
 
   return <div className="page-content quotes-page quote-v3-page" data-view="quotes"><div className="page-header"><div><span className="eyebrow">ACOMPANHAMENTO COMERCIAL</span><h1>Cotações</h1><p>Cadastre, priorize e acompanhe a resposta sem sair da gestão.</p></div><button className="button button-primary" type="button" onClick={() => setCreating(true)}><Plus size={15} />Nova cotação</button></div>
     <div className="quote-v3-metrics" aria-label="Indicadores de cotações">{[
@@ -60,6 +64,6 @@ export default function HybridQuotesView({ state, currentEmployee, WaitingContex
     </section>
     {creating && <QuoteCreateDrawer employees={state.employees || []} onClose={() => setCreating(false)} onCreate={onCreateQuote} AttachmentSectionComponent={AttachmentSectionComponent} />}
     {selectedQuote && <QuoteManagementDrawer quote={selectedQuote} task={selectedTask} employees={state.employees || []} teams={state.teams || []} currentEmployee={currentEmployee} WaitingContextFieldsComponent={WaitingContextFieldsComponent} ReturnsSectionComponent={ReturnsSectionComponent} onClose={() => onSelectQuote?.("")} onOpenTask={(id) => { onSelectQuote?.(""); onOpenTask?.(id); }} onEnsureTaskDetails={onEnsureTaskDetails} onUpdate={onUpdateQuote} onRequestWaiting={() => onRequestWaitingQuote?.(selectedQuote.id)} onRegisterWaitingReturn={onRegisterWaitingReturn} onMarkSent={onMarkQuoteSent} onOutcome={onSetQuoteOutcome} onAttachment={onAttachment} onDeleteAttachment={onDeleteAttachment} loadAttachmentContent={loadAttachmentContent} AttachmentSectionComponent={AttachmentSectionComponent} />}
-    {pendingMove && <MoveDialog move={pendingMove} saving={moving} onCancel={() => setPendingMove(null)} onConfirm={confirmMove} />}
+    {pendingMove && <MoveDialog move={pendingMove} task={tasksByQuote.get(pendingMove.quote.id)} saving={moving} onCancel={() => setPendingMove(null)} onConfirm={confirmMove} onAttachment={onAttachment} onDeleteAttachment={onDeleteAttachment} loadAttachmentContent={loadAttachmentContent} AttachmentSectionComponent={AttachmentSectionComponent} />}
   </div>;
 }

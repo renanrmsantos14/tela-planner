@@ -1457,11 +1457,18 @@ button { cursor: pointer; }
 .attachment-dropzone-copy strong { overflow: hidden; color: var(--navy); text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
 .attachment-dropzone-copy small { color: var(--muted); font-size: 10px; line-height: 1.35; }
 .attachment-dropzone-action { min-height: 32px; display: inline-flex; align-items: center; justify-content: center; padding: 0 10px; border: 1px solid #c3d4ef; border-radius: 8px; color: var(--blue); background: rgba(255,255,255,.72); font-size: 10px; font-weight: 800; white-space: nowrap; }
+.attachment-section.is-compact > .drawer-section-heading, .attachment-section.is-compact > .attachment-helper { display: none; }
+.attachment-section.is-compact .attachment-dropzone { min-height: 58px; gap: 8px; padding: 8px 10px; border-radius: 10px; }
+.attachment-section.is-compact .attachment-upload-icon { width: 30px; height: 30px; border-radius: 8px; }
+.attachment-section.is-compact .attachment-dropzone-copy { gap: 1px; }
+.attachment-section.is-compact .attachment-dropzone-copy strong { font-size: 10px; }
+.attachment-section.is-compact .attachment-dropzone-copy small { font-size: 9px; line-height: 1.2; }
+.attachment-section.is-compact .attachment-dropzone-action { min-height: 28px; padding: 0 9px; font-size: 9px; }
 .attachment-list { display: grid; gap: 8px; margin-top: 10px; }
 .attachment-item { min-width: 0; display: grid; gap: 8px; padding: 9px; border: 1px solid #e3eaf3; border-radius: 11px; background: var(--surface); transition: border-color 160ms ease, box-shadow 160ms ease; }
 .attachment-item:hover { border-color: #c7d6ea; box-shadow: 0 7px 18px rgba(0,26,61,.06); }
 .attachment-card { min-width: 0; display: flex; align-items: center; gap: 9px; }
-.attachment-open-button { min-width: 0; display: flex; flex: 1; align-items: center; gap: 9px; padding: 0; border: 0; color: inherit; background: transparent; text-align: left; cursor: pointer; }
+.attachment-open-button, .attachment-file-summary { min-width: 0; display: flex; flex: 1; align-items: center; gap: 9px; padding: 0; border: 0; color: inherit; background: transparent; text-align: left; }
 .attachment-open-button:hover .attachment-file-main strong, .attachment-open-button:focus-visible .attachment-file-main strong { color: var(--blue); }
 .attachment-open-button:focus-visible, .attachment-delete-button:focus-visible, .attachment-remove-confirm button:focus-visible { outline: 3px solid var(--blue-soft); outline-offset: 2px; }
 .attachment-card-actions { min-width: 0; display: flex; align-items: center; gap: 8px; }
