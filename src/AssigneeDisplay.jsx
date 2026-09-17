@@ -28,9 +28,6 @@ function AvatarStack({ profiles, small }) {
 }
 
 export default function AssigneeDisplay({ value, small = false, team = null, teamName = "", primaryName = "", consultantNames = [] }) {
-  const responsibilityLabel = primaryName
-    ? `Principal: ${primaryName}${consultantNames.length ? ` · Consultores: ${consultantNames.join(", ")}` : ""}`
-    : "";
   if (team || teamName) {
     const label = team?.name || teamName || "Equipe responsável";
     return <span className="assignee-display assignee-display-team" title={`Equipe responsável: ${label}`} aria-label={`Equipe responsável: ${label}`}>
@@ -40,15 +37,11 @@ export default function AssigneeDisplay({ value, small = false, team = null, tea
   }
   const profiles = normalizeProfiles(value);
   const names = profiles.map((profile) => profile.name);
-  const label = responsibilityLabel || names.join(", ") || "Não atribuído";
-  const isUnassigned = profiles.length === 1 && /^não atribuído$/i.test(profiles[0].name);
+  const responsibilityNames = primaryName ? [primaryName, ...consultantNames] : names;
+  const label = responsibilityNames.map((name) => String(name || "").trim().split(/\s+/)[0]).filter(Boolean).join(" | ") || "Não atribuído";
 
-  if (names.length === 1 || primaryName) return <span className="assignee-display" title={label} aria-label={`Responsável principal: ${label}`}>
-    <Avatar profile={profiles[0]} small={small} />
+  return <span className="assignee-display" title={label} aria-label={`Responsáveis: ${label}`}>
+    {profiles.length === 1 ? <Avatar profile={profiles[0]} small={small} /> : <AvatarStack profiles={profiles} small={small} />}
     <span className="assignee-name">{label}</span>
-  </span>;
-
-  return <span className="assignee-display assignee-display-multiple" title={label} aria-label={`Responsáveis: ${label}`}>
-    <AvatarStack profiles={profiles} small={small} />
   </span>;
 }
