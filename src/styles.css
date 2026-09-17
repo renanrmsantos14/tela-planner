@@ -408,7 +408,7 @@ button { cursor: pointer; }
 .quote-v3-drawer-footer > div { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 .quote-v3-spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.45); border-top-color: #fff; border-radius: 50%; animation: quote-v3-spin 700ms linear infinite; }
 .quote-v3-confirm-layer { position: fixed; inset: 0; z-index: 120; display: grid; place-items: center; padding: 20px; background: rgba(0,20,30,.5); }
-.quote-v3-dialog { width: min(430px, 100%); padding: 22px; border: 0; border-radius: 16px; background: #fff; box-shadow: 0 22px 60px rgba(0,20,30,.28); }
+.quote-v3-dialog { width: min(430px, 100%); max-height: calc(100dvh - 40px); overflow-y: auto; overscroll-behavior: contain; padding: 22px; border: 0; border-radius: 16px; background: #fff; box-shadow: 0 22px 60px rgba(0,20,30,.28); }
 .quote-v3-dialog h3 { margin: 0 0 8px; }
 .quote-v3-dialog p { color: var(--muted); }
 .quote-v3-dialog label { display: grid; gap: 7px; margin: 14px 0; font-weight: 700; }
@@ -1465,7 +1465,15 @@ button { cursor: pointer; }
 .attachment-section.is-compact .attachment-dropzone-copy small { font-size: 9px; line-height: 1.2; }
 .attachment-section.is-compact .attachment-dropzone-action { min-height: 28px; padding: 0 9px; font-size: 9px; }
 .attachment-list { display: grid; gap: 8px; margin-top: 10px; }
-.attachment-section.is-compact .attachment-list { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.attachment-section.is-compact .attachment-list { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+.attachment-section.is-compact .attachment-item { gap: 5px; padding: 7px; }
+.attachment-section.is-compact .attachment-card { gap: 6px; }
+.attachment-section.is-compact .attachment-file-icon { width: 28px; height: 28px; border-radius: 7px; }
+.attachment-section.is-compact .attachment-file-main span { display: none; }
+.attachment-section.is-compact .attachment-status { gap: 0; font-size: 0; }
+.attachment-section.is-compact .attachment-status svg { width: 14px; height: 14px; }
+.attachment-section.is-compact .attachment-card-actions { gap: 3px; }
+.attachment-section.is-compact .attachment-delete-button { width: 24px; height: 24px; }
 .attachment-item { min-width: 0; display: grid; gap: 8px; padding: 9px; border: 1px solid #e3eaf3; border-radius: 11px; background: var(--surface); transition: border-color 160ms ease, box-shadow 160ms ease; }
 .attachment-item:hover { border-color: #c7d6ea; box-shadow: 0 7px 18px rgba(0,26,61,.06); }
 .attachment-card { min-width: 0; display: flex; align-items: center; gap: 9px; }
