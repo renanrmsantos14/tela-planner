@@ -633,7 +633,7 @@ button { cursor: pointer; }
 .task-card-tag .personal-tag-dot { width: 6px; height: 6px; }
 .task-card-footer { gap: 7px; padding-top: 7px; }
 .task-card .avatar { width: 26px; height: 26px; }
-.task-card .date-chip { gap: 5px; }
+.task-card .date-chip { flex: 0 0 auto; gap: 5px; }
 
 /* Responsáveis: leitura rápida para uma pessoa e equipe sem estourar o card. */
 .avatar-stack { width: auto; display: inline-flex; align-items: center; justify-content: flex-start; background: transparent; }

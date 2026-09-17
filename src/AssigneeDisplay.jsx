@@ -21,12 +21,6 @@ function Avatar({ profile, small, className = "" }) {
   </span>;
 }
 
-function AvatarStack({ profiles, small }) {
-  return <span className={`avatar avatar-stack ${small ? "avatar-stack-small" : ""}`} aria-hidden="true">
-    {profiles.map((profile, index) => <Avatar profile={profile} small={small} className="avatar-stack-item" key={`${profile.id || profile.name}-${index}`} />)}
-  </span>;
-}
-
 export default function AssigneeDisplay({ value, small = false, team = null, teamName = "", primaryName = "", consultantNames = [] }) {
   if (team || teamName) {
     const label = team?.name || teamName || "Equipe responsável";
@@ -41,7 +35,7 @@ export default function AssigneeDisplay({ value, small = false, team = null, tea
   const label = responsibilityNames.map((name) => String(name || "").trim().split(/\s+/)[0]).filter(Boolean).join(" | ") || "Não atribuído";
 
   return <span className="assignee-display" title={label} aria-label={`Responsáveis: ${label}`}>
-    {profiles.length === 1 ? <Avatar profile={profiles[0]} small={small} /> : <AvatarStack profiles={profiles} small={small} />}
+    <Avatar profile={profiles[0]} small={small} />
     <span className="assignee-name">{label}</span>
   </span>;
 }
