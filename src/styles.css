@@ -1465,6 +1465,7 @@ button { cursor: pointer; }
 .attachment-section.is-compact .attachment-dropzone-copy small { font-size: 9px; line-height: 1.2; }
 .attachment-section.is-compact .attachment-dropzone-action { min-height: 28px; padding: 0 9px; font-size: 9px; }
 .attachment-list { display: grid; gap: 8px; margin-top: 10px; }
+.attachment-section.is-compact .attachment-list { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
 .attachment-item { min-width: 0; display: grid; gap: 8px; padding: 9px; border: 1px solid #e3eaf3; border-radius: 11px; background: var(--surface); transition: border-color 160ms ease, box-shadow 160ms ease; }
 .attachment-item:hover { border-color: #c7d6ea; box-shadow: 0 7px 18px rgba(0,26,61,.06); }
 .attachment-card { min-width: 0; display: flex; align-items: center; gap: 9px; }
