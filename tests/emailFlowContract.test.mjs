@@ -155,3 +155,26 @@ test("Flow diário monta resumo individual e semanal com idempotência", async (
   assert.match(source, /_cr40f_cr40f_funcionarioresponsavel_value/);
   assert.match(source, /createArray\(items\('For_each_task'\)\?\['_cr40f_cr40f_funcionarioresponsavel_value'\]\)/);
 });
+
+test("Resumo diário usa cartões de e-mail válidos e cores por contexto", async () => {
+  const source = await readFile(new URL("../scripts/create-planner-daily-flow.ps1", import.meta.url), "utf8");
+  const card = source.match(/\$htmlTemplate\.inputs\.select = @'\r?\n([\s\S]*?)\r?\n'@/)?.[1];
+  const body = source.match(/\$sendDigest\.inputs\.parameters\.'emailMessage\/Body' = @'\r?\n([\s\S]*?)\r?\n'@/)?.[1];
+
+  assert.ok(card, "template de tarefa não encontrado");
+  assert.ok(body, "corpo do resumo não encontrado");
+  assert.match(card, /^@concat\('<table role="presentation"/);
+  assert.match(card, /<\/td><\/tr><\/table>'\)$/);
+  assert.doesNotMatch(card, /^@concat\('<tr>/);
+  assert.match(card, /__SECTION_COLOR__/);
+  assert.match(card, /Urgente.*Alta.*Baixa.*Média/);
+  assert.match(source, /Name = 'overdue'; Color = '#b42318'/);
+  assert.match(source, /Name = 'today'; Color = '#1465a7'/);
+  assert.match(source, /Name = 'week'; Color = '#6e47a4'/);
+  assert.match(body, /<table role="presentation" width="600"/);
+  assert.match(body, /ATRASADAS/);
+  assert.match(body, /VENCEM HOJE/);
+  assert.match(body, /ESTA SEMANA/);
+  assert.match(body, /color:#ffffff!important/);
+  assert.match(body, /webresourceName=new_TelaPlanner\.html/);
+});
