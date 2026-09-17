@@ -540,6 +540,7 @@ function StatusPicker({ value, onChange }) {
 }
 
 function QuoteCompletionDialog({ quote, taskId, onUpload, onCancel, onConfirm }) {
+  const initialDraft = useRef({ result: quote?.responseSent ? "sent" : "ready", value: quote?.value || "", commercialTerms: quote?.commercialTerms || "" });
   const [result, setResult] = useState(quote?.responseSent ? "sent" : "ready");
   const [value, setValue] = useState(quote?.value || "");
   const [commercialTerms, setCommercialTerms] = useState(quote?.commercialTerms || "");
@@ -552,7 +553,20 @@ function QuoteCompletionDialog({ quote, taskId, onUpload, onCancel, onConfirm })
   const [sentConfirmed, setSentConfirmed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
   const validation = validateQuoteCommercial({ value, commercialTerms });
+  const changedFields = [
+    result !== initialDraft.current.result && "resultado comercial",
+    value !== initialDraft.current.value && "valor total",
+    commercialTerms !== initialDraft.current.commercialTerms && "condições comerciais",
+    sentConfirmed && "confirmação de envio",
+    draftAttachments.length > 0 && `${draftAttachments.length} ${draftAttachments.length === 1 ? "anexo não enviado" : "anexos não enviados"}`,
+  ].filter(Boolean);
+  const requestCancel = () => {
+    if (busy) return;
+    if (changedFields.length) setConfirmDiscard(true);
+    else onCancel();
+  };
   const addDraftAttachments = (_, filesOrFile) => {
     const files = toAttachmentFiles(filesOrFile);
     if (files.some((file) => file.size > 5 * 1024 * 1024)) {
@@ -593,8 +607,19 @@ function QuoteCompletionDialog({ quote, taskId, onUpload, onCancel, onConfirm })
     } catch (failure) { setError(failure.message || "Não foi possível concluir a tarefa."); }
     finally { setBusy(false); }
   };
-  return (
-    <div className="drawer-confirm-layer" onMouseDown={(event) => event.stopPropagation()}>
+  return createPortal(
+    <div className="drawer-confirm-layer" onMouseDown={(event) => { event.stopPropagation(); if (event.target === event.currentTarget) requestCancel(); }}>
+      {confirmDiscard ? (
+        <div className="drawer-confirm" role="dialog" aria-modal="true" aria-labelledby="quote-discard-title">
+          <h2 id="quote-discard-title">Descartar alterações?</h2>
+          <p>Ao sair, você perderá: {changedFields.join(", ")}.</p>
+          {uploadedCount > 0 && <p>{uploadedCount === 1 ? "O anexo já salvo permanecerá" : `Os ${uploadedCount} anexos já salvos permanecerão`} na tarefa.</p>}
+          <div className="drawer-confirm-actions">
+            <button className="button button-quiet" type="button" onClick={() => setConfirmDiscard(false)}>Continuar editando</button>
+            <button className="button button-danger" type="button" onClick={onCancel}>Descartar alterações</button>
+          </div>
+        </div>
+      ) : (
       <form className="drawer-confirm quote-completion-dialog" role="dialog" aria-modal="true" aria-labelledby="quote-completion-title" onSubmit={confirm} onPaste={handlePaste}>
         <h2 id="quote-completion-title">Concluir tarefa da cotação</h2>
         <p>Informe o resultado comercial antes de concluir a tarefa.</p>
@@ -610,11 +635,13 @@ function QuoteCompletionDialog({ quote, taskId, onUpload, onCancel, onConfirm })
         {uploadedCount > 0 && <p className="quote-completion-uploaded" role="status">{uploadedCount} {uploadedCount === 1 ? "anexo já salvo" : "anexos já salvos"} na tarefa.</p>}
         {error && <p className="quote-completion-error" role="alert">{error}</p>}
         <div className="drawer-confirm-actions">
-          <button className="button button-quiet" type="button" onClick={onCancel} disabled={busy}>Cancelar</button>
+          <button className="button button-quiet" type="button" onClick={requestCancel} disabled={busy}>Cancelar</button>
           <button className="button button-primary" type="submit" disabled={busy || !validation.valid || (result === "sent" && !sentConfirmed)}>{busy ? "Salvando…" : "Confirmar conclusão"}</button>
         </div>
       </form>
-    </div>
+      )}
+    </div>,
+    document.body,
   );
 }
 
