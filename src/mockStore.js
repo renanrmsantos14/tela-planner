@@ -278,6 +278,7 @@ export function loadState() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return seedState();
     const state = JSON.parse(raw);
+    const normalizeStatus = (status) => status === "Convertida em serviço" ? "Aceita pelo cliente" : status;
     if (state.teams) {
       return {
         collectionEvents: [],
@@ -285,7 +286,8 @@ export function loadState() {
         personalTags: [],
         currentUserId: "user-renan",
         ...state,
-        tasks: (state.tasks || []).map((taskItem) => ({ ...taskItem, restrictedVisibility: Boolean(taskItem.restrictedVisibility), personalTagIds: normalizePersonalTagIds(taskItem.personalTagIds) })),
+        quotes: (state.quotes || []).map((quote) => ({ ...quote, status: normalizeStatus(quote.status) })),
+        tasks: (state.tasks || []).map((taskItem) => ({ ...taskItem, quoteStatus: normalizeStatus(taskItem.quoteStatus), restrictedVisibility: Boolean(taskItem.restrictedVisibility), personalTagIds: normalizePersonalTagIds(taskItem.personalTagIds) })),
       };
     }
     const migrated = migrateLegacyTeams(state.tasks || [], state.employees || [], ["Comercial", "Financeiro", "Operação", "Qualidade"]);
@@ -295,7 +297,8 @@ export function loadState() {
       personalTags: [],
       currentUserId: "user-renan",
       ...state,
-      tasks: migrated.tasks.map((taskItem) => ({ ...taskItem, restrictedVisibility: Boolean(taskItem.restrictedVisibility), personalTagIds: normalizePersonalTagIds(taskItem.personalTagIds) })),
+      quotes: (state.quotes || []).map((quote) => ({ ...quote, status: normalizeStatus(quote.status) })),
+      tasks: migrated.tasks.map((taskItem) => ({ ...taskItem, quoteStatus: normalizeStatus(taskItem.quoteStatus), restrictedVisibility: Boolean(taskItem.restrictedVisibility), personalTagIds: normalizePersonalTagIds(taskItem.personalTagIds) })),
       teams: migrated.teams,
     };
   } catch {
@@ -1055,6 +1058,7 @@ export function updateQuote(state, id, patch = {}) {
   const reopening = !terminal && isQuoteTerminalStatus(existing.status);
   if (reopening) {
     nextQuote.finalizationAt = "";
+    nextQuote.lossReason = "";
     nextQuote.responseSent = false;
   }
   const completedAt = nextQuote.finalizationAt || new Date().toISOString();
@@ -1100,6 +1104,7 @@ export function markQuoteSent(state, id) {
 
 export function setQuoteOutcome(state, id, outcome, reason = "") {
   if (outcome === "Perdida" && !String(reason).trim()) throw new Error("Informe o motivo da perda.");
+  if (String(reason).trim().length > 1000) throw new Error("Motivo da perda excede 1.000 caracteres.");
   return updateQuote(state, id, { status: outcome, lossReason: outcome === "Perdida" ? String(reason).trim() : "", finalizationAt: new Date().toISOString() });
 }
 

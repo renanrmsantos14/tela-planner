@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { addAttachment, addComment, archivePersonalTag, createPersonalTag, createTask, createTeam, createQuote, deleteAttachment, deleteTask, deleteTeam, ensureQuoteTask, importPlannerTasks, loadPersonalTags, markQuoteSent, replaceTaskPersonalTags, resolveWaitingReturn, seedState, setQuoteOutcome, updatePersonalTag, updateTask, updateTeam, updateQuote } from "../src/mockStore.js";
+import { addAttachment, addComment, archivePersonalTag, createPersonalTag, createTask, createTeam, createQuote, deleteAttachment, deleteTask, deleteTeam, ensureQuoteTask, importPlannerTasks, loadPersonalTags, loadState, markQuoteSent, replaceTaskPersonalTags, resolveWaitingReturn, seedState, setQuoteOutcome, STORAGE_KEY, updatePersonalTag, updateTask, updateTeam, updateQuote } from "../src/mockStore.js";
 import { localDateKey } from "../src/management.js";
 
 function withStorage() {
@@ -304,6 +304,7 @@ test("reabrir cotação reativa sua tarefa principal e limpa encerramento", () =
 
   assert.equal(reopened.quotes[0].status, "Nova");
   assert.equal(reopened.quotes[0].finalizationAt, "");
+  assert.equal(reopened.quotes[0].lossReason, "");
   assert.equal(reopenedTask.status, "todo");
   assert.equal(reopenedTask.quoteStatus, "Nova");
 });
@@ -478,6 +479,17 @@ test("semeia cenário operacional amplo e variado", () => {
   assert.ok(state.tasks.some((item) => item.assigneeNames.includes("Renan Martins")));
   assert.ok(new Set(state.tasks.map((item) => item.teamName)).size >= 4);
   assert.ok(state.tasks.some((item) => item.comments.length > 0 && item.attachments.length > 0 && item.history.length > 1));
+});
+
+test("lê registros mock antigos como aceite do cliente", () => {
+  withStorage();
+  const state = seedState();
+  state.quotes = [{ id: "quote-old", status: "Convertida em serviço" }];
+  state.tasks = [{ id: "task-old", quoteId: "quote-old", quoteStatus: "Convertida em serviço" }];
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  const loaded = loadState();
+  assert.equal(loaded.quotes[0].status, "Aceita pelo cliente");
+  assert.equal(loaded.tasks[0].quoteStatus, "Aceita pelo cliente");
 });
 
 test("registra no histórico da tarefa mudanças feitas pela gestão da cotação", () => {
