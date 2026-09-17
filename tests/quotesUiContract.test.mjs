@@ -32,6 +32,8 @@ test("kanban de cotações move por arraste sem seletor nos cards", () => {
   assert.doesNotMatch(kanban, /Mover para…|quote-kanban-move/);
   assert.match(kanban, /onDragStart/);
   assert.match(kanban, /onMove={handleBoardMove}/);
+  assert.match(kanban, /formatMoney\(quote\.value\)/);
+  assert.match(kanban, /quote-kanban-value-content/);
 });
 
 test("kanban de cotações replica o motor e a composição do quadro de tarefas", () => {

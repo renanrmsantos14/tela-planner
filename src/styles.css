@@ -346,6 +346,11 @@ button { cursor: pointer; }
 .quote-kanban-card .priority-warning { color: #80530c; background: #fff5dc; }
 .quote-kanban-card .priority-danger { color: #a92e3b; background: #fff0f2; }
 .quote-kanban-card .task-description { margin-bottom: 10px; }
+.quote-kanban-value { display: flex; align-items: center; gap: 8px; min-width: 0; margin: 9px 0 2px; padding: 7px 9px; border: 1px solid #d7e6df; border-radius: 9px; color: #175d4d; background: #f1faf5; }
+.quote-kanban-value-icon { display: grid; flex: 0 0 25px; width: 25px; height: 25px; place-items: center; border-radius: 7px; color: #fff; background: #278467; }
+.quote-kanban-value-content { display: grid; min-width: 0; gap: 1px; }
+.quote-kanban-value-content small { color: #5d7c71; font-size: 9px; font-weight: 750; line-height: 1.1; letter-spacing: .04em; text-transform: uppercase; }
+.quote-kanban-value-content strong { overflow: hidden; color: #145743; font-size: 13px; font-weight: 850; line-height: 1.2; font-variant-numeric: tabular-nums; text-overflow: ellipsis; white-space: nowrap; }
 .quote-v3-layer { position: fixed; inset: 0; z-index: 90; display: flex; justify-content: flex-end; background: rgba(2, 23, 34, .42); backdrop-filter: blur(2px); animation: quote-v3-fade 180ms linear; }
 .quote-v3-drawer { display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto; width: min(760px, 100vw); height: 100%; background: #fff; box-shadow: -20px 0 50px rgba(0, 24, 39, .2); animation: quote-v3-enter 240ms cubic-bezier(.23,1,.32,1); }
 .quote-v3-create { width: min(720px, 100vw); }

@@ -179,7 +179,7 @@ function formatDateTime(value) {
   return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Sao_Paulo" }).format(date);
 }
 
-function formatMoney(value) {
+export function formatMoney(value) {
   if (value === "" || value === null || value === undefined) return "Valor sob consulta";
   const number = typeof value === "number" ? value : Number(String(value).replace(/[^0-9,-]/g, "").replace(/\./g, "").replace(",", "."));
   if (Number.isNaN(number)) return String(value);

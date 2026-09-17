@@ -1,6 +1,6 @@
 import React, { memo, useCallback, useMemo } from "react";
 import { BadgeDollarSign, CalendarDays, CircleHelp, ClipboardList, Clock3, FileText, GripVertical, ScanSearch, Send } from "lucide-react";
-import { QUOTE_OPEN_STATUSES, QUOTE_PRIORITIES } from "../quoteDomain";
+import { formatMoney, QUOTE_OPEN_STATUSES, QUOTE_PRIORITIES } from "../quoteDomain";
 import { formatDate, waitingContextSummary } from "../domain";
 import KanbanBoard from "../KanbanBoard.jsx";
 
@@ -32,6 +32,7 @@ const QuoteCard = memo(function QuoteCard({ quote, task, isDragging, draggable, 
     <div className="task-card-top"><span className={`priority priority-${PRIORITY_TONES[priority.id] || "neutral"}`} aria-label={`Prioridade: ${priority.label}`}>{priority.label}</span>{overdue && <span className="overdue-label">Vencida</span>}<span className={overdue ? "date-chip overdue" : "date-chip"} title={`Prazo: ${formatDate(quote.deadline)}`}><CalendarDays size={13} aria-hidden="true" />{formatDate(quote.deadline)}</span></div>
     <div className="task-card-title-row"><h3>{quote.client || quote.title || "Cotação sem cliente"}</h3></div>
     <div className="task-link"><GripVertical size={13} aria-hidden="true" /><FileText size={13} aria-hidden="true" /><em>{quote.code || "Sem número"}{quote.title ? ` · ${quote.title}` : ""}</em></div>
+    {quote.value !== null && quote.value !== undefined && String(quote.value).trim() && <div className="quote-kanban-value" aria-label={`Valor da cotação: ${formatMoney(quote.value)}`}><span className="quote-kanban-value-icon" aria-hidden="true"><BadgeDollarSign size={14} /></span><span className="quote-kanban-value-content"><small>Valor</small><strong>{formatMoney(quote.value)}</strong></span></div>}
     {waitingSummary && <div className="task-waiting-summary" title={waitingSummary}><Clock3 size={13} /><span>{waitingSummary}</span></div>}
     {(quote.serviceType || quote.origin || quote.destination) && <p className="task-description">{[quote.serviceType, [quote.origin, quote.destination].filter(Boolean).join(" → ")].filter(Boolean).join(" · ")}</p>}
   </article>;
