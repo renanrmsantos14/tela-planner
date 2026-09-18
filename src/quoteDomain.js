@@ -16,8 +16,6 @@ export const QUOTE_PRIORITIES = [
   { id: "urgent", label: "Urgente" },
 ];
 
-export const QUOTE_CHANNELS = ["WhatsApp", "Telefone", "E-mail"];
-
 export const QUOTE_VEHICLE_VALUES = Object.freeze({
   "Básico": 202410000,
   Executivo: 202410001,
@@ -40,7 +38,6 @@ export function validateQuoteCommercial(input = {}) {
     ? Number(normalized.replace(/\./g, "").replace(",", "."))
     : Number(normalized);
   if (!raw || !/^[\d.,]+$/.test(normalized) || !Number.isFinite(number) || number <= 0) errors.value = "Informe um valor maior que zero.";
-  if (!String(input.commercialTerms ?? "").trim()) errors.commercialTerms = "Informe as condições comerciais.";
   return { valid: Object.keys(errors).length === 0, errors };
 }
 export const QUOTE_CREATE_STEPS = [
@@ -54,13 +51,10 @@ const STEP_FIELDS = {
     ["title", "Informe o título interno."],
     ["client", "Informe o cliente ou empresa."],
     ["clientContact", "Informe o nome do solicitante."],
-    ["channel", "Selecione o canal de entrada."],
   ],
   service: [
-    ["serviceType", "Informe o tipo de serviço."],
     ["origin", "Informe a origem."],
     ["destination", "Informe o destino."],
-    ["serviceDate", "Informe a data e hora do serviço."],
   ],
   commercial: [],
 };
@@ -78,10 +72,11 @@ export function validateQuoteStep(input = {}, stepId = "review") {
     for (const field of ["origin", "destination"]) if (String(input[field] || "").length > 10000) errors[field] = "Máximo de 10.000 caracteres.";
     if (String(input.notes || "").length > 4000) errors.notes = "O pedido do cliente excede 4.000 caracteres, limite do Dataverse.";
   }
-  if (stepId === "client" && ["WhatsApp", "Telefone"].includes(input.channel) && !String(input.clientPhone || "").trim()) errors.clientPhone = "Informe o telefone.";
-  if (stepId === "client" && input.channel === "E-mail") {
+  if (stepId === "client") {
+    const phone = String(input.clientPhone || "").trim();
     const email = String(input.clientEmail || "").trim();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.clientEmail = "Informe um e-mail válido.";
+    if (!phone && !email) errors.clientPhone = "Informe pelo menos o telefone ou o e-mail.";
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.clientEmail = "Informe um e-mail válido.";
   }
   if (stepId === "commercial" && QUOTE_COMPLETED_STATUSES.includes(input.status)) Object.assign(errors, validateQuoteCommercial(input).errors);
   return { valid: Object.keys(errors).length === 0, errors };
@@ -163,7 +158,11 @@ const EXECUTIVE_NOTES = [
   "Caso precise de suporte, acione a equipe Betinhos pelos canais oficiais do atendimento.",
 ];
 
-const ASSET_NAMES = {
+export function quoteEmailNotes(quote = {}) {
+  return [...(isVanVehicle(quote.vehicleType) ? VAN_NOTES : EXECUTIVE_NOTES), ...String(quote.commercialTerms || "").split(/\r?\n+/).map((item) => item.trim()).filter(Boolean)];
+}
+
+export const QUOTE_ASSET_NAMES = {
   banner: "new_cotacao_banner.png",
   header: "new_cotacao_header_solicitacao.png",
   vehicle: "new_cotacao_banner_veiculos.png",
@@ -225,23 +224,23 @@ export function validateQuoteDraft(input = {}) {
   if (stepErrors.clientPhone && !missing.includes("telefone ou e-mail")) missing.push("telefone ou e-mail");
   if (stepErrors.clientEmail && !missing.includes("e-mail válido")) missing.push("e-mail válido");
   if (stepErrors.value) missing.push("valor total maior que zero");
-  if (stepErrors.commercialTerms) missing.push("condições comerciais");
   if (String(input.status || "") === "Perdida" && !String(input.lossReason || "").trim()) missing.push("motivo da perda");
   return missing.length ? { valid: false, missing, error: `Informe: ${missing.join(", ")}.` } : { valid: true, missing: [], error: "" };
 }
 
-function assetUrl(baseUrl, filename) {
+function assetUrl(baseUrl, filename, imageUrls = {}) {
+  if (imageUrls[filename]) return imageUrls[filename];
   if (!baseUrl) return filename;
   return `${String(baseUrl).replace(/\/$/, "")}/WebResources/${filename}`;
 }
 
 export function buildQuoteEmailHtml(quote = {}, assets = {}) {
   const baseUrl = assets.baseUrl || assets.clientUrl || "";
-  const names = { ...ASSET_NAMES, ...(assets.names || {}) };
+  const names = { ...QUOTE_ASSET_NAMES, ...(assets.names || {}) };
   const van = isVanVehicle(quote.vehicleType);
   const intro = quote.clientContact || quote.client || "cliente";
   const route = buildQuoteRouteText(quote);
-  const notes = [...(van ? VAN_NOTES : EXECUTIVE_NOTES), ...String(quote.commercialTerms || "").split(/\r?\n+/).map((item) => item.trim()).filter(Boolean)];
+  const notes = quoteEmailNotes(quote);
   const orderNotes = route.map((line) => `<p style="margin:0 0 8px;font-size:13px;line-height:1.6;color:#ffffff;">&#8226; ${escapeHtml(line)}</p>`).join("");
   const important = notes.map((line) => `<tr><td style="padding:0 0 12px;font-size:14px;line-height:1.65;color:#171512;">&#8226; ${escapeHtml(line)}</td></tr>`).join("");
   const value = escapeHtml(formatMoney(quote.value));
@@ -251,10 +250,10 @@ export function buildQuoteEmailHtml(quote = {}, assets = {}) {
     "<style>body{-webkit-text-size-adjust:100%;}.cotacao-fluid-img{display:block;width:100%;height:auto;border:0;}@media(max-width:640px){.a4-sheet{width:100%!important;max-width:100%!important;min-height:0!important}.cotacao-col,.cotacao-img-pair{display:block!important;width:100%!important}.cotacao-value{font-size:26px!important}}</style></head>",
     "<body style=\"margin:0;padding:0;background:#0a2f41;\"><table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" width=\"100%\" style=\"background:#0a2f41;margin:0;padding:0;\"><tr><td align=\"center\">",
     "<table class=\"a4-sheet\" role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" width=\"794\" style=\"width:794px;max-width:794px;min-height:1123px;background:#d9d9d9;border-collapse:collapse;font-family:Segoe UI,Arial,sans-serif;color:#171512;\">",
-    `<tr><td><img class="cotacao-fluid-img" src="${escapeHtml(assetUrl(baseUrl, names.banner))}" alt="Betinhos Executive Service" width="794"></td></tr>`,
+    `<tr><td><img class="cotacao-fluid-img" src="${escapeHtml(assetUrl(baseUrl, names.banner, assets.imageUrls))}" alt="Betinhos Executive Service" width="794"></td></tr>`,
     `<tr><td style="padding:24px 42px 14px;background:#d9d9d9;"><p style="margin:0 0 14px;font-size:16px;line-height:1.6;">Olá ${escapeHtml(intro)},</p><p style="margin:0 0 12px;font-size:14px;line-height:1.62;">A <strong>Betinhos Executive Service</strong> é uma empresa de traslados e serviços executivos presente no estado de São Paulo há mais de 37 anos e, ao longo dessas décadas, mantemos compromisso com Non Compliance, EHS e Safe Fleet.</p><p style="margin:0;font-size:14px;line-height:1.7;">Abaixo segue sua cotação no mesmo formato do material aprovado, com foco nas informações do atendimento e sem a assinatura final.</p></td></tr>`,
-    `<tr><td style="background:#0a2f41;padding:0;"><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;"><tr><td class="cotacao-col" valign="middle" width="50%" style="width:50%;padding:24px 22px;text-align:center;"><img src="${escapeHtml(assetUrl(baseUrl, names.header))}" alt="Betinhos Executive Service" width="340" style="display:block;width:100%;max-width:340px;height:auto;border:0;margin:0 auto;"></td><td class="cotacao-col" valign="top" width="50%" style="width:50%;padding:22px 24px 24px;color:#ffffff;"><p style="margin:0 0 10px;font-size:15px;line-height:1.35;color:#ffffff;"><em>Roteiro do atendimento</em></p>${orderNotes}</td></tr></table></td></tr>`,
-    `<tr><td style="background:#d9d9d9;padding:0;"><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;"><tr><td class="cotacao-img-pair" width="50%" style="width:50%;padding:16px 10px 18px 18px;text-align:center;"><img src="${escapeHtml(assetUrl(baseUrl, van ? names.vanVehicle : names.vehicle))}" alt="${van ? "Van executiva Betinhos" : "Frota executiva Betinhos"}" width="360" style="display:block;width:100%;max-width:360px;height:auto;border:0;margin:0 auto;"></td><td class="cotacao-img-pair" width="50%" style="width:50%;padding:16px 18px 18px 10px;text-align:center;"><img src="${escapeHtml(assetUrl(baseUrl, van ? names.vanInfo : names.commitments))}" alt="${van ? "Informações da van executiva" : "Compromissos operacionais Betinhos"}" width="360" style="display:block;width:100%;max-width:360px;height:auto;border:0;margin:0 auto;"></td></tr></table></td></tr>`,
+    `<tr><td style="background:#0a2f41;padding:0;"><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;"><tr><td class="cotacao-col" valign="middle" width="50%" style="width:50%;padding:24px 22px;text-align:center;"><img src="${escapeHtml(assetUrl(baseUrl, names.header, assets.imageUrls))}" alt="Betinhos Executive Service" width="340" style="display:block;width:100%;max-width:340px;height:auto;border:0;margin:0 auto;"></td><td class="cotacao-col" valign="top" width="50%" style="width:50%;padding:22px 24px 24px;color:#ffffff;"><p style="margin:0 0 10px;font-size:15px;line-height:1.35;color:#ffffff;"><em>Roteiro do atendimento</em></p>${orderNotes}</td></tr></table></td></tr>`,
+    `<tr><td style="background:#d9d9d9;padding:0;"><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;"><tr><td class="cotacao-img-pair" width="50%" style="width:50%;padding:16px 10px 18px 18px;text-align:center;"><img src="${escapeHtml(assetUrl(baseUrl, van ? names.vanVehicle : names.vehicle, assets.imageUrls))}" alt="${van ? "Van executiva Betinhos" : "Frota executiva Betinhos"}" width="360" style="display:block;width:100%;max-width:360px;height:auto;border:0;margin:0 auto;"></td><td class="cotacao-img-pair" width="50%" style="width:50%;padding:16px 18px 18px 10px;text-align:center;"><img src="${escapeHtml(assetUrl(baseUrl, van ? names.vanInfo : names.commitments, assets.imageUrls))}" alt="${van ? "Informações da van executiva" : "Compromissos operacionais Betinhos"}" width="360" style="display:block;width:100%;max-width:360px;height:auto;border:0;margin:0 auto;"></td></tr></table></td></tr>`,
     `<tr><td style="background:#0a2f41;padding:22px 34px 24px;text-align:center;"><p style="margin:0 0 8px;font-size:17px;line-height:1.42;color:#ffffff;font-weight:700;">Com base nesse comprometimento, faço saber que o custo total é de</p><p class="cotacao-value" style="margin:0 0 12px;font-size:30px;line-height:1.15;color:#ffffff;font-weight:700;">${value}</p><p style="margin:0;font-size:15px;line-height:1.42;color:#ffffff;font-weight:700;">Veja abaixo informações importantes para sua contratação</p></td></tr>`,
     `<tr><td style="background:#d9d9d9;padding:22px 34px 24px;"><p style="margin:0 0 14px;font-size:16px;line-height:1.35;font-weight:700;">OBSERVAÇÕES IMPORTANTES:</p><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;">${important}</table></td></tr>`,
     "</table></td></tr></table></body></html>",
@@ -263,13 +262,37 @@ export function buildQuoteEmailHtml(quote = {}, assets = {}) {
 
 export function buildQuotePlainText(quote = {}) {
   const route = buildQuoteRouteText(quote).map((line) => `• ${line}`).join("\n");
-  const notes = [...(isVanVehicle(quote.vehicleType) ? VAN_NOTES : EXECUTIVE_NOTES), ...String(quote.commercialTerms || "").split(/\r?\n+/).map((item) => item.trim()).filter(Boolean)].map((line) => `• ${line}`).join("\n");
+  const notes = quoteEmailNotes(quote).map((line) => `• ${line}`).join("\n");
   return [`Cotação ${quote.code || ""}`.trim(), `Olá ${quote.clientContact || quote.client || "cliente"},`, "", route, "", `Custo total: ${formatMoney(quote.value)}`, "", "OBSERVAÇÕES IMPORTANTES:", notes].join("\n");
 }
 
+export async function loadQuoteImages(quote, { baseUrl = "", signal, fetcher = fetch } = {}) {
+  const names = [QUOTE_ASSET_NAMES.banner, QUOTE_ASSET_NAMES.header,
+    ...(isVanVehicle(quote.vehicleType)
+      ? [QUOTE_ASSET_NAMES.vanVehicle, QUOTE_ASSET_NAMES.vanInfo]
+      : [QUOTE_ASSET_NAMES.vehicle, QUOTE_ASSET_NAMES.commitments])];
+  const files = {};
+  const imageUrls = {};
+  await Promise.all(names.map(async (name) => {
+    const response = await fetcher(assetUrl(baseUrl, name), { signal, credentials: "same-origin" });
+    if (!response.ok) throw new Error(`Não foi possível carregar a imagem ${name}.`);
+    const blob = await response.blob();
+    const bytes = new Uint8Array(await blob.arrayBuffer());
+    if (bytes.length < 24 || bytes[0] !== 137 || bytes[1] !== 80 || bytes[2] !== 78 || bytes[3] !== 71) throw new Error(`A imagem ${name} está indisponível.`);
+    signal?.throwIfAborted?.();
+    let binary = "";
+    for (let index = 0; index < bytes.length; index += 8192) binary += String.fromCharCode(...bytes.subarray(index, index + 8192));
+    files[name] = bytes;
+    imageUrls[name] = `data:image/png;base64,${btoa(binary)}`;
+  }));
+  return { files, imageUrls };
+}
+
 export async function copyQuoteToClipboard(quote, assets = {}) {
-  const html = buildQuoteEmailHtml(quote, assets);
+  const prepared = assets.imageUrls ? assets : { ...assets, ...await loadQuoteImages(quote, assets) };
+  const html = buildQuoteEmailHtml(quote, prepared);
   const text = buildQuotePlainText(quote);
+  assets.signal?.throwIfAborted?.();
   if (typeof navigator !== "undefined" && navigator.clipboard?.write && typeof ClipboardItem !== "undefined") {
     await navigator.clipboard.write([new ClipboardItem({ "text/html": new Blob([html], { type: "text/html" }), "text/plain": new Blob([text], { type: "text/plain" }) })]);
     return { html, text, method: "clipboard" };

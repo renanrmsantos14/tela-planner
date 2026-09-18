@@ -1,30 +1,47 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Copy, ExternalLink, Link2, Save, X } from "lucide-react";
-import { buildQuoteEmailHtml, copyQuoteToClipboard, QUOTE_OPEN_STATUSES, quoteSubject, validateQuoteStep } from "../quoteDomain";
+import React, { useEffect, useRef, useState } from "react";
+import { Download, ExternalLink, Link2, Mail, Save, Trash2, X } from "lucide-react";
+import { buildQuoteEmailHtml, loadQuoteImages, QUOTE_OPEN_STATUSES, QUOTE_TERMINAL_STATUSES, quoteSubject, validateQuoteStep } from "../quoteDomain";
+import { createQuoteWord, downloadQuoteWord } from "../quoteWord";
+import { createQuotePdf, downloadQuotePdf } from "../quotePdf";
+import { acquireMailToken } from "../msalConfig";
+import { createQuoteDraft, openDraftInOutlook } from "../mailGraph";
 import { canRegisterWaitingReturn, formatDate, normalizeWaitingContext, validateWaitingContext } from "../domain";
 import { QuoteClientFields, QuoteCommercialFields, QuoteServiceFields } from "./QuoteFields";
 import MissingDeadlineDialog from "./MissingDeadlineDialog";
+import TaskHistorySection from "../TaskHistorySection";
+import QuoteDeleteDialog from "./QuoteDeleteDialog";
 
 function StatusBadge({ status }) { return <span className="quote-v3-status"><span />{status || "Sem status"}</span>; }
 
-export default function QuoteManagementDrawer({ quote, task, employees = [], teams = [], currentEmployee, WaitingContextFieldsComponent, ReturnsSectionComponent, onClose, onOpenTask, onEnsureTaskDetails, onUpdate, onRegisterWaitingReturn, onAttachment, onDeleteAttachment, loadAttachmentContent, AttachmentSectionComponent }) {
-  const [tab, setTab] = useState("summary");
+export default function QuoteManagementDrawer({ quote, task, employees = [], teams = [], currentEmployee, WaitingContextFieldsComponent, ReturnsSectionComponent, onClose, onOpenTask, onEnsureTaskDetails, onUpdate, onOutcome, onDeleteQuote, onRegisterWaitingReturn, onAttachment, onDeleteAttachment, loadAttachmentContent, AttachmentSectionComponent }) {
   const [draft, setDraft] = useState(quote);
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
-  const [copyFailed, setCopyFailed] = useState(false);
-  const [preview, setPreview] = useState(false);
+  const [composerOpen, setComposerOpen] = useState(false);
+  const [composerBusy, setComposerBusy] = useState("");
+  const [composerMessage, setComposerMessage] = useState("");
+  const [composerMode, setComposerMode] = useState("body");
+  const [attachmentFormat, setAttachmentFormat] = useState("pdf");
+  const [composerEmail, setComposerEmail] = useState(quote.clientEmail || "");
   const [confirmMissingDeadline, setConfirmMissingDeadline] = useState(false);
   const [waitingContext, setWaitingContext] = useState(() => normalizeWaitingContext(task?.waitingContext));
   const [waitingError, setWaitingError] = useState("");
+  const [resultOpen, setResultOpen] = useState(false);
+  const [resultStatus, setResultStatus] = useState("Aceita pelo cliente");
+  const [lossReason, setLossReason] = useState("");
+  const [resultError, setResultError] = useState("");
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const closeRef = useRef(null);
-  const history = useMemo(() => [...(task?.history || [])].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt))), [task?.history]);
+  const composerController = useRef(null);
   const update = (key, value) => setDraft((current) => ({ ...current, [key]: value }));
 
   useEffect(() => { closeRef.current?.focus(); onEnsureTaskDetails?.(task?.id); }, [onEnsureTaskDetails, task?.id]);
   useEffect(() => { setDraft(quote); }, [quote]);
+  useEffect(() => { setComposerEmail(quote.clientEmail || ""); }, [quote.clientEmail]);
   useEffect(() => { setWaitingContext(normalizeWaitingContext(task?.waitingContext)); setWaitingError(""); }, [task?.id, task?.waitingContext]);
-  useEffect(() => { const handler = (event) => { if (event.key === "Escape") preview ? setPreview(false) : onClose?.(); }; window.addEventListener("keydown", handler); return () => window.removeEventListener("keydown", handler); }, [onClose, preview]);
+  const closeComposer = () => { composerController.current?.abort(); composerController.current = null; setComposerBusy(""); setComposerMessage(""); setComposerOpen(false); };
+  useEffect(() => { const handler = (event) => { if (event.key === "Escape") deleteOpen ? setDeleteOpen(false) : composerOpen ? closeComposer() : onClose?.(); }; window.addEventListener("keydown", handler); return () => window.removeEventListener("keydown", handler); }, [onClose, composerOpen, deleteOpen]);
+  useEffect(() => () => composerController.current?.abort(), []);
 
   const run = async (operation) => {
     setSaving(true);
@@ -47,34 +64,75 @@ export default function QuoteManagementDrawer({ quote, task, employees = [], tea
     if (result === false) setWaitingError("Não foi possível salvar o contexto. Tente novamente.");
   };
   const waitingChanged = JSON.stringify(normalizeWaitingContext(task?.waitingContext)) !== JSON.stringify(waitingContext);
-  const copy = async () => {
-    setCopyFailed(false);
-    const result = await run(() => copyQuoteToClipboard(draft, { baseUrl: window.location.origin }));
-    if (result === false) setCopyFailed(true);
+  const registerResult = async (event) => {
+    event.preventDefault();
+    const reason = lossReason.trim();
+    if (resultStatus === "Perdida" && !reason) { setResultError("Informe o motivo da perda."); return; }
+    if (reason.length > 1000) { setResultError("Motivo da perda excede 1.000 caracteres."); return; }
+    setResultError("");
+    const success = await run(() => onOutcome?.(quote.id, resultStatus, reason));
+    if (success === false) setResultError("Não foi possível registrar o resultado. Tente novamente.");
+    else setResultOpen(false);
+  };
+  const reopen = async () => {
+    const success = await run(() => onUpdate?.(quote.id, { status: "Nova", responseSent: false, finalizationAt: "", lossReason: "" }));
+    if (success === false) setResultError("Não foi possível reabrir a cotação. Tente novamente.");
+  };
+  const composeAction = async (action) => {
+    const controller = new AbortController();
+    composerController.current = controller;
+    setComposerBusy(action);
+    setComposerMessage("");
+    try {
+      if (action === "draft" && !composerEmail.trim()) throw new Error("Informe o e-mail do cliente para criar o rascunho.");
+      const assets = await loadQuoteImages(draft, { baseUrl: window.location.origin, signal: controller.signal });
+      if (action === "word") {
+        const word = await createQuoteWord(draft, { baseUrl: window.location.origin, signal: controller.signal, assets });
+        if (!controller.signal.aborted) { downloadQuoteWord(word); setComposerMessage("Modelo Word baixado com imagens incorporadas."); }
+      } else if (action === "pdf") {
+        const pdf = await createQuotePdf(draft, { baseUrl: window.location.origin, signal: controller.signal, assets });
+        if (!controller.signal.aborted) { downloadQuotePdf(pdf); setComposerMessage("PDF baixado com imagens incorporadas."); }
+      } else {
+        const token = await acquireMailToken();
+        let attachment;
+        if (composerMode !== "body") {
+          const result = attachmentFormat === "pdf"
+            ? await createQuotePdf(draft, { baseUrl: window.location.origin, signal: controller.signal, assets })
+            : await createQuoteWord(draft, { baseUrl: window.location.origin, signal: controller.signal, assets });
+          attachment = { name: result.filename, bytes: new Uint8Array(await result.blob.arrayBuffer()), contentType: attachmentFormat === "pdf" ? "application/pdf" : "application/vnd.openxmlformats-officedocument.wordprocessingml.document" };
+        }
+        const draftResult = await createQuoteDraft({ token, quote: { ...draft, clientEmail: composerEmail.trim() }, mode: composerMode, attachment, assets: { ...assets, buildHtml: buildQuoteEmailHtml }, subject: quoteSubject(draft) });
+        openDraftInOutlook(draftResult);
+        if (!controller.signal.aborted) setComposerMessage("Rascunho criado no Outlook. Revise e envie manualmente; a cotação continua sem status de enviada.");
+      }
+    } catch (error) {
+      if (!controller.signal.aborted) setComposerMessage(error.message || "Não foi possível preparar a proposta.");
+    } finally {
+      if (composerController.current === controller) { composerController.current = null; setComposerBusy(""); }
+    }
   };
 
   return <div className="quote-v3-layer" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose?.(); }}><aside className="quote-v3-drawer quote-v3-management" role="dialog" aria-modal="true" aria-labelledby="quote-management-title">
     <header className="quote-v3-drawer-header"><div><span className="quote-code">{draft.code || "Sem número"}</span><h2 id="quote-management-title">{draft.client || draft.title}</h2><div className="quote-v3-header-meta"><StatusBadge status={draft.status} /><span>{task?.assigneeNames?.join(", ") || "Financeiro"}</span><span className={draft.deadline && draft.deadline < new Date().toISOString().slice(0, 10) && QUOTE_OPEN_STATUSES.includes(draft.status) ? "danger-text" : ""}>Prazo {formatDate(draft.deadline)}</span></div></div><button ref={closeRef} className="icon-button" type="button" onClick={onClose} aria-label="Fechar cotação"><X size={20} /></button></header>
-    <nav className="quote-v3-tabs" aria-label="Detalhes da cotação">{[["summary", "Resumo"], ["data", "Dados"], ["activity", "Atividade"]].map(([id, label]) => <button key={id} type="button" className={tab === id ? "active" : ""} onClick={() => { setTab(id); if (id === "activity") onEnsureTaskDetails?.(task?.id); }}>{label}</button>)}</nav>
     <div className="quote-v3-drawer-body">
-      {tab === "summary" && <div className="quote-v3-summary">
-        <section className="quote-v3-facts"><div><span>Serviço</span><strong>{draft.serviceType || "Não informado"}</strong></div><div><span>Rota</span><strong>{draft.origin || "—"} → {draft.destination || "—"}</strong></div><div><span>Data</span><strong>{formatDate(draft.serviceDate)}</strong></div><div><span>Valor</span><strong>{draft.value || "Não informado"}</strong></div></section>
-        {draft.status === "Aguardando informação" && task && WaitingContextFieldsComponent && <div className="quote-v3-waiting">
-          <WaitingContextFieldsComponent value={waitingContext} onChange={setWaitingContext} employees={employees} teams={teams} error={waitingError} />
-          <div className="quote-v3-waiting-actions">
-            {canRegisterWaitingReturn(task, currentEmployee, teams) && onRegisterWaitingReturn && <button className="button button-secondary drawer-return-action" type="button" onClick={() => onRegisterWaitingReturn(task.id)}>Registrar retorno</button>}
-            {waitingChanged && <button className="button button-primary" type="button" disabled={saving} onClick={saveWaitingContext}>{saving ? "Salvando…" : "Salvar contexto"}</button>}
-          </div>
-        </div>}
-        {task && ReturnsSectionComponent && <ReturnsSectionComponent task={task} currentEmployee={currentEmployee} loadAttachmentContent={loadAttachmentContent} onDeleteAttachment={onDeleteAttachment} />}
-        <section className="quote-v3-recent"><header><h3>Últimos eventos</h3><button className="button button-quiet" type="button" onClick={() => setTab("activity")}>Ver histórico</button></header>{task?.detailsLoading ? <p>Carregando atividade…</p> : task?.detailsError ? <p className="quote-v3-inline-warning">Histórico indisponível. As demais ações continuam disponíveis.</p> : history.slice(0, 3).map((item) => <article key={item.id}><span>{item.text}</span><small>{formatDate(item.createdAt)} · {item.author || "Sistema"}</small></article>)}</section>
+      <form className="quote-v3-data" onSubmit={(event) => { event.preventDefault(); save(); }}><section><h3>Cliente</h3><QuoteClientFields draft={draft} update={update} errors={errors} /></section><section><h3>Serviço</h3><QuoteServiceFields draft={draft} update={update} errors={errors} /></section><section><h3>Prazo e comercial</h3><QuoteCommercialFields draft={draft} update={update} errors={errors} /></section><button className="button button-primary" type="submit" disabled={saving}><Save size={15} />{saving ? "Salvando…" : "Salvar dados"}</button></form>
+      {task && AttachmentSectionComponent && <AttachmentSectionComponent taskId={task.id} attachments={task.attachments || []} loadAttachmentContent={loadAttachmentContent} onAttachment={onAttachment} onDeleteAttachment={onDeleteAttachment} itemLabel="à cotação" helperText="Anexos da cotação ficam vinculados à tarefa de acompanhamento." />}
+      {draft.status === "Aguardando informação" && task && WaitingContextFieldsComponent && <div className="quote-v3-waiting">
+        <WaitingContextFieldsComponent value={waitingContext} onChange={setWaitingContext} employees={employees} teams={teams} error={waitingError} />
+        <div className="quote-v3-waiting-actions">
+          {canRegisterWaitingReturn(task, currentEmployee, teams) && onRegisterWaitingReturn && <button className="button button-secondary drawer-return-action" type="button" onClick={() => onRegisterWaitingReturn(task.id)}>Registrar retorno</button>}
+          {waitingChanged && <button className="button button-primary" type="button" disabled={saving} onClick={saveWaitingContext}>{saving ? "Salvando…" : "Salvar contexto"}</button>}
+        </div>
       </div>}
-      {tab === "data" && <><form className="quote-v3-data" onSubmit={(event) => { event.preventDefault(); save(); }}><section><h3>Cliente</h3><QuoteClientFields draft={draft} update={update} errors={errors} /></section><section><h3>Serviço</h3><QuoteServiceFields draft={draft} update={update} errors={errors} /></section><section><h3>Prazo e comercial</h3><QuoteCommercialFields draft={draft} update={update} errors={errors} /></section><button className="button button-primary" type="submit" disabled={saving}><Save size={15} />{saving ? "Salvando…" : "Salvar dados"}</button></form>{task && AttachmentSectionComponent && <AttachmentSectionComponent taskId={task.id} attachments={task.attachments || []} loadAttachmentContent={loadAttachmentContent} onAttachment={onAttachment} onDeleteAttachment={onDeleteAttachment} itemLabel="à cotação" helperText="Anexos da cotação ficam vinculados à tarefa de acompanhamento." />}</>}
-      {tab === "activity" && <section className="quote-v3-activity">{task?.detailsLoading ? <p>Carregando histórico…</p> : task?.detailsError ? <div className="quote-v3-inline-warning"><strong>Histórico indisponível</strong><span>{task.detailsError}</span><button className="button button-secondary" type="button" onClick={() => onEnsureTaskDetails?.(task.id)}>Tentar novamente</button></div> : history.length ? history.map((item) => <article key={item.id}><span className="history-dot" /><div><strong>{item.text}</strong><small>{formatDate(item.createdAt)} · {item.author || "Sistema"}</small></div></article>) : <p>Nenhum evento registrado.</p>}</section>}
+      {task && ReturnsSectionComponent && <ReturnsSectionComponent task={task} currentEmployee={currentEmployee} loadAttachmentContent={loadAttachmentContent} onDeleteAttachment={onDeleteAttachment} />}
+      {QUOTE_TERMINAL_STATUSES.includes(draft.status) && <section className="quote-v3-result"><h3>Resultado</h3><strong>{draft.status}</strong><span>Finalizada em {draft.finalizationAt ? new Date(draft.finalizationAt).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }) : "data não informada"}</span>{draft.status === "Perdida" && <p>Motivo: {draft.lossReason || "Não registrado"}</p>}</section>}
+      <TaskHistorySection history={task?.history} employees={employees} loading={task?.detailsLoading} error={task?.detailsError} onRetry={task ? () => onEnsureTaskDetails?.(task.id) : undefined} />
     </div>
-    <footer className="quote-v3-drawer-footer quote-v3-management-footer"><div><button className="button button-secondary" type="button" onClick={() => setPreview(true)}><ExternalLink size={15} />Abrir prévia</button>{task && <button className="button button-quiet" type="button" onClick={() => onOpenTask?.(task.id)}><Link2 size={15} />Ver tarefa</button>}</div>{draft.status === "Cotada" && <button className="button button-primary" type="button" disabled={saving} onClick={copy}><Copy size={15} />{copyFailed ? "Falha ao copiar · tentar novamente" : "Copiar proposta"}</button>}</footer>
+    <footer className="quote-v3-drawer-footer quote-v3-management-footer"><div><button className="button button-secondary" type="button" onClick={() => { setComposerMessage(""); setComposerOpen(true); }}><ExternalLink size={15} />Montar email</button>{task && <button className="button button-quiet" type="button" onClick={() => onOpenTask?.(task.id)}><Link2 size={15} />Ver tarefa</button>}{draft.status === "Respondida ao cliente" && <button className="button button-primary" type="button" disabled={saving} onClick={() => { setResultError(""); setResultOpen(true); }}>Registrar resultado</button>}{QUOTE_TERMINAL_STATUSES.includes(draft.status) && <button className="button button-secondary" type="button" disabled={saving} onClick={reopen}>Reabrir cotação</button>}{onDeleteQuote && <button className="button button-danger" type="button" disabled={saving} onClick={() => setDeleteOpen(true)}><Trash2 size={15} />Excluir cotação</button>}</div>{resultError && !resultOpen && <span role="alert">{resultError}</span>}</footer>
   </aside>
-  {preview && <div className="quote-v3-preview" role="dialog" aria-modal="true" aria-label="Prévia da cotação"><header><div><strong>Prévia para Outlook</strong><small>{quoteSubject(draft)}</small></div><button className="icon-button" type="button" onClick={() => setPreview(false)} aria-label="Fechar prévia"><X size={20} /></button></header><iframe title="Prévia da tabela para Outlook" srcDoc={buildQuoteEmailHtml(draft, { baseUrl: window.location.origin })} /></div>}
+  {composerOpen && <div className="quote-v3-composer-layer" onMouseDown={(event) => { if (event.target === event.currentTarget) closeComposer(); }}><div className="quote-v3-preview" role="dialog" aria-modal="true" aria-label="Montar email da cotação"><header><div><strong>Montar email</strong><small>{quoteSubject(draft)}</small></div><button className="icon-button" type="button" onClick={closeComposer} aria-label="Fechar montagem do email"><X size={20} /></button></header><div className="quote-v3-composer-options"><label htmlFor="quote-composer-email">Destinatário<input id="quote-composer-email" type="email" value={composerEmail} onChange={(event) => setComposerEmail(event.target.value)} placeholder="cliente@empresa.com" /></label><fieldset><legend>Enviar como</legend><label><input type="radio" name="quote-composer-mode" checked={composerMode === "body"} onChange={() => setComposerMode("body")} />No corpo do email</label><label><input type="radio" name="quote-composer-mode" checked={composerMode === "attachment"} onChange={() => setComposerMode("attachment")} />Em anexo</label><label><input type="radio" name="quote-composer-mode" checked={composerMode === "both"} onChange={() => setComposerMode("both")} />Corpo e anexo</label></fieldset>{composerMode !== "body" && <fieldset><legend>Formato do anexo</legend><label><input type="radio" name="quote-composer-format" checked={attachmentFormat === "pdf"} onChange={() => setAttachmentFormat("pdf")} />PDF</label><label><input type="radio" name="quote-composer-format" checked={attachmentFormat === "word"} onChange={() => setAttachmentFormat("word")} />Word editável</label></fieldset>}</div><iframe title="Proposta para Outlook" srcDoc={buildQuoteEmailHtml(draft, { baseUrl: window.location.origin })} /><footer><span role="status">{composerBusy ? "Preparando imagens e rascunho…" : composerMessage}</span><div><button className="button button-secondary" type="button" disabled={Boolean(composerBusy)} onClick={() => composeAction("pdf")}><Download size={15} />Baixar PDF</button><button className="button button-secondary" type="button" disabled={Boolean(composerBusy)} onClick={() => composeAction("word")}><Download size={15} />Baixar Word</button><button className="button button-primary" type="button" disabled={Boolean(composerBusy)} onClick={() => composeAction("draft")}><Mail size={15} />Criar rascunho no Outlook</button></div></footer></div></div>}
   {confirmMissingDeadline && <MissingDeadlineDialog onCancel={() => { setConfirmMissingDeadline(false); document.getElementById("quote-deadline")?.focus(); }} onConfirm={() => save(true)} />}
+  {resultOpen && <div className="quote-v3-confirm-layer" onMouseDown={(event) => { if (event.target === event.currentTarget) setResultOpen(false); }}><form className="quote-v3-dialog" role="dialog" aria-modal="true" aria-label="Registrar resultado da cotação" onSubmit={registerResult}><h3>Registrar resultado</h3><fieldset><legend>Resultado da cotação</legend>{["Aceita pelo cliente", "Perdida", "Cancelada"].map((status) => <label key={status}><input type="radio" name="quote-result" checked={resultStatus === status} onChange={() => { setResultStatus(status); setResultError(""); }} />{status}</label>)}</fieldset>{resultStatus === "Perdida" && <label htmlFor="quote-result-reason">Motivo da perda<textarea id="quote-result-reason" required maxLength={1000} value={lossReason} onChange={(event) => setLossReason(event.target.value)} /></label>}{resultError && <p role="alert">{resultError}</p>}<div><button className="button button-secondary" type="button" onClick={() => setResultOpen(false)}>Voltar</button><button className="button button-primary" type="submit" disabled={saving || (resultStatus === "Perdida" && !lossReason.trim())}>{saving ? "Salvando…" : "Confirmar"}</button></div></form></div>}
+  {deleteOpen && <QuoteDeleteDialog quote={quote} onCancel={() => setDeleteOpen(false)} onDelete={onDeleteQuote} />}
   </div>;
 }

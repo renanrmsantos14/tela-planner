@@ -17,6 +17,7 @@ const configuredRedirectUri = resolvePlannerRedirectUri({
 
 export const msalConfigured = Boolean(clientId);
 export const plannerScopes = ["User.Read", "Tasks.Read", "User.ReadBasic.All"];
+export const mailScopes = ["User.Read", "Mail.ReadWrite"];
 
 export const msalConfig = {
   auth: {
@@ -115,6 +116,23 @@ export async function acquirePlannerToken() {
         scopes: plannerScopes,
         overrideInteractionInProgress: true,
       });
+      return response.accessToken;
+    });
+  }
+}
+
+export async function acquireMailToken() {
+  assertRedirectBridgeOrigin();
+  const instance = await ensureMsalInitialized();
+  let account = activeAccount(instance);
+  if (!account) account = await loginMicrosoft();
+  try {
+    const response = await instance.acquireTokenSilent({ account, scopes: mailScopes });
+    return response.accessToken;
+  } catch (error) {
+    if (!(error instanceof InteractionRequiredAuthError)) throw error;
+    return runInteraction(async () => {
+      const response = await instance.acquireTokenPopup({ account, scopes: mailScopes, overrideInteractionInProgress: true });
       return response.accessToken;
     });
   }
