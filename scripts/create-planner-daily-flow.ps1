@@ -139,17 +139,17 @@ $digestActions = @'
     "runtimeConfiguration": { "concurrency": { "repetitions": 1 } },
     "actions": {
       "Compose_employee_id": { "type": "Compose", "inputs": "@items('For_each_employee')?['cr40f_funcionariosid']" },
-      "Filter_direct_tasks": { "type": "Query", "runAfter": { "Compose_employee_id": [ "Succeeded" ] }, "inputs": { "from": "@outputs('List_open_tasks')?['body/value']", "where": "@and(equals(item()?['_cr40f_cr40f_funcionarioresponsavel_value'],outputs('Compose_employee_id')),or(less(formatDateTime(item()?['cr40f_prazo'],'yyyy-MM-dd'),variables('Today')),and(greaterOrEquals(formatDateTime(item()?['cr40f_prazo'],'yyyy-MM-dd'),variables('Today')),lessOrEquals(formatDateTime(item()?['cr40f_prazo'],'yyyy-MM-dd'),addDays(variables('Today'),if(equals(dayOfWeek(variables('Today')),1),4,0))))))" } },
+      "Filter_direct_tasks": { "type": "Query", "runAfter": { "Compose_employee_id": [ "Succeeded" ] }, "inputs": { "from": "@outputs('List_open_tasks')?['body/value']", "where": "@and(equals(item()?['_cr40f_cr40f_funcionarioresponsavel_value'],outputs('Compose_employee_id')),or(less(formatDateTime(item()?['cr40f_prazo'],'yyyy-MM-dd'),variables('Today')),equals(formatDateTime(item()?['cr40f_prazo'],'yyyy-MM-dd'),variables('Today'))))" } },
       "Select_employee_teams": { "type": "Query", "runAfter": { "Compose_employee_id": [ "Succeeded" ] }, "inputs": { "from": "@outputs('List_team_members')?['body/value']", "where": "@equals(item()?['_cr40f_funcionario_value'],outputs('Compose_employee_id'))" } },
       "Filter_task_team_relations": { "type": "Query", "runAfter": { "Select_employee_teams": [ "Succeeded" ] }, "inputs": { "from": "@outputs('List_task_team_relations')?['body/value']", "where": "@contains(string(body('Select_employee_teams')),item()?['_cr40f_equipe_value'])" } },
-      "Filter_team_tasks": { "type": "Query", "runAfter": { "Filter_task_team_relations": [ "Succeeded" ] }, "inputs": { "from": "@outputs('List_open_tasks')?['body/value']", "where": "@and(contains(string(body('Filter_task_team_relations')),item()?['cr40f_plannertarefaid']),or(less(formatDateTime(item()?['cr40f_prazo'],'yyyy-MM-dd'),variables('Today')),and(greaterOrEquals(formatDateTime(item()?['cr40f_prazo'],'yyyy-MM-dd'),variables('Today')),lessOrEquals(formatDateTime(item()?['cr40f_prazo'],'yyyy-MM-dd'),addDays(variables('Today'),if(equals(dayOfWeek(variables('Today')),1),4,0))))))" } },
+      "Filter_team_tasks": { "type": "Query", "runAfter": { "Filter_task_team_relations": [ "Succeeded" ] }, "inputs": { "from": "@outputs('List_open_tasks')?['body/value']", "where": "@and(contains(string(body('Filter_task_team_relations')),item()?['cr40f_plannertarefaid']),or(less(formatDateTime(item()?['cr40f_prazo'],'yyyy-MM-dd'),variables('Today')),equals(formatDateTime(item()?['cr40f_prazo'],'yyyy-MM-dd'),variables('Today'))))" } },
       "Compose_report_tasks": { "type": "Compose", "runAfter": { "Filter_direct_tasks": [ "Succeeded" ], "Filter_team_tasks": [ "Succeeded" ] }, "inputs": "@union(body('Filter_direct_tasks'),body('Filter_team_tasks'))" },
       "Condition_has_tasks": {
         "type": "If",
         "runAfter": { "Compose_report_tasks": [ "Succeeded" ] },
         "expression": { "and": [{ "greater": [ "@length(outputs('Compose_report_tasks'))", 0 ] }, { "not": { "equals": [ "@empty(items('For_each_employee')?['cr40f_emailbetinhos'])", true ] } }] },
         "actions": {
-          "Compose_report_kind": { "type": "Compose", "inputs": "@if(equals(dayOfWeek(variables('Today')),1),'ResumoSemanal','ResumoDiario')" },
+          "Compose_report_kind": { "type": "Compose", "inputs": "ResumoDiario" },
           "List_existing_digest": { "type": "OpenApiConnection", "runAfter": { "Compose_report_kind": [ "Succeeded" ] }, "inputs": { "parameters": { "entityName": "cr40f_plannerdisparos", "$filter": "cr40f_chaveidempotente eq '@{concat(outputs('Compose_employee_id'),'|',variables('Today'),'|',if(equals(outputs('Compose_report_kind'),'ResumoSemanal'),'ResumoSemanal',''),'|Email')}'", "$top": 1 }, "host": { "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps", "operationId": "ListRecords", "connectionName": "shared_commondataserviceforapps" }, "authentication": "@parameters('$authentication')" } },
           "Condition_not_sent": {
             "type": "If", "runAfter": { "List_existing_digest": [ "Succeeded" ] }, "expression": { "equals": [ "@length(outputs('List_existing_digest')?['body/value'])", 0 ] },
@@ -206,7 +206,7 @@ $employeeActions | Add-Member -NotePropertyName Filter_employee_assignees -NoteP
 $employeeActions | Add-Member -NotePropertyName Filter_assigned_tasks -NotePropertyValue ([ordered]@{
   type = 'Query'
   runAfter = [ordered]@{ Filter_employee_assignees = @('Succeeded') }
-  inputs = [ordered]@{ from = "@outputs('List_open_tasks')?['body/value']"; where = "@and(contains(string(body('Filter_employee_assignees')),item()?['cr40f_plannertarefaid']),or(less(formatDateTime(item()?['cr40f_prazo'],'yyyy-MM-dd'),variables('Today')),lessOrEquals(formatDateTime(item()?['cr40f_prazo'],'yyyy-MM-dd'),addDays(variables('Today'),if(equals(dayOfWeek(variables('Today')),1),4,0)))))" }
+  inputs = [ordered]@{ from = "@outputs('List_open_tasks')?['body/value']"; where = "@and(contains(string(body('Filter_employee_assignees')),item()?['cr40f_plannertarefaid']),or(less(formatDateTime(item()?['cr40f_prazo'],'yyyy-MM-dd'),variables('Today')),equals(formatDateTime(item()?['cr40f_prazo'],'yyyy-MM-dd'),variables('Today'))))" }
 })
 $employeeActions.Compose_report_tasks.runAfter = [ordered]@{ Filter_direct_tasks = @('Succeeded'); Filter_team_tasks = @('Succeeded'); Filter_assigned_tasks = @('Succeeded') }
 $employeeActions.Compose_report_tasks.inputs = "@union(union(body('Filter_direct_tasks'),body('Filter_team_tasks')),body('Filter_assigned_tasks'))"

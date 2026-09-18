@@ -77,7 +77,7 @@ $definition = @'
     },
     "For_each_recipient": {
       "type": "Foreach",
-      "foreach": "@outputs('Compose_Recipients')",
+      "foreach": "@if(equals(outputs('Compose_Context')?['sourceType'],'quote'),json('[]'),outputs('Compose_Recipients'))",
       "runAfter": { "Compose_Recipients": [ "Succeeded" ] },
       "actions": {
         "Condition_NotAuthor": {

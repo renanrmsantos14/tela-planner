@@ -1298,6 +1298,7 @@ async function collectLiveTask(xrm, state, id, input = {}) {
     creatorEmployeeId: task.creatorEmployeeId || "",
     assigneeIds: recipients,
     notificationRecipientIds: recipients,
+    sourceType: task.sourceType || "manual",
     referenceDate,
     collectionType: "manual_overdue",
   };
@@ -1419,10 +1420,11 @@ async function createLiveTask(xrm, state, input) {
   await markQuoteOrigin(xrm, input.quoteId, id);
   await createEvent(xrm, id, 100000000, "Tarefa criada.");
   if (assigneeIds.length) {
-    await createEvent(xrm, id, 100000003, "Responsáveis atribuídos.", "notification:assignment", "", JSON.stringify({ actorEmployeeId: input.actorEmployeeId || "", actorUserId: input.actorUserId || "", creatorEmployeeId: input.actorEmployeeId || "", assigneeIds, previousAssigneeIds: [] }));
+    await createEvent(xrm, id, 100000003, "Responsáveis atribuídos.", "notification:assignment", "", JSON.stringify({ actorEmployeeId: input.actorEmployeeId || "", actorUserId: input.actorUserId || "", creatorEmployeeId: input.actorEmployeeId || "", assigneeIds, previousAssigneeIds: [], sourceType: managedQuoteTask ? "quote" : input.sourceType || "manual", sourceCode: input.sourceCode || input.quoteCode || "" }));
   }
   if (status === "waiting") {
-    await createEvent(xrm, id, 100000002, waitingContextSummary(waitingContext), "notification:waiting", "", JSON.stringify({ actorEmployeeId: input.actorEmployeeId || "", actorUserId: input.actorUserId || "", creatorEmployeeId: input.actorEmployeeId || "", assigneeIds, waitingContext, waitingTargetIds: waitingTargetIds(state, waitingContext) }));
+    const waitingTargets = waitingTargetIds(state, waitingContext);
+    await createEvent(xrm, id, 100000002, waitingContextSummary(waitingContext), "notification:waiting", "", JSON.stringify({ actorEmployeeId: input.actorEmployeeId || "", actorUserId: input.actorUserId || "", creatorEmployeeId: managedQuoteTask ? "" : input.actorEmployeeId || "", assigneeIds, waitingContext, waitingTargetIds: waitingTargets, notificationRecipientIds: managedQuoteTask ? [...new Set([...assigneeIds, ...waitingTargets])] : undefined, sourceType: managedQuoteTask ? "quote" : input.sourceType || "manual", sourceCode: input.sourceCode || input.quoteCode || "" }));
   }
   return loadLiveState(xrm);
 }
@@ -1521,17 +1523,25 @@ async function updateLiveTask(xrm, state, id, patch) {
   const suppressNotifications = patch.suppressNotifications === true;
   const nextAssigneeIds = resolvedAssigneeIds;
   const assigneesChanged = (patch.assigneeNames !== undefined || patch.assigneeIds !== undefined || patch.primaryAssigneeId !== undefined || patch.consultantIds !== undefined || patch.assignmentMode !== undefined || patch.teamIds !== undefined || patch.teamId !== undefined) && (JSON.stringify([...previousAssigneeIds].sort()) !== JSON.stringify([...nextAssigneeIds].sort()) || resolvedPrimaryAssigneeId !== previousPrimaryAssigneeId);
-  const eventContext = { actorEmployeeId: patch.actorEmployeeId || "", actorUserId: patch.actorUserId || "", creatorEmployeeId: existing?.creatorEmployeeId || "", assigneeIds: nextAssigneeIds, previousAssigneeIds };
+  const quoteNotificationContext = quoteTask ? { sourceType: "quote", sourceCode: existing.sourceCode || existing.quoteCode || "", creatorEmployeeId: "", notificationRecipientIds: nextAssigneeIds } : {};
+  const eventContext = { actorEmployeeId: patch.actorEmployeeId || "", actorUserId: patch.actorUserId || "", creatorEmployeeId: existing?.creatorEmployeeId || "", assigneeIds: nextAssigneeIds, previousAssigneeIds, ...quoteNotificationContext };
   const eventWrites = [];
   if (!suppressNotifications) {
     if (patch.mentionedEmployeeIds?.length) eventWrites.push(createEvent(xrm, id, 100000001, "Menção na tarefa.", "notification:mention", "", JSON.stringify({ ...eventContext, mentionedEmployeeIds: patch.mentionedEmployeeIds })));
     if (statusChanged) eventWrites.push(createEvent(xrm, id, 100000002, nextStatus === "done" ? "Tarefa concluída." : `Status alterado para ${STATUSES.find((item) => item.id === nextStatus)?.label || nextStatus}.`, "status", previousStatus, nextStatus));
     if (statusChanged && nextStatus === "waiting") eventWrites.push(createEvent(xrm, id, 100000002, waitingContextSummary(waitingContext), "waitingContext", JSON.stringify(normalizeWaitingContext(existing?.waitingContext)), JSON.stringify(waitingContext)));
     if (waitingChanged && !statusChanged) eventWrites.push(createEvent(xrm, id, 100000002, `Contexto de Aguardando atualizado: ${waitingContextSummary(waitingContext)}.`, "waitingContext", JSON.stringify(normalizeWaitingContext(existing?.waitingContext)), JSON.stringify(waitingContext)));
-    if (statusChanged && nextStatus === "done") eventWrites.push(createEvent(xrm, id, 100000002, "Tarefa concluída por outro responsável.", "notification:status", "", JSON.stringify({ ...eventContext, previousStatus, nextStatus })));
-    if ((statusChanged && nextStatus === "waiting") || (waitingChanged && !statusChanged)) eventWrites.push(createEvent(xrm, id, 100000002, waitingContextSummary(waitingContext) || "Tarefa aguardando retorno.", "notification:waiting", "", JSON.stringify({ ...eventContext, previousStatus, nextStatus, waitingContext, waitingTargetIds: waitingTargetIds(state, waitingContext) })));
+    if (statusChanged && nextStatus === "done" && !quoteTask) eventWrites.push(createEvent(xrm, id, 100000002, "Tarefa concluída por outro responsável.", "notification:status", "", JSON.stringify({ ...eventContext, previousStatus, nextStatus })));
+    if ((statusChanged && nextStatus === "waiting") || (waitingChanged && !statusChanged)) {
+      const waitingTargets = waitingTargetIds(state, waitingContext);
+      eventWrites.push(createEvent(xrm, id, 100000002, waitingContextSummary(waitingContext) || "Tarefa aguardando retorno.", "notification:waiting", "", JSON.stringify({ ...eventContext, previousStatus, nextStatus, waitingContext, waitingTargetIds: waitingTargets, notificationRecipientIds: quoteTask ? [...new Set([...nextAssigneeIds, ...waitingTargets])] : undefined })));
+    }
     if (dueDateChanged) eventWrites.push(createEvent(xrm, id, 100000002, `Prazo alterado de ${previousDueDate || "sem prazo"} para ${patch.dueDate || "sem prazo"}.${patch.deadlineChangeReason ? ` Motivo: ${patch.deadlineChangeReason}` : ""}`, "notification:deadline", previousDueDate, JSON.stringify({ ...eventContext, nextDueDate: patch.dueDate || "", reason: patch.deadlineChangeReason || "" })));
-    if (assigneesChanged) eventWrites.push(createEvent(xrm, id, 100000002, "Responsáveis alterados.", "notification:assignees", JSON.stringify(previousAssigneeIds), JSON.stringify({ ...eventContext, addedAssigneeIds: nextAssigneeIds.filter((assigneeId) => !previousAssigneeIds.includes(assigneeId)), removedAssigneeIds: previousAssigneeIds.filter((assigneeId) => !nextAssigneeIds.includes(assigneeId)) })));
+    if (assigneesChanged) {
+      const addedAssigneeIds = nextAssigneeIds.filter((assigneeId) => !previousAssigneeIds.includes(assigneeId));
+      const removedAssigneeIds = previousAssigneeIds.filter((assigneeId) => !nextAssigneeIds.includes(assigneeId));
+      eventWrites.push(createEvent(xrm, id, 100000002, "Responsáveis alterados.", "notification:assignees", JSON.stringify(previousAssigneeIds), JSON.stringify({ ...eventContext, addedAssigneeIds, removedAssigneeIds, notificationRecipientIds: quoteTask ? addedAssigneeIds : undefined })));
+    }
     if (!statusChanged && !dueDateChanged && !assigneesChanged && !waitingChanged) eventWrites.push(createEvent(xrm, id, patch.status !== undefined ? 100000002 : 100000001, "Tarefa atualizada."));
   }
   if (quoteTask && nextStatus === "done") await Promise.all(eventWrites).catch((error) => console.warn("[Planner] tarefa concluída; evento de histórico não registrado", error));
@@ -1649,8 +1659,11 @@ async function resolveLiveWaitingReturn(xrm, state, id, input = {}) {
     JSON.stringify({
       actorEmployeeId: input.actorEmployeeId || "",
       actorUserId: input.actorUserId || "",
-      creatorEmployeeId: nextTask.creatorEmployeeId || "",
+      creatorEmployeeId: isQuoteTask(existing) && !existing.parentTaskId ? "" : nextTask.creatorEmployeeId || "",
       assigneeIds,
+      notificationRecipientIds: isQuoteTask(existing) && !existing.parentTaskId ? assigneeIds : undefined,
+      sourceType: isQuoteTask(existing) && !existing.parentTaskId ? "quote" : undefined,
+      sourceCode: isQuoteTask(existing) && !existing.parentTaskId ? nextTask.sourceCode || nextTask.quoteCode || "" : undefined,
       previousStatus: "waiting",
       nextStatus: "doing",
       returnId,

@@ -130,7 +130,7 @@ test("Flow automático de e-mail replica destinatários das notificações e nã
   assert.doesNotMatch(source, /coalesce\(outputs\('Compose_Context'\)\?\['plannerBaseUrl'\], 'https:\/\/org23b93544\.crm2\.dynamics\.com'\)/);
 });
 
-test("Flow diário monta resumo individual e semanal com idempotência", async () => {
+test("Flow diário envia um único resumo por responsável às 8h", async () => {
   const source = await readFile(new URL("../scripts/create-planner-daily-flow.ps1", import.meta.url), "utf8");
   assert.match(source, /Recurrence[\s\S]*weekDays.*Monday.*Friday[\s\S]*hours.*8/);
   assert.match(source, /E\. South America Standard Time/);
@@ -138,11 +138,11 @@ test("Flow diário monta resumo individual e semanal com idempotência", async (
   assert.match(source, /cr40f_emailbetinhos/);
   assert.match(source, /cr40f_plannertarefaequipe/);
   assert.match(source, /cr40f_plannerequipemembro/);
-  assert.match(source, /ResumoSemanal/);
-  assert.match(source, /ResumoDiario/);
+  assert.match(source, /Compose_report_kind.*ResumoDiario/);
+  assert.doesNotMatch(source, /Compose_report_kind.*dayOfWeek/);
   assert.match(source, /Create_deadline_event/);
   assert.match(source, /notification:deadline/);
-  assert.match(source, /equals.*dayOfWeek\(variables\('Today'\)\).*1/);
+  assert.doesNotMatch(source, /Filter_assigned_tasks[\s\S]*dayOfWeek/);
   assert.match(source, /Atrasadas/);
   assert.match(source, /Vencem hoje/);
   assert.match(source, /Indicadores/);

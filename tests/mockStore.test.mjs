@@ -220,6 +220,38 @@ test("coloca nova cotação na fila Financeiro sem lembrete individual", () => {
   assert.equal(created.notifications.some((item) => item.taskId === task.id), false);
 });
 
+test("notificações da cotação seguem responsáveis, ação necessária e deduplicação", () => {
+  withStorage();
+  const created = createQuote(seedState(), {
+    title: "Transfer",
+    client: "Cliente",
+    deadline: "2026-09-19",
+    assigneeIds: ["employee-marina"],
+    assigneeNames: ["Marina Alves"],
+  });
+  const quote = created.quotes[0];
+  const task = created.tasks.find((item) => item.quoteId === quote.id && !item.parentTaskId);
+  const createdAssignment = created.notifications.filter((item) => item.taskId === task.id);
+  assert.deepEqual(createdAssignment.map((item) => item.recipientEmployeeId), ["employee-marina"]);
+
+  const edited = updateQuote(created, quote.id, { title: "Título revisado", priority: "high" });
+  assert.equal(edited.notifications.length, created.notifications.length);
+
+  const assigned = updateQuote(edited, quote.id, { assigneeIds: ["employee-marina", "employee-rafael"], assigneeNames: ["Marina Alves", "Rafael Lima"] });
+  const assignmentNotifications = assigned.notifications.filter((item) => item.taskId === task.id && item.type === "assignees");
+  assert.deepEqual(assignmentNotifications.map((item) => item.recipientEmployeeId), ["employee-rafael"]);
+
+  const waiting = updateQuote(assigned, quote.id, {
+    status: "Aguardando informação",
+    waitingContext: { subject: "Confirmação do cliente", onType: "external", onName: "Cliente", note: "Aguardando dados" },
+  });
+  const waitingNotifications = waiting.notifications.filter((item) => item.taskId === task.id && item.type === "waiting");
+  assert.deepEqual(new Set(waitingNotifications.map((item) => item.recipientEmployeeId)), new Set(["employee-marina", "employee-rafael"]));
+
+  const done = updateQuote(waiting, quote.id, { status: "Cotada", value: "R$ 800,00", commercialTerms: "Pagamento em 30 dias" });
+  assert.equal(done.notifications.filter((item) => item.taskId === task.id && item.type === "status").length, 0);
+});
+
 test("atualiza dados comerciais e replica campos operacionais na tarefa", () => {
   withStorage();
   const initial = seedState();

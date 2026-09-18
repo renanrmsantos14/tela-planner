@@ -355,7 +355,7 @@ export function createTask(state, input) {
   };
   const notifications = [...(state.notifications || [])];
   const creationNotificationType = status === "waiting" ? "waiting" : "assignment";
-  notificationRecipients({ type: creationNotificationType, assigneeIds, creatorEmployeeId: nextTask.creatorEmployeeId, mentionedEmployeeIds: waitingTargetIds(state, waitingContext), actorEmployeeId: input.actorEmployeeId }).forEach((recipientEmployeeId) => {
+  notificationRecipients({ type: creationNotificationType, assigneeIds, creatorEmployeeId: managedQuoteTask ? "" : nextTask.creatorEmployeeId, mentionedEmployeeIds: waitingTargetIds(state, waitingContext), actorEmployeeId: input.actorEmployeeId }).forEach((recipientEmployeeId) => {
     const message = creationNotificationType === "waiting" ? waitingContextSummary(waitingContext) : nextTask.title;
     notifications.unshift({ id: uid("notification"), taskId: nextTask.id, recipientEmployeeId, type: creationNotificationType, title: creationNotificationType === "waiting" ? "Retorno aguardado" : "Nova tarefa atribuída", message, occurredAt: new Date().toISOString(), readAt: "", dedupeKey: notificationDedupeKey({ recipientId: recipientEmployeeId, taskId: nextTask.id, type: creationNotificationType, eventId: nextTask.id }) });
   });
@@ -418,13 +418,13 @@ export function updateTask(state, id, patch) {
   if (!existing) return saveState({ ...state, tasks });
   const next = tasks.find((taskItem) => taskItem.id === id);
   const changes = [
-    (statusChanged || quoteStatusChanged) ? (next.status === "waiting" ? "waiting" : "status") : "",
+    (statusChanged || quoteStatusChanged) && !(quoteTask && next.status === "done") ? (next.status === "waiting" ? "waiting" : "status") : "",
     patch.dueDate !== undefined && patch.dueDate !== existing.dueDate ? "deadline" : "",
     waitingChanged && !statusChanged ? "waiting" : "",
     (patch.assigneeNames !== undefined || patch.assigneeIds !== undefined || patch.primaryAssigneeId !== undefined || patch.consultantIds !== undefined || patch.assignmentMode !== undefined || patch.teamIds !== undefined || patch.teamId !== undefined) && (JSON.stringify(next.assigneeIds || []) !== JSON.stringify(existing.assigneeIds || []) || next.primaryAssigneeId !== existing.primaryAssigneeId) ? "assignees" : "",
   ].filter(Boolean);
   const notifications = [...(state.notifications || [])];
-  changes.forEach((type) => notificationRecipients({ type, creatorEmployeeId: existing.creatorEmployeeId, assigneeIds: next.assigneeIds || employeeIdsByNames(state.employees, next.assigneeNames), mentionedEmployeeIds: type === "waiting" ? waitingTargetIds(state, next.waitingContext) : [], previousAssigneeIds: existing.assigneeIds || employeeIdsByNames(state.employees, existing.assigneeNames), nextStatus: next.status, actorEmployeeId: patch.actorEmployeeId }).forEach((recipientEmployeeId) => {
+  changes.forEach((type) => notificationRecipients({ type: type === "assignees" && quoteTask ? "assignment" : type, creatorEmployeeId: quoteTask ? "" : existing.creatorEmployeeId, assigneeIds: next.assigneeIds || employeeIdsByNames(state.employees, next.assigneeNames), mentionedEmployeeIds: type === "waiting" ? waitingTargetIds(state, next.waitingContext) : [], previousAssigneeIds: existing.assigneeIds || employeeIdsByNames(state.employees, existing.assigneeNames), nextStatus: next.status, actorEmployeeId: patch.actorEmployeeId }).forEach((recipientEmployeeId) => {
     const eventId = uid("event");
     const isWaiting = type === "waiting";
     notifications.unshift({ id: uid("notification"), taskId: id, recipientEmployeeId, type, title: isWaiting ? (waitingChanged && !statusChanged ? "Contexto de retorno atualizado" : "Retorno aguardado") : type === "deadline" ? "Prazo alterado" : type === "status" ? "Status alterado" : "Responsáveis alterados", message: isWaiting ? waitingContextSummary(next.waitingContext) || next.title : next.title, occurredAt: new Date().toISOString(), readAt: "", dedupeKey: notificationDedupeKey({ recipientId: recipientEmployeeId, taskId: id, type, eventId }) });
@@ -663,7 +663,7 @@ export function resolveWaitingReturn(state, id, input = {}) {
   const assigneeIds = next.assigneeIds || employeeIdsByNames(state.employees, next.assigneeNames);
   notificationRecipients({
     type: "waiting_return",
-    creatorEmployeeId: next.creatorEmployeeId,
+    creatorEmployeeId: isQuoteTask(existing) && !existing.parentTaskId ? "" : next.creatorEmployeeId,
     assigneeIds,
     actorEmployeeId: input.actorEmployeeId,
   }).forEach((recipientEmployeeId) => {
@@ -1114,9 +1114,32 @@ export function updateQuote(state, id, patch = {}) {
       };
     }),
   };
-  if (patch.waitingContext !== undefined) {
-    const linkedTask = nextState.tasks.find((taskItem) => taskItem.quoteId === id && !taskItem.parentTaskId);
-    if (linkedTask) return updateTask(nextState, linkedTask.id, { waitingContext: patch.waitingContext, actorEmployeeId: patch.actorEmployeeId });
+  const linkedTask = nextState.tasks.find((taskItem) => taskItem.quoteId === id && !taskItem.parentTaskId);
+  if (linkedTask) {
+    const previousTask = state.tasks.find((taskItem) => taskItem.id === linkedTask.id);
+    const nextAssigneeIds = linkedTask.assigneeIds || [];
+    const previousAssigneeIds = previousTask?.assigneeIds || [];
+    const notifications = [...(nextState.notifications || [])];
+    const notificationChanges = [];
+    if (statusChanged && linkedTask.status !== "waiting" && linkedTask.status !== "done") notificationChanges.push("status");
+    if (patch.deadline !== undefined && patch.deadline !== previousTask?.dueDate) notificationChanges.push("deadline");
+    if (patch.assigneeIds !== undefined && JSON.stringify(nextAssigneeIds) !== JSON.stringify(previousAssigneeIds)) notificationChanges.push("assignees");
+    notificationChanges.forEach((type) => notificationRecipients({ type: type === "assignees" ? "assignment" : type, creatorEmployeeId: "", assigneeIds: nextAssigneeIds, previousAssigneeIds, nextStatus: linkedTask.status, actorEmployeeId: patch.actorEmployeeId }).forEach((recipientEmployeeId) => {
+      const eventId = uid("event");
+      notifications.unshift({
+        id: uid("notification"),
+        taskId: linkedTask.id,
+        recipientEmployeeId,
+        type,
+        title: type === "deadline" ? "Prazo alterado" : type === "status" ? "Status alterado" : "Responsáveis alterados",
+        message: linkedTask.title,
+        occurredAt: nextQuote.modifiedAt,
+        readAt: "",
+        dedupeKey: notificationDedupeKey({ recipientId: recipientEmployeeId, taskId: linkedTask.id, type, eventId }),
+      });
+    }));
+    nextState.notifications = notifications;
+    if (patch.waitingContext !== undefined) return updateTask(nextState, linkedTask.id, { waitingContext: patch.waitingContext, actorEmployeeId: patch.actorEmployeeId });
   }
   return saveState(nextState);
 }
