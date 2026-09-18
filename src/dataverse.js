@@ -1386,7 +1386,7 @@ async function sendLiveNotificationTest(xrm, state, input = {}) {
   return { state: await loadLiveState(xrm), emailDispatch: dispatch };
 }
 
-async function createLiveTask(xrm, state, input) {
+async function createLiveTask(xrm, state, input, returnCreatedTaskId = false) {
   if (input.quoteId && !input.parentTaskId) {
     const mainTask = state.tasks.find((task) => task.quoteId === input.quoteId && !task.parentTaskId);
     if (mainTask) throw new Error("Esta cotação já possui um acompanhamento principal ativo ou encerrado.");
@@ -1426,7 +1426,7 @@ async function createLiveTask(xrm, state, input) {
     const waitingTargets = waitingTargetIds(state, waitingContext);
     await createEvent(xrm, id, 100000002, waitingContextSummary(waitingContext), "notification:waiting", "", JSON.stringify({ actorEmployeeId: input.actorEmployeeId || "", actorUserId: input.actorUserId || "", creatorEmployeeId: managedQuoteTask ? "" : input.actorEmployeeId || "", assigneeIds, waitingContext, waitingTargetIds: waitingTargets, notificationRecipientIds: managedQuoteTask ? [...new Set([...assigneeIds, ...waitingTargets])] : undefined, sourceType: managedQuoteTask ? "quote" : input.sourceType || "manual", sourceCode: input.sourceCode || input.quoteCode || "" }));
   }
-  return loadLiveState(xrm);
+  return returnCreatedTaskId ? id : loadLiveState(xrm);
 }
 
 async function updateLiveTask(xrm, state, id, patch) {
@@ -1859,13 +1859,10 @@ async function createLiveQuote(xrm, state, input = {}) {
   const quoteId = cleanId(created?.cr40f_pedidodecotacaoid || created?.[`${QUOTE_TABLE}id`]);
   if (!quoteId) throw new Error("Dataverse criou a cotação sem retornar o ID.");
   try {
-    const nextState = await loadLiveState(xrm);
-    const taskState = await createLiveTask(xrm, nextState, { title: quoteTaskTitle(normalizedInput), quoteId, quoteCode: created.cr40f_numerodacotacao || "", quoteTitle: normalizedInput.title || "", quoteStatus: normalizedInput.status || "Nova", dueDate: normalizedInput.deadline || "", priority: normalizedInput.priority || "medium", sourceType: "quote", assigneeIds: normalizedInput.assigneeIds || [], assigneeNames: normalizedInput.assigneeNames || [], assignmentMode: "people", description: `Acompanhar a cotação ${created.cr40f_numerodacotacao || "selecionada"} até a resposta ao cliente.` });
-    const createdQuote = (taskState.quotes || []).find((quote) => cleanId(quote.id) === quoteId);
-    const linkedTask = (taskState.tasks || []).find((task) => cleanId(task.quoteId) === quoteId && !task.parentTaskId);
-    const teamId = await resolveFinanceTeamId(xrm, taskState);
-    if (linkedTask && teamId) await replaceTaskTeams(xrm, linkedTask.id, { assignmentMode: "team", teamIds: [teamId] });
-    if (createdQuote && linkedTask) await request(xrm, `/${entitySetName(QUOTE_TABLE)}(${quoteId})`, { method: "PATCH", body: JSON.stringify({ cr40f_plannertaskid: linkedTask.id }) });
+    const nextState = { ...state, quotes: [...(state.quotes || []), { ...normalizedInput, id: quoteId }] };
+    const taskId = await createLiveTask(xrm, nextState, { title: quoteTaskTitle(normalizedInput), quoteId, quoteCode: created.cr40f_numerodacotacao || "", quoteTitle: normalizedInput.title || "", quoteStatus: normalizedInput.status || "Nova", dueDate: normalizedInput.deadline || "", priority: normalizedInput.priority || "medium", sourceType: "quote", assigneeIds: normalizedInput.assigneeIds || [], assigneeNames: normalizedInput.assigneeNames || [], assignmentMode: "people", description: `Acompanhar a cotação ${created.cr40f_numerodacotacao || "selecionada"} até a resposta ao cliente.` }, true);
+    const teamId = await resolveFinanceTeamId(xrm, state);
+    if (teamId) await replaceTaskTeams(xrm, taskId, { assignmentMode: "team", teamIds: [teamId] });
     return loadLiveState(xrm);
   } catch (error) {
     try { await request(xrm, `/${entitySetName(QUOTE_TABLE)}(${quoteId})`, { method: "DELETE" }); } catch (cleanupError) { console.warn("[Planner] falha ao desfazer cotação sem tarefa", cleanupError); }
