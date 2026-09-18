@@ -369,10 +369,10 @@ test("cria tarefa otimista pronta para aparecer antes do Dataverse responder", (
   assert.deepEqual(task.attachments, []);
 });
 
-test("título automático de cotação nunca exibe undefined", () => {
-  assert.equal(quoteTaskTitle({ code: "COT-42" }), "Acompanhar COT-42");
-  assert.equal(quoteTaskTitle({ title: "Evento executivo" }), "Acompanhar Evento executivo");
-  assert.equal(quoteTaskTitle({}), "Acompanhar cotação");
+test("título automático de cotação usa solicitante", () => {
+  assert.equal(quoteTaskTitle({ clientContact: "Maria Silva" }), "Cotação - Maria Silva");
+  assert.equal(quoteTaskTitle({ code: "COT-42" }), "Cotação");
+  assert.equal(quoteTaskTitle({}), "Cotação");
 });
 
 test("aplica alteração otimista sem mutar o estado anterior", () => {

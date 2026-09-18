@@ -180,6 +180,34 @@ test("cria cotação e acompanhamento principal no mesmo estado mock", () => {
   assert.equal(task.priority, "high");
 });
 
+test("usa solicitante no título automático da cotação e da tarefa", () => {
+  withStorage();
+  const next = createQuote(seedState(), { client: "Cliente novo", clientContact: "Maria Silva", deadline: "2026-09-20" });
+  const quote = next.quotes[0];
+  const task = next.tasks.find((item) => item.quoteId === quote.id && !item.parentTaskId);
+  assert.equal(quote.title, "Cotação - Maria Silva");
+  assert.equal(task.title, "Cotação - Maria Silva");
+});
+
+test("atualiza títulos automáticos quando solicitante muda e preserva títulos manuais", () => {
+  withStorage();
+  const created = createQuote(seedState(), { client: "Cliente", clientContact: "Maria Silva" });
+  const quote = created.quotes[0];
+  const automatic = updateQuote(created, quote.id, { clientContact: "João Souza" });
+  const automaticTask = automatic.tasks.find((item) => item.quoteId === quote.id && !item.parentTaskId);
+  assert.equal(automatic.quotes[0].title, "Cotação - João Souza");
+  assert.equal(automaticTask.title, "Cotação - João Souza");
+
+  const custom = createQuote(seedState(), { title: "Transfer executivo", client: "Cliente", clientContact: "Maria Silva" });
+  const customQuote = custom.quotes[0];
+  const customTaskId = custom.tasks.find((item) => item.quoteId === customQuote.id && !item.parentTaskId).id;
+  const renamedTaskState = updateTask(custom, customTaskId, { title: "Cobrar retorno do cliente" });
+  const edited = updateQuote(renamedTaskState, customQuote.id, { clientContact: "João Souza" });
+  const editedTask = edited.tasks.find((item) => item.id === customTaskId);
+  assert.equal(edited.quotes.find((item) => item.id === customQuote.id).title, "Transfer executivo");
+  assert.equal(editedTask.title, "Cobrar retorno do cliente");
+});
+
 test("coloca nova cotação na fila Financeiro sem lembrete individual", () => {
   withStorage();
   const created = createQuote(seedState(), { title: "Transfer", client: "Cliente", deadline: "2026-09-19" });

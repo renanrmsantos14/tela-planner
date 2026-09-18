@@ -219,9 +219,25 @@ export function waitingContextSummary(value) {
   return parts.join(" · ");
 }
 
+export function quoteTitle(quote = {}) {
+  const requester = String(quote.clientContact || "").trim();
+  return requester ? `Cotação - ${requester}` : "Cotação";
+}
+
+export function isAutomaticQuoteTitle(quote = {}) {
+  const title = String(quote.title || "").trim();
+  return !title || title === "Cotação" || title === "Nova cotação" || title === quoteTitle(quote);
+}
+
 export function quoteTaskTitle(quote = {}) {
-  const reference = String(quote.code || quote.title || "").trim();
-  return `Acompanhar ${reference || "cotação"}`;
+  return quoteTitle(quote);
+}
+
+export function isAutomaticQuoteTaskTitle(task = {}, quote = {}) {
+  const title = String(task.title || "").trim();
+  const previousAutomatic = quoteTitle(quote);
+  const legacyAutomatic = `Acompanhar ${String(quote.code || quote.title || "cotação").trim()}`;
+  return !title || title === previousAutomatic || title === legacyAutomatic;
 }
 
 export function buildOptimisticTask(input, parentTaskId = null) {

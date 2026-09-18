@@ -46,6 +46,9 @@ import {
   normalizePersonalTagIds,
   PERSONAL_TAG_COLORS,
   normalizeWaitingContext,
+  isAutomaticQuoteTaskTitle,
+  isAutomaticQuoteTitle,
+  quoteTaskTitle,
   deriveExecutionActor,
   responsibilityFromIds,
   resolveTaskAssignment,
@@ -1762,7 +1765,7 @@ async function ensureLiveQuoteTask(xrm, state, quote) {
   const existing = state.tasks.find((item) => item.quoteId === quote.id && !item.parentTaskId);
   if (existing || quote.plannerTaskId) return state;
   const reference = String(quote.code || quote.title || "").trim();
-  return createLiveTask(xrm, state, { title: `Acompanhar ${reference || "cotação"}`, quoteId: quote.id, quoteCode: quote.code || "", quoteTitle: quote.title || "", quoteStatus: quote.status, dueDate: quote.deadline, priority: "medium", sourceType: "quote", assigneeName: "Não atribuído", teamName: "Financeiro", description: `Acompanhar a cotação ${reference || "selecionada"} até a resposta ao cliente.` });
+  return createLiveTask(xrm, state, { title: quoteTaskTitle(quote), quoteId: quote.id, quoteCode: quote.code || "", quoteTitle: quote.title || "", quoteStatus: quote.status, dueDate: quote.deadline, priority: "medium", sourceType: "quote", assigneeName: "Não atribuído", teamName: "Financeiro", description: `Acompanhar a cotação ${reference || "selecionada"} até a resposta ao cliente.` });
 }
 
 function quoteDateTime(value) {
@@ -1788,7 +1791,7 @@ function quotePayload(input = {}, includeUnset = false) {
   const payload = {};
   const has = (key) => includeUnset || Object.prototype.hasOwnProperty.call(input, key);
   const set = (key, field, value) => { if (has(key)) payload[field] = value; };
-  set("title", "cr40f_titulo", input.title == null ? "" : String(input.title).trim());
+  set("title", "cr40f_titulo", input.title == null ? quoteTaskTitle(input) : String(input.title).trim() || quoteTaskTitle(input));
   set("client", "cr40f_clienteempresa", input.client == null ? "" : String(input.client).trim());
   if (has("clientId") && (input.clientId || !includeUnset)) {
     const clientId = cleanId(input.clientId);
@@ -1837,13 +1840,14 @@ async function resolveFinanceTeamId(xrm, state) {
 async function createLiveQuote(xrm, state, input = {}) {
   if (QUOTE_COMPLETED_STATUSES.includes(input.status)) throw new Error("Crie a cotação como Nova e registre o resultado comercial depois.");
   await quoteSelect(xrm);
-  const payload = quotePayload(input, true);
+  const normalizedInput = { ...input, title: String(input.title || "").trim() || quoteTaskTitle(input) };
+  const payload = quotePayload(normalizedInput, true);
   const created = await request(xrm, `/${entitySetName(QUOTE_TABLE)}`, { method: "POST", body: JSON.stringify(payload) });
   const quoteId = cleanId(created?.cr40f_pedidodecotacaoid || created?.[`${QUOTE_TABLE}id`]);
   if (!quoteId) throw new Error("Dataverse criou a cotação sem retornar o ID.");
   try {
     const nextState = await loadLiveState(xrm);
-    const taskState = await createLiveTask(xrm, nextState, { title: `Acompanhar ${created.cr40f_numerodacotacao || input.title || "cotação"}`, quoteId, quoteCode: created.cr40f_numerodacotacao || "", quoteTitle: input.title || "", quoteStatus: input.status || "Nova", dueDate: input.deadline || "", priority: input.priority || "medium", sourceType: "quote", assigneeIds: input.assigneeIds || [], assigneeNames: input.assigneeNames || [], assignmentMode: "people", description: `Acompanhar a cotação ${created.cr40f_numerodacotacao || "selecionada"} até a resposta ao cliente.` });
+    const taskState = await createLiveTask(xrm, nextState, { title: quoteTaskTitle(normalizedInput), quoteId, quoteCode: created.cr40f_numerodacotacao || "", quoteTitle: normalizedInput.title || "", quoteStatus: normalizedInput.status || "Nova", dueDate: normalizedInput.deadline || "", priority: normalizedInput.priority || "medium", sourceType: "quote", assigneeIds: normalizedInput.assigneeIds || [], assigneeNames: normalizedInput.assigneeNames || [], assignmentMode: "people", description: `Acompanhar a cotação ${created.cr40f_numerodacotacao || "selecionada"} até a resposta ao cliente.` });
     const createdQuote = (taskState.quotes || []).find((quote) => cleanId(quote.id) === quoteId);
     const linkedTask = (taskState.tasks || []).find((task) => cleanId(task.quoteId) === quoteId && !task.parentTaskId);
     const teamId = await resolveFinanceTeamId(xrm, taskState);
@@ -1880,7 +1884,9 @@ async function updateLiveQuote(xrm, state, id, patch = {}) {
     if (!validation.allowed) throw new Error(validation.error);
     if (!linkedTasks.some((task) => !task.parentTaskId)) throw new Error("Tarefa vinculada à cotação não encontrada.");
   }
-  const payload = quotePayload({ ...patch, ...(patch.status && patch.status !== "Respondida ao cliente" ? { responseSent: false } : {}) });
+  const effectivePatch = { ...patch };
+  if (isAutomaticQuoteTitle(existing) && patch.clientContact !== undefined && patch.title === undefined) effectivePatch.title = quoteTaskTitle({ ...existing, ...patch });
+  const payload = quotePayload({ ...effectivePatch, ...(patch.status && patch.status !== "Respondida ao cliente" ? { responseSent: false } : {}) });
   await request(xrm, `/${entitySetName(QUOTE_TABLE)}(${quoteId})`, { method: "PATCH", body: JSON.stringify(payload) });
   const statusChanged = nextStatus !== existing.status;
   const terminal = isQuoteTerminalStatus(nextStatus);
@@ -1896,7 +1902,7 @@ async function updateLiveQuote(xrm, state, id, patch = {}) {
       status: statusChanged ? taskStatusForQuoteStatus(nextStatus) : undefined,
       quoteStatus: statusChanged ? nextStatus : undefined,
       waitingContext: patch.waitingContext,
-      title: patch.title ? `Acompanhar ${patch.code || existing.code || "cotação"}` : undefined,
+      title: isAutomaticQuoteTaskTitle(task, existing) ? quoteTaskTitle({ ...existing, ...effectivePatch }) : undefined,
       dueDate: patch.deadline,
       priority: patch.priority,
       assigneeIds: patch.assigneeIds,

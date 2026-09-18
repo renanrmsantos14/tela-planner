@@ -13,6 +13,9 @@ import {
   validatePersonalTag,
   validateWaitingContext,
   waitingContextSummary,
+  isAutomaticQuoteTaskTitle,
+  isAutomaticQuoteTitle,
+  quoteTaskTitle,
 } from "./domain.js";
 import { dailyReminderRows, notificationDedupeKey, notificationRecipients } from "./notifications.js";
 import { localDateKey, manualCollectionKey } from "./management.js";
@@ -1029,7 +1032,7 @@ export function markAllNotificationsRead(state, recipientEmployeeId, readAt = ne
 export function ensureQuoteTask(state, quote) {
   const existing = state.tasks.find((taskItem) => taskItem.quoteId === quote.id && !taskItem.parentTaskId);
   if (existing) return state;
-  return createTask(state, { title: `Acompanhar ${quote.code}`, quoteId: quote.id, quoteCode: quote.code, quoteTitle: quote.title, quoteStatus: quote.status, dueDate: quote.deadline, priority: "medium", assigneeName: "Não atribuído", assignmentMode: "people", teamName: "Financeiro", description: `Acompanhar a cotação ${quote.code} até a resposta ao cliente.` });
+  return createTask(state, { title: quoteTaskTitle(quote), quoteId: quote.id, quoteCode: quote.code, quoteTitle: quote.title, quoteStatus: quote.status, dueDate: quote.deadline, priority: "medium", assigneeName: "Não atribuído", assignmentMode: "people", teamName: "Financeiro", description: `Acompanhar a cotação ${quote.code} até a resposta ao cliente.` });
 }
 
 export function createQuote(state, input = {}) {
@@ -1038,17 +1041,18 @@ export function createQuote(state, input = {}) {
   const sequence = Math.max(0, ...(state.quotes || []).map((quote) => Number.parseInt(String(quote.code || "").replace(/\D/g, ""), 10) || 0)) + 1;
   const quote = {
     id: uid("quote"), code: input.code || `COT-${String(sequence).padStart(4, "0")}`,
-    title: String(input.title || "Nova cotação").trim(), client: String(input.client || "").trim(),
+    title: String(input.title || "").trim(), client: String(input.client || "").trim(),
     status: input.status || "Nova", deadline: input.deadline || "", value: input.value || "",
     vehicleType: input.vehicleType || "", origin: input.origin || "", destination: input.destination || "",
     passengers: input.passengers || "", serviceDate: input.serviceDate || "", returnDate: input.returnDate || "",
     clientContact: input.clientContact || "", clientEmail: input.clientEmail || "", clientPhone: input.clientPhone || "",
     commercialTerms: input.commercialTerms || "", notes: input.notes || "", priority: input.priority || "medium", channel: input.channel || "", hasReturn: Boolean(input.returnDate), lossReason: input.lossReason || "", responseSent: false, finalizationAt: "", plannerTaskId: "", createdAt: now, modifiedAt: now,
   };
+  if (!quote.title) quote.title = quoteTaskTitle(quote);
   const withQuote = { ...state, quotes: [quote, ...(state.quotes || [])] };
   const assigneeIds = input.assigneeIds || [];
   const assigneeNames = input.assigneeNames || assigneeIds.map((id) => withQuote.employees?.find((employee) => employee.id === id)?.name).filter(Boolean);
-  const withTask = createTask(withQuote, { title: `Acompanhar ${quote.code}`, quoteId: quote.id, quoteCode: quote.code, quoteTitle: quote.title, quoteStatus: quote.status, dueDate: quote.deadline, priority: quote.priority, assigneeIds, assigneeNames, assigneeName: assigneeNames.join(", ") || "Não atribuído", assignmentMode: "people", teamName: "Financeiro", description: `Acompanhar a cotação ${quote.code} até a resposta ao cliente.` });
+  const withTask = createTask(withQuote, { title: quoteTaskTitle(quote), quoteId: quote.id, quoteCode: quote.code, quoteTitle: quote.title, quoteStatus: quote.status, dueDate: quote.deadline, priority: quote.priority, assigneeIds, assigneeNames, assigneeName: assigneeNames.join(", ") || "Não atribuído", assignmentMode: "people", teamName: "Financeiro", description: `Acompanhar a cotação ${quote.code} até a resposta ao cliente.` });
   const task = withTask.tasks.find((item) => item.quoteId === quote.id && !item.parentTaskId);
   return saveState({ ...withTask, quotes: withTask.quotes.map((item) => item.id === quote.id ? { ...item, plannerTaskId: task?.id || "", modifiedAt: now } : item) });
 }
@@ -1069,6 +1073,7 @@ export function updateQuote(state, id, patch = {}) {
     if (!(state.tasks || []).some((task) => task.quoteId === id && !task.parentTaskId)) throw new Error("Tarefa vinculada à cotação não encontrada.");
   }
   const nextQuote = { ...existing, ...patch, id, modifiedAt: new Date().toISOString() };
+  if (isAutomaticQuoteTitle(existing) && patch.clientContact !== undefined && patch.title === undefined) nextQuote.title = quoteTaskTitle(nextQuote);
   if (patch.status && patch.status !== "Respondida ao cliente") nextQuote.responseSent = false;
   const outcomeStatus = nextQuote.status;
   const statusChanged = outcomeStatus !== existing.status;
@@ -1094,7 +1099,7 @@ export function updateQuote(state, id, patch = {}) {
       if (!taskItem.parentTaskId && patch.assigneeIds !== undefined && JSON.stringify(patch.assigneeIds) !== JSON.stringify(taskItem.assigneeIds || [])) history.push({ id: uid("history"), text: `Responsável atualizado para ${patch.assigneeNames?.join(", ") || "sem responsável"}.`, createdAt: nextQuote.modifiedAt, author: actor?.name || "Sistema", authorId: actor?.id || "", field: "assignees", previousValue: taskItem.assigneeNames || [], nextValue: patch.assigneeNames || [] });
       return {
         ...taskItem,
-        title: taskItem.parentTaskId ? taskItem.title : `Acompanhar ${nextQuote.code || "cotação"}`,
+        title: taskItem.parentTaskId || !isAutomaticQuoteTaskTitle(taskItem, existing) ? taskItem.title : quoteTaskTitle(nextQuote),
         quoteCode: nextQuote.code || taskItem.quoteCode,
         quoteTitle: nextQuote.title || taskItem.quoteTitle,
         dueDate: nextQuote.deadline || taskItem.dueDate,
