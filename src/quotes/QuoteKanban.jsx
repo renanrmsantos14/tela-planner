@@ -1,7 +1,7 @@
 import React, { memo, useCallback, useMemo } from "react";
 import { BadgeDollarSign, CalendarDays, CircleHelp, ClipboardList, Clock3, FileText, GripVertical, ScanSearch, Send } from "lucide-react";
 import { formatMoney, QUOTE_OPEN_STATUSES, QUOTE_PRIORITIES } from "../quoteDomain";
-import { formatDate, waitingContextSummary } from "../domain";
+import { canRegisterWaitingReturn, formatDate, waitingContextSummary } from "../domain";
 import KanbanBoard from "../KanbanBoard.jsx";
 
 const STATUS_META = {
@@ -15,10 +15,11 @@ const STATUS_META = {
 const PRIORITY_TONES = { low: "neutral", medium: "action", high: "warning", urgent: "danger" };
 const TODAY = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 
-const QuoteCard = memo(function QuoteCard({ quote, task, isDragging, draggable, onOpen, onDragStart, onDragEnd }) {
+const QuoteCard = memo(function QuoteCard({ quote, task, currentEmployee, teams = [], isDragging, draggable, onOpen, onRegisterWaitingReturn, onDragStart, onDragEnd }) {
   const priority = QUOTE_PRIORITIES.find((item) => item.id === quote.priority) || QUOTE_PRIORITIES[1];
   const overdue = Boolean(quote.deadline && quote.deadline < TODAY);
   const waitingSummary = quote.status === "Aguardando informação" ? waitingContextSummary(task?.waitingContext) : "";
+  const canRegisterReturn = canRegisterWaitingReturn(task, currentEmployee, teams);
   return <article
     className={`task-card quote-kanban-card${overdue ? " task-overdue" : ""}${isDragging ? " task-card-dragging" : ""}`}
     draggable={draggable}
@@ -35,10 +36,11 @@ const QuoteCard = memo(function QuoteCard({ quote, task, isDragging, draggable, 
     {quote.value !== null && quote.value !== undefined && String(quote.value).trim() && <div className="quote-kanban-value" aria-label={`Valor da cotação: ${formatMoney(quote.value)}`}><span className="quote-kanban-value-icon" aria-hidden="true"><BadgeDollarSign size={14} /></span><span className="quote-kanban-value-content"><small>Valor</small><strong>{formatMoney(quote.value)}</strong></span></div>}
     {waitingSummary && <div className="task-waiting-summary" title={waitingSummary}><Clock3 size={13} /><span>{waitingSummary}</span></div>}
     {(quote.serviceType || quote.origin || quote.destination) && <p className="task-description">{[quote.serviceType, [quote.origin, quote.destination].filter(Boolean).join(" → ")].filter(Boolean).join(" · ")}</p>}
+    {canRegisterReturn && <div className="task-card-footer quote-kanban-card-footer"><button className="task-quick-action task-return-action" type="button" onClick={(event) => { event.stopPropagation(); onRegisterWaitingReturn?.(task.id); }} onKeyDown={(event) => event.stopPropagation()}>Registrar retorno</button></div>}
   </article>;
 });
 
-export default function QuoteKanban({ quotes, tasksByQuote, onOpen, onMove }) {
+export default function QuoteKanban({ quotes, tasksByQuote, currentEmployee, teams = [], onOpen, onRegisterWaitingReturn, onMove }) {
   const columns = useMemo(() => QUOTE_OPEN_STATUSES.map((status) => ({ id: status, label: status, tone: STATUS_META[status]?.tone || "neutral" })), []);
   const quotesByColumn = useMemo(() => Object.fromEntries(QUOTE_OPEN_STATUSES.map((status) => [status, quotes.filter((quote) => quote.status === status)])), [quotes]);
   const getSourceColumnId = useCallback((quote) => quote?.status || "", []);
@@ -65,6 +67,6 @@ export default function QuoteKanban({ quotes, tasksByQuote, onOpen, onMove }) {
     itemLabelPlural="cotações"
     transferType="text/quote-id"
     renderColumnIcon={(column) => { const Icon = STATUS_META[column.id]?.Icon || ClipboardList; return <Icon className={`status-column-icon status-column-icon-${column.tone}`} size={17} strokeWidth={2.2} aria-hidden="true" />; }}
-    renderCard={(quote, dragProps) => <QuoteCard key={quote.id} quote={quote} task={tasksByQuote.get(quote.id)} onOpen={onOpen} {...dragProps} />}
+    renderCard={(quote, dragProps) => <QuoteCard key={quote.id} quote={quote} task={tasksByQuote.get(quote.id)} currentEmployee={currentEmployee} teams={teams} onOpen={onOpen} onRegisterWaitingReturn={onRegisterWaitingReturn} {...dragProps} />}
   /></div>;
 }

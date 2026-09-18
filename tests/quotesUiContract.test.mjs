@@ -84,6 +84,17 @@ test("kanban de cotações replica o motor e a composição do quadro de tarefas
   assert.match(kanban, /requestAnimationFrame/);
 });
 
+test("card de cotação registra retorno pela tarefa vinculada", () => {
+  const kanban = read("../src/quotes/QuoteKanban.jsx");
+  const hybrid = read("../src/quotes/HybridQuotesView.jsx");
+  assert.match(kanban, /canRegisterWaitingReturn\(task, currentEmployee, teams\)/);
+  assert.match(kanban, /task-quick-action task-return-action/);
+  assert.match(kanban, /stopPropagation\(\)/);
+  assert.match(kanban, /onKeyDown=\{\(event\) => event\.stopPropagation\(\)\}/);
+  assert.match(kanban, /onRegisterWaitingReturn\?\.\(task\.id\)/);
+  assert.match(hybrid, /<QuoteKanban[^>]*currentEmployee=\{currentEmployee\}[^>]*teams=\{state\.teams\}[^>]*onRegisterWaitingReturn=\{onRegisterWaitingReturn\}/);
+});
+
 test("filtros de cotações reutilizam o multiselect da aba Tarefas", () => {
   const hybrid = read("../src/quotes/HybridQuotesView.jsx");
   assert.match(hybrid, /SearchableMultiSelect/);
