@@ -4,6 +4,7 @@ import { QUOTE_CREATE_STEPS, validateQuoteStep } from "../quoteDomain";
 import { QuoteClientFields, QuoteCommercialFields, QuoteServiceFields } from "./QuoteFields";
 import QuoteReview from "./QuoteReview";
 import MissingDeadlineDialog from "./MissingDeadlineDialog";
+import { isAutomaticQuoteTitle, quoteTitle } from "../domain";
 
 const INITIAL_DRAFT = { status: "Nova", priority: "medium", channel: "WhatsApp", assigneeIds: [], assigneeNames: [] };
 
@@ -21,7 +22,7 @@ export default function QuoteCreateDrawer({ employees = [], onClose, onCreate, A
   const initialFocusRef = useRef(null);
   const changed = attachments.length > 0 || JSON.stringify(draft) !== JSON.stringify(INITIAL_DRAFT);
   const step = QUOTE_CREATE_STEPS[stepIndex];
-  const update = (key, value) => { setDraft((current) => ({ ...current, [key]: value })); setErrors((current) => ({ ...current, [key]: "" })); };
+  const update = (key, value) => { setDraft((current) => { const next = { ...current, [key]: value }; if (key === "clientContact" && isAutomaticQuoteTitle(current)) next.title = quoteTitle(next); return next; }); setErrors((current) => ({ ...current, [key]: "" })); };
   const requestClose = () => { if (saving) return; if (changed) setConfirmClose(true); else onClose?.(); };
 
   useEffect(() => { initialFocusRef.current?.focus(); }, []);
