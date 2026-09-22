@@ -24,9 +24,27 @@ export default function QuoteCreateDrawer({ employees = [], onClose, onCreate, A
   const step = QUOTE_CREATE_STEPS[stepIndex];
   const update = (key, value) => { setDraft((current) => { const next = { ...current, [key]: value }; if (key === "clientContact" && isAutomaticQuoteTitle(current)) next.title = quoteTitle(next); return next; }); setErrors((current) => ({ ...current, [key]: "" })); };
   const requestClose = () => { if (saving) return; if (changed) setConfirmClose(true); else onClose?.(); };
+  const keepTabInDrawer = (event) => {
+    if (event.defaultPrevented || event.key !== "Tab" || confirmClose || confirmMissingDeadline) return;
+    const drawer = document.querySelector(".quote-v3-create");
+    const controls = [...(drawer?.querySelectorAll("a[href], button, input:not([type='hidden']), select, textarea, [tabindex]") || [])]
+      .filter((control) => !control.disabled && control.tabIndex >= 0 && control.offsetParent !== null && !control.closest("[hidden]"));
+    const activeIndex = controls.indexOf(document.activeElement);
+    if (event.shiftKey && activeIndex === 0) {
+      event.preventDefault();
+      controls.at(-1)?.focus();
+    } else if (!event.shiftKey && activeIndex === controls.length - 1) {
+      event.preventDefault();
+      controls[0]?.focus();
+    }
+  };
 
   useEffect(() => { initialFocusRef.current?.focus(); }, []);
   useEffect(() => { if (step.id === "review") document.getElementById("quote-create-title")?.focus({ preventScroll: true }); }, [step.id]);
+  useEffect(() => {
+    if (stepIndex === 0) return;
+    document.querySelector(".quote-v3-drawer-body .quote-v3-form-grid input:not([type='hidden']), .quote-v3-drawer-body .quote-v3-form-grid textarea, .quote-v3-drawer-body .quote-v3-form-grid [data-searchable-select-trigger]")?.focus({ preventScroll: true });
+  }, [stepIndex]);
   useEffect(() => () => attachmentsRef.current.forEach((item) => URL.revokeObjectURL(item.previewUrl)), []);
   useEffect(() => {
     const onKeyDown = (event) => { if (event.key === "Escape" && !confirmClose) requestClose(); };
@@ -83,10 +101,10 @@ export default function QuoteCreateDrawer({ employees = [], onClose, onCreate, A
     finally { setSaving(false); }
   };
 
-  return <div className="quote-v3-layer" onMouseDown={(event) => { if (event.target === event.currentTarget) requestClose(); }}>
+  return <div className="quote-v3-layer" onKeyDown={keepTabInDrawer} onMouseDown={(event) => { if (event.target === event.currentTarget) requestClose(); }}>
     <aside className={`quote-v3-drawer quote-v3-create${step.id === "review" ? " quote-v3-create-review" : ""}`} role="dialog" aria-modal="true" aria-labelledby="quote-create-title">
       <header className="quote-v3-drawer-header"><div>{step.id !== "review" && <span className="eyebrow">NOVA SOLICITAÇÃO</span>}<h2 id="quote-create-title" tabIndex={step.id === "review" ? -1 : undefined}>Criar cotação</h2>{step.id === "review" && <p className="quote-review-step-label">Revisão · 4 de 4</p>}</div><button ref={initialFocusRef} className="icon-button" type="button" onClick={requestClose} aria-label="Fechar cadastro"><X size={20} /></button></header>
-      {step.id !== "review" && <ol className="quote-v3-stepper" aria-label="Etapas do cadastro">{QUOTE_CREATE_STEPS.map((item, index) => <li key={item.id} className={index === stepIndex ? "active" : index < stepIndex ? "done" : ""} aria-current={index === stepIndex ? "step" : undefined}><button type="button" disabled={index > stepIndex} onClick={() => setStepIndex(index)}><span>{index < stepIndex ? <Check size={14} /> : index + 1}</span>{item.label}</button></li>)}</ol>}
+      {step.id !== "review" && <ol className="quote-v3-stepper" aria-label="Etapas do cadastro">{QUOTE_CREATE_STEPS.map((item, index) => <li key={item.id} className={index === stepIndex ? "active" : index < stepIndex ? "done" : ""} aria-current={index === stepIndex ? "step" : undefined}><button type="button" tabIndex={-1} disabled={index > stepIndex} onClick={() => setStepIndex(index)}><span>{index < stepIndex ? <Check size={14} /> : index + 1}</span>{item.label}</button></li>)}</ol>}
       <div className="quote-v3-drawer-body" onPaste={handlePaste}>
         {step.id !== "review" && <><div className="quote-v3-step-progress" role="progressbar" aria-valuemin="1" aria-valuemax="4" aria-valuenow={stepIndex + 1}><span style={{ width: `${((stepIndex + 1) / 4) * 100}%` }} /></div>
           <div className="quote-v3-step-heading"><span>Etapa {stepIndex + 1} de 4</span><h3>{step.label}</h3></div></>}

@@ -48,7 +48,19 @@ export const FormMoneyInput = forwardRef(function FormMoneyInput({ error, classN
 
 const FormDateInput = forwardRef(function FormDateInput({ error, className = "", ...props }, ref) {
   const errorId = props.id && error ? `${props.id}-error` : undefined;
-  return <DateInput ref={ref} {...props} className={`form-general-input${className ? ` ${className}` : ""}`} aria-invalid={error ? true : undefined} aria-describedby={errorId || props["aria-describedby"]} />;
+  const handleKeyDown = (event) => {
+    props.onKeyDown?.(event);
+    if (event.defaultPrevented || event.key !== "Tab") return;
+    const scope = event.currentTarget.closest(".quote-v3-drawer-body");
+    if (!scope) return;
+    const controls = [...scope.querySelectorAll("input:not([type='hidden']), textarea, [data-searchable-select-trigger], [role='radio'][tabindex='0'], button:not([type='submit']):not([tabindex='-1'])")]
+      .filter((control) => !control.disabled && control.tabIndex >= 0 && control.offsetParent !== null && !control.closest("[hidden]"));
+    const next = controls[controls.indexOf(event.currentTarget) + (event.shiftKey ? -1 : 1)];
+    if (!next) return;
+    event.preventDefault();
+    next.focus();
+  };
+  return <DateInput ref={ref} {...props} onKeyDown={handleKeyDown} className={`form-general-input${className ? ` ${className}` : ""}`} aria-invalid={error ? true : undefined} aria-describedby={errorId || props["aria-describedby"]} />;
 });
 
 export const FormTextArea = forwardRef(function FormTextArea({ error, className = "", ...props }, ref) {

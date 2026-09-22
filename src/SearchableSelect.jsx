@@ -108,7 +108,7 @@ function referenceIsHidden(element, rect, viewport) {
 
 function focusAdjacentControl(trigger, direction) {
   const scope = trigger?.closest(
-    "form, .dashboard-filters, .filter-surface, .form-stack",
+    "form, .dashboard-filters, .filter-surface, .form-stack, .quote-v3-drawer-body",
   );
   if (!scope) return;
   const controls = [
@@ -118,6 +118,7 @@ function focusAdjacentControl(trigger, direction) {
   ].filter(
     (control) =>
       !control.disabled &&
+      control.tabIndex >= 0 &&
       control.offsetParent !== null &&
       !control.closest("[hidden]"),
   );
