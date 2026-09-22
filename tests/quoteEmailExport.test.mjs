@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildQuoteEmailHtml, loadQuoteImages } from "../src/quoteDomain.js";
+import { readFile } from "node:fs/promises";
+import { buildQuoteEmailHtml, loadQuoteImages, QUOTE_ASSET_NAMES } from "../src/quoteDomain.js";
 import { createQuoteWord } from "../src/quoteWord.js";
 import { createQuotePdf } from "../src/quotePdf.js";
 import { createQuoteDraft } from "../src/mailGraph.js";
@@ -8,6 +9,14 @@ import { createQuoteDraft } from "../src/mailGraph.js";
 const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9n0ZkAAAAASUVORK5CYII=", "base64");
 const quote = { code: "COT-1007", client: "Cliente", clientContact: "Renan", origin: "GRU", destination: "Paulista", vehicleType: "Executivo", value: "R$ 1.000,00", commercialTerms: "Pagamento em 30 dias" };
 const fetcher = async () => ({ ok: true, blob: async () => new Blob([png], { type: "image/png" }) });
+
+test("WebResources locais contêm os seis PNGs usados pelas cotações", async () => {
+  for (const name of Object.values(QUOTE_ASSET_NAMES)) {
+    const bytes = await readFile(new URL(`../public/WebResources/${name}`, import.meta.url));
+    assert.equal(bytes.subarray(0, 8).toString("hex"), "89504e470d0a1a0a", `${name} deve ser PNG válido`);
+    assert.ok(bytes.length > 1000, `${name} não pode estar vazio`);
+  }
+});
 
 test("carrega todas as imagens e incorpora seus bytes no HTML copiado", async () => {
   const images = await loadQuoteImages(quote, { baseUrl: "https://crm.example", fetcher });
