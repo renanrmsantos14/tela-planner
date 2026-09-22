@@ -110,7 +110,7 @@ export default function QuoteManagementDrawer({ quote, task, employees = [], tea
     if (!enabled) setInlineToolbarPosition(null);
     else requestAnimationFrame(positionInlineToolbar);
     if (enabled) setComposerMessage("Edite os textos no preview. As mudanças entram no e-mail copiado; PDF e Word usam os dados salvos.");
-    else setComposerMessage(previewEdited ? "Texto editado. Copie o modelo para usar as alterações; PDF e Word usam os dados salvos." : "");
+    else setComposerMessage(previewEdited ? "Texto editado. Copiar, PDF e Word usarão exatamente esta versão." : "");
   };
   const getEditedPreview = () => {
     const document = previewFrameRef.current?.contentDocument;
@@ -190,22 +190,23 @@ export default function QuoteManagementDrawer({ quote, task, employees = [], tea
     try {
       if (action === "draft" && !composerEmail.trim()) throw new Error("Informe o e-mail do cliente para criar o rascunho.");
       const assets = await loadQuoteImages(draft, { baseUrl: window.location.origin, signal: controller.signal });
+      const currentPreview = getEditedPreview();
       if (action === "copy") {
         await copyQuoteToClipboard(draft, { ...assets, ...(previewEdited ? getEditedPreview() : {}), signal: controller.signal });
         if (!controller.signal.aborted) setComposerMessage("Cotação copiada. Abra o Outlook app, crie um e-mail e cole com Ctrl+V.");
       } else if (action === "word") {
-        const word = await createQuoteWord(draft, { baseUrl: window.location.origin, signal: controller.signal, assets });
-        if (!controller.signal.aborted) { downloadQuoteWord(word); setComposerMessage("Modelo Word baixado com imagens incorporadas."); }
+        const word = await createQuoteWord(draft, { baseUrl: window.location.origin, signal: controller.signal, assets, html: currentPreview.html });
+        if (!controller.signal.aborted) { downloadQuoteWord(word); setComposerMessage("Word baixado com o mesmo visual do preview."); }
       } else if (action === "pdf") {
-        const pdf = await createQuotePdf(draft, { baseUrl: window.location.origin, signal: controller.signal, assets });
-        if (!controller.signal.aborted) { downloadQuotePdf(pdf); setComposerMessage("PDF baixado com imagens incorporadas."); }
+        const pdf = await createQuotePdf(draft, { baseUrl: window.location.origin, signal: controller.signal, assets, html: currentPreview.html });
+        if (!controller.signal.aborted) { downloadQuotePdf(pdf); setComposerMessage("PDF baixado com o mesmo visual do preview."); }
       } else {
         const token = await acquireMailToken();
         let attachment;
         if (composerMode !== "body") {
           const result = attachmentFormat === "pdf"
-            ? await createQuotePdf(draft, { baseUrl: window.location.origin, signal: controller.signal, assets })
-            : await createQuoteWord(draft, { baseUrl: window.location.origin, signal: controller.signal, assets });
+            ? await createQuotePdf(draft, { baseUrl: window.location.origin, signal: controller.signal, assets, html: currentPreview.html })
+            : await createQuoteWord(draft, { baseUrl: window.location.origin, signal: controller.signal, assets, html: currentPreview.html });
           attachment = { name: result.filename, bytes: new Uint8Array(await result.blob.arrayBuffer()), contentType: attachmentFormat === "pdf" ? "application/pdf" : "application/vnd.openxmlformats-officedocument.wordprocessingml.document" };
         }
         const draftResult = await createQuoteDraft({ token, quote: { ...draft, clientEmail: composerEmail.trim() }, mode: composerMode, attachment, assets: { ...assets, buildHtml: buildQuoteEmailHtml }, subject: quoteSubject(draft) });

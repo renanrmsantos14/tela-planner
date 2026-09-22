@@ -1,6 +1,32 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { buildQuoteRouteText, formatMoney, isVanVehicle, loadQuoteImages, QUOTE_ASSET_NAMES, quoteEmailNotes, quoteSubject } from "./quoteDomain.js";
 
+async function renderHtmlToPng(html, signal) {
+  signal?.throwIfAborted?.();
+  const { default: html2canvas } = await import("html2canvas");
+  const frame = document.createElement("iframe");
+  frame.style.cssText = "position:fixed;left:-10000px;top:0;width:794px;height:1123px;border:0;opacity:0;pointer-events:none";
+  document.body.appendChild(frame);
+  try {
+    await new Promise((resolve, reject) => {
+      frame.onload = resolve;
+      frame.onerror = () => reject(new Error("Não foi possível preparar o PDF."));
+      frame.srcdoc = html;
+    });
+    const source = frame.contentDocument;
+    source.body.style.removeProperty("zoom");
+    const sheet = source.querySelector(".a4-sheet") || source.body;
+    const height = Math.max(1123, sheet.scrollHeight);
+    frame.style.height = `${height}px`;
+    await Promise.all([...source.images].map((item) => item.decode().catch(() => {})));
+    signal?.throwIfAborted?.();
+    const canvas = await html2canvas(sheet, { scale: 2, useCORS: true, backgroundColor: "#d9d9d9", logging: false, width: 794, height, windowWidth: 794, windowHeight: height });
+    return new Uint8Array(await (await new Promise((resolve, reject) => canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("Não foi possível renderizar o PDF.")), "image/png"))).arrayBuffer());
+  } finally {
+    frame.remove();
+  }
+}
+
 function wrap(text, max) {
   const words = String(text || "").replace(/[→↔]/g, "->").replace(/[—–]/g, "-").split(/\s+/).filter(Boolean);
   const lines = [];
@@ -19,7 +45,15 @@ function fitImage(page, image, x, y, maxWidth, maxHeight) {
   page.drawImage(image, { x: x + (maxWidth - width) / 2, y: y + (maxHeight - height) / 2, width, height });
 }
 
-export async function createQuotePdf(quote, { baseUrl = "", signal, fetcher, assets } = {}) {
+export async function createQuotePdf(quote, { baseUrl = "", signal, fetcher, assets, html } = {}) {
+  if (html && typeof DOMParser !== "undefined") {
+    const pdf = await PDFDocument.create();
+    const page = pdf.addPage([595, 842]);
+    const screenshot = await pdf.embedPng(await renderHtmlToPng(html, signal));
+    page.drawImage(screenshot, { x: 0, y: 0, width: 595, height: 842 });
+    const bytes = await pdf.save();
+    return { blob: new Blob([bytes], { type: "application/pdf" }), filename: `${quoteSubject(quote).replace(/[<>:"/\\|?*]/g, "-") || "Cotação"}.pdf` };
+  }
   const artwork = assets || await loadQuoteImages(quote, { baseUrl, signal, fetcher });
   signal?.throwIfAborted?.();
   const pdf = await PDFDocument.create();

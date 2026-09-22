@@ -1,6 +1,14 @@
 import { buildQuoteRouteText, formatMoney, isVanVehicle, loadQuoteImages, QUOTE_ASSET_NAMES, quoteEmailNotes, quoteSubject } from "./quoteDomain.js";
 
-export async function createQuoteWord(quote, { baseUrl = "", signal, fetcher, assets } = {}) {
+export async function createQuoteWord(quote, { baseUrl = "", signal, fetcher, assets, html } = {}) {
+  if (html) {
+    signal?.throwIfAborted?.();
+    const content = `<!DOCTYPE html><html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" lang="pt-BR"><head><meta charset="utf-8"><title>${quoteSubject(quote)}</title></head><body>${String(html).replace(/^.*?<body[^>]*>|<\/body>.*$/gis, "")}</body></html>`;
+    return {
+      blob: new Blob([content], { type: "application/msword;charset=utf-8" }),
+      filename: `${quoteSubject(quote).replace(/[<>:"/\\|?*]/g, "-") || "Cotação"}.doc`,
+    };
+  }
   const artwork = assets || await loadQuoteImages(quote, { baseUrl, signal, fetcher });
   const { AlignmentType, Document, ImageRun, Packer, Paragraph, Table, TableCell, TableRow, TextRun, WidthType } = await import("docx");
   signal?.throwIfAborted?.();

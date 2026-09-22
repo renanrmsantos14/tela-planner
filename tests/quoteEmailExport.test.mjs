@@ -61,6 +61,14 @@ test("Word contém conteúdo editável e quatro imagens incorporadas", async () 
   assert.equal((archive.match(/word\/media\//g) || []).length >= 4, true);
 });
 
+test("Word pode usar exatamente o HTML exibido no preview", async () => {
+  const html = '<!DOCTYPE html><html><body><table class="a4-sheet"><tr><td>Visual idêntico ao preview</td></tr></table></body></html>';
+  const { blob, filename } = await createQuoteWord(quote, { html });
+  assert.equal(filename, "Cotação COT-1007 - Cliente.doc");
+  assert.equal(blob.type, "application/msword;charset=utf-8");
+  assert.match(await blob.text(), /Visual idêntico ao preview/);
+});
+
 test("cancelamento impede preparar Word após carregar imagens", async () => {
   const controller = new AbortController();
   controller.abort();
