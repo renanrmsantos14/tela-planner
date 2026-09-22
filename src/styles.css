@@ -431,21 +431,31 @@ button { cursor: pointer; }
 .quote-v3-data > .button { justify-self: end; }
 .quote-v3-inline-warning { display: grid; gap: 8px; padding: 13px; border-radius: 10px; background: #fff7e6; color: #7a5200; }
 .quote-v3-feedback { position: sticky; bottom: 0; margin-top: 14px; padding: 10px 12px; border-radius: 9px; background: #eaf5f2; color: #175d4d; }
-.quote-v3-composer-layer { position: fixed; inset: 0; z-index: 115; display: grid; place-items: center; padding: 24px; background: rgba(0,20,30,.55); }
-.quote-v3-preview { width: min(100%, 1040px); height: 100%; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; overflow: hidden; border-radius: 16px; background: #fff; box-shadow: 0 24px 70px rgba(0,20,30,.35); }
-.quote-v3-preview header { display: flex; align-items: center; justify-content: space-between; padding: 13px 16px; border-bottom: 1px solid var(--quote-v3-border); }
-.quote-v3-preview header div { display: grid; gap: 3px; }
-.quote-v3-preview header small { color: var(--muted); }
-.quote-v3-preview iframe { width: 100%; height: 100%; border: 0; background: #0a2f41; }
-.quote-v3-preview footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; border-top: 1px solid var(--quote-v3-border); }
-.quote-v3-preview footer > span { min-width: 0; color: var(--muted); font-size: 12px; }
-.quote-v3-preview footer > div { display: flex; flex-wrap: wrap; gap: 8px; }
-.quote-v3-composer-options { display: grid; grid-template-columns: minmax(180px, 1fr) minmax(260px, 1.5fr) 160px; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--quote-v3-border); background: #f8fafb; }
+.quote-v3-composer-layer { position: fixed; inset: 0; z-index: 115; display: grid; place-items: center; padding: 24px; background: rgba(0,20,30,.62); }
+.quote-v3-preview { width: min(1480px, 100%); height: min(920px, calc(100dvh - 48px)); min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 360px; grid-template-rows: auto minmax(0, 1fr); grid-template-areas: "header header" "viewport sidebar"; overflow: hidden; border: 1px solid rgba(255,255,255,.45); border-radius: 16px; background: #fff; box-shadow: 0 24px 70px rgba(0,20,30,.35); }
+.quote-v3-preview-header { grid-area: header; display: flex; align-items: center; justify-content: space-between; min-width: 0; padding: 12px 18px; border-bottom: 1px solid var(--quote-v3-border); background: #fff; }
+.quote-v3-preview-header > div { min-width: 0; display: grid; gap: 3px; }
+.quote-v3-preview-header strong { overflow: hidden; color: var(--navy); font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.quote-v3-preview-kicker { color: var(--muted); font-size: 9px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.quote-v3-preview-viewport { grid-area: viewport; min-width: 0; min-height: 0; display: grid; place-items: center; overflow: hidden; padding: 16px; background: #e8edf2; }
+.quote-v3-preview-viewport iframe { width: 100%; height: 100%; border: 0; background: #0a2f41; }
+.quote-v3-composer-sidebar { grid-area: sidebar; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; border-left: 1px solid var(--quote-v3-border); background: #fff; }
+.quote-v3-composer-heading { display: grid; gap: 5px; padding: 20px 20px 16px; border-bottom: 1px solid #edf0f4; }
+.quote-v3-composer-heading span { color: var(--navy); font-size: 15px; font-weight: 800; }
+.quote-v3-composer-heading small { color: var(--muted); font-size: 11px; line-height: 1.45; }
+.quote-v3-composer-options { display: grid; gap: 20px; padding: 18px 20px; }
+.quote-v3-composer-options > label { display: grid; gap: 7px; color: var(--navy); font-size: 11px; font-weight: 800; }
+.quote-v3-composer-options input[type="email"], .quote-v3-composer-options select { box-sizing: border-box; width: 100%; min-width: 0; height: 40px; padding: 0 11px; border: 1px solid var(--quote-v3-border); border-radius: 8px; background: #fff; color: var(--ink); }
 .quote-v3-composer-options label, .quote-v3-composer-options fieldset { display: grid; gap: 5px; min-width: 0; margin: 0; font-size: 12px; color: var(--muted); }
-.quote-v3-composer-options input[type="email"], .quote-v3-composer-options select { min-width: 0; height: 34px; padding: 0 9px; border: 1px solid var(--quote-v3-border); border-radius: 7px; background: #fff; color: var(--ink); }
-.quote-v3-composer-options fieldset { grid-template-columns: repeat(3, minmax(0, 1fr)); align-content: start; border: 0; padding: 0; }
+.quote-v3-composer-options fieldset { display: grid; gap: 8px; border: 0; padding: 0; }
 .quote-v3-composer-options legend { grid-column: 1 / -1; padding: 0; }
-.quote-v3-composer-options fieldset label { display: flex; grid-template-columns: none; align-items: center; gap: 5px; color: var(--ink); }
+.quote-v3-composer-options fieldset label { display: flex; align-items: center; gap: 9px; min-height: 34px; color: var(--ink); cursor: pointer; }
+.quote-v3-composer-options fieldset input[type="radio"] { width: 16px; height: 16px; margin: 0; accent-color: var(--blue); }
+.quote-v3-composer-actions { display: grid; gap: 10px; margin-top: auto; padding: 16px 20px 20px; border-top: 1px solid #edf0f4; background: #fbfcfd; }
+.quote-v3-composer-actions > span { min-height: 16px; color: var(--muted); font-size: 10px; line-height: 1.4; }
+.quote-v3-composer-actions > .button { justify-content: center; min-height: 42px; }
+.quote-v3-composer-actions > div { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.quote-v3-composer-actions > div .button { justify-content: center; min-height: 38px; }
 @keyframes quote-v3-enter { from { transform: translateX(24px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 @keyframes quote-v3-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes quote-v3-spin { to { transform: rotate(360deg); } }
@@ -496,10 +506,14 @@ button { cursor: pointer; }
   .quote-v3-drawer-footer > div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .quote-v3-drawer-footer .button { justify-content: center; }
   .quote-v3-composer-layer { padding: 0; }
-  .quote-v3-preview { border-radius: 0; }
-  .quote-v3-preview footer { align-items: stretch; flex-direction: column; }
-  .quote-v3-composer-options { grid-template-columns: 1fr; }
-  .quote-v3-composer-options fieldset { grid-template-columns: 1fr; }
+  .quote-v3-preview { width: 100%; height: 100dvh; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(220px, 42dvh) minmax(0, 1fr); grid-template-areas: "header" "viewport" "sidebar"; border: 0; border-radius: 0; }
+  .quote-v3-composer-sidebar { border-top: 1px solid var(--quote-v3-border); border-left: 0; }
+  .quote-v3-composer-heading { padding: 13px 16px 10px; }
+  .quote-v3-composer-heading small { display: none; }
+  .quote-v3-composer-options { grid-template-columns: 1fr 1fr; gap: 12px; padding: 12px 16px; }
+  .quote-v3-composer-options fieldset { grid-column: 1 / -1; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .quote-v3-composer-options fieldset:first-of-type { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .quote-v3-composer-actions { padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); }
 }
 
 @media (prefers-reduced-motion: reduce) {
