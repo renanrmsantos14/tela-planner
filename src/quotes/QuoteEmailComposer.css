@@ -1,0 +1,48 @@
+.quote-v3-preview.quote-v3-preview {
+  grid-template-columns: minmax(0, 1fr) 360px;
+  grid-template-rows: minmax(0, 1fr);
+  grid-template-areas: "viewport actions";
+}
+
+.quote-v3-preview.quote-v3-preview > .quote-v3-preview-viewport { grid-area: viewport; }
+.quote-v3-preview.quote-v3-preview > .quote-v3-composer-actions {
+  grid-area: actions;
+  min-width: 0;
+  max-height: 100%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 10px;
+  padding: 20px;
+  border-top: 0;
+  border-left: 1px solid #edf0f4;
+}
+
+.quote-v3-preview.quote-v3-preview > .quote-v3-composer-actions > .quote-v3-preview-header {
+  grid-area: auto;
+  flex: 0 0 auto;
+  padding: 0 0 14px;
+  border-bottom: 1px solid #edf0f4;
+}
+.quote-v3-preview.quote-v3-preview > .quote-v3-composer-actions > span { flex: 0 0 auto; padding: 10px 12px; border-radius: 9px; background: #f4f7fb; color: #53647a; font-size: 11px; }
+.quote-v3-preview.quote-v3-preview > .quote-v3-composer-actions > .button { width: 100%; }
+.quote-v3-preview.quote-v3-preview > .quote-v3-composer-actions > div { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.quote-v3-preview.quote-v3-preview > .quote-v3-composer-actions > div .button { min-width: 0; padding-inline: 8px; }
+.quote-v3-editor-toolbar { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; padding: 10px; border: 1px solid #e5ebf2; border-radius: 10px; background: #f8fafc; }
+.quote-v3-editor-toolbar .button { min-width: 0; min-height: 36px; padding-inline: 8px; font-size: 11px; }
+
+@media (max-width: 760px) {
+  .quote-v3-preview.quote-v3-preview {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-areas: "viewport" "actions";
+  }
+  .quote-v3-preview.quote-v3-preview > .quote-v3-composer-actions {
+    max-height: 42dvh;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    border-top: 1px solid #edf0f4;
+    border-left: 0;
+  }
+}

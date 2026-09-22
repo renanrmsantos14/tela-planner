@@ -289,9 +289,9 @@ export async function loadQuoteImages(quote, { baseUrl = "", signal, fetcher = f
 }
 
 export async function copyQuoteToClipboard(quote, assets = {}) {
-  const prepared = assets.imageUrls ? assets : { ...assets, ...await loadQuoteImages(quote, assets) };
-  const html = buildQuoteEmailHtml(quote, prepared);
-  const text = buildQuotePlainText(quote);
+  const prepared = assets.html || assets.imageUrls ? assets : { ...assets, ...await loadQuoteImages(quote, assets) };
+  const html = assets.html || buildQuoteEmailHtml(quote, prepared);
+  const text = assets.text || buildQuotePlainText(quote);
   assets.signal?.throwIfAborted?.();
   if (typeof navigator !== "undefined" && navigator.clipboard?.write && typeof ClipboardItem !== "undefined") {
     await navigator.clipboard.write([new ClipboardItem({ "text/html": new Blob([html], { type: "text/html" }), "text/plain": new Blob([text], { type: "text/plain" }) })]);

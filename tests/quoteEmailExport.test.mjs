@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { buildQuoteEmailHtml, loadQuoteImages, QUOTE_ASSET_NAMES } from "../src/quoteDomain.js";
+import { buildQuoteEmailHtml, copyQuoteToClipboard, loadQuoteImages, QUOTE_ASSET_NAMES } from "../src/quoteDomain.js";
 import { createQuoteWord } from "../src/quoteWord.js";
 import { createQuotePdf } from "../src/quotePdf.js";
 import { createQuoteDraft } from "../src/mailGraph.js";
@@ -24,6 +24,29 @@ test("carrega todas as imagens e incorpora seus bytes no HTML copiado", async ()
   const html = buildQuoteEmailHtml(quote, { baseUrl: "https://crm.example", imageUrls: images.imageUrls });
   assert.equal((html.match(/src="data:image\/png;base64,/g) || []).length, 4);
   assert.doesNotMatch(html, /src="https:\/\/crm.example\/WebResources\//);
+});
+
+test("copia o HTML editado do preview sem reconstruir a proposta original", async () => {
+  const originalNavigator = Object.getOwnPropertyDescriptor(globalThis, "navigator");
+  const originalClipboardItem = Object.getOwnPropertyDescriptor(globalThis, "ClipboardItem");
+  let copied;
+  class MockClipboardItem { constructor(data) { this.data = data; } }
+  Object.defineProperty(globalThis, "navigator", { configurable: true, value: { clipboard: { write: async ([item]) => { copied = item; } } } });
+  Object.defineProperty(globalThis, "ClipboardItem", { configurable: true, value: MockClipboardItem });
+  try {
+    const html = '<!DOCTYPE html><html><body><p>Texto editado</p><img src="data:image/png;base64,abc"></body></html>';
+    const text = "Texto editado";
+    const result = await copyQuoteToClipboard(quote, { html, text });
+    assert.equal(result.html, html);
+    assert.equal(result.text, text);
+    assert.equal(await copied.data["text/html"].text(), html);
+    assert.equal(await copied.data["text/plain"].text(), text);
+  } finally {
+    if (originalNavigator) Object.defineProperty(globalThis, "navigator", originalNavigator);
+    else delete globalThis.navigator;
+    if (originalClipboardItem) Object.defineProperty(globalThis, "ClipboardItem", originalClipboardItem);
+    else delete globalThis.ClipboardItem;
+  }
 });
 
 test("falha inteira se uma imagem não puder ser carregada", async () => {
