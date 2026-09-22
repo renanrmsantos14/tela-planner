@@ -36,10 +36,12 @@ export default function QuoteManagementDrawer({ quote, task, employees = [], tea
   const [editingPreview, setEditingPreview] = useState(false);
   const [previewEdited, setPreviewEdited] = useState(false);
   const [previewResetKey, setPreviewResetKey] = useState(0);
+  const [inlineToolbarPosition, setInlineToolbarPosition] = useState(null);
   const closeRef = useRef(null);
   const composerController = useRef(null);
   const previewFrameRef = useRef(null);
   const previewViewportRef = useRef(null);
+  const inlineToolbarRef = useRef(null);
   const update = (key, value) => setDraft((current) => ({ ...current, [key]: value }));
 
   useEffect(() => { closeRef.current?.focus(); onEnsureTaskDetails?.(task?.id); }, [onEnsureTaskDetails, task?.id]);
@@ -62,6 +64,29 @@ export default function QuoteManagementDrawer({ quote, task, employees = [], tea
     const scale = Math.min(1, (viewport.clientWidth - 32) / naturalWidth, (viewport.clientHeight - 32) / naturalHeight);
     document.body.style.zoom = String(Math.max(.35, scale));
   };
+  const positionInlineToolbar = () => {
+    const frame = previewFrameRef.current;
+    const viewport = previewViewportRef.current;
+    const document = frame?.contentDocument;
+    if (!document?.body.classList.contains("quote-email-editing") || !viewport) {
+      setInlineToolbarPosition(null);
+      return;
+    }
+    const selectionNode = document.getSelection()?.anchorNode;
+    const selectionElement = selectionNode?.nodeType === 1 ? selectionNode : selectionNode?.parentElement;
+    const target = selectionElement?.closest('[contenteditable="true"]') || document.activeElement?.closest?.('[contenteditable="true"]');
+    if (!target) { setInlineToolbarPosition(null); return; }
+    const frameRect = frame.getBoundingClientRect();
+    const viewportRect = viewport.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+    const toolbarWidth = inlineToolbarRef.current?.offsetWidth || 264;
+    const toolbarHeight = inlineToolbarRef.current?.offsetHeight || 42;
+    const left = Math.max(8, Math.min(frameRect.left - viewportRect.left + targetRect.left, viewport.clientWidth - toolbarWidth - 8));
+    const above = frameRect.top - viewportRect.top + targetRect.top - toolbarHeight - 8;
+    const below = frameRect.top - viewportRect.top + targetRect.bottom + 8;
+    const top = above >= 8 ? above : Math.min(below, viewport.clientHeight - toolbarHeight - 8);
+    setInlineToolbarPosition({ left, top });
+  };
   const setPreviewEditing = (enabled) => {
     const document = previewFrameRef.current?.contentDocument;
     if (!document?.body) return;
@@ -82,6 +107,8 @@ export default function QuoteManagementDrawer({ quote, task, employees = [], tea
     });
     document.body.querySelectorAll("img").forEach((image) => { image.contentEditable = "false"; image.draggable = false; });
     setEditingPreview(enabled);
+    if (!enabled) setInlineToolbarPosition(null);
+    else requestAnimationFrame(positionInlineToolbar);
     if (enabled) setComposerMessage("Edite os textos no preview. As mudanças entram no e-mail copiado; PDF e Word usam os dados salvos.");
     else setComposerMessage(previewEdited ? "Texto editado. Copie o modelo para usar as alterações; PDF e Word usam os dados salvos." : "");
   };
@@ -97,7 +124,11 @@ export default function QuoteManagementDrawer({ quote, task, employees = [], tea
     if (body) body.style.removeProperty("zoom");
     return { html: `<!DOCTYPE html>${copy.outerHTML}`, text: document.body.innerText || document.body.textContent || "" };
   };
-  const formatPreview = (command) => previewFrameRef.current?.contentDocument?.execCommand(command, false);
+  const formatPreview = (command) => {
+    const document = previewFrameRef.current?.contentDocument;
+    if (!document?.execCommand(command, false)) return;
+    requestAnimationFrame(positionInlineToolbar);
+  };
   useEffect(() => {
     if (!composerOpen) return undefined;
     setEditingPreview(false);
@@ -207,8 +238,8 @@ export default function QuoteManagementDrawer({ quote, task, employees = [], tea
     <footer className="quote-v3-drawer-footer quote-v3-management-footer"><div><button className="button button-secondary" type="button" onClick={() => { setComposerMessage(""); setComposerOpen(true); }}><ExternalLink size={15} />Montar email</button>{task && <button className="button button-quiet" type="button" onClick={() => onOpenTask?.(task.id)}><Link2 size={15} />Ver tarefa</button>}{draft.status === "Respondida ao cliente" && <button className="button button-primary" type="button" disabled={saving} onClick={() => { setResultError(""); setResultOpen(true); }}>Registrar resultado</button>}{QUOTE_TERMINAL_STATUSES.includes(draft.status) && <button className="button button-secondary" type="button" disabled={saving} onClick={reopen}>Reabrir cotação</button>}{onDeleteQuote && <button className="button button-danger" type="button" disabled={saving} onClick={() => setDeleteOpen(true)}><Trash2 size={15} />Excluir cotação</button>}</div>{resultError && !resultOpen && <span role="alert">{resultError}</span>}</footer>
   </aside>
   {composerOpen && <div className="quote-v3-composer-layer" onMouseDown={(event) => { if (event.target === event.currentTarget) closeComposer(); }}><section className="quote-v3-preview" role="dialog" aria-modal="true" aria-label="Montar email da cotação">
-    <div className="quote-v3-preview-viewport" ref={previewViewportRef}><iframe key={previewResetKey} ref={previewFrameRef} title="Proposta para Outlook" onLoad={() => { fitEmailPreview(); const document = previewFrameRef.current?.contentDocument; document?.body?.addEventListener("input", () => { setPreviewEdited(true); requestAnimationFrame(fitEmailPreview); }); document?.body?.addEventListener("keydown", (event) => { if (event.key === "Tab" && event.target.isContentEditable) { event.preventDefault(); document.execCommand(event.shiftKey ? "outdent" : "indent", false); } }); document?.body?.addEventListener("paste", (event) => { if (!event.target.isContentEditable) return; event.preventDefault(); document.execCommand("insertText", false, event.clipboardData?.getData("text/plain") || ""); }); if (editingPreview) setPreviewEditing(true); }} srcDoc={previewHtml || buildQuoteEmailHtml(draft, { baseUrl: window.location.origin })} /></div>
-    <footer className="quote-v3-composer-actions"><header className="quote-v3-preview-header"><div><span className="quote-v3-preview-kicker">Pré-visualização</span><strong>{quoteSubject(draft)}</strong></div><button className="icon-button" type="button" onClick={closeComposer} aria-label="Fechar montagem do email"><X size={20} /></button></header><span role="status">{composerBusy ? "Preparando arquivos…" : composerMessage || "O modelo copiado inclui as imagens."}</span><button className="button button-secondary" type="button" aria-pressed={editingPreview} disabled={Boolean(composerBusy) || !previewHtml} onClick={() => setPreviewEditing(!editingPreview)}>{editingPreview ? "Concluir edição" : "Editar texto"}</button>{editingPreview && <div className="quote-v3-editor-toolbar" role="toolbar" aria-label="Formatação do texto">{[["bold", "B", "Negrito"], ["italic", "I", "Itálico"], ["underline", "U", "Sublinhado"], ["insertUnorderedList", "• Lista", "Lista com marcadores"], ["insertOrderedList", "1. Lista", "Lista numerada"], ["outdent", "← Recuar", "Diminuir recuo (Shift+Tab)"], ["indent", "→ Avançar", "Aumentar recuo (Tab)"]].map(([command, label, title]) => <button key={command} className="button button-secondary" type="button" title={title} aria-label={title} onMouseDown={(event) => event.preventDefault()} onClick={() => formatPreview(command)}>{label}</button>)}</div>}{previewEdited && <button className="button button-quiet" type="button" disabled={Boolean(composerBusy)} onClick={() => { setPreviewEdited(false); setEditingPreview(false); setPreviewResetKey((key) => key + 1); setComposerMessage("Edições descartadas."); }}>Reverter edições</button>}<button className="button button-primary" type="button" disabled={Boolean(composerBusy)} onClick={() => composeAction("copy")}><Copy size={15} />Copiar modelo completo</button><div><button className="button button-secondary" type="button" disabled={Boolean(composerBusy)} onClick={() => composeAction("pdf")}><Download size={15} />Baixar PDF</button><button className="button button-secondary" type="button" disabled={Boolean(composerBusy)} onClick={() => composeAction("word")}><Download size={15} />Baixar Word</button></div></footer>
+    <div className="quote-v3-preview-viewport" ref={previewViewportRef}>{editingPreview && inlineToolbarPosition && <div ref={inlineToolbarRef} className="quote-v3-inline-toolbar" role="toolbar" aria-label="Formatação do texto" style={inlineToolbarPosition}>{[["bold", <strong>B</strong>, "Negrito"], ["italic", <em>I</em>, "Itálico"], ["underline", <span style={{ textDecoration: "underline" }}>U</span>, "Sublinhado"], ["insertUnorderedList", "•", "Lista com marcadores"], ["insertOrderedList", "1.", "Lista numerada"], ["outdent", "←", "Diminuir recuo (Shift+Tab)"], ["indent", "→", "Aumentar recuo (Tab)"]].map(([command, label, title]) => <button key={command} className="quote-v3-inline-format-button" type="button" title={title} aria-label={title} onMouseDown={(event) => event.preventDefault()} onClick={() => formatPreview(command)}>{label}</button>)}</div>}<iframe key={previewResetKey} ref={previewFrameRef} title="Proposta para Outlook" onLoad={() => { fitEmailPreview(); const document = previewFrameRef.current?.contentDocument; const syncToolbar = () => requestAnimationFrame(positionInlineToolbar); document?.addEventListener("selectionchange", syncToolbar); document?.body?.addEventListener("focusin", syncToolbar); document?.body?.addEventListener("mouseup", syncToolbar); document?.body?.addEventListener("keyup", syncToolbar); document?.body?.addEventListener("input", () => { setPreviewEdited(true); requestAnimationFrame(() => { fitEmailPreview(); positionInlineToolbar(); }); }); document?.body?.addEventListener("keydown", (event) => { if (event.key === "Tab" && event.target.isContentEditable) { event.preventDefault(); document.execCommand(event.shiftKey ? "outdent" : "indent", false); } }); document?.body?.addEventListener("paste", (event) => { if (!event.target.isContentEditable) return; event.preventDefault(); document.execCommand("insertText", false, event.clipboardData?.getData("text/plain") || ""); }); if (editingPreview) setPreviewEditing(true); }} srcDoc={previewHtml || buildQuoteEmailHtml(draft, { baseUrl: window.location.origin })} /></div>
+    <footer className="quote-v3-composer-actions"><header className="quote-v3-preview-header"><div><span className="quote-v3-preview-kicker">Pré-visualização</span><strong>{quoteSubject(draft)}</strong></div><button className="icon-button" type="button" onClick={closeComposer} aria-label="Fechar montagem do email"><X size={20} /></button></header><span role="status">{composerBusy ? "Preparando arquivos…" : composerMessage || "O modelo copiado inclui as imagens."}</span><button className="button button-secondary" type="button" aria-pressed={editingPreview} disabled={Boolean(composerBusy) || !previewHtml} onClick={() => setPreviewEditing(!editingPreview)}>{editingPreview ? "Concluir edição" : "Editar texto"}</button>{previewEdited && <button className="button button-quiet" type="button" disabled={Boolean(composerBusy)} onClick={() => { setPreviewEdited(false); setEditingPreview(false); setPreviewResetKey((key) => key + 1); setComposerMessage("Edições descartadas."); }}>Reverter edições</button>}<button className="button button-primary" type="button" disabled={Boolean(composerBusy)} onClick={() => composeAction("copy")}><Copy size={15} />Copiar modelo completo</button><div><button className="button button-secondary" type="button" disabled={Boolean(composerBusy)} onClick={() => composeAction("pdf")}><Download size={15} />Baixar PDF</button><button className="button button-secondary" type="button" disabled={Boolean(composerBusy)} onClick={() => composeAction("word")}><Download size={15} />Baixar Word</button></div></footer>
   </section></div>}
   {confirmMissingDeadline && <MissingDeadlineDialog onCancel={() => { setConfirmMissingDeadline(false); document.getElementById("quote-deadline")?.focus(); }} onConfirm={() => save(true)} />}
   {resultOpen && <div className="quote-v3-confirm-layer" onMouseDown={(event) => { if (event.target === event.currentTarget) setResultOpen(false); }}><form className="quote-v3-dialog" role="dialog" aria-modal="true" aria-label="Registrar resultado da cotação" onSubmit={registerResult}><h3>Registrar resultado</h3><fieldset><legend>Resultado da cotação</legend>{["Aceita pelo cliente", "Perdida", "Cancelada"].map((status) => <label key={status}><input type="radio" name="quote-result" checked={resultStatus === status} onChange={() => { setResultStatus(status); setResultError(""); }} />{status}</label>)}</fieldset>{resultStatus === "Perdida" && <label htmlFor="quote-result-reason">Motivo da perda<textarea id="quote-result-reason" required maxLength={1000} value={lossReason} onChange={(event) => setLossReason(event.target.value)} /></label>}{resultError && <p role="alert">{resultError}</p>}<div><button className="button button-secondary" type="button" onClick={() => setResultOpen(false)}>Voltar</button><button className="button button-primary" type="submit" disabled={saving || (resultStatus === "Perdida" && !lossReason.trim())}>{saving ? "Salvando…" : "Confirmar"}</button></div></form></div>}

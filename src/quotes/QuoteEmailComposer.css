@@ -4,7 +4,7 @@
   grid-template-areas: "viewport actions";
 }
 
-.quote-v3-preview.quote-v3-preview > .quote-v3-preview-viewport { grid-area: viewport; }
+.quote-v3-preview.quote-v3-preview > .quote-v3-preview-viewport { position: relative; grid-area: viewport; }
 .quote-v3-preview.quote-v3-preview > .quote-v3-composer-actions {
   grid-area: actions;
   min-width: 0;
@@ -30,8 +30,12 @@
 .quote-v3-preview.quote-v3-preview > .quote-v3-composer-actions > .button { width: 100%; }
 .quote-v3-preview.quote-v3-preview > .quote-v3-composer-actions > div { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .quote-v3-preview.quote-v3-preview > .quote-v3-composer-actions > div .button { min-width: 0; padding-inline: 8px; }
-.quote-v3-editor-toolbar { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; padding: 10px; border: 1px solid #e5ebf2; border-radius: 10px; background: #f8fafc; }
-.quote-v3-editor-toolbar .button { min-width: 0; min-height: 36px; padding-inline: 8px; font-size: 11px; }
+.quote-v3-inline-toolbar { position: absolute; z-index: 5; display: flex; align-items: center; gap: 3px; max-width: calc(100% - 16px); padding: 4px; border: 1px solid #dfe5ec; border-radius: 9px; background: #fff; box-shadow: 0 5px 16px rgba(16,24,40,.14); }
+.quote-v3-inline-format-button { position: relative; display: grid; flex: 0 0 32px; place-items: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: #26374b; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.quote-v3-inline-format-button:hover { background: #f0f4f8; color: #082d62; }
+.quote-v3-inline-format-button:focus-visible { outline: 2px solid #3978e8; outline-offset: 1px; }
+.quote-v3-inline-format-button:nth-child(4), .quote-v3-inline-format-button:nth-child(6) { margin-left: 5px; }
+.quote-v3-inline-format-button:nth-child(4)::before, .quote-v3-inline-format-button:nth-child(6)::before { position: absolute; top: 6px; left: -5px; width: 1px; height: 20px; background: #e5ebf2; content: ""; }
 
 @media (max-width: 760px) {
   .quote-v3-preview.quote-v3-preview {
