@@ -66,7 +66,10 @@ test("Word pode usar exatamente o HTML exibido no preview", async () => {
   const { blob, filename } = await createQuoteWord(quote, { html });
   assert.equal(filename, "Cotação COT-1007 - Cliente.doc");
   assert.equal(blob.type, "application/msword;charset=utf-8");
-  assert.match(await blob.text(), /Visual idêntico ao preview/);
+  const content = await blob.text();
+  assert.match(content, /Visual idêntico ao preview/);
+  assert.match(content, /@page WordSection1\{size:595\.3pt 841\.9pt;margin:0/);
+  assert.match(content, /<div class="WordSection1">/);
 });
 
 test("cancelamento impede preparar Word após carregar imagens", async () => {

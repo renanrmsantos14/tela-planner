@@ -3,7 +3,9 @@ import { buildQuoteRouteText, formatMoney, isVanVehicle, loadQuoteImages, QUOTE_
 export async function createQuoteWord(quote, { baseUrl = "", signal, fetcher, assets, html } = {}) {
   if (html) {
     signal?.throwIfAborted?.();
-    const content = `<!DOCTYPE html><html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" lang="pt-BR"><head><meta charset="utf-8"><title>${quoteSubject(quote)}</title></head><body>${String(html).replace(/^.*?<body[^>]*>|<\/body>.*$/gis, "")}</body></html>`;
+    const body = String(html).replace(/^.*?<body[^>]*>|<\/body>.*$/gis, "");
+    const wordStyles = "@page WordSection1{size:595.3pt 841.9pt;margin:0;mso-header-margin:0;mso-footer-margin:0}html,body{margin:0!important;padding:0!important}div.WordSection1{page:WordSection1;width:595.3pt}table.a4-sheet{width:595.3pt!important;max-width:595.3pt!important;min-height:841.9pt!important;table-layout:fixed!important}";
+    const content = `<!DOCTYPE html><html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" lang="pt-BR"><head><meta charset="utf-8"><title>${quoteSubject(quote)}</title><style>${wordStyles}</style></head><body><div class="WordSection1">${body}</div></body></html>`;
     return {
       blob: new Blob([content], { type: "application/msword;charset=utf-8" }),
       filename: `${quoteSubject(quote).replace(/[<>:"/\\|?*]/g, "-") || "Cotação"}.doc`,
