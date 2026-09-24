@@ -73,12 +73,15 @@ test("triagem comunica busca, filtros ativos e estados da lista", async () => {
   assert.match(styles, /@media \(max-width: 720px\) \{[\s\S]*\.contacts-filter-bar \.filter-search \{ grid-column: 1; grid-row: 1;/);
 });
 
-test("drawer reutiliza responsáveis, seletor pesquisável e anexos", async () => {
+test("drawer reutiliza responsáveis, contatos alternativos e anexos", async () => {
   const source = await readSource("../src/ContactsView.jsx");
   const styles = await readSource("../src/styles.css");
 
   assert.match(source, /<AssignmentFields form=\{draft\}/);
-  assert.match(source, /<SearchableSelect value=\{draft\.channel\}/);
+  assert.doesNotMatch(source, /<SearchableSelect value=\{draft\.channel\}/);
+  assert.match(source, /aria-label="Telefone do remetente"/);
+  assert.match(source, /aria-label="E-mail do remetente"/);
+  assert.match(source, /validateContact\(draft\)/);
   assert.match(source, /AttachmentSectionComponent/);
   assert.match(source, /MAX_CONTACT_ATTACHMENT_SIZE = 5 \* 1024 \* 1024/);
   assert.match(styles, /@media \(max-width: 820px\) \{[\s\S]*\.contact-kanban/);

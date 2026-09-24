@@ -10,6 +10,7 @@ const quoteSources = [
   read("../src/quotes/HybridQuotesView.jsx"),
   read("../src/quotes/QuoteCreateDrawer.jsx"),
   read("../src/quotes/QuoteManagementDrawer.jsx"),
+  read("../src/TaskHistorySection.jsx"),
   read("../src/quotes/QuoteKanban.jsx"),
   read("../src/KanbanBoard.jsx"),
 ].join("\n");
@@ -36,6 +37,21 @@ test("formulário exibe dados comerciais apenas após cotar", () => {
   assert.match(workspace, /Informar dados comerciais/);
   assert.match(workspace, /\["Cotada", "Respondida ao cliente"\]\.includes\(draft\.status\)/);
   assert.match(read("../src/quotes/HybridQuotesView.jsx"), /AttachmentSectionComponent[\s\S]*itemLabel="à cotação"[\s\S]*showPreview=\{false\}/);
+});
+
+test("condições comerciais são opcionais, mas valor continua obrigatório", () => {
+  const fields = read("../src/quotes/QuoteFields.jsx");
+  const workspace = read("../src/QuotesView.jsx");
+  const hybrid = read("../src/quotes/HybridQuotesView.jsx");
+  const app = read("../src/App.jsx");
+  assert.doesNotMatch(fields, /id="quote-commercial-terms" label="Condições comerciais" required/);
+  assert.doesNotMatch(fields, /id="quote-commercial-terms" rows="4" required/);
+  assert.doesNotMatch(workspace, /Field label="Condições comerciais" required/);
+  assert.doesNotMatch(workspace, /id="legacy-quote-terms" required/);
+  assert.doesNotMatch(hybrid, /id="quote-move-terms" required/);
+  assert.doesNotMatch(app, /id="quote-completion-terms"[\s\S]{0,180}\brequired/);
+  assert.match(fields, /id="quote-value"[^>]*required/);
+  assert.match(app, /id="quote-completion-value"[^\n]*required/);
 });
 
 test("footer do cadastro não exibe botão cancelar", () => {
@@ -101,6 +117,22 @@ test("filtros de cotações reutilizam o multiselect da aba Tarefas", () => {
   assert.equal((hybrid.match(/<SearchableMultiSelect/g) || []).length, 4);
 });
 
+test("aba de cotações mostra apenas registros sem resultado nas duas versões", () => {
+  for (const source of [read("../src/QuotesView.jsx"), read("../src/quotes/HybridQuotesView.jsx")]) {
+    assert.match(source, /\(state\.quotes \|\| \[\]\)\.filter\(\(quote\) => isQuoteOpen\(quote\.status\)\)/);
+  }
+});
+
+test("exclusão da cotação pede confirmação e alcança tarefa vinculada", () => {
+  const dialog = read("../src/quotes/QuoteDeleteDialog.jsx");
+  assert.match(dialog, /role="alertdialog"/);
+  assert.match(dialog, /tarefas vinculadas, incluindo subtarefas/);
+  assert.match(dialog, /onDelete\?\.\(quote\.id\)/);
+  assert.match(read("../src/quotes/QuoteManagementDrawer.jsx"), /<QuoteDeleteDialog/);
+  assert.match(read("../src/QuotesView.jsx"), /<QuoteDeleteDialog/);
+  assert.match(read("../src/dataverse.js"), /async function deleteLiveQuote/);
+});
+
 test("campos textuais usam o componente adaptado da Tela Formulário Geral", () => {
   const fields = read("../src/quotes/QuoteFields.jsx");
   assert.match(fields, /FormTextInput/);
@@ -108,6 +140,21 @@ test("campos textuais usam o componente adaptado da Tela Formulário Geral", () 
   assert.equal((fields.match(/<input/g) || []).length, 1);
   assert.equal((fields.match(/<textarea/g) || []).length, 1);
   assert.match(fields, /form-general-input/);
+});
+
+test("cotações não expõem nem persistem tipo de serviço", () => {
+  const sources = [
+    read("../src/QuotesView.jsx"),
+    read("../src/quotes/QuoteFields.jsx"),
+    read("../src/quotes/QuoteCreateDrawer.jsx"),
+    read("../src/quotes/QuoteReview.jsx"),
+    read("../src/quotes/QuoteManagementDrawer.jsx"),
+    read("../src/quotes/QuoteKanban.jsx"),
+    read("../src/quoteDomain.js"),
+    read("../src/mockStore.js"),
+    read("../src/dataverse.js"),
+  ].join("\n");
+  assert.doesNotMatch(sources, /serviceType|cr40f_tiposervico|tipo de serviço/i);
 });
 
 test("app usa select compartilhado e prévia estática não usa select nativo", () => {
@@ -127,4 +174,27 @@ test("integração mantém flag V3 e carregamento sob demanda do histórico", ()
   assert.match(app, /VITE_QUOTES_HYBRID_V3/);
   assert.match(app, /onEnsureTaskDetails/);
   assert.match(quoteSources, /Histórico indisponível/);
+});
+
+test("drawer de cotação começa em dados e mantém histórico como última seção", () => {
+  const drawer = read("../src/quotes/QuoteManagementDrawer.jsx");
+  const history = read("../src/TaskHistorySection.jsx");
+  assert.doesNotMatch(drawer, /quote-v3-tabs|Resumo|Atividade|setTab/);
+  assert.match(drawer, /<form className="quote-v3-data"/);
+  assert.match(drawer, /<TaskHistorySection history=\{task\?\.history\}/);
+  assert.ok(drawer.indexOf('<form className="quote-v3-data"') < drawer.indexOf("<TaskHistorySection"));
+  assert.match(history, /Histórico da tarefa/);
+  assert.match(history, /Mostrar mais/);
+  assert.match(history, /aria-expanded=\{showHistory\}/);
+});
+
+test("solicitante cadastrado preenche contatos e protege dados manuais", () => {
+  const fields = read("../src/quotes/QuoteFields.jsx");
+  const adapter = read("../src/dataverse.js");
+  assert.match(fields, /clientEmail: requester\.email/);
+  assert.match(fields, /clientPhone: requester\.phone/);
+  assert.match(fields, /Manter dados atuais/);
+  assert.match(fields, /Usar dados do cadastro/);
+  assert.match(adapter, /cr40f_email,cr40f_telefone,_cr40f_cliente_value/);
+  assert.match(adapter, /cr40f_classificacao eq 202410002/);
 });

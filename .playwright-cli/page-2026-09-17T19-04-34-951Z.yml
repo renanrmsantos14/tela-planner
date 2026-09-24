@@ -1,0 +1,308 @@
+- generic [ref=f1e3]:
+  - complementary [ref=f1e4]:
+    - button "Expandir navegação" [ref=f1e5] [cursor=pointer]
+    - generic "Hoje, 36 pendências e 1 atrasados" [ref=f1e14]:
+      - strong [ref=f1e16]: 17 de set
+      - generic [ref=f1e17]:
+        - strong [ref=f1e19]: "36"
+        - strong [ref=f1e21]: "1"
+    - navigation [ref=f1e22]:
+      - button [ref=f1e23] [cursor=pointer]
+      - button [ref=f1e29] [cursor=pointer]
+      - button [ref=f1e33] [cursor=pointer]
+      - button [ref=f1e39] [cursor=pointer]
+      - button [ref=f1e43] [cursor=pointer]
+  - main [ref=f1e47]:
+    - generic "Ações do aplicativo" [ref=f1e48]:
+      - button "Abrir notificações, 4 não lidas" [ref=f1e419] [cursor=pointer]:
+        - generic [ref=f1e55]: "4"
+      - button "Atualizar dados" [ref=f1e56] [cursor=pointer]
+    - generic [ref=f1e420]:
+      - generic [ref=f1e421]:
+        - generic [ref=f1e422]:
+          - generic [ref=f1e423]: Tarefas
+          - heading "Operação em movimento" [level=1] [ref=f1e424]
+          - paragraph [ref=f1e425]: Arraste os cartões para atualizar o agrupamento selecionado.
+        - generic [ref=f1e426]:
+          - 'button "Ordenar: Prazo" [ref=f1e428] [cursor=pointer]'
+          - generic [ref=f1e435]:
+            - combobox
+            - button "Agrupar colunas por" [ref=f1e436] [cursor=pointer]:
+              - generic [ref=f1e439]: "Agrupar: Status"
+          - generic "Escopo das tarefas" [ref=f1e441]:
+            - button "Todas" [ref=f1e442] [cursor=pointer]
+            - button "Minhas" [pressed] [ref=f1e448] [cursor=pointer]
+          - generic "Modo de visualização das tarefas" [ref=f1e452]:
+            - button "Quadro" [pressed] [ref=f1e453] [cursor=pointer]
+            - button "Lista" [ref=f1e459] [cursor=pointer]
+            - button "Agenda" [ref=f1e461] [cursor=pointer]
+      - generic [ref=f1e464]:
+        - textbox "Buscar tarefas, cotações, qualidade ou pessoas" [ref=f1e469]
+        - generic [ref=f1e470]:
+          - generic [ref=f1e471]:
+            - listbox:
+              - option: Não atribuído
+              - option: Camila Torres
+              - option: Gustavo Neri
+              - option: João Mendes
+              - option: Luiza Prado
+              - option: Marina Alves
+              - option: Rafael Lima
+              - option [selected]: Renan Martins
+            - button "Renan Martins Limpar seleção" [ref=f1e472] [cursor=pointer]:
+              - generic [ref=f1e473]: Renan Martins
+              - button "Limpar seleção" [ref=f1e476]
+          - generic [ref=f1e478]:
+            - listbox:
+              - option: A fazer
+              - option: Aguardando
+              - option: Em andamento
+              - option: Concluído
+              - option: Cancelada
+            - button "Todos os status" [ref=f1e479] [cursor=pointer]
+          - generic [ref=f1e482]:
+            - listbox:
+              - option: Baixa
+              - option: Média
+              - option: Alta
+              - option: Urgente
+            - button "Todas as prioridades" [ref=f1e483] [cursor=pointer]
+          - generic [ref=f1e486]:
+            - listbox:
+              - option: Comercial
+              - option: Financeiro
+              - option: Operação
+              - option: Qualidade
+            - button "Todas as equipes" [ref=f1e487] [cursor=pointer]
+          - generic [ref=f1e490]:
+            - listbox
+            - button "Minhas tags" [ref=f1e491] [cursor=pointer]
+          - button "Limpar filtros" [ref=f1e494] [cursor=pointer]
+          - button "Nova tarefa" [ref=f1e498] [cursor=pointer]
+      - generic [ref=f1e501]:
+        - generic [ref=f1e502]:
+          - generic [ref=f1e503]:
+            - generic [ref=f1e504]:
+              - heading "A fazer" [level=2] [ref=f1e508]
+              - generic [ref=f1e509]: "1"
+            - button "Criar tarefa em A fazer" [ref=f1e510] [cursor=pointer]
+          - article [ref=f1e513]:
+            - generic [ref=f1e514]:
+              - generic [ref=f1e515]: Média
+              - button "Abrir tarefa" [ref=f1e516] [cursor=pointer]
+            - heading "Revisar comentário da ocorrência QAL-205" [level=3] [ref=f1e521]
+            - generic [ref=f1e522]:
+              - 'generic "Equipe responsável: Qualidade" [ref=f1e523]': Qualidade
+              - generic [ref=f1e531]: 19 set.
+        - generic [ref=f1e535]:
+          - generic [ref=f1e536]:
+            - generic [ref=f1e537]:
+              - heading "Aguardando" [level=2] [ref=f1e541]
+              - generic [ref=f1e542]: "2"
+            - button "Criar tarefa em Aguardando" [ref=f1e543] [cursor=pointer]
+          - generic [ref=f1e545]:
+            - article [ref=f1e546]:
+              - generic [ref=f1e547]:
+                - generic [ref=f1e548]: Média
+                - generic [ref=f1e549]: Aguardando informação
+                - generic "Aguardando sua atuação" [ref=f1e550]: Pendente
+                - button "Abrir tarefa" [ref=f1e557] [cursor=pointer]
+              - heading "Acompanhar retorno do fornecedor" [level=3] [ref=f1e562]
+              - generic [ref=f1e563]: Você foi mencionado
+              - generic "Aguardando disponibilidade da segunda van · Rafael Lima · até 18 set." [ref=f1e570]
+              - 'generic "Checklist: 1 de 3 concluídas" [ref=f1e575]':
+                - generic [ref=f1e576]:
+                  - generic [ref=f1e577]: Checklist
+                  - strong [ref=f1e581]: 1/3
+                - generic [ref=f1e582]:
+                  - generic: Enviar cobrança ao parceiro
+                  - generic: Registrar retorno
+                  - generic: Atualizar status da tarefa
+              - generic [ref=f1e588]:
+                - 'generic "Equipe responsável: Operação" [ref=f1e589]': Operação
+                - generic [ref=f1e597]: 18 set.
+                - button "Registrar retorno" [ref=f1e601] [cursor=pointer]
+            - article [ref=f1e602]:
+              - generic [ref=f1e603]:
+                - generic [ref=f1e604]: Média
+                - generic [ref=f1e605]: Aguardando informação
+                - generic "Aguardando sua atuação" [ref=f1e606]: Pendente
+                - button "Abrir tarefa" [ref=f1e613] [cursor=pointer]
+              - heading "Confirmar disponibilidade de veículo" [level=3] [ref=f1e618]
+              - generic "Aguardando confirmação da segunda van · Operação · até 19 set." [ref=f1e619]
+              - generic [ref=f1e624]:
+                - 'generic "Equipe responsável: Operação" [ref=f1e625]': Operação
+                - generic [ref=f1e633]: 19 set.
+                - button "Registrar retorno" [ref=f1e637] [cursor=pointer]
+        - generic [ref=f1e638]:
+          - generic [ref=f1e639]:
+            - generic [ref=f1e640]:
+              - heading "Em andamento" [level=2] [ref=f1e643]
+              - generic [ref=f1e644]: "1"
+            - button "Criar tarefa em Em andamento" [ref=f1e645] [cursor=pointer]
+          - article [ref=f1e648]:
+            - generic [ref=f1e649]:
+              - generic [ref=f1e650]: Alta
+              - button "Abrir tarefa" [ref=f1e651] [cursor=pointer]
+            - heading "Revisar pendências prioritárias do dia" [level=3] [ref=f1e656]
+            - group "Em andamento por Renan, há 9 min" [ref=f1e657]:
+              - generic [ref=f1e658]:
+                - generic [ref=f1e659]: HOJE
+                - time [ref=f1e660]: 9min
+              - generic [ref=f1e661]:
+                - strong [ref=f1e662]: Em andamento
+                - generic [ref=f1e663]: Renan
+            - 'generic "Checklist: 0 de 1 concluídas" [ref=f1e664]':
+              - generic [ref=f1e665]:
+                - generic [ref=f1e666]: Checklist
+                - strong [ref=f1e670]: 0/1
+              - generic [ref=f1e671]:
+                - button "Aprovar mensagem para cliente estratégico"
+            - generic [ref=f1e673]:
+              - 'generic "Equipe responsável: Comercial" [ref=f1e674]': Comercial
+              - generic [ref=f1e682]: 17 set.
+        - generic [ref=f1e686]:
+          - generic [ref=f1e687]:
+            - generic [ref=f1e688]:
+              - heading "Concluído" [level=2] [ref=f1e692]
+              - generic [ref=f1e693]: "1"
+            - button "Criar tarefa em Concluído" [ref=f1e694] [cursor=pointer]
+          - article [ref=f1e697]:
+            - generic [ref=f1e698]:
+              - generic [ref=f1e699]: Baixa
+              - button "Abrir tarefa" [ref=f1e700] [cursor=pointer]
+            - heading "Confirmar fechamento semanal" [level=3] [ref=f1e705]
+            - generic [ref=f1e706]:
+              - 'generic "Equipe responsável: Financeiro" [ref=f1e707]': Financeiro
+              - generic [ref=f1e715]: 16 set.
+    - complementary [ref=f1e212]:
+      - generic [ref=f1e213]:
+        - generic [ref=f1e214]:
+          - generic [ref=f1e215]:
+            - generic [ref=f1e216]: Detalhe da tarefa
+            - generic [ref=f1e217]: COT-1006
+          - generic "Resumo da tarefa" [ref=f1e218]:
+            - generic [ref=f1e219]: Em andamento
+            - generic [ref=f1e221]: Alta
+            - generic [ref=f1e224]: 18 set.
+        - button "Fechar detalhe" [ref=f1e227] [cursor=pointer]
+      - generic [ref=f1e231]:
+        - region "Minhas tags" [ref=f1e232]:
+          - group "Tags pessoais da tarefa" [ref=f1e233]:
+            - generic [ref=f1e234]:
+              - generic [ref=f1e235]: Sem Tag selecionada
+              - button "Escolher tags; 0 não selecionadas" [ref=f1e236] [cursor=pointer]: ...
+        - generic [ref=f1e238]:
+          - generic [ref=f1e239]:
+            - generic [ref=f1e240]: Título da tarefa
+            - button "Mostrar tarefa somente para responsáveis e criador" [ref=f1e241] [cursor=pointer]
+          - textbox "Título da tarefa" [ref=f1e245]:
+            - /placeholder: Escreva o título da tarefa
+            - text: Montar cotação do carro blindado
+        - button "Cotação vinculada COT-1006 · Carro blindado · Diretoria" [ref=f1e246] [cursor=pointer]:
+          - generic [ref=f1e250]:
+            - generic [ref=f1e251]: Cotação vinculada
+            - strong [ref=f1e252]: COT-1006 · Carro blindado · Diretoria
+        - generic [ref=f1e256]:
+          - generic [ref=f1e257]:
+            - generic [ref=f1e258]:
+              - generic [ref=f1e259]: Status
+              - 'group "Status atual: Em andamento" [ref=f1e260]':
+                - generic [ref=f1e261]:
+                  - button "A fazer" [ref=f1e262] [cursor=pointer]
+                  - button "Aguardando" [ref=f1e266] [cursor=pointer]
+                  - button "Em andamento" [pressed] [ref=f1e270] [cursor=pointer]
+                  - button "Concluído" [ref=f1e273] [cursor=pointer]
+                - generic [ref=f1e277]: Em andamento
+            - generic [ref=f1e278]:
+              - generic [ref=f1e279]: Prioridade
+              - 'group "Prioridade atual: Alta" [ref=f1e280]':
+                - generic [ref=f1e281]:
+                  - button "Baixa" [ref=f1e282] [cursor=pointer]
+                  - button "Média" [ref=f1e285] [cursor=pointer]
+                  - button "Alta" [pressed] [ref=f1e288] [cursor=pointer]
+                  - button "Urgente" [ref=f1e291] [cursor=pointer]
+                - generic [ref=f1e294]: Alta
+          - generic [ref=f1e295]:
+            - generic [ref=f1e296]:
+              - generic [ref=f1e297]:
+                - generic [ref=f1e298]: Equipe
+                - group "Tipo de atribuição" [ref=f1e299]:
+                  - button "Pessoas" [ref=f1e300] [cursor=pointer]
+                  - button "Equipe" [pressed] [ref=f1e304] [cursor=pointer]
+              - generic [ref=f1e310]:
+                - generic [ref=f1e311]: Equipe
+                - generic [ref=f1e312]:
+                  - listbox:
+                    - option [selected]: Comercial
+                    - option: Financeiro
+                    - option: Operação
+                    - option: Qualidade
+                  - button "Comercial Limpar seleção" [ref=f1e313] [cursor=pointer]:
+                    - generic [ref=f1e314]: Comercial
+                    - button "Limpar seleção" [ref=f1e317]
+              - generic "Membros de Comercial" [ref=f1e319]:
+                - generic [ref=f1e320]: Composição herdada da equipe
+                - generic [ref=f1e322]:
+                  - generic [ref=f1e323]: MA
+                  - text: "Principal: Marina Alves"
+            - generic [ref=f1e324]:
+              - text: Prazo
+              - textbox "Prazo" [ref=f1e325]: 2026-09-18
+        - region "Execução atual" [ref=f1e326]:
+          - heading "Execução atual" [level=3] [ref=f1e328]
+          - generic [ref=f1e329]: Nenhum executor identificado para a execução atual.
+        - generic [ref=f1e330]:
+          - text: Descrição
+          - textbox "Descrição" [ref=f1e331]: Compor o valor final com deslocamento e espera.
+        - generic [ref=f1e332]:
+          - generic [ref=f1e333]:
+            - heading "Checklist" [level=3] [ref=f1e334]
+            - button "Adicionar item" [ref=f1e336] [cursor=pointer]
+          - generic [ref=f1e338]: Nenhuma subtarefa adicionada.
+        - generic [ref=f1e339]:
+          - generic [ref=f1e340]:
+            - generic [ref=f1e341]:
+              - heading "Comentários" [level=3] [ref=f1e342]
+              - generic [ref=f1e343]: "0"
+            - generic [ref=f1e344]: Mensagens da equipe
+          - generic [ref=f1e345]:
+            - strong [ref=f1e348]: Comece a conversa
+            - generic [ref=f1e349]: Registre uma atualização para manter a equipe alinhada.
+          - generic [ref=f1e350]:
+            - textbox "Nova atualização da tarefa" [ref=f1e353]:
+              - /placeholder: O que a equipe precisa saber?
+            - button "Enviar comentário" [disabled] [ref=f1e355]
+        - generic [ref=f1e359]:
+          - generic [ref=f1e360]:
+            - generic [ref=f1e361]:
+              - heading "Anexos" [level=3] [ref=f1e362]
+              - generic [ref=f1e363]: "1"
+            - generic [ref=f1e364]: Até 5 MB por arquivo
+          - paragraph [ref=f1e365]: As alterações nos anexos só são enviadas ao clicar em Salvar tarefa.
+          - generic [ref=f1e366] [cursor=pointer]:
+            - generic [ref=f1e371]:
+              - strong [ref=f1e372]: Adicione arquivos à tarefa
+              - generic [ref=f1e373]: Cole com Ctrl+V, clique para escolher ou arraste arquivos para cá
+            - generic [ref=f1e374]: Escolher arquivos
+            - button "Adicione arquivos à tarefa Cole com Ctrl+V, clique para escolher ou arraste arquivos para cá Escolher arquivos"
+          - article [ref=f1e376]:
+            - button "Abrir prévia de comprovante-servico.svg" [ref=f1e378]:
+              - img "comprovante-servico.svg" [ref=f1e379]
+            - generic [ref=f1e380]:
+              - button "Abrir comprovante-servico.svg em nova aba" [ref=f1e381] [cursor=pointer]:
+                - generic [ref=f1e388]:
+                  - strong [ref=f1e389]: comprovante-servico.svg
+                  - generic [ref=f1e390]: Imagem · 104 KB · Abrir em nova aba
+              - generic [ref=f1e391]:
+                - generic [ref=f1e392]: Salvo
+                - button "Remover comprovante-servico.svg" [ref=f1e396] [cursor=pointer]
+        - button "Histórico da tarefa Alterações registradas nesta tarefa 1" [ref=f1e402] [cursor=pointer]:
+          - generic [ref=f1e403]:
+            - strong [ref=f1e404]: Histórico da tarefa
+            - generic [ref=f1e405]: Alterações registradas nesta tarefa
+          - generic [ref=f1e406]: "1"
+      - generic [ref=f1e409]:
+        - button "Excluir" [ref=f1e410] [cursor=pointer]
+        - button "Cancelar" [ref=f1e414] [cursor=pointer]
+        - button "Salvar tarefa" [ref=f1e415] [cursor=pointer]

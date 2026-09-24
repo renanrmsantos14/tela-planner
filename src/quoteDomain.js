@@ -32,12 +32,8 @@ export const QUOTE_COMPLETED_STATUSES = ["Cotada", "Respondida ao cliente"];
 
 export function validateQuoteCommercial(input = {}) {
   const errors = {};
-  const raw = String(input.value ?? "").trim();
-  const normalized = raw.replace(/^R\$\s*/i, "").replace(/\s/g, "");
-  const number = normalized.includes(",")
-    ? Number(normalized.replace(/\./g, "").replace(",", "."))
-    : Number(normalized);
-  if (!raw || !/^[\d.,]+$/.test(normalized) || !Number.isFinite(number) || number <= 0) errors.value = "Informe um valor maior que zero.";
+  const number = parseQuoteMoney(input.value);
+  if (number === null || !Number.isFinite(number) || number <= 0) errors.value = "Informe um valor maior que zero.";
   return { valid: Object.keys(errors).length === 0, errors };
 }
 export const QUOTE_CREATE_STEPS = [
@@ -159,7 +155,14 @@ const EXECUTIVE_NOTES = [
 ];
 
 export function quoteEmailNotes(quote = {}) {
-  return [...(isVanVehicle(quote.vehicleType) ? VAN_NOTES : EXECUTIVE_NOTES), ...String(quote.commercialTerms || "").split(/\r?\n+/).map((item) => item.trim()).filter(Boolean)];
+  return [...(isVanVehicle(quote.vehicleType) ? VAN_NOTES : EXECUTIVE_NOTES)];
+}
+
+export function quoteProposalSections(quote = {}) {
+  return [
+    { id: "request", title: "Pedido do cliente", text: String(quote.notes ?? "").replace(/\r\n?/g, "\n") },
+    { id: "commercial", title: "Condições comerciais", text: String(quote.commercialTerms ?? "").replace(/\r\n?/g, "\n") },
+  ].filter((section) => section.text.trim());
 }
 
 export const QUOTE_ASSET_NAMES = {
@@ -191,10 +194,24 @@ function formatDateTime(value) {
   return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Sao_Paulo" }).format(date);
 }
 
+// Empty is null; invalid input is NaN. Decimal-dot strings remain compatible
+// with existing records; a group of three digits after a dot denotes thousands.
+export function parseQuoteMoney(value) {
+  if (value == null || String(value).trim() === "") return null;
+  if (typeof value === "number") return Number.isFinite(value) ? value : NaN;
+  const raw = String(value).trim().replace(/^R\$\s*/i, "");
+  let normalized;
+  if (/^-?\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?$/.test(raw)) normalized = raw.replace(/\./g, "").replace(",", ".");
+  else if (/^-?\d+(?:[,.]\d{1,2})?$/.test(raw)) normalized = raw.replace(",", ".");
+  else return NaN;
+  const number = Number(normalized);
+  return Number.isFinite(number) ? number : NaN;
+}
+
 export function formatMoney(value) {
-  if (value === "" || value === null || value === undefined) return "Valor sob consulta";
-  const number = typeof value === "number" ? value : Number(String(value).replace(/[^0-9,-]/g, "").replace(/\./g, "").replace(",", "."));
-  if (Number.isNaN(number)) return String(value);
+  const number = parseQuoteMoney(value);
+  if (number === null) return "Valor sob consulta";
+  if (!Number.isFinite(number)) return String(value);
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(number).replace(/\u00a0/g, " ");
 }
 
@@ -241,8 +258,10 @@ export function buildQuoteEmailHtml(quote = {}, assets = {}) {
   const intro = quote.clientContact || quote.client || "cliente";
   const route = buildQuoteRouteText(quote);
   const notes = quoteEmailNotes(quote);
+  const sections = quoteProposalSections(quote);
   const orderNotes = route.map((line) => `<p style="margin:0 0 8px;font-size:13px;line-height:1.6;color:#ffffff;">&#8226; ${escapeHtml(line)}</p>`).join("");
   const important = notes.map((line) => `<tr><td style="padding:0 0 12px;font-size:14px;line-height:1.65;color:#171512;">&#8226; ${escapeHtml(line)}</td></tr>`).join("");
+  const proposalSections = sections.map(({ title, text }) => `<tr><td style="background:#d9d9d9;padding:22px 34px 4px;"><p style="margin:0 0 10px;font-size:16px;line-height:1.35;font-weight:700;">${escapeHtml(title)}:</p>${text.split("\n").map((line) => `<p style="margin:0 0 10px;font-size:14px;line-height:1.65;white-space:pre-wrap;">${escapeHtml(line) || "&nbsp;"}</p>`).join("")}</td></tr>`).join("");
   const value = escapeHtml(formatMoney(quote.value));
   const subject = escapeHtml(quote.subject || `Cotação ${quote.code || ""}${quote.client ? ` - ${quote.client}` : ""}`.trim());
   return [
@@ -255,6 +274,7 @@ export function buildQuoteEmailHtml(quote = {}, assets = {}) {
     `<tr><td style="background:#0a2f41;padding:0;"><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;"><tr><td class="cotacao-col" valign="middle" width="50%" style="width:50%;padding:24px 22px;text-align:center;"><img src="${escapeHtml(assetUrl(baseUrl, names.header, assets.imageUrls))}" alt="Betinhos Executive Service" width="340" style="display:block;width:100%;max-width:340px;height:auto;border:0;margin:0 auto;"></td><td class="cotacao-col" valign="top" width="50%" style="width:50%;padding:22px 24px 24px;color:#ffffff;"><p style="margin:0 0 10px;font-size:15px;line-height:1.35;color:#ffffff;"><em>Roteiro do atendimento</em></p>${orderNotes}</td></tr></table></td></tr>`,
     `<tr><td style="background:#d9d9d9;padding:0;"><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;"><tr><td class="cotacao-img-pair" width="50%" style="width:50%;padding:16px 10px 18px 18px;text-align:center;"><img src="${escapeHtml(assetUrl(baseUrl, van ? names.vanVehicle : names.vehicle, assets.imageUrls))}" alt="${van ? "Van executiva Betinhos" : "Frota executiva Betinhos"}" width="360" style="display:block;width:100%;max-width:360px;height:auto;border:0;margin:0 auto;"></td><td class="cotacao-img-pair" width="50%" style="width:50%;padding:16px 18px 18px 10px;text-align:center;"><img src="${escapeHtml(assetUrl(baseUrl, van ? names.vanInfo : names.commitments, assets.imageUrls))}" alt="${van ? "Informações da van executiva" : "Compromissos operacionais Betinhos"}" width="360" style="display:block;width:100%;max-width:360px;height:auto;border:0;margin:0 auto;"></td></tr></table></td></tr>`,
     `<tr><td style="background:#0a2f41;padding:22px 34px 24px;text-align:center;"><p style="margin:0 0 8px;font-size:17px;line-height:1.42;color:#ffffff;font-weight:700;">Com base nesse comprometimento, faço saber que o custo total é de</p><p class="cotacao-value" style="margin:0 0 12px;font-size:30px;line-height:1.15;color:#ffffff;font-weight:700;">${value}</p><p style="margin:0;font-size:15px;line-height:1.42;color:#ffffff;font-weight:700;">Veja abaixo informações importantes para sua contratação</p></td></tr>`,
+    proposalSections,
     `<tr><td style="background:#d9d9d9;padding:22px 34px 24px;"><p style="margin:0 0 14px;font-size:16px;line-height:1.35;font-weight:700;">OBSERVAÇÕES IMPORTANTES:</p><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;">${important}</table></td></tr>`,
     "</table></td></tr></table></body></html>",
   ].join("");
@@ -263,7 +283,8 @@ export function buildQuoteEmailHtml(quote = {}, assets = {}) {
 export function buildQuotePlainText(quote = {}) {
   const route = buildQuoteRouteText(quote).map((line) => `• ${line}`).join("\n");
   const notes = quoteEmailNotes(quote).map((line) => `• ${line}`).join("\n");
-  return [`Cotação ${quote.code || ""}`.trim(), `Olá ${quote.clientContact || quote.client || "cliente"},`, "", route, "", `Custo total: ${formatMoney(quote.value)}`, "", "OBSERVAÇÕES IMPORTANTES:", notes].join("\n");
+  const sections = quoteProposalSections(quote).flatMap(({ title, text }) => ["", `${title.toUpperCase()}:`, text]);
+  return [`Cotação ${quote.code || ""}`.trim(), `Olá ${quote.clientContact || quote.client || "cliente"},`, "", route, "", `Custo total: ${formatMoney(quote.value)}`, ...sections, "", "OBSERVAÇÕES IMPORTANTES:", notes].join("\n");
 }
 
 export async function loadQuoteImages(quote, { baseUrl = "", signal, fetcher = fetch } = {}) {

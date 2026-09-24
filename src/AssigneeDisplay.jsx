@@ -22,10 +22,18 @@ export default function AssigneeDisplay({ value, small = false, team = null, tea
   const profiles = normalizeProfiles(value);
   const names = profiles.map((profile) => profile.name);
   const responsibilityNames = primaryName ? [primaryName, ...consultantNames] : names;
-  const label = responsibilityNames.map((name) => String(name || "").trim().split(/\s+/)[0]).filter(Boolean).join(" | ") || "Não atribuído";
+  const displayNames = responsibilityNames.map((name) => String(name || "").trim().split(/\s+/)[0]).filter(Boolean);
+  const label = displayNames.join(" | ") || "Não atribuído";
 
   return <span className="assignee-display" title={label} aria-label={`Responsáveis: ${label}`}>
     <span className={`team-assignee-icon ${small ? "team-assignee-icon-small" : ""}`} aria-hidden="true"><TeamIcon name="users" size={small ? 14 : 16} /></span>
-    <span className="assignee-name">{label}</span>
+    <span className="assignee-name">
+      {displayNames.length ? displayNames.map((name, index) => (
+        <React.Fragment key={`${name}-${index}`}>
+          {index > 0 && " | "}
+          {index === 0 ? <strong className="assignee-primary-name">{name}</strong> : name}
+        </React.Fragment>
+      )) : label}
+    </span>
   </span>;
 }

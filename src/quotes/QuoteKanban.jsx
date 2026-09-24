@@ -35,7 +35,7 @@ const QuoteCard = memo(function QuoteCard({ quote, task, currentEmployee, teams 
     <div className="task-link"><GripVertical size={13} aria-hidden="true" /><FileText size={13} aria-hidden="true" /><em>{quote.code || "Sem número"}{quote.title ? ` · ${quote.title}` : ""}</em></div>
     {quote.value !== null && quote.value !== undefined && String(quote.value).trim() && <div className="quote-kanban-value" aria-label={`Valor da cotação: ${formatMoney(quote.value)}`}><span className="quote-kanban-value-icon" aria-hidden="true"><BadgeDollarSign size={14} /></span><span className="quote-kanban-value-content"><small>Valor</small><strong>{formatMoney(quote.value)}</strong></span></div>}
     {waitingSummary && <div className="task-waiting-summary" title={waitingSummary}><Clock3 size={13} /><span>{waitingSummary}</span></div>}
-    {(quote.serviceType || quote.origin || quote.destination) && <p className="task-description">{[quote.serviceType, [quote.origin, quote.destination].filter(Boolean).join(" → ")].filter(Boolean).join(" · ")}</p>}
+    {(quote.origin || quote.destination) && <p className="task-description">{[quote.origin, quote.destination].filter(Boolean).join(" → ")}</p>}
     {canRegisterReturn && <div className="task-card-footer quote-kanban-card-footer"><button className="task-quick-action task-return-action" type="button" onClick={(event) => { event.stopPropagation(); onRegisterWaitingReturn?.(task.id); }} onKeyDown={(event) => event.stopPropagation()}>Registrar retorno</button></div>}
   </article>;
 });

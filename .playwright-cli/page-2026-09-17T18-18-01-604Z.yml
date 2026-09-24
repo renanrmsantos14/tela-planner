@@ -1,0 +1,281 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - button "Expandir navegação" [ref=e5] [cursor=pointer]
+    - generic "Hoje, 36 pendências e 1 atrasados" [ref=e14]:
+      - strong [ref=e16]: 17 de set
+      - generic [ref=e17]:
+        - strong [ref=e19]: "36"
+        - strong [ref=e21]: "1"
+    - navigation [ref=e22]:
+      - button [ref=e23] [cursor=pointer]
+      - button [ref=e29] [cursor=pointer]
+      - button [ref=e33] [cursor=pointer]
+      - button [active] [ref=e39] [cursor=pointer]
+      - button [ref=e43] [cursor=pointer]
+  - main [ref=e47]:
+    - generic "Ações do aplicativo" [ref=e48]:
+      - button "Abrir notificações, 4 não lidas" [ref=e212] [cursor=pointer]:
+        - generic [ref=e55]: "4"
+      - button "Atualizar dados" [ref=e56] [cursor=pointer]
+    - generic [ref=e513]:
+      - generic [ref=e514]:
+        - generic [ref=e515]:
+          - generic [ref=e516]: ACOMPANHAMENTO COMERCIAL
+          - heading "Cotações" [level=1] [ref=e517]
+          - paragraph [ref=e518]: Cadastre, priorize e acompanhe a resposta sem sair da gestão.
+        - button "Nova cotação" [ref=e519] [cursor=pointer]
+      - generic "Indicadores de cotações" [ref=e521]:
+        - button "Ativas 17" [ref=e522] [cursor=pointer]:
+          - generic [ref=e527]: Ativas
+          - strong [ref=e528]: "17"
+        - button "Atrasadas 4" [ref=e529] [cursor=pointer]:
+          - generic [ref=e538]: Atrasadas
+          - strong [ref=e539]: "4"
+        - button "Vencem hoje 2" [ref=e540] [cursor=pointer]:
+          - generic [ref=e544]: Vencem hoje
+          - strong [ref=e545]: "2"
+        - button "Aguardando 3" [ref=e546] [cursor=pointer]:
+          - generic [ref=e551]: Aguardando
+          - strong [ref=e552]: "3"
+      - generic [ref=e553]:
+        - generic [ref=e554]:
+          - textbox "Buscar cotações" [ref=e559]:
+            - /placeholder: Buscar cotação, cliente ou serviço
+          - generic [ref=e560]:
+            - generic [ref=e561]:
+              - listbox:
+                - option: Sem responsável
+                - option: Marina Alves
+                - option: Rafael Lima
+                - option: Camila Torres
+                - option: João Mendes
+                - option: Luiza Prado
+                - option: Gustavo Neri
+                - option: Renan Martins
+              - button "Todos os responsáveis" [ref=e562] [cursor=pointer]
+            - generic [ref=e565]:
+              - listbox:
+                - option: Nova
+                - option: Em análise pelo financeiro
+                - option: Aguardando informação
+                - option: Cotada
+                - option: Respondida ao cliente
+              - button "Todos os status" [ref=e566] [cursor=pointer]
+            - generic [ref=e569]:
+              - listbox:
+                - option: Baixa
+                - option: Média
+                - option: Alta
+                - option: Urgente
+              - button "Todas as prioridades" [ref=e570] [cursor=pointer]
+            - generic [ref=e573]:
+              - listbox:
+                - option: Atrasadas
+                - option: Vencem hoje
+                - option: Sem prazo
+              - button "Todos os prazos" [ref=e574] [cursor=pointer]
+          - generic "Visualização" [ref=e577]:
+            - button "Lista" [ref=e578] [cursor=pointer]
+            - button "Kanban" [pressed] [ref=e580] [cursor=pointer]
+        - generic "Kanban de cotações" [ref=e586]:
+          - generic [ref=e588]:
+            - generic [ref=e589]:
+              - generic [ref=e591]:
+                - heading "Nova" [level=2] [ref=e595]
+                - generic [ref=e596]: "5"
+              - generic [ref=e597]:
+                - article [ref=e598]:
+                  - generic [ref=e599]:
+                    - 'generic "Prioridade: Média" [ref=e600]': Média
+                    - 'generic "Prazo: 20 set." [ref=e601]': 20 set.
+                  - heading "Vértice Tecnologia" [level=3] [ref=e605]
+                  - emphasis [ref=e617]: COT-1004 · Roadshow executivo · São Paulo e Campinas
+                  - 'generic "Valor da cotação: R$ 8.740,00" [ref=e618]':
+                    - generic [ref=e623]:
+                      - generic [ref=e624]: Valor
+                      - strong [ref=e625]: R$ 8.740,00
+                - article [ref=e626]:
+                  - generic [ref=e627]:
+                    - 'generic "Prioridade: Média" [ref=e628]': Média
+                    - 'generic "Prazo: 18 set." [ref=e629]': 18 set.
+                  - heading "Kairós Health" [level=3] [ref=e633]
+                  - emphasis [ref=e645]: COT-1001 · Transfer internacional · GRU–Faria Lima
+                  - 'generic "Valor da cotação: R$ 1.960,00" [ref=e646]':
+                    - generic [ref=e651]:
+                      - generic [ref=e652]: Valor
+                      - strong [ref=e653]: R$ 1.960,00
+                - article [ref=e654]:
+                  - generic [ref=e655]:
+                    - 'generic "Prioridade: Média" [ref=e656]': Média
+                    - 'generic "Prazo: 23 set." [ref=e657]': 23 set.
+                  - heading "Delta Foods" [level=3] [ref=e661]
+                  - emphasis [ref=e673]: COT-0997 · Operação de embarque · Viracopos
+                  - 'generic "Valor da cotação: R$ 3.890,00" [ref=e674]':
+                    - generic [ref=e679]:
+                      - generic [ref=e680]: Valor
+                      - strong [ref=e681]: R$ 3.890,00
+                - article [ref=e682]:
+                  - generic [ref=e683]:
+                    - 'generic "Prioridade: Média" [ref=e684]': Média
+                    - 'generic "Prazo: 24 set." [ref=e685]': 24 set.
+                  - heading "Nexa Industrial" [level=3] [ref=e689]
+                  - emphasis [ref=e701]: COT-0995 · Transfer de executivos · São José dos Campos
+                  - 'generic "Valor da cotação: R$ 4.620,00" [ref=e702]':
+                    - generic [ref=e707]:
+                      - generic [ref=e708]: Valor
+                      - strong [ref=e709]: R$ 4.620,00
+                - article [ref=e710]:
+                  - generic [ref=e711]:
+                    - 'generic "Prioridade: Média" [ref=e712]': Média
+                    - 'generic "Prazo: 26 set." [ref=e713]': 26 set.
+                  - heading "Maré Logística" [level=3] [ref=e717]
+                  - emphasis [ref=e729]: COT-0992 · Transfer noturno · Santos–GRU
+                  - 'generic "Valor da cotação: R$ 2.340,00" [ref=e730]':
+                    - generic [ref=e735]:
+                      - generic [ref=e736]: Valor
+                      - strong [ref=e737]: R$ 2.340,00
+            - generic [ref=e738]:
+              - generic [ref=e740]:
+                - heading "Em análise pelo financeiro" [level=2] [ref=e748]
+                - generic [ref=e749]: "5"
+              - generic [ref=e750]:
+                - article [ref=e751]:
+                  - generic [ref=e752]:
+                    - 'generic "Prioridade: Média" [ref=e753]': Média
+                    - 'generic "Prazo: 17 set." [ref=e754]': 17 set.
+                  - heading "Grupo Horizonte" [level=3] [ref=e758]
+                  - emphasis [ref=e770]: COT-1008 · Transfer executivo · Aeroporto GRU
+                  - 'generic "Valor da cotação: R$ 1.280,00" [ref=e771]':
+                    - generic [ref=e776]:
+                      - generic [ref=e777]: Valor
+                      - strong [ref=e778]: R$ 1.280,00
+                - article [ref=e779]:
+                  - generic [ref=e780]:
+                    - 'generic "Prioridade: Média" [ref=e781]': Média
+                    - 'generic "Prazo: 18 set." [ref=e782]': 18 set.
+                  - heading "Alvorada Capital" [level=3] [ref=e786]
+                  - emphasis [ref=e798]: COT-1006 · Carro blindado · Diretoria
+                  - 'generic "Valor da cotação: R$ 2.400,00" [ref=e799]':
+                    - generic [ref=e804]:
+                      - generic [ref=e805]: Valor
+                      - strong [ref=e806]: R$ 2.400,00
+                - article [ref=e807]:
+                  - generic [ref=e808]:
+                    - 'generic "Prioridade: Média" [ref=e809]': Média
+                    - 'generic "Prazo: 21 set." [ref=e810]': 21 set.
+                  - heading "Mosaico Eventos" [level=3] [ref=e814]
+                  - emphasis [ref=e826]: COT-1003 · Traslado de palestrantes · Expo Center Norte
+                  - 'generic "Valor da cotação: R$ 3.260,00" [ref=e827]':
+                    - generic [ref=e832]:
+                      - generic [ref=e833]: Valor
+                      - strong [ref=e834]: R$ 3.260,00
+                - article [ref=e835]:
+                  - generic [ref=e836]:
+                    - 'generic "Prioridade: Média" [ref=e837]': Média
+                    - 'generic "Prazo: 17 set." [ref=e838]': 17 set.
+                  - heading "Orbe Consultoria" [level=3] [ref=e842]
+                  - emphasis [ref=e854]: COT-0998 · Transfer para conselho · Itaim Bibi
+                  - 'generic "Valor da cotação: R$ 2.150,00" [ref=e855]':
+                    - generic [ref=e860]:
+                      - generic [ref=e861]: Valor
+                      - strong [ref=e862]: R$ 2.150,00
+                - article [ref=e863]:
+                  - generic [ref=e864]:
+                    - 'generic "Prioridade: Média" [ref=e865]': Média
+                    - 'generic "Prazo: 25 set." [ref=e866]': 25 set.
+                  - heading "Pilar Seguros" [level=3] [ref=e870]
+                  - emphasis [ref=e882]: COT-0994 · Frota dedicada · Convenção anual
+                  - 'generic "Valor da cotação: R$ 12.900,00" [ref=e883]':
+                    - generic [ref=e888]:
+                      - generic [ref=e889]: Valor
+                      - strong [ref=e890]: R$ 12.900,00
+            - generic [ref=e891]:
+              - generic [ref=e893]:
+                - heading "Aguardando informação" [level=2] [ref=e897]
+                - generic [ref=e898]: "3"
+              - generic [ref=e899]:
+                - article [ref=e900]:
+                  - generic [ref=e901]:
+                    - 'generic "Prioridade: Média" [ref=e902]': Média
+                    - 'generic "Prazo: 19 set." [ref=e903]': 19 set.
+                  - heading "Norte & Sul Eventos" [level=3] [ref=e907]
+                  - emphasis [ref=e919]: COT-1007 · Van executiva · Evento corporativo
+                  - 'generic "Valor da cotação: R$ 4.950,00" [ref=e920]':
+                    - generic [ref=e925]:
+                      - generic [ref=e926]: Valor
+                      - strong [ref=e927]: R$ 4.950,00
+                  - generic "Aguardando disponibilidade da segunda van · Rafael Lima · até 18 set." [ref=e928]
+                - article [ref=e933]:
+                  - generic [ref=e934]:
+                    - 'generic "Prioridade: Média" [ref=e935]': Média
+                    - 'generic "Prazo: 22 set." [ref=e936]': 22 set.
+                  - heading "Lumen Energia" [level=3] [ref=e940]
+                  - emphasis [ref=e952]: COT-1002 · Disposição diária · Alphaville
+                  - 'generic "Valor da cotação: R$ 6.180,00" [ref=e953]':
+                    - generic [ref=e958]:
+                      - generic [ref=e959]: Valor
+                      - strong [ref=e960]: R$ 6.180,00
+                - article [ref=e961]:
+                  - generic [ref=e962]:
+                    - 'generic "Prioridade: Média" [ref=e963]': Média
+                    - 'generic "Prazo: 19 set." [ref=e964]': 19 set.
+                  - heading "Leste Mídia" [level=3] [ref=e968]
+                  - emphasis [ref=e980]: COT-0993 · Recepção VIP · Hotel Unique
+                  - 'generic "Valor da cotação: R$ 2.780,00" [ref=e981]':
+                    - generic [ref=e986]:
+                      - generic [ref=e987]: Valor
+                      - strong [ref=e988]: R$ 2.780,00
+            - generic [ref=e989]:
+              - generic [ref=e991]:
+                - heading "Cotada" [level=2] [ref=e995]
+                - generic [ref=e996]: "0"
+              - generic [ref=e997]: Arraste cotações para cá
+            - generic [ref=e1001]:
+              - generic [ref=e1003]:
+                - heading "Respondida ao cliente" [level=2] [ref=e1007]
+                - generic [ref=e1008]: "4"
+              - generic [ref=e1009]:
+                - article [ref=e1010]:
+                  - generic [ref=e1011]:
+                    - 'generic "Prioridade: Média" [ref=e1012]': Média
+                    - generic [ref=e1013]: Vencida
+                    - 'generic "Prazo: 16 set." [ref=e1014]': 16 set.
+                  - heading "Casa 9 Produções" [level=3] [ref=e1018]
+                  - emphasis [ref=e1030]: COT-1005 · Recepção de convidados · Congonhas
+                  - 'generic "Valor da cotação: R$ 860,00" [ref=e1031]':
+                    - generic [ref=e1036]:
+                      - generic [ref=e1037]: Valor
+                      - strong [ref=e1038]: R$ 860,00
+                - article [ref=e1039]:
+                  - generic [ref=e1040]:
+                    - 'generic "Prioridade: Média" [ref=e1041]': Média
+                    - generic [ref=e1042]: Vencida
+                    - 'generic "Prazo: 14 set." [ref=e1043]': 14 set.
+                  - heading "Aurora Produções" [level=3] [ref=e1047]
+                  - emphasis [ref=e1059]: COT-0999 · Transporte de equipe · Guarujá
+                  - 'generic "Valor da cotação: R$ 5.480,00" [ref=e1060]':
+                    - generic [ref=e1065]:
+                      - generic [ref=e1066]: Valor
+                      - strong [ref=e1067]: R$ 5.480,00
+                - article [ref=e1068]:
+                  - generic [ref=e1069]:
+                    - 'generic "Prioridade: Média" [ref=e1070]': Média
+                    - generic [ref=e1071]: Vencida
+                    - 'generic "Prazo: 12 set." [ref=e1072]': 12 set.
+                  - heading "Estação 21" [level=3] [ref=e1076]
+                  - emphasis [ref=e1088]: COT-0996 · Apoio logístico · Hotel Fasano
+                  - 'generic "Valor da cotação: R$ 1.740,00" [ref=e1089]':
+                    - generic [ref=e1094]:
+                      - generic [ref=e1095]: Valor
+                      - strong [ref=e1096]: R$ 1.740,00
+                - article [ref=e1097]:
+                  - generic [ref=e1098]:
+                    - 'generic "Prioridade: Média" [ref=e1099]': Média
+                    - generic [ref=e1100]: Vencida
+                    - 'generic "Prazo: 10 set." [ref=e1101]': 10 set.
+                  - heading "Horizon Bio" [level=3] [ref=e1105]
+                  - emphasis [ref=e1117]: COT-0991 · Veículo executivo · Diretoria regional
+                  - 'generic "Valor da cotação: R$ 7.350,00" [ref=e1118]':
+                    - generic [ref=e1123]:
+                      - generic [ref=e1124]: Valor
+                      - strong [ref=e1125]: R$ 7.350,00

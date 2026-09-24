@@ -449,3 +449,18 @@
 **Suggested improvement:** Quando o usuário pedir um componente existente, localizar sua estrutura e seus estados reais, criar ou importar uma implementação identificável e adicionar um teste que impeça controles nativos diretos fora desse componente.
 
 **Principle:** Paridade de componente exige reuso estrutural verificável; semântica e aparência semelhantes não são evidência suficiente.
+
+### Observation 31: Rótulo de direção precisa seguir o comparador real
+
+**Status:** OPEN
+**Date:** 2026-09-17
+**Session context:** Revalidação da ordenação de cards do Quadro do Planner.
+**Skill:** antigravity-protocol / task-observer
+**Type:** open-source
+**Phase/Area:** Contrato entre UI e lógica de ordenação
+
+**Issue:** O comparador ordenava datas em ascendente como mais antigas primeiro, mas a tabela de rótulos da UI chamava essa direção de mais recente primeiro em Criação e Atualização.
+
+**Suggested improvement:** Cobrir a associação entre direção interna e texto exibido com teste de contrato, além do teste isolado do comparador.
+
+**Principle:** Uma ordenação só está correta quando algoritmo, estado persistido e rótulo visível usam a mesma semântica de direção.

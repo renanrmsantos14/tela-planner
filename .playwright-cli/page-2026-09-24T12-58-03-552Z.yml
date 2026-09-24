@@ -1,0 +1,23 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - main [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e6]:
+          - strong [ref=e7]: Tarefas
+          - generic [ref=e8]: Central de Trabalho
+        - button "Abrir notificações, 2 não lidas" [ref=e9] [cursor=pointer]:
+          - generic [ref=e15]: "2"
+        - button "Atualizar dados" [ref=e16] [cursor=pointer]
+      - status "Carregando tela" [ref=e20]:
+        - generic [ref=e21]: Carregando tela…
+    - navigation "Navegação principal" [ref=e171]:
+      - button "Hoje 15" [ref=e172] [cursor=pointer]:
+        - generic [ref=e178]: Hoje
+        - generic [ref=e179]: "15"
+      - button "Tarefas 30" [ref=e180] [cursor=pointer]:
+        - generic [ref=e184]: Tarefas
+        - generic [ref=e185]: "30"
+      - button "Cotações" [ref=e186] [cursor=pointer]
+      - button "Mais" [ref=e191] [cursor=pointer]
+    - button "Criar nova tarefa" [ref=e194] [cursor=pointer]
+  - listbox [ref=e196]

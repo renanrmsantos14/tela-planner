@@ -188,12 +188,17 @@ function Ensure-PlannerRelationship([hashtable] $Headers, [string] $ApiBaseUrl, 
 function Get-PlannerAttribute([hashtable] $Headers, [string] $ApiBaseUrl, [string] $Entity, [string] $LogicalName) {
   $escapedEntity = Escape-OData $Entity
   $escapedAttribute = Escape-OData $LogicalName
-  try {
-    return Invoke-RestMethod -Method Get -Uri "$ApiBaseUrl/EntityDefinitions(LogicalName='$escapedEntity')/Attributes(LogicalName='$escapedAttribute')?`$select=LogicalName" -Headers $Headers -ErrorAction Stop
-  }
-  catch {
-    if ((Get-ResponseStatusCode $_) -eq 404) { return $null }
-    throw
+  for ($attempt = 1; $attempt -le 3; $attempt++) {
+    try {
+      return Invoke-RestMethod -Method Get -Uri "$ApiBaseUrl/EntityDefinitions(LogicalName='$escapedEntity')/Attributes(LogicalName='$escapedAttribute')?`$select=LogicalName" -Headers $Headers -ErrorAction Stop
+    }
+    catch {
+      $status = Get-ResponseStatusCode $_
+      if ($status -eq 404) { return $null }
+      if ($attempt -eq 3 -or ($status -ne 0 -and $status -ne 429 -and $status -lt 500)) { throw }
+      Write-Step "falha temporária ao consultar $Entity.$LogicalName; nova tentativa ($attempt/2)"
+      Start-Sleep -Seconds (2 * $attempt)
+    }
   }
 }
 

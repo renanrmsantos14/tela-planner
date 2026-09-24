@@ -15,6 +15,7 @@ import {
   deleteAttachment as deleteMockAttachment,
   deleteContactAttachment as deleteMockContactAttachment,
   deleteTask as deleteMockTask,
+  deleteQuote as deleteMockQuote,
   ensureQuoteTask as ensureMockQuoteTask,
   createQuote as createMockQuote,
   updateQuote as updateMockQuote,
@@ -58,7 +59,7 @@ import {
   waitingContextSummary,
 } from "./domain.js";
 import { isQuoteTask, isQuoteTerminalStatus, quoteStatusForTaskStatus, taskStatusForQuoteStatus } from "./quoteTaskFlow.js";
-import { QUOTE_COMPLETED_STATUSES, QUOTE_VEHICLE_VALUES, validateQuoteCommercial } from "./quoteDomain.js";
+import { parseQuoteMoney, QUOTE_COMPLETED_STATUSES, QUOTE_VEHICLE_VALUES, validateQuoteCommercial } from "./quoteDomain.js";
 import { localDateKey, manualCollectionKey } from "./management.js";
 import { normalizeContact } from "./contactDomain.js";
 
@@ -108,20 +109,6 @@ const PERSONAL_TAG_TABLE = "cr40f_plannertagpessoal";
 const PERSONAL_TAG_TASK_TABLE = "cr40f_plannertagpessoaltarefa";
 const ENVIRONMENT_VARIABLE_DEFINITION_TABLE = "environmentvariabledefinition";
 const ENVIRONMENT_VARIABLE_VALUE_TABLE = "environmentvariablevalue";
-const SERVICE_TYPE_TABLE = "cr40f_tiposervicoplanner";
-const SERVICE_TYPE_LOOKUP = "cr40f_tiposervicoplanner";
-const serviceTypeValues = new Map();
-
-async function quoteServiceMetadata(xrm) {
-  const path = `/EntityDefinitions(LogicalName='${QUOTE_TABLE}')/Attributes(LogicalName='cr40f_tiposervico')/Microsoft.Dynamics.CRM.PicklistAttributeMetadata?$expand=OptionSet,GlobalOptionSet`;
-  const metadata = await request(xrm, path);
-  const choices = metadata.GlobalOptionSet || metadata.OptionSet;
-  if (!choices?.Options?.length) throw new Error("Choice de tipo de serviço indisponível no Dataverse.");
-  return choices.Options.map((option) => ({
-    value: option.Value,
-    label: option.Label?.UserLocalizedLabel?.Label || option.Label?.LocalizedLabels?.find((label) => label.LanguageCode === 1046)?.Label || "",
-  })).filter((option) => option.label && Number.isInteger(option.value));
-}
 const FLOW_URL_SCHEMA = "new_URLFlowsalvararquivosSharePoint";
 const READ_FLOW_URL_SCHEMA = "new_URLFlowConsultarArquivosSharePoint";
 const DELETE_FLOW_URL_SCHEMA = "new_URLFlowExcluirArquivoSharePoint";
@@ -159,7 +146,6 @@ const IMAGE_OPTIMIZER_WORKER_SOURCE = `
 `;
 const ENTITY_SETS = Object.freeze({
   [QUOTE_TABLE]: "cr40f_pedidodecotacaos",
-  [SERVICE_TYPE_TABLE]: "cr40f_tiposervicoplanners",
   [QUALITY_ERROR_TABLE]: "cr40f_errooperacionals",
   [QUALITY_ACTION_TABLE]: "cr40f_acaooperacionals",
   [TASK_TABLE]: "cr40f_plannertarefas",
@@ -192,7 +178,7 @@ const QUOTE_STATUS_VALUES = Object.freeze({
   "Respondida ao cliente": 100004004,
   "Cancelada": 100004005,
   "Perdida": 100004006,
-  "Convertida em serviço": 100004007,
+  "Aceita pelo cliente": 100004007,
 });
 const QUOTE_PRIORITY_VALUES = Object.freeze({ low: 100003000, medium: 100003001, high: 100003002, urgent: 100003003 });
 const QUOTE_CHANNEL_VALUES = Object.freeze({ WhatsApp: 100001000, Telefone: 100001001, "E-mail": 100001002 });
@@ -200,8 +186,8 @@ const lookupCache = new Map();
 let quoteClientEntitySet = "";
 let quoteLongRoutesAvailable = false;
 let quoteLongRoutesChecked = false;
-let quoteServiceLookupAvailable = false;
-let quoteServiceLookupChecked = false;
+let quoteLossReasonAvailable = false;
+let quoteLossReasonChecked = false;
 
 function sanitizePathSegment(value, fallback = "sem-codigo") {
   const sanitized = String(value || "").trim().replace(/[<>:\"/\\|?*\x00-\x1F]/g, "-").replace(/\s+/g, " ").replace(/\.+$/g, "");
@@ -375,6 +361,8 @@ function plannerTaskQuery(includeTeamLookup = true, includeWaitingContext = true
     "cr40f_prioridade",
     TASK_RESTRICTED_VISIBILITY_FIELD,
     "cr40f_prazo",
+    "createdon",
+    "modifiedon",
     ...(includeWaitingContext ? Object.values(WAITING_CONTEXT_FIELDS) : []),
     "_createdby_value",
     `_${EMPLOYEE_ASSIGNEE_FIELD}_value`,
@@ -409,65 +397,6 @@ async function resolveEnvironmentVariableUrl(xrm, schemaName, fallback = "") {
   if (!definition) return fallback.trim();
   const values = await retrieveMany(xrm, ENVIRONMENT_VARIABLE_VALUE_TABLE, `?$select=value&$filter=_environmentvariabledefinitionid_value eq ${definition.environmentvariabledefinitionid}&$top=1`);
   return String(values[0]?.value || definition.defaultvalue || fallback).trim();
-}
-
-export async function loadQuoteServiceTypes() {
-  const xrm = getXrm();
-  if (!xrm) return (await import("./mockQuoteServiceTypes.js")).loadMockQuoteServiceTypes();
-  const rows = await retrieveMany(xrm, SERVICE_TYPE_TABLE, `?$select=${SERVICE_TYPE_TABLE}id,cr40f_name,cr40f_ordem,cr40f_arquivado&$filter=statecode eq 0&$orderby=cr40f_ordem asc,cr40f_name asc`);
-  return rows.map((row) => ({ id: row[`${SERVICE_TYPE_TABLE}id`], name: row.cr40f_name, order: row.cr40f_ordem ?? 0, archived: Boolean(row.cr40f_arquivado) }));
-}
-
-function assertServiceTypeDev(xrm) {
-  if (!xrm) throw new Error("Gerenciar tipos de serviço exige Dataverse conectado.");
-  if (xrm.Utility.getGlobalContext().getClientUrl().replace(/\/$/, "").toLowerCase() !== DEV_DATAVERSE_URL.toLowerCase()) throw new Error("Tipos de serviço só podem ser alterados no DEV.");
-}
-
-export function canEditQuoteServiceTypes() {
-  const xrm = getXrm();
-  return !xrm || xrm.Utility.getGlobalContext().getClientUrl().replace(/\/$/, "").toLowerCase() === DEV_DATAVERSE_URL.toLowerCase();
-}
-
-export async function createQuoteServiceType(name) {
-  const xrm = getXrm();
-  if (!xrm) return (await import("./mockQuoteServiceTypes.js")).createMockQuoteServiceType(name);
-  assertServiceTypeDev(xrm);
-  const cleanName = String(name || "").trim();
-  if (!cleanName) throw new Error("Informe o nome do tipo de serviço.");
-  const current = await loadQuoteServiceTypes();
-  if (current.some((item) => item.name.localeCompare(cleanName, "pt-BR", { sensitivity: "base" }) === 0)) throw new Error("Já existe um tipo de serviço com esse nome.");
-  await request(xrm, `/${entitySetName(SERVICE_TYPE_TABLE)}`, { method: "POST", body: JSON.stringify({ cr40f_name: cleanName, cr40f_ordem: Math.max(-1, ...current.map((item) => item.order)) + 1, cr40f_arquivado: false }) });
-  return loadQuoteServiceTypes();
-}
-
-export async function updateQuoteServiceType(id, patch) {
-  const xrm = getXrm();
-  if (!xrm) return (await import("./mockQuoteServiceTypes.js")).updateMockQuoteServiceType(id, patch);
-  assertServiceTypeDev(xrm);
-  const current = await loadQuoteServiceTypes();
-  if (!current.some((item) => item.id === id)) throw new Error("Tipo de serviço não encontrado.");
-  const payload = {};
-  if (Object.hasOwn(patch, "name")) {
-    const name = String(patch.name || "").trim();
-    if (!name) throw new Error("Informe o nome do tipo de serviço.");
-    if (current.some((item) => item.id !== id && item.name.localeCompare(name, "pt-BR", { sensitivity: "base" }) === 0)) throw new Error("Já existe um tipo de serviço com esse nome.");
-    payload.cr40f_name = name;
-  }
-  if (Object.hasOwn(patch, "archived")) payload.cr40f_arquivado = Boolean(patch.archived);
-  await request(xrm, `/${entitySetName(SERVICE_TYPE_TABLE)}(${cleanId(id)})`, { method: "PATCH", body: JSON.stringify(payload) });
-  return loadQuoteServiceTypes();
-}
-
-export async function deleteQuoteServiceType(id) {
-  const xrm = getXrm();
-  if (!xrm) return (await import("./mockQuoteServiceTypes.js")).deleteMockQuoteServiceType(id, loadMockState().quotes);
-  assertServiceTypeDev(xrm);
-  const typeId = cleanId(id);
-  if (!(await loadQuoteServiceTypes()).some((item) => item.id === typeId)) throw new Error("Tipo de serviço não encontrado.");
-  const linked = await request(xrm, `/${entitySetName(QUOTE_TABLE)}?$select=${QUOTE_TABLE}id&$filter=_${SERVICE_TYPE_LOOKUP}_value eq ${typeId}&$top=1`);
-  if (linked?.value?.length) throw new Error("Este tipo de serviço está vinculado a uma cotação. Arquive-o para preservar o histórico.");
-  await request(xrm, `/${entitySetName(SERVICE_TYPE_TABLE)}(${typeId})`, { method: "DELETE" });
-  return loadQuoteServiceTypes();
 }
 
 async function resolveSharePointFlowUrl(xrm) {
@@ -654,13 +583,11 @@ function normalizeQuote(row) {
     title: row.cr40f_titulo || "Sem título",
     client: row.cr40f_clienteempresa || "",
     clientId: row._cr40f_cliente_value || "",
-    status: row["cr40f_statuscotacao@OData.Community.Display.V1.FormattedValue"] || Object.entries(QUOTE_STATUS_VALUES).find(([, value]) => value === row.cr40f_statuscotacao)?.[0] || "",
+    status: Object.entries(QUOTE_STATUS_VALUES).find(([, value]) => value === row.cr40f_statuscotacao)?.[0] || row["cr40f_statuscotacao@OData.Community.Display.V1.FormattedValue"] || "",
     channel: row["cr40f_canalentrada@OData.Community.Display.V1.FormattedValue"] || Object.entries(QUOTE_CHANNEL_VALUES).find(([, value]) => value === row.cr40f_canalentrada)?.[0] || "",
     clientContact: row.cr40f_contatocliente || "",
     clientEmail: row.cr40f_emailcliente || "",
     clientPhone: row.cr40f_telefonewhatsapp || "",
-    serviceTypeId: row[`_${SERVICE_TYPE_LOOKUP}_value`] || "",
-    serviceType: row[`_${SERVICE_TYPE_LOOKUP}_value@OData.Community.Display.V1.FormattedValue`] || row["cr40f_tiposervico@OData.Community.Display.V1.FormattedValue"] || [...serviceTypeValues].find(([, value]) => value === row.cr40f_tiposervico)?.[0] || "",
     vehicleType: Object.entries(QUOTE_VEHICLE_VALUES).find(([, value]) => value === row.cr40f_tipoveiculo)?.[0] || row["cr40f_tipoveiculo@OData.Community.Display.V1.FormattedValue"] || "",
     origin: row.cr40f_origemcompleta ?? row.cr40f_origem ?? "",
     destination: row.cr40f_destinocompleto ?? row.cr40f_destino ?? "",
@@ -683,10 +610,19 @@ function normalizeQuote(row) {
 }
 
 const QUOTE_SELECT = [
-  "cr40f_pedidodecotacaoid", "cr40f_numerodacotacao", "cr40f_titulo", "cr40f_clienteempresa", "_cr40f_cliente_value", "cr40f_contatocliente", "cr40f_telefonewhatsapp", "cr40f_emailcliente", "cr40f_canalentrada", "cr40f_tiposervico", "cr40f_tipoveiculo", "cr40f_origem", "cr40f_destino", "cr40f_datahoraservico", "cr40f_retorno", "cr40f_datahoraretorno", "cr40f_quantidadepassageiros", "cr40f_observacoespedido", "cr40f_prioridade", "cr40f_statuscotacao", "cr40f_prazoresponder", "cr40f_valorcotado", "cr40f_condicaocomercial", "cr40f_respostaenviadacliente", "cr40f_datahorafinalizacao", "cr40f_plannertaskid", "cr40f_linktarefaplanner", "cr40f_linkmensagemteams",
+  "cr40f_pedidodecotacaoid", "cr40f_numerodacotacao", "cr40f_titulo", "cr40f_clienteempresa", "_cr40f_cliente_value", "cr40f_contatocliente", "cr40f_telefonewhatsapp", "cr40f_emailcliente", "cr40f_canalentrada", "cr40f_tipoveiculo", "cr40f_origem", "cr40f_destino", "cr40f_datahoraservico", "cr40f_retorno", "cr40f_datahoraretorno", "cr40f_quantidadepassageiros", "cr40f_observacoespedido", "cr40f_prioridade", "cr40f_statuscotacao", "cr40f_prazoresponder", "cr40f_valorcotado", "cr40f_condicaocomercial", "cr40f_respostaenviadacliente", "cr40f_datahorafinalizacao", "cr40f_plannertaskid", "cr40f_linktarefaplanner", "cr40f_linkmensagemteams",
 ].join(",");
 
 async function quoteSelect(xrm) {
+  if (!quoteLossReasonChecked) {
+    try {
+      await request(xrm, `/EntityDefinitions(LogicalName='${QUOTE_TABLE}')/Attributes(LogicalName='cr40f_motivoperda')?$select=LogicalName`);
+      quoteLossReasonAvailable = true;
+    } catch (error) {
+      if (!String(error?.message || "").includes("404")) throw error;
+    }
+    quoteLossReasonChecked = true;
+  }
   if (!quoteLongRoutesChecked) {
     try {
       await Promise.all(["cr40f_origemcompleta", "cr40f_destinocompleto"].map((field) => request(xrm, `/EntityDefinitions(LogicalName='${QUOTE_TABLE}')/Attributes(LogicalName='${field}')?$select=LogicalName`)));
@@ -696,12 +632,7 @@ async function quoteSelect(xrm) {
     }
     quoteLongRoutesChecked = true;
   }
-  if (!quoteServiceLookupChecked) {
-    try { await request(xrm, `/EntityDefinitions(LogicalName='${QUOTE_TABLE}')/Attributes(LogicalName='${SERVICE_TYPE_LOOKUP}')?$select=LogicalName`); quoteServiceLookupAvailable = true; }
-    catch { quoteServiceLookupAvailable = false; }
-    quoteServiceLookupChecked = true;
-  }
-  return [QUOTE_SELECT, ...(quoteLongRoutesAvailable ? ["cr40f_origemcompleta", "cr40f_destinocompleto"] : []), ...(quoteServiceLookupAvailable ? [`_${SERVICE_TYPE_LOOKUP}_value`] : [])].join(",");
+  return [QUOTE_SELECT, ...(quoteLongRoutesAvailable ? ["cr40f_origemcompleta", "cr40f_destinocompleto"] : []), ...(quoteLossReasonAvailable ? ["cr40f_motivoperda"] : [])].join(",");
 }
 
 export async function loadQuoteClients() {
@@ -723,6 +654,26 @@ export async function loadQuoteClients() {
     next = link ? new URL(link).pathname.replace(`/api/data/${API_VERSION}`, "") + new URL(link).search : "";
   }
   return { clients: rows.map((row) => ({ id: row[idField], name: row[nameField] })).filter((row) => row.id && row.name), entitySet };
+}
+
+export async function loadQuoteRequesters() {
+  const xrm = getXrm();
+  if (!xrm) {
+    return (loadMockState().quotes || []).filter((quote) => quote.clientContact).map((quote) => ({ id: `mock-requester-${quote.id}`, name: quote.clientContact, clientId: quote.clientId || "", clientName: quote.client || "", email: quote.clientEmail || "", phone: quote.clientPhone || "" })).sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+  }
+  const metadata = await request(xrm, "/EntityDefinitions(LogicalName='cr40f_bancodedados')?$select=PrimaryIdAttribute,PrimaryNameAttribute,EntitySetName");
+  const { PrimaryIdAttribute: idField, EntitySetName: entitySet } = metadata;
+  const nameField = "cr40f_nomedopassageiro";
+  if (!idField || !entitySet) throw new Error("Metadata de Banco de Dados incompleta.");
+  const rows = [];
+  let next = `/${entitySet}?$select=${idField},${nameField},cr40f_email,cr40f_telefone,_cr40f_cliente_value&$filter=statecode eq 0 and cr40f_classificacao eq 202410002&$orderby=${nameField} asc`;
+  while (next) {
+    const result = await request(xrm, next);
+    rows.push(...(result?.value || []));
+    const link = result?.["@odata.nextLink"];
+    next = link ? new URL(link).pathname.replace(`/api/data/${API_VERSION}`, "") + new URL(link).search : "";
+  }
+  return rows.map((row) => ({ id: row[idField], name: row[nameField], clientId: row._cr40f_cliente_value || "", clientName: row["_cr40f_cliente_value@OData.Community.Display.V1.FormattedValue"] || "", email: row.cr40f_email || "", phone: row.cr40f_telefone || "" })).filter((row) => row.id && row.name);
 }
 
 async function primaryNameAttribute(xrm, table) {
@@ -966,6 +917,8 @@ function normalizeTask(row, events = [], assignees = [], teamRelations = []) {
   const fallbackName = formatLookup(row, EMPLOYEE_ASSIGNEE_FIELD);
   return {
     id: row.cr40f_plannertarefaid,
+    createdAt: row.createdon || "",
+    updatedAt: row.modifiedon || "",
     title: row.cr40f_titulo || row.cr40f_name || "Sem título",
     description: row.cr40f_descricao || "",
     checklist: parseChecklist(row.cr40f_checklistjson),
@@ -1788,9 +1741,7 @@ function quoteDateTime(value) {
 }
 
 function quoteMoney(value) {
-  if (value === "" || value === null || value === undefined) return null;
-  const raw = String(value).trim();
-  const number = typeof value === "number" ? value : Number(raw.includes(",") ? raw.replace(/[^0-9,-]/g, "").replace(/\./g, "").replace(",", ".") : raw.replace(/[^0-9.-]/g, ""));
+  const number = parseQuoteMoney(value);
   return Number.isFinite(number) ? number : null;
 }
 
@@ -1800,26 +1751,24 @@ function quoteChoice(value, choices, label) {
   throw new Error(`${label} inválido para cotação: ${String(value ?? "vazio")}. Selecione uma opção válida.`);
 }
 
-function quotePayload(input = {}, includeUnset = false) {
+function quotePayload(input = {}, includeUnset = false, clientNavigation = "") {
   const payload = {};
   const has = (key) => includeUnset || Object.prototype.hasOwnProperty.call(input, key);
   const set = (key, field, value) => { if (has(key)) payload[field] = value; };
   set("title", "cr40f_titulo", input.title == null ? quoteTaskTitle(input) : String(input.title).trim() || quoteTaskTitle(input));
   set("client", "cr40f_clienteempresa", input.client == null ? "" : String(input.client).trim());
-  if (has("clientId") && (input.clientId || !includeUnset)) {
+  if (has("clientId") && input.clientId) {
     const clientId = cleanId(input.clientId);
-    if (clientId && (!/^[0-9a-f-]{36}$/i.test(clientId) || !quoteClientEntitySet)) throw new Error("Cliente cadastrado inválido. Selecione novamente.");
-    payload["cr40f_cliente@odata.bind"] = clientId ? `/${quoteClientEntitySet}(${clientId})` : null;
+    if (!/^[0-9a-f-]{36}$/i.test(clientId) || !quoteClientEntitySet) throw new Error("Cliente cadastrado inválido. Selecione novamente.");
+    payload[`${clientNavigation || "cr40f_cliente"}@odata.bind`] = `/${quoteClientEntitySet}(${clientId})`;
   }
   set("clientContact", "cr40f_contatocliente", input.clientContact == null ? "" : String(input.clientContact).trim());
   set("clientPhone", "cr40f_telefonewhatsapp", input.clientPhone == null ? "" : String(input.clientPhone).trim());
   set("clientEmail", "cr40f_emailcliente", input.clientEmail == null ? "" : String(input.clientEmail).trim());
-  if (has("channel")) payload.cr40f_canalentrada = quoteChoice(input.channel, QUOTE_CHANNEL_VALUES, "Canal de entrada");
-  if (has("serviceType")) {
-    const label = String(input.serviceType || "").trim();
-    payload.cr40f_tiposervico = serviceTypeValues.get(label) || 100002008;
-  }
-  if (has("vehicleType")) payload.cr40f_tipoveiculo = quoteChoice(input.vehicleType === "Basico" ? "Básico" : input.vehicleType, QUOTE_VEHICLE_VALUES, "Tipo de veículo");
+  if (input.channel) payload.cr40f_canalentrada = quoteChoice(input.channel, QUOTE_CHANNEL_VALUES, "Canal de entrada");
+  else if (!includeUnset && has("channel")) payload.cr40f_canalentrada = null;
+  if (input.vehicleType) payload.cr40f_tipoveiculo = quoteChoice(input.vehicleType === "Basico" ? "Básico" : input.vehicleType, QUOTE_VEHICLE_VALUES, "Tipo de veículo");
+  else if (!includeUnset && has("vehicleType")) payload.cr40f_tipoveiculo = null;
   for (const [key, legacyField, longField] of [["origin", "cr40f_origem", "cr40f_origemcompleta"], ["destination", "cr40f_destino", "cr40f_destinocompleto"]]) {
     if (!has(key)) continue;
     const value = input[key] == null ? "" : String(input[key]);
@@ -1840,6 +1789,12 @@ function quotePayload(input = {}, includeUnset = false) {
   set("commercialTerms", "cr40f_condicaocomercial", input.commercialTerms == null ? "" : String(input.commercialTerms));
   if (has("responseSent")) payload.cr40f_respostaenviadacliente = Boolean(input.responseSent);
   if (has("finalizationAt")) payload.cr40f_datahorafinalizacao = quoteDateTime(input.finalizationAt);
+  if (has("lossReason")) {
+    const reason = String(input.lossReason || "").trim();
+    if (reason.length > 1000) throw new Error("Motivo da perda excede 1.000 caracteres.");
+    if (reason && !quoteLossReasonAvailable) throw new Error("Campo Motivo da perda ainda não disponível no Dataverse DEV.");
+    if (quoteLossReasonAvailable) payload.cr40f_motivoperda = reason;
+  }
   return payload;
 }
 
@@ -1854,7 +1809,10 @@ async function createLiveQuote(xrm, state, input = {}) {
   if (QUOTE_COMPLETED_STATUSES.includes(input.status)) throw new Error("Crie a cotação como Nova e registre o resultado comercial depois.");
   await quoteSelect(xrm);
   const normalizedInput = { ...input, title: String(input.title || "").trim() || quoteTaskTitle(input) };
-  const payload = quotePayload(normalizedInput, true);
+  const clientNavigation = normalizedInput.clientId
+    ? await resolveLookupNavigation(xrm, QUOTE_TABLE, "cr40f_cliente", "cr40f_clientes1")
+    : "";
+  const payload = quotePayload(normalizedInput, true, clientNavigation);
   const created = await request(xrm, `/${entitySetName(QUOTE_TABLE)}`, { method: "POST", body: JSON.stringify(payload) });
   const quoteId = cleanId(created?.cr40f_pedidodecotacaoid || created?.[`${QUOTE_TABLE}id`]);
   if (!quoteId) throw new Error("Dataverse criou a cotação sem retornar o ID.");
@@ -1872,11 +1830,6 @@ async function createLiveQuote(xrm, state, input = {}) {
 
 async function updateLiveQuote(xrm, state, id, patch = {}) {
   await quoteSelect(xrm);
-  if (Object.hasOwn(patch, "serviceType")) {
-    const legacyChoices = await quoteServiceMetadata(xrm);
-    serviceTypeValues.clear();
-    legacyChoices.forEach(({ label, value }) => serviceTypeValues.set(label, value));
-  }
   const quoteId = cleanId(id);
   const existing = (state.quotes || []).find((quote) => cleanId(quote.id) === quoteId);
   if (!existing) throw new Error("Cotação não encontrada.");
@@ -1896,7 +1849,10 @@ async function updateLiveQuote(xrm, state, id, patch = {}) {
   }
   const effectivePatch = { ...patch };
   if (isAutomaticQuoteTitle(existing) && patch.clientContact !== undefined && patch.title === undefined) effectivePatch.title = quoteTaskTitle({ ...existing, ...patch });
-  const payload = quotePayload({ ...effectivePatch, ...(patch.status && patch.status !== "Respondida ao cliente" ? { responseSent: false } : {}) });
+  const clientNavigation = effectivePatch.clientId
+    ? await resolveLookupNavigation(xrm, QUOTE_TABLE, "cr40f_cliente", "cr40f_clientes1")
+    : "";
+  const payload = quotePayload({ ...effectivePatch, ...(patch.status && patch.status !== "Respondida ao cliente" ? { responseSent: false } : {}) }, false, clientNavigation);
   await request(xrm, `/${entitySetName(QUOTE_TABLE)}(${quoteId})`, { method: "PATCH", body: JSON.stringify(payload) });
   const statusChanged = nextStatus !== existing.status;
   const terminal = isQuoteTerminalStatus(nextStatus);
@@ -1937,14 +1893,18 @@ async function markLiveQuoteSent(xrm, state, id) {
 
 async function setLiveQuoteOutcome(xrm, state, id, outcome, reason = "") {
   if (outcome === "Perdida" && !String(reason).trim()) throw new Error("Informe o motivo da perda.");
-  const next = await updateLiveQuote(xrm, state, id, { status: outcome, finalizationAt: new Date().toISOString() });
+  if (String(reason).trim().length > 1000) throw new Error("Motivo da perda excede 1.000 caracteres.");
+  const next = await updateLiveQuote(xrm, state, id, { status: outcome, lossReason: outcome === "Perdida" ? String(reason).trim() : "", finalizationAt: new Date().toISOString() });
   if (outcome !== "Perdida") return next;
   const task = (next.tasks || []).find((item) => cleanId(item.quoteId) === cleanId(id) && !item.parentTaskId);
-  if (task) {
+  if (!task) return next;
+  try {
     await createEvent(xrm, task.id, 100000001, `Motivo da perda: ${String(reason).trim()}`, "resultado-cotacao", "", String(reason).trim());
     return loadLiveState(xrm);
+  } catch (error) {
+    console.warn("[Planner] resultado salvo, mas histórico do motivo indisponível", error);
+    return next;
   }
-  return next;
 }
 
 async function deleteLiveTask(xrm, state, id) {
@@ -1958,6 +1918,26 @@ async function deleteLiveTask(xrm, state, id) {
     await Promise.all(relations.map((relation) => request(xrm, `/${entitySetName(RELATION_TABLE)}(${cleanId(relation[`${RELATION_TABLE}id`])})`, { method: "DELETE" })));
   }
   await request(xrm, `/${entitySetName(TASK_TABLE)}(${cleanId(id)})`, { method: "DELETE" });
+  return loadLiveState(xrm);
+}
+
+async function deleteLiveQuote(xrm, state, id) {
+  const quoteId = cleanId(id);
+  if (!(state.quotes || []).some((quote) => cleanId(quote.id) === quoteId)) throw new Error("Cotação não encontrada.");
+  const linked = await retrieveMany(xrm, TASK_TABLE, `?$select=cr40f_plannertarefaid&$filter=_cr40f_pedidocotacao_value eq ${quoteId}`);
+  const deleted = new Set();
+  const deleteWithChildren = async (taskId) => {
+    taskId = cleanId(taskId);
+    if (deleted.has(taskId)) return;
+    const children = await retrieveMany(xrm, RELATION_TABLE, `?$select=_cr40f_subtarefa_value&$filter=_cr40f_tarefapai_value eq ${taskId}`);
+    for (const child of children) if (child._cr40f_subtarefa_value) await deleteWithChildren(child._cr40f_subtarefa_value);
+    const parentRelations = await retrieveMany(xrm, RELATION_TABLE, `?$select=${RELATION_TABLE}id&$filter=_cr40f_subtarefa_value eq ${taskId}`);
+    for (const relation of parentRelations) await request(xrm, `/${entitySetName(RELATION_TABLE)}(${cleanId(relation[`${RELATION_TABLE}id`])})`, { method: "DELETE" });
+    await deleteLiveTask(xrm, state, taskId);
+    deleted.add(taskId);
+  };
+  for (const task of linked) await deleteWithChildren(task.cr40f_plannertarefaid);
+  await request(xrm, `/${entitySetName(QUOTE_TABLE)}(${quoteId})`, { method: "DELETE" });
   return loadLiveState(xrm);
 }
 
@@ -2185,6 +2165,7 @@ function createMockDataStore() {
     collectTask: async (state, id, input) => withMode(collectMockTask(state, id, input)),
     sendNotificationTest: async () => { throw new Error("O envio de teste exige o ambiente Dataverse conectado."); },
     deleteTask: async (state, id) => withMode(deleteMockTask(state, id)),
+    deleteQuote: async (state, id) => withMode(deleteMockQuote(state, id)),
     addComment: async (state, id, text, context) => withMode(addMockComment(state, id, text, context)),
     addAttachment: async (state, id, file, previewUrl = "") => withMode(addMockAttachment(state, id, { name: file?.name || "Arquivo", mimeType: file?.type || "", size: file?.size || 0, previewUrl })),
     deleteAttachment: async (state, taskId, attachment) => withMode(deleteMockAttachment(state, taskId, attachment?.id)),
@@ -2256,6 +2237,7 @@ export function createDataStore() {
     updateTask: (state, id, patch) => updateLiveTask(xrm, state, id, patch),
     resolveWaitingReturn: (state, id, input) => resolveLiveWaitingReturn(xrm, state, id, input),
     deleteTask: (state, id) => deleteLiveTask(xrm, state, id),
+    deleteQuote: (state, id) => deleteLiveQuote(xrm, state, id),
     addComment: (state, id, text, context) => addLiveComment(xrm, id, text, context),
     addAttachment: (state, id, file) => addLiveAttachment(xrm, state, id, file),
     deleteAttachment: (state, taskId, attachment) => deleteLiveAttachment(xrm, state, taskId, attachment),

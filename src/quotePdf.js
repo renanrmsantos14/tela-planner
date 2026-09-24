@@ -1,5 +1,5 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
-import { buildQuoteRouteText, formatMoney, isVanVehicle, loadQuoteImages, QUOTE_ASSET_NAMES, quoteEmailNotes, quoteSubject } from "./quoteDomain.js";
+import { buildQuoteRouteText, formatMoney, isVanVehicle, loadQuoteImages, QUOTE_ASSET_NAMES, quoteEmailNotes, quoteProposalSections, quoteSubject } from "./quoteDomain.js";
 
 async function renderHtmlToPng(html, signal) {
   signal?.throwIfAborted?.();
@@ -21,7 +21,7 @@ async function renderHtmlToPng(html, signal) {
     await Promise.all([...source.images].map((item) => item.decode().catch(() => {})));
     signal?.throwIfAborted?.();
     const canvas = await html2canvas(sheet, { scale: 2, useCORS: true, backgroundColor: "#d9d9d9", logging: false, width: 794, height, windowWidth: 794, windowHeight: height });
-    return new Uint8Array(await (await new Promise((resolve, reject) => canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("Não foi possível renderizar o PDF.")), "image/png"))).arrayBuffer());
+    return { bytes: new Uint8Array(await (await new Promise((resolve, reject) => canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("Não foi possível renderizar o PDF.")), "image/png"))).arrayBuffer()), width: canvas.width, height: canvas.height };
   } finally {
     frame.remove();
   }
@@ -48,16 +48,21 @@ function fitImage(page, image, x, y, maxWidth, maxHeight) {
 export async function createQuotePdf(quote, { baseUrl = "", signal, fetcher, assets, html } = {}) {
   if (html && typeof DOMParser !== "undefined") {
     const pdf = await PDFDocument.create();
-    const page = pdf.addPage([595, 842]);
-    const screenshot = await pdf.embedPng(await renderHtmlToPng(html, signal));
-    page.drawImage(screenshot, { x: 0, y: 0, width: 595, height: 842 });
+    const rendered = await renderHtmlToPng(html, signal);
+    const screenshot = await pdf.embedPng(rendered.bytes);
+    const renderedHeight = rendered.height * 595 / rendered.width;
+    const pageCount = Math.max(1, Math.ceil(renderedHeight / 842));
+    for (let index = 0; index < pageCount; index += 1) {
+      const page = pdf.addPage([595, 842]);
+      page.drawImage(screenshot, { x: 0, y: 842 - renderedHeight + index * 842, width: 595, height: renderedHeight });
+    }
     const bytes = await pdf.save();
     return { blob: new Blob([bytes], { type: "application/pdf" }), filename: `${quoteSubject(quote).replace(/[<>:"/\\|?*]/g, "-") || "Cotação"}.pdf` };
   }
   const artwork = assets || await loadQuoteImages(quote, { baseUrl, signal, fetcher });
   signal?.throwIfAborted?.();
   const pdf = await PDFDocument.create();
-  const page = pdf.addPage([595, 842]);
+  let page = pdf.addPage([595, 842]);
   const font = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
   const navy = rgb(0.04, 0.18, 0.25);
@@ -82,8 +87,23 @@ export async function createQuotePdf(quote, { baseUrl = "", signal, fetcher, ass
   page.drawRectangle({ x: 0, y: y - 68, width: 595, height: 68, color: navy });
   page.drawText("Custo total", { x: 32, y: y - 25, size: 11, font: bold, color: rgb(1, 1, 1) });
   page.drawText(formatMoney(quote.value), { x: 32, y: y - 50, size: 19, font: bold, color: rgb(1, 1, 1) }); y -= 96;
+  const ensureSpace = (needed = 45) => {
+    if (y >= needed) return;
+    page = pdf.addPage([595, 842]);
+    page.drawRectangle({ x: 0, y: 0, width: 595, height: 842, color: rgb(0.85, 0.85, 0.85) });
+    y = 810;
+  };
+  for (const { title, text } of quoteProposalSections(quote)) {
+    ensureSpace(); page.drawText(`${title}:`, { x: 32, y, size: 11, font: bold, color: navy }); y -= 18;
+    for (const paragraph of text.split("\n")) {
+      for (const line of wrap(paragraph || " ", 88)) { ensureSpace(28); page.drawText(line, { x: 32, y, size: 8, font, color: rgb(0.09, 0.08, 0.07) }); y -= 11; }
+      y -= 4;
+    }
+    y -= 6;
+  }
+  ensureSpace();
   page.drawText("OBSERVAÇÕES IMPORTANTES:", { x: 32, y, size: 11, font: bold, color: navy }); y -= 18;
-  for (const note of quoteEmailNotes(quote).slice(0, 8)) { for (const line of wrap(`• ${note}`, 88)) { if (y < 28) break; page.drawText(line, { x: 32, y, size: 8, font, color: rgb(0.09, 0.08, 0.07) }); y -= 11; } }
+  for (const note of quoteEmailNotes(quote)) { for (const line of wrap(`• ${note}`, 88)) { ensureSpace(28); page.drawText(line, { x: 32, y, size: 8, font, color: rgb(0.09, 0.08, 0.07) }); y -= 11; } }
   const bytes = await pdf.save();
   return { blob: new Blob([bytes], { type: "application/pdf" }), filename: `${quoteSubject(quote).replace(/[<>:"/\\|?*]/g, "-") || "Cotação"}.pdf` };
 }

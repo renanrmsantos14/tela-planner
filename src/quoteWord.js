@@ -1,4 +1,4 @@
-import { buildQuoteRouteText, formatMoney, isVanVehicle, loadQuoteImages, QUOTE_ASSET_NAMES, quoteEmailNotes, quoteSubject } from "./quoteDomain.js";
+import { buildQuoteRouteText, formatMoney, isVanVehicle, loadQuoteImages, QUOTE_ASSET_NAMES, quoteEmailNotes, quoteProposalSections, quoteSubject } from "./quoteDomain.js";
 
 export async function createQuoteWord(quote, { baseUrl = "", signal, fetcher, assets, html } = {}) {
   if (html) {
@@ -27,6 +27,7 @@ export async function createQuoteWord(quote, { baseUrl = "", signal, fetcher, as
   const van = isVanVehicle(quote.vehicleType);
   const route = buildQuoteRouteText(quote);
   const notes = quoteEmailNotes(quote);
+  const sections = quoteProposalSections(quote);
   const routeCell = new TableCell({ shading: { fill: "0A2F41" }, children: [paragraph("Roteiro do atendimento", { bold: true, color: "FFFFFF" }), ...route.map((line) => paragraph(`• ${line}`, { color: "FFFFFF" }))] });
   const doc = new Document({
     sections: [{ properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 360, right: 520, bottom: 360, left: 520 } } }, children: [
@@ -44,6 +45,7 @@ export async function createQuoteWord(quote, { baseUrl = "", signal, fetcher, as
       paragraph("Com base nesse comprometimento, faço saber que o custo total é de", { bold: true, align: AlignmentType.CENTER, after: 80 }),
       paragraph(formatMoney(quote.value), { bold: true, size: 38, align: AlignmentType.CENTER, after: 80 }),
       paragraph("Veja abaixo informações importantes para sua contratação", { bold: true, align: AlignmentType.CENTER }),
+      ...sections.flatMap(({ title, text }) => [paragraph(`${title}:`, { bold: true, size: 25 }), ...text.split("\n").map((line) => paragraph(line || " "))]),
       paragraph("OBSERVAÇÕES IMPORTANTES:", { bold: true, size: 25 }),
       ...notes.map((line) => paragraph(`• ${line}`)),
     ] }],

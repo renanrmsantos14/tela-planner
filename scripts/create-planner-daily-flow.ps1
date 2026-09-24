@@ -109,7 +109,7 @@ $definitionObject.actions = [ordered]@{
             operationId = 'SendEmailV2'
             connectionName = 'shared_office365'
           }
-          authentication = "@parameters('$authentication')"
+          authentication = '@parameters(''$authentication'')'
         }
       }
     }

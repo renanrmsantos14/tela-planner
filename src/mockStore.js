@@ -48,9 +48,9 @@ const MOCK_IMAGE_PREVIEWS = {
 
 export function seedState() {
   const quotes = [
-    { id: "quote-1008", code: "COT-1008", title: "Transfer executivo · Aeroporto GRU", client: "Grupo Horizonte", status: "Em análise pelo financeiro", deadline: dateFromToday(0), value: "R$ 1.280,00" },
-    { id: "quote-1007", code: "COT-1007", title: "Van executiva · Evento corporativo", client: "Norte & Sul Eventos", status: "Aguardando informação", deadline: dateFromToday(2), value: "R$ 4.950,00" },
-    { id: "quote-1006", code: "COT-1006", title: "Carro blindado · Diretoria", client: "Alvorada Capital", status: "Em análise pelo financeiro", deadline: dateFromToday(1), value: "R$ 2.400,00" },
+    { id: "quote-1008", code: "COT-1008", title: "Transfer executivo · Aeroporto GRU", client: "Grupo Horizonte", clientId: "mock-client-Grupo Horizonte", clientContact: "Marina Alves", clientEmail: "marina@grupohorizonte.example", clientPhone: "(11) 99999-1008", status: "Em análise pelo financeiro", deadline: dateFromToday(0), value: "R$ 1.280,00" },
+    { id: "quote-1007", code: "COT-1007", title: "Van executiva · Evento corporativo", client: "Norte & Sul Eventos", clientId: "mock-client-Norte & Sul Eventos", clientContact: "Rafael Lima", clientEmail: "rafael@nortesul.example", clientPhone: "(11) 99999-1007", status: "Aguardando informação", deadline: dateFromToday(2), value: "R$ 4.950,00" },
+    { id: "quote-1006", code: "COT-1006", title: "Carro blindado · Diretoria", client: "Alvorada Capital", clientId: "mock-client-Alvorada Capital", clientContact: "Camila Torres", clientEmail: "camila@alvoradacapital.example", clientPhone: "(11) 99999-1006", status: "Em análise pelo financeiro", deadline: dateFromToday(1), value: "R$ 2.400,00" },
     { id: "quote-1005", code: "COT-1005", title: "Recepção de convidados · Congonhas", client: "Casa 9 Produções", status: "Respondida ao cliente", deadline: dateFromToday(-1), value: "R$ 860,00" },
     { id: "quote-1004", code: "COT-1004", title: "Roadshow executivo · São Paulo e Campinas", client: "Vértice Tecnologia", status: "Nova", deadline: dateFromToday(3), value: "R$ 8.740,00" },
     { id: "quote-1003", code: "COT-1003", title: "Traslado de palestrantes · Expo Center Norte", client: "Mosaico Eventos", status: "Em análise pelo financeiro", deadline: dateFromToday(4), value: "R$ 3.260,00" },
@@ -756,6 +756,17 @@ function waitingTargetIds(state, context) {
 
 export function deleteTask(state, id) {
   return saveState({ ...state, tasks: state.tasks.filter((taskItem) => taskItem.id !== id) });
+}
+
+export function deleteQuote(state, id) {
+  if (!(state.quotes || []).some((quote) => quote.id === id)) throw new Error("Cotação não encontrada.");
+  const taskIds = new Set((state.tasks || []).filter((task) => task.quoteId === id).map((task) => task.id));
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const task of state.tasks || []) if (task.parentTaskId && taskIds.has(task.parentTaskId) && !taskIds.has(task.id)) { taskIds.add(task.id); changed = true; }
+  }
+  return saveState({ ...state, quotes: state.quotes.filter((quote) => quote.id !== id), tasks: state.tasks.filter((task) => !taskIds.has(task.id)), notifications: (state.notifications || []).filter((item) => !taskIds.has(item.taskId)) });
 }
 
 export function adminCleanup(state, action) {

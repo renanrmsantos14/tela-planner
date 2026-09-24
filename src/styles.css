@@ -99,6 +99,15 @@ body { min-width: 0; margin: 0; background: var(--canvas); color: var(--ink); fo
 button, input, select, textarea { font: inherit; }
 input:not([type]), input[type="text"], input[type="search"], input[type="email"], input[type="url"], input[type="tel"], input[type="password"], textarea { font-weight: 600; }
 input:not([type])::placeholder, input[type="text"]::placeholder, input[type="search"]::placeholder, input[type="email"]::placeholder, input[type="url"]::placeholder, input[type="tel"]::placeholder, input[type="password"]::placeholder, textarea::placeholder { font-weight: 600; }
+
+/* Checkbox: mesma linguagem visual em todos os fluxos, sem herdar estilos de campo de texto. */
+input[type="checkbox"] { appearance: none; width: 18px; height: 18px; flex: 0 0 18px; margin: 0; border: 1.5px solid #aebdce; border-radius: 6px; background: #fff; color: #fff; cursor: pointer; transition: border-color 150ms ease, background-color 150ms ease, box-shadow 150ms ease, transform 120ms ease; }
+input[type="checkbox"]:hover { border-color: var(--blue); background: #f7faff; }
+input[type="checkbox"]:active { transform: scale(.94); }
+input[type="checkbox"]:focus-visible { outline: 0; border-color: var(--blue); box-shadow: 0 0 0 4px rgba(33,89,210,.16); }
+input[type="checkbox"]:checked { border-color: var(--blue); background: var(--blue); box-shadow: inset 0 0 0 2px var(--blue); }
+input[type="checkbox"]:checked::after { content: ""; display: block; width: 5px; height: 9px; margin: 2px auto 0; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+input[type="checkbox"]:disabled { cursor: not-allowed; opacity: .55; }
 button { cursor: pointer; }
 .app-shell { height: 100dvh; min-height: 100dvh; display: flex; overflow: hidden; }
 .sidebar { width: var(--sidebar-width); height: 100dvh; box-sizing: border-box; flex: 0 0 var(--sidebar-width); overflow: hidden; background: var(--navy); color: #fff; display: flex; flex-direction: column; padding: 26px 14px 16px; position: relative; transition: width 200ms var(--ease-out), flex-basis 200ms var(--ease-out); }
@@ -296,6 +305,39 @@ button { cursor: pointer; }
   .notification-test-type { min-height: 48px; }
   .notification-test-footer { align-items: stretch; flex-direction: column; }
   .notification-test-footer .button { width: 100%; margin-left: 0; min-height: 46px; }
+}
+
+/* Modal comercial: hierarquia curta, checkbox legível e anexos em segundo plano. */
+.quote-commercial-dialog {
+  width: min(560px, calc(100vw - 32px));
+  padding: 24px;
+  border: 1px solid #e1e7ef;
+  border-radius: 18px;
+  box-shadow: 0 24px 70px rgba(0, 20, 30, .22);
+}
+.quote-dialog-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.quote-dialog-header h3 { margin: 3px 0 0; color: var(--navy); font-size: 19px; letter-spacing: -.25px; }
+.quote-dialog-eyebrow { color: var(--blue); font-size: 9px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.quote-commercial-dialog > p { margin: 7px 0 22px; font-size: 12px; line-height: 1.5; }
+.quote-dialog-fields { display: grid; gap: 17px; }
+.quote-commercial-dialog .quote-dialog-fields label { gap: 7px; margin: 0; color: var(--navy); font-size: 12px; font-weight: 800; }
+.quote-commercial-dialog .quote-dialog-fields input,
+.quote-commercial-dialog .quote-dialog-fields textarea { box-sizing: border-box; width: 100%; }
+.quote-commercial-dialog .quote-dialog-fields textarea { min-height: 96px; resize: vertical; }
+.quote-dialog-checkbox { display: flex !important; align-items: flex-start; gap: 10px; margin: 18px 0 0 !important; padding: 12px 13px; border: 1px solid #d9e4f2; border-radius: 10px; color: var(--navy); background: #f7faff; font-size: 11px !important; line-height: 1.4; cursor: pointer; }
+.quote-dialog-checkbox input { width: 17px; height: 17px; flex: 0 0 auto; margin: 0; accent-color: var(--blue); }
+.quote-dialog-checkbox span { padding-top: 1px; }
+.quote-dialog-attachments { margin-top: 20px; padding-top: 18px; border-top: 1px solid #edf0f4; }
+.quote-dialog-section-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 9px; color: var(--navy); font-size: 11px; font-weight: 800; }
+.quote-dialog-section-title small { color: var(--tertiary); font-size: 10px; font-weight: 700; }
+.quote-dialog-attachments .attachment-dropzone { min-height: 64px; padding: 10px 12px; }
+.quote-dialog-attachments .attachment-empty { margin-top: 8px; padding: 10px 12px; }
+.quote-dialog-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 24px !important; padding-top: 16px; border-top: 1px solid #edf0f4; }
+.quote-dialog-actions .button { min-width: 96px; }
+@media (max-width: 560px) {
+  .quote-commercial-dialog { width: calc(100vw - 20px); padding: 20px; }
+  .quote-commercial-dialog .quote-dialog-actions { position: sticky; bottom: -20px; margin-right: -20px !important; margin-left: -20px; padding: 14px 20px calc(14px + env(safe-area-inset-bottom)); background: rgba(255,255,255,.96); }
+  .quote-dialog-actions .button { flex: 1; }
 }
 
 /* Cotações híbridas V3 */
@@ -1417,7 +1459,7 @@ button { cursor: pointer; }
 .import-review-grid small { color: var(--muted); font-size: 9px; font-weight: 800; text-transform: uppercase; }
 .import-review-grid p { margin: 7px 0 0; color: var(--ink); font-size: 11px; line-height: 1.45; }
 .import-confirm { display: flex; gap: 10px; align-items: flex-start; padding: 14px; border: 1px solid #c8daf8; border-radius: 12px; color: var(--navy); background: #f7faff; cursor: pointer; }
-.import-confirm input { width: 17px; height: 17px; margin: 1px 0 0; accent-color: var(--blue); }
+.import-confirm input { width: 18px; height: 18px; flex-basis: 18px; margin: 1px 0 0; }
 .import-confirm span { display: grid; gap: 4px; font-size: 11px; }
 .import-confirm small { color: var(--muted); line-height: 1.45; }
 .import-success { display: grid; justify-items: center; gap: 10px; padding: 42px 20px; text-align: center; color: var(--green); }
@@ -2591,6 +2633,8 @@ button { cursor: pointer; }
 .quote-form-section > .eyebrow { display: block; margin-bottom: 12px; }
 .quote-form label { display: flex; flex-direction: column; gap: 6px; color: var(--secondary); font-size: 12px; font-weight: 600; }
 .quote-form input, .quote-form select, .quote-form textarea { width: 100%; border: 1px solid var(--line); border-radius: 8px; background: #fcfcfb; color: var(--primary); padding: 10px 11px; font: inherit; font-weight: 400; }
+.quote-form .quote-checkbox-field { display: inline-flex; width: fit-content; flex-direction: row; align-items: center; gap: 9px; min-height: 40px; padding: 8px 11px; border: 1px solid var(--line); border-radius: 8px; background: #fcfcfb; color: var(--primary); cursor: pointer; }
+.quote-form .quote-checkbox-field input[type="checkbox"] { width: 18px; height: 18px; padding: 0; border: 1.5px solid #aebdce; border-radius: 6px; background: #fff; }
 .quote-form .custom-select-trigger { min-height: 40px; border-radius: 8px; background: #fcfcfb; color: var(--primary); font-size: 12px; }
 .quote-form textarea { resize: vertical; min-height: 84px; }
 .quote-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
@@ -2691,3 +2735,4 @@ button { cursor: pointer; }
     box-shadow: 0 14px 28px rgba(0, 26, 61, .28);
   }
 }
+.quote-requester-conflict{display:grid;gap:8px;margin-top:8px;padding:10px 12px;border:1px solid #e3b341;border-radius:8px;background:#fff8e1;font-size:12px}.quote-requester-conflict>div{display:flex;gap:8px;flex-wrap:wrap}.quote-requester-conflict button{border:1px solid #c7a13b;border-radius:6px;background:#fff;padding:5px 9px;color:#3d3218;cursor:pointer}.quote-requester-conflict button:last-child{background:#163d52;color:#fff;border-color:#163d52}

@@ -1,0 +1,433 @@
+- generic [ref=e3]:
+  - main [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - strong [ref=e7]: Cotações
+        - generic [ref=e8]: Central de Trabalho
+      - button "Abrir notificações, 4 não lidas" [ref=e197] [cursor=pointer]:
+        - generic [ref=e15]: "4"
+      - button "Atualizar dados" [ref=e16] [cursor=pointer]
+    - generic [ref=e230]:
+      - generic [ref=e232]:
+        - generic [ref=e233]: ACOMPANHAMENTO COMERCIAL
+        - heading "Cotações" [level=1] [ref=e234]
+        - paragraph [ref=e235]: Cadastre, priorize e acompanhe a resposta sem sair da gestão.
+      - generic "Indicadores de cotações" [ref=e236]:
+        - button "Ativas 17" [ref=e237] [cursor=pointer]:
+          - generic [ref=e242]: Ativas
+          - strong [ref=e243]: "17"
+        - button "Atrasadas 4" [ref=e244] [cursor=pointer]:
+          - generic [ref=e253]: Atrasadas
+          - strong [ref=e254]: "4"
+        - button "Vencem hoje 2" [ref=e255] [cursor=pointer]:
+          - generic [ref=e259]: Vencem hoje
+          - strong [ref=e260]: "2"
+        - button "Aguardando 3" [ref=e261] [cursor=pointer]:
+          - generic [ref=e266]: Aguardando
+          - strong [ref=e267]: "3"
+      - generic [ref=e268]:
+        - generic [ref=e269]:
+          - textbox "Buscar cotações" [ref=e274]:
+            - /placeholder: Buscar cotação, cliente ou serviço
+          - button "Filtros" [ref=e275] [cursor=pointer]
+          - generic "Visualização" [ref=e279]:
+            - button "Lista" [ref=e280] [cursor=pointer]
+            - button "Kanban" [pressed] [ref=e282] [cursor=pointer]
+        - generic "Kanban de cotações" [ref=e288]:
+          - generic [ref=e290]:
+            - generic [ref=e291]:
+              - generic [ref=e293]:
+                - heading "Nova" [level=2] [ref=e297]
+                - generic [ref=e298]: "5"
+              - generic [ref=e299]:
+                - article [ref=e300]:
+                  - generic [ref=e301]:
+                    - 'generic "Prioridade: Média" [ref=e302]': Média
+                    - 'generic "Prazo: 27 set." [ref=e303]': 27 set.
+                  - heading "Vértice Tecnologia" [level=3] [ref=e307]
+                  - emphasis [ref=e319]: COT-1004 · Roadshow executivo · São Paulo e Campinas
+                  - 'generic "Valor da cotação: R$ 8.740,00" [ref=e320]':
+                    - generic [ref=e325]:
+                      - generic [ref=e326]: Valor
+                      - strong [ref=e327]: R$ 8.740,00
+                - article [ref=e328]:
+                  - generic [ref=e329]:
+                    - 'generic "Prioridade: Média" [ref=e330]': Média
+                    - 'generic "Prazo: 25 set." [ref=e331]': 25 set.
+                  - heading "Kairós Health" [level=3] [ref=e335]
+                  - emphasis [ref=e347]: COT-1001 · Transfer internacional · GRU–Faria Lima
+                  - 'generic "Valor da cotação: R$ 1.960,00" [ref=e348]':
+                    - generic [ref=e353]:
+                      - generic [ref=e354]: Valor
+                      - strong [ref=e355]: R$ 1.960,00
+                - article [ref=e356]:
+                  - generic [ref=e357]:
+                    - 'generic "Prioridade: Média" [ref=e358]': Média
+                    - 'generic "Prazo: 30 set." [ref=e359]': 30 set.
+                  - heading "Delta Foods" [level=3] [ref=e363]
+                  - emphasis [ref=e375]: COT-0997 · Operação de embarque · Viracopos
+                  - 'generic "Valor da cotação: R$ 3.890,00" [ref=e376]':
+                    - generic [ref=e381]:
+                      - generic [ref=e382]: Valor
+                      - strong [ref=e383]: R$ 3.890,00
+                - article [ref=e384]:
+                  - generic [ref=e385]:
+                    - 'generic "Prioridade: Média" [ref=e386]': Média
+                    - 'generic "Prazo: 01 out." [ref=e387]': 01 out.
+                  - heading "Nexa Industrial" [level=3] [ref=e391]
+                  - emphasis [ref=e403]: COT-0995 · Transfer de executivos · São José dos Campos
+                  - 'generic "Valor da cotação: R$ 4.620,00" [ref=e404]':
+                    - generic [ref=e409]:
+                      - generic [ref=e410]: Valor
+                      - strong [ref=e411]: R$ 4.620,00
+                - article [ref=e412]:
+                  - generic [ref=e413]:
+                    - 'generic "Prioridade: Média" [ref=e414]': Média
+                    - 'generic "Prazo: 03 out." [ref=e415]': 03 out.
+                  - heading "Maré Logística" [level=3] [ref=e419]
+                  - emphasis [ref=e431]: COT-0992 · Transfer noturno · Santos–GRU
+                  - 'generic "Valor da cotação: R$ 2.340,00" [ref=e432]':
+                    - generic [ref=e437]:
+                      - generic [ref=e438]: Valor
+                      - strong [ref=e439]: R$ 2.340,00
+            - generic [ref=e440]:
+              - generic [ref=e442]:
+                - heading "Em análise pelo financeiro" [level=2] [ref=e450]
+                - generic [ref=e451]: "5"
+              - generic [ref=e452]:
+                - article [ref=e453]:
+                  - generic [ref=e454]:
+                    - 'generic "Prioridade: Média" [ref=e455]': Média
+                    - 'generic "Prazo: 24 set." [ref=e456]': 24 set.
+                  - heading "Grupo Horizonte" [level=3] [ref=e460]
+                  - emphasis [ref=e472]: COT-1008 · Transfer executivo · Aeroporto GRU
+                  - 'generic "Valor da cotação: R$ 1.280,00" [ref=e473]':
+                    - generic [ref=e478]:
+                      - generic [ref=e479]: Valor
+                      - strong [ref=e480]: R$ 1.280,00
+                - article [ref=e481]:
+                  - generic [ref=e482]:
+                    - 'generic "Prioridade: Média" [ref=e483]': Média
+                    - 'generic "Prazo: 25 set." [ref=e484]': 25 set.
+                  - heading "Alvorada Capital" [level=3] [ref=e488]
+                  - emphasis [ref=e500]: COT-1006 · Carro blindado · Diretoria
+                  - 'generic "Valor da cotação: R$ 2.400,00" [ref=e501]':
+                    - generic [ref=e506]:
+                      - generic [ref=e507]: Valor
+                      - strong [ref=e508]: R$ 2.400,00
+                - article [ref=e509]:
+                  - generic [ref=e510]:
+                    - 'generic "Prioridade: Média" [ref=e511]': Média
+                    - 'generic "Prazo: 28 set." [ref=e512]': 28 set.
+                  - heading "Mosaico Eventos" [level=3] [ref=e516]
+                  - emphasis [ref=e528]: COT-1003 · Traslado de palestrantes · Expo Center Norte
+                  - 'generic "Valor da cotação: R$ 3.260,00" [ref=e529]':
+                    - generic [ref=e534]:
+                      - generic [ref=e535]: Valor
+                      - strong [ref=e536]: R$ 3.260,00
+                - article [ref=e537]:
+                  - generic [ref=e538]:
+                    - 'generic "Prioridade: Média" [ref=e539]': Média
+                    - 'generic "Prazo: 24 set." [ref=e540]': 24 set.
+                  - heading "Orbe Consultoria" [level=3] [ref=e544]
+                  - emphasis [ref=e556]: COT-0998 · Transfer para conselho · Itaim Bibi
+                  - 'generic "Valor da cotação: R$ 2.150,00" [ref=e557]':
+                    - generic [ref=e562]:
+                      - generic [ref=e563]: Valor
+                      - strong [ref=e564]: R$ 2.150,00
+                - article [ref=e565]:
+                  - generic [ref=e566]:
+                    - 'generic "Prioridade: Média" [ref=e567]': Média
+                    - 'generic "Prazo: 02 out." [ref=e568]': 02 out.
+                  - heading "Pilar Seguros" [level=3] [ref=e572]
+                  - emphasis [ref=e584]: COT-0994 · Frota dedicada · Convenção anual
+                  - 'generic "Valor da cotação: R$ 12.900,00" [ref=e585]':
+                    - generic [ref=e590]:
+                      - generic [ref=e591]: Valor
+                      - strong [ref=e592]: R$ 12.900,00
+            - generic [ref=e593]:
+              - generic [ref=e595]:
+                - heading "Aguardando informação" [level=2] [ref=e599]
+                - generic [ref=e600]: "3"
+              - generic [ref=e601]:
+                - article [ref=e602]:
+                  - generic [ref=e603]:
+                    - 'generic "Prioridade: Média" [ref=e604]': Média
+                    - 'generic "Prazo: 26 set." [ref=e605]': 26 set.
+                  - heading "Norte & Sul Eventos" [level=3] [ref=e609]
+                  - emphasis [ref=e621]: COT-1007 · Van executiva · Evento corporativo
+                  - 'generic "Valor da cotação: R$ 4.950,00" [ref=e622]':
+                    - generic [ref=e627]:
+                      - generic [ref=e628]: Valor
+                      - strong [ref=e629]: R$ 4.950,00
+                  - generic "Aguardando disponibilidade da segunda van · Rafael Lima · até 25 set." [ref=e630]
+                  - button "Registrar retorno" [ref=e636] [cursor=pointer]
+                - article [ref=e637]:
+                  - generic [ref=e638]:
+                    - 'generic "Prioridade: Média" [ref=e639]': Média
+                    - 'generic "Prazo: 29 set." [ref=e640]': 29 set.
+                  - heading "Lumen Energia" [level=3] [ref=e644]
+                  - emphasis [ref=e656]: COT-1002 · Disposição diária · Alphaville
+                  - 'generic "Valor da cotação: R$ 6.180,00" [ref=e657]':
+                    - generic [ref=e662]:
+                      - generic [ref=e663]: Valor
+                      - strong [ref=e664]: R$ 6.180,00
+                  - button "Registrar retorno" [ref=e666] [cursor=pointer]
+                - article [ref=e667]:
+                  - generic [ref=e668]:
+                    - 'generic "Prioridade: Média" [ref=e669]': Média
+                    - 'generic "Prazo: 26 set." [ref=e670]': 26 set.
+                  - heading "Leste Mídia" [level=3] [ref=e674]
+                  - emphasis [ref=e686]: COT-0993 · Recepção VIP · Hotel Unique
+                  - 'generic "Valor da cotação: R$ 2.780,00" [ref=e687]':
+                    - generic [ref=e692]:
+                      - generic [ref=e693]: Valor
+                      - strong [ref=e694]: R$ 2.780,00
+                  - button "Registrar retorno" [ref=e696] [cursor=pointer]
+            - generic [ref=e697]:
+              - generic [ref=e699]:
+                - heading "Cotada" [level=2] [ref=e703]
+                - generic [ref=e704]: "0"
+              - generic [ref=e705]: Arraste cotações para cá
+            - generic [ref=e709]:
+              - generic [ref=e711]:
+                - heading "Respondida ao cliente" [level=2] [ref=e715]
+                - generic [ref=e716]: "4"
+              - generic [ref=e717]:
+                - article [ref=e718]:
+                  - generic [ref=e719]:
+                    - 'generic "Prioridade: Média" [ref=e720]': Média
+                    - generic [ref=e721]: Vencida
+                    - 'generic "Prazo: 23 set." [ref=e722]': 23 set.
+                  - heading "Casa 9 Produções" [level=3] [ref=e726]
+                  - emphasis [ref=e738]: COT-1005 · Recepção de convidados · Congonhas
+                  - 'generic "Valor da cotação: R$ 860,00" [ref=e739]':
+                    - generic [ref=e744]:
+                      - generic [ref=e745]: Valor
+                      - strong [ref=e746]: R$ 860,00
+                - article [ref=e747]:
+                  - generic [ref=e748]:
+                    - 'generic "Prioridade: Média" [ref=e749]': Média
+                    - generic [ref=e750]: Vencida
+                    - 'generic "Prazo: 21 set." [ref=e751]': 21 set.
+                  - heading "Aurora Produções" [level=3] [ref=e755]
+                  - emphasis [ref=e767]: COT-0999 · Transporte de equipe · Guarujá
+                  - 'generic "Valor da cotação: R$ 5.480,00" [ref=e768]':
+                    - generic [ref=e773]:
+                      - generic [ref=e774]: Valor
+                      - strong [ref=e775]: R$ 5.480,00
+                - article [ref=e776]:
+                  - generic [ref=e777]:
+                    - 'generic "Prioridade: Média" [ref=e778]': Média
+                    - generic [ref=e779]: Vencida
+                    - 'generic "Prazo: 19 set." [ref=e780]': 19 set.
+                  - heading "Estação 21" [level=3] [ref=e784]
+                  - emphasis [ref=e796]: COT-0996 · Apoio logístico · Hotel Fasano
+                  - 'generic "Valor da cotação: R$ 1.740,00" [ref=e797]':
+                    - generic [ref=e802]:
+                      - generic [ref=e803]: Valor
+                      - strong [ref=e804]: R$ 1.740,00
+                - article [ref=e805]:
+                  - generic [ref=e806]:
+                    - 'generic "Prioridade: Média" [ref=e807]': Média
+                    - generic [ref=e808]: Vencida
+                    - 'generic "Prazo: 17 set." [ref=e809]': 17 set.
+                  - heading "Horizon Bio" [level=3] [ref=e813]
+                  - emphasis [ref=e825]: COT-0991 · Veículo executivo · Diretoria regional
+                  - 'generic "Valor da cotação: R$ 7.350,00" [ref=e826]':
+                    - generic [ref=e831]:
+                      - generic [ref=e832]: Valor
+                      - strong [ref=e833]: R$ 7.350,00
+      - generic [ref=e834]:
+        - dialog [ref=e835]:
+          - generic [ref=e836]:
+            - generic [ref=e837]:
+              - text: COT-1005
+              - heading "Casa 9 Produções" [level=2] [ref=e838]
+              - generic [ref=e839]:
+                - generic [ref=e840]: Respondida ao cliente
+                - generic [ref=e842]: Camila Torres
+                - generic [ref=e843]: Prazo 23 set.
+            - button "Fechar cotação" [ref=e844] [cursor=pointer]
+          - generic [ref=e848]:
+            - generic [ref=e849]:
+              - generic [ref=e850]:
+                - heading "Cliente" [level=3] [ref=e851]
+                - generic [ref=e852]:
+                  - generic [ref=e853]:
+                    - generic [ref=e854]:
+                      - text: Título interno
+                      - generic [ref=e855]: "*"
+                    - textbox "Título interno" [ref=e856]:
+                      - /placeholder: "Ex.: Transfer executivo · GRU"
+                      - text: Recepção de convidados · Congonhas
+                  - generic [ref=e857]:
+                    - generic [ref=e858]:
+                      - generic [ref=e859]:
+                        - text: Cliente / empresa
+                        - generic [ref=e860]: "*"
+                      - group "Origem do cliente" [ref=e861]:
+                        - button "Cliente cadastrado" [pressed] [ref=e862] [cursor=pointer]
+                        - button "Digitar nome livre" [ref=e867] [cursor=pointer]
+                    - generic [ref=e871]:
+                      - combobox
+                      - button "Selecione um cliente" [ref=e872] [cursor=pointer]
+                  - generic [ref=e875]:
+                    - generic [ref=e876]:
+                      - generic [ref=e877]:
+                        - text: Nome do solicitante
+                        - generic [ref=e878]: "*"
+                      - group "Origem do solicitante" [ref=e879]:
+                        - button "Solicitante cadastrado" [pressed] [ref=e880] [cursor=pointer]
+                        - button "Digitar solicitante livre" [ref=e885] [cursor=pointer]
+                    - generic [ref=e889]:
+                      - combobox
+                      - button "Nome do solicitante" [ref=e890] [cursor=pointer]:
+                        - generic [ref=e891]: Selecione um solicitante
+                  - generic [ref=e893]:
+                    - generic [ref=e894]: Telefone / WhatsApp
+                    - textbox "Telefone / WhatsApp" [ref=e895]
+                  - generic [ref=e896]:
+                    - generic [ref=e897]: E-mail
+                    - textbox "E-mail" [ref=e898]
+              - generic [ref=e899]:
+                - heading "Serviço" [level=3] [ref=e900]
+                - generic [ref=e901]:
+                  - generic [ref=e902]:
+                    - generic [ref=e903]: Tipo de veículo
+                    - generic [ref=e904]:
+                      - combobox
+                      - button "Selecione" [ref=e905] [cursor=pointer]
+                  - generic [ref=e908]:
+                    - generic [ref=e909]: Número de passageiros
+                    - spinbutton "Número de passageiros" [ref=e910]
+                  - generic [ref=e911]:
+                    - generic [ref=e912]:
+                      - text: Origem
+                      - generic [ref=e913]: "*"
+                    - textbox "Origem" [ref=e914]
+                  - generic [ref=e915]:
+                    - generic [ref=e916]:
+                      - text: Destino
+                      - generic [ref=e917]: "*"
+                    - textbox "Destino" [ref=e918]
+                  - generic [ref=e919]:
+                    - generic [ref=e920]: Data e hora
+                    - textbox "Data e hora" [ref=e921]
+                  - generic [ref=e922]:
+                    - generic [ref=e923]: Retorno
+                    - textbox "Retorno" [ref=e924]
+                  - generic [ref=e925]:
+                    - generic [ref=e926]: Pedido do cliente
+                    - textbox "Pedido do cliente Este texto será incluído na proposta enviada ao cliente." [ref=e927]:
+                      - /placeholder: Cole aqui a mensagem original do cliente, sem alterar o texto.
+                      - text: Buscar diretoria no aeroporto\nLevar placa de identificação
+                    - generic [ref=e928]: Este texto será incluído na proposta enviada ao cliente.
+              - generic [ref=e929]:
+                - heading "Prazo e comercial" [level=3] [ref=e930]
+                - generic [ref=e931]:
+                  - generic [ref=e932]:
+                    - generic [ref=e933]: Prazo para responder
+                    - textbox "Prazo para responder" [ref=e934]: 2026-09-23
+                  - generic [ref=e935]:
+                    - generic [ref=e936]: Prioridade
+                    - 'radiogroup "Prioridade: Média" [ref=e937]':
+                      - generic [ref=e938]:
+                        - radio "Baixa" [ref=e939] [cursor=pointer]
+                        - radio "Média" [checked] [ref=e942] [cursor=pointer]
+                        - radio "Alta" [ref=e945] [cursor=pointer]
+                        - radio "Urgente" [ref=e948] [cursor=pointer]
+                      - generic [ref=e951]: Média
+                  - generic [ref=e952]:
+                    - generic [ref=e953]:
+                      - text: Valor total (BRL)
+                      - generic [ref=e954]: "*"
+                    - textbox "Valor total (BRL)" [ref=e955]:
+                      - /placeholder: R$ 0,00
+                      - text: R$ 860,00
+                  - generic [ref=e956]:
+                    - generic [ref=e957]: Condições comerciais
+                    - textbox "Condições comerciais" [ref=e958]:
+                      - /placeholder: Prazo, pagamento, espera, cancelamento e demais condições
+                      - text: Pagamento em 30 dias\nValidade de 10 dias
+              - button "Salvar dados" [ref=e959] [cursor=pointer]
+            - generic [ref=e964]:
+              - generic [ref=e965]:
+                - generic [ref=e966]:
+                  - heading "Anexos" [level=3] [ref=e967]
+                  - generic [ref=e968]: "1"
+                - generic [ref=e969]: Até 5 MB por arquivo
+              - paragraph [ref=e970]: Anexos da cotação ficam vinculados à tarefa de acompanhamento.
+              - generic [ref=e971] [cursor=pointer]:
+                - generic [ref=e976]:
+                  - strong [ref=e977]: Adicione arquivos à cotação
+                  - generic [ref=e978]: Cole com Ctrl+V, clique para escolher ou arraste arquivos para cá
+                - generic [ref=e979]: Escolher arquivos
+                - button "Adicione arquivos à cotação Cole com Ctrl+V, clique para escolher ou arraste arquivos para cá Escolher arquivos"
+              - article [ref=e981]:
+                - button "Abrir prévia de evidencia-operacional.svg" [ref=e983]:
+                  - img "evidencia-operacional.svg" [ref=e984]
+                - generic [ref=e985]:
+                  - button "Abrir evidencia-operacional.svg em nova aba" [ref=e986] [cursor=pointer]:
+                    - generic [ref=e993]:
+                      - strong [ref=e994]: evidencia-operacional.svg
+                      - generic [ref=e995]: Imagem · 119 KB · Abrir em nova aba
+                  - generic [ref=e996]:
+                    - generic [ref=e997]: Salvo
+                    - button "Remover evidencia-operacional.svg" [ref=e1001] [cursor=pointer]
+            - button "Histórico da tarefa Alterações registradas nesta tarefa 1" [ref=e1007] [cursor=pointer]:
+              - generic [ref=e1008]:
+                - strong [ref=e1009]: Histórico da tarefa
+                - generic [ref=e1010]: Alterações registradas nesta tarefa
+              - generic [ref=e1011]: "1"
+          - generic [ref=e1015]:
+            - button "Montar email" [active] [ref=e1016] [cursor=pointer]
+            - button "Ver tarefa" [ref=e1021] [cursor=pointer]
+            - button "Registrar resultado" [ref=e1025] [cursor=pointer]
+            - button "Excluir cotação" [ref=e1026] [cursor=pointer]
+        - dialog "Montar email da cotação" [ref=e1059]:
+          - iframe [ref=e1061]:
+            - generic [ref=f2e1]:
+              - img "Betinhos Executive Service" [ref=f2e2]
+              - paragraph [ref=f2e3]: Olá Casa 9 Produções,
+              - paragraph [ref=f2e4]:
+                - text: A
+                - strong [ref=f2e5]: Betinhos Executive Service
+                - text: é uma empresa de traslados e serviços executivos presente no estado de São Paulo há mais de 37 anos e, ao longo dessas décadas, mantemos compromisso com Non Compliance, EHS e Safe Fleet.
+              - paragraph [ref=f2e6]: Abaixo segue sua cotação no mesmo formato do material aprovado, com foco nas informações do atendimento e sem a assinatura final.
+              - img "Betinhos Executive Service" [ref=f2e7]
+              - paragraph [ref=f2e8]:
+                - emphasis [ref=f2e9]: Roteiro do atendimento
+              - paragraph [ref=f2e10]: • Roteiro a definir.
+              - img "Frota executiva Betinhos" [ref=f2e11]
+              - img "Compromissos operacionais Betinhos" [ref=f2e12]
+              - paragraph [ref=f2e13]: Com base nesse comprometimento, faço saber que o custo total é de
+              - paragraph [ref=f2e14]: R$ 860,00
+              - paragraph [ref=f2e15]: Veja abaixo informações importantes para sua contratação
+              - paragraph [ref=f2e16]: "Pedido do cliente:"
+              - paragraph [ref=f2e17]: Buscar diretoria no aeroporto\nLevar placa de identificação
+              - paragraph [ref=f2e18]: "Condições comerciais:"
+              - paragraph [ref=f2e19]: Pagamento em 30 dias\nValidade de 10 dias
+              - paragraph [ref=f2e20]: "OBSERVAÇÕES IMPORTANTES:"
+              - text: • Esse e-mail é exclusivo para cotação e não garante o agendamento do serviço. Caso aprovado, devolva sua confirmação ao consultor da Betinhos. • A definição do motorista acontece próximo à data do atendimento para preservar descanso e segurança operacional. • Caso precise de suporte, acione a equipe Betinhos pelos canais oficiais do atendimento.
+          - generic [ref=e1062]:
+            - generic [ref=e1063]:
+              - generic [ref=e1064]:
+                - generic [ref=e1065]: Pré-visualização
+                - strong [ref=e1066]: Cotação COT-1005 - Casa 9 Produções
+              - button "Fechar montagem do email" [ref=e1067] [cursor=pointer]
+            - status [ref=e1071]: O modelo copiado inclui as imagens.
+            - button "Editar texto" [ref=e1072] [cursor=pointer]
+            - button "Copiar modelo completo" [ref=e1073] [cursor=pointer]
+            - generic [ref=e1077]:
+              - button "Baixar PDF" [ref=e1078] [cursor=pointer]
+              - button "Baixar Word" [ref=e1082] [cursor=pointer]
+  - navigation "Navegação principal" [ref=e171]:
+    - button "Hoje 15" [ref=e172] [cursor=pointer]:
+      - generic [ref=e178]: Hoje
+      - generic [ref=e179]: "15"
+    - button "Tarefas 30" [ref=e180] [cursor=pointer]:
+      - generic [ref=e184]: Tarefas
+      - generic [ref=e185]: "30"
+    - button "Cotações" [ref=e186] [cursor=pointer]
+    - button "Mais" [ref=e191] [cursor=pointer]

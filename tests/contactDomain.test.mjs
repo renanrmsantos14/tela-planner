@@ -44,7 +44,7 @@ test("expõe transições operacionais de status", () => {
 });
 
 test("filtra por mensagem, canal, status, prioridade e responsável", () => {
-  const contacts = [contact(), contact({ id: "c-2", channel: "email", status: "waiting", priority: "high", ownerEmployeeId: "e-2", lastMessage: "Anexo da nota fiscal" })];
+  const contacts = [contact(), contact({ id: "c-2", senderPhone: "", senderEmail: "ana@example.com", status: "waiting", priority: "high", ownerEmployeeId: "e-2", lastMessage: "Anexo da nota fiscal" })];
   assert.equal(filterContacts(contacts, { query: "nota fiscal" }).length, 1);
   assert.equal(filterContacts(contacts, { channel: ["email"], status: ["waiting"], priority: ["high"], owner: ["e-2"] }).length, 1);
   assert.equal(filterContacts([contact({ status: "archived" })]).length, 0);
@@ -83,11 +83,14 @@ test("preserva múltiplos responsáveis e permite filtrar qualquer pessoa seleci
   assert.deepEqual(buildLinkedTaskInput(shared).assigneeName, ["Renan", "Marina"]);
 });
 
-test("exige o contato correspondente ao canal e mantém a observação de aguardando", () => {
-  const email = contact({ channel: "email", senderPhone: "", senderEmail: "ana@example.com", status: "waiting" });
+test("exige telefone ou e-mail e mantém a observação de aguardando", () => {
+  const noContact = contact({ senderPhone: "", senderEmail: "" });
+  const email = contact({ senderPhone: "", senderEmail: "ana@example.com", status: "waiting" });
+  const phone = contact({ senderPhone: "+55 11 99999-0000", senderEmail: "" });
+  assert.equal(validateContact(noContact).allowed, false);
   assert.equal(validateContact(email).allowed, true);
-  assert.equal(validateContact({ ...email, senderEmail: "" }).allowed, false);
-  assert.equal(validateContact({ ...email, senderEmail: "", senderPhone: "+55 11 99999-0000" }).allowed, false);
+  assert.equal(validateContact(phone).allowed, true);
+  assert.equal(validateContact({ ...email, senderEmail: "", senderPhone: "" }).allowed, false);
   assert.equal(email.waitingNote, "Esperando resposta");
 });
 

@@ -35,6 +35,7 @@ import {
   contactIsOverdue,
   filterContacts,
   sortContacts,
+  validateContact,
 } from "./contactDomain.js";
 
 const CHANNEL_ICON = { whatsapp: MessageCircle, email: Mail, phone: Phone };
@@ -124,7 +125,6 @@ function emptyDraft(currentEmployee) {
     senderName: "",
     senderPhone: "",
     senderEmail: "",
-    channel: "whatsapp",
     priority: "medium",
     status: "new",
     assignmentMode: "people",
@@ -230,9 +230,6 @@ function ContactDrawer({
   const quoteOptions = [{ value: "", label: "Sem vínculo" }, ...quotes.map((quote) => ({ value: quote.id, label: `${quote.code || "Cotação"} · ${quote.title || quote.client || ""}`, search: `${quote.code || ""} ${quote.title || ""} ${quote.client || ""}` }))];
   const relatedTasks = (tasks || []).filter((task) => task.contactId === contact?.id || contact?.linkedTaskIds?.includes(task.id));
   const ChannelIcon = CHANNEL_ICON[draft.channel] || MessageCircle;
-  const channelField = draft.channel === "email" ? "senderEmail" : "senderPhone";
-  const channelFieldLabel = draft.channel === "email" ? "E-mail do remetente" : "Telefone do remetente";
-  const channelFieldType = draft.channel === "email" ? "email" : "tel";
   const availableStatuses = isNew ? CONTACT_STATUSES : CONTACT_STATUSES.filter((item) => (CONTACT_STATUS_TRANSITIONS[contact.status] || [contact.status]).includes(item.id));
   const update = (key, value) => setDraft((current) => ({ ...current, [key]: value }));
   const setAssignmentForm = (updater) => setDraft((current) => {
@@ -254,6 +251,11 @@ function ContactDrawer({
   const submit = async (event) => {
     event.preventDefault();
     setSaveError("");
+    const validation = validateContact(draft);
+    if (!validation.allowed) {
+      setSaveError(validation.error);
+      return;
+    }
     setSaving(true);
     try {
       const success = await onSave(isNew ? { ...draft, attachments: draftAttachments } : draft);
@@ -326,9 +328,10 @@ function ContactDrawer({
           {!isNew && canEdit && <div className="contact-drawer-actions"><button className="button button-secondary" type="button" onClick={() => onCreateTask(contact)} disabled={saving}><Plus size={14} /> Criar task</button><span>O status do caso não muda.</span></div>}
           <div className="drawer-field-grid contact-core-grid">
             <label>Remetente<input value={draft.senderName} onChange={(event) => update("senderName", event.target.value)} disabled={!canEdit || saving} required /></label>
-            <label>Canal<SearchableSelect value={draft.channel} onChange={(value) => update("channel", value)} options={CONTACT_CHANNELS.map((item) => ({ value: item.id, label: item.label }))} placeholder="Selecione o canal" clearable={false} disabled={!canEdit || saving} aria-label="Canal do caso" /></label>
-            <label className="contact-channel-field">{channelFieldLabel}<input type={channelFieldType} value={draft[channelField] || ""} onChange={(event) => update(channelField, event.target.value)} disabled={!canEdit || saving} placeholder={draft.channel === "email" ? "nome@empresa.com" : "(00) 00000-0000"} required /></label>
+            <label>Telefone (opcional)<input type="tel" value={draft.senderPhone || ""} onChange={(event) => update("senderPhone", event.target.value)} disabled={!canEdit || saving} placeholder="(00) 00000-0000" aria-label="Telefone do remetente" /></label>
+            <label>E-mail (opcional)<input type="email" value={draft.senderEmail || ""} onChange={(event) => update("senderEmail", event.target.value)} disabled={!canEdit || saving} placeholder="nome@empresa.com" aria-label="E-mail do remetente" /></label>
           </div>
+          <p className="contact-contact-hint">Informe pelo menos um contato: telefone ou e-mail.</p>
           <div className="drawer-field-grid contact-quick-fields">
             <div className="drawer-status-priority-grid">
               <div className="status-field"><span className="status-field-label">Status</span><ContactStatusPicker value={draft.status} options={availableStatuses} onChange={(value) => update("status", value)} disabled={!canEdit || saving} /></div>

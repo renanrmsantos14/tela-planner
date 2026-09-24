@@ -7,7 +7,7 @@ import { createQuotePdf } from "../src/quotePdf.js";
 import { createQuoteDraft } from "../src/mailGraph.js";
 
 const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9n0ZkAAAAASUVORK5CYII=", "base64");
-const quote = { code: "COT-1007", client: "Cliente", clientContact: "Renan", origin: "GRU", destination: "Paulista", vehicleType: "Executivo", value: "R$ 1.000,00", commercialTerms: "Pagamento em 30 dias" };
+const quote = { code: "COT-1007", client: "Cliente", clientContact: "Renan", origin: "GRU", destination: "Paulista", vehicleType: "Executivo", value: "R$ 1.000,00", notes: "Pedido original do cliente", commercialTerms: "Pagamento em 30 dias" };
 const fetcher = async () => ({ ok: true, blob: async () => new Blob([png], { type: "image/png" }) });
 
 test("WebResources locais contêm os seis PNGs usados pelas cotações", async () => {

@@ -35,13 +35,13 @@ function DetailGroup({ title, step, onEditStep, disabled, children }) {
 }
 
 export default function QuoteReview({ draft, attachments, onEditStep, saving = false }) {
-  const contact = draft.channel === "E-mail" ? draft.clientEmail : draft.clientPhone;
+  const contact = [draft.clientPhone, draft.clientEmail].filter((value) => String(value || "").trim()).join(" · ");
   const priority = PRIORITIES.find((item) => item.id === draft.priority)?.label || "Não informada";
 
   return <div className="quote-review">
     <section className="quote-review-trip" aria-label="Resumo do serviço">
       <div className="quote-review-trip-heading">
-        <span>{detailText(draft.serviceType)}</span>
+        <span>Rota do serviço</span>
         <button type="button" onClick={() => onEditStep(1)} aria-label="Editar serviço" disabled={saving}>Editar</button>
       </div>
       <div className="quote-review-route">
@@ -71,7 +71,7 @@ export default function QuoteReview({ draft, attachments, onEditStep, saving = f
         <DetailGroup title="Cliente" step={0} onEditStep={onEditStep} disabled={saving}>
           <Detail label="Título interno">{detailText(draft.title)}</Detail>
           <Detail label="Solicitante">{detailText(draft.clientContact)}</Detail>
-          <Detail label="Contato">{draft.channel ? `${draft.channel} · ${detailText(contact)}` : detailText(contact)}</Detail>
+          <Detail label="Contato">{detailText(contact)}</Detail>
         </DetailGroup>
         <DetailGroup title="Serviço" step={1} onEditStep={onEditStep} disabled={saving}>
           <Detail label="Veículo">{draft.vehicleType || "A definir"}</Detail>

@@ -25,7 +25,6 @@ export const CONTACT_STATUS_TRANSITIONS = Object.freeze({
 });
 
 const CONTACT_STATUS_IDS = new Set(CONTACT_STATUSES.map((item) => item.id));
-const CONTACT_CHANNEL_IDS = new Set(CONTACT_CHANNELS.map((item) => item.id));
 const CONTACT_PRIORITY_IDS = new Set(CONTACT_PRIORITIES.map((item) => item.id));
 const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 };
 const LEGACY_STATUS_ALIASES = { resolved: "done", archived: "done" };
@@ -71,7 +70,13 @@ export function normalizeContact(input = {}, context = {}) {
   const owner = context.owner || {};
   const status = CONTACT_STATUS_IDS.has(canonicalStatus(input.status)) ? canonicalStatus(input.status) : "new";
   const priority = CONTACT_PRIORITY_IDS.has(input.priority) ? input.priority : "medium";
-  const channel = CONTACT_CHANNEL_IDS.has(input.channel) ? input.channel : "whatsapp";
+  const channel = input.externalConversationId || input.sourceUrl === "whatsapp-web"
+    ? "whatsapp"
+    : text(input.senderPhone)
+      ? "phone"
+      : text(input.senderEmail)
+        ? "email"
+        : "whatsapp";
   const receivedAt = input.receivedAt || now;
   const lastMessageAt = input.lastMessageAt || receivedAt;
   const message = text(input.lastMessage || input.message);
@@ -129,11 +134,9 @@ export function normalizeContact(input = {}, context = {}) {
 export function validateContact(input = {}) {
   if (!text(input.subject)) return { allowed: false, error: "Informe o assunto do caso." };
   if (!text(input.senderName)) return { allowed: false, error: "Informe o remetente." };
-  if (!CONTACT_CHANNEL_IDS.has(input.channel)) return { allowed: false, error: "Selecione um canal válido." };
   if (!CONTACT_STATUS_IDS.has(canonicalStatus(input.status))) return { allowed: false, error: "Selecione um status válido." };
   if (!CONTACT_PRIORITY_IDS.has(input.priority)) return { allowed: false, error: "Selecione uma prioridade válida." };
-  if (["whatsapp", "phone"].includes(input.channel) && !text(input.senderPhone)) return { allowed: false, error: "Informe o telefone do remetente." };
-  if (input.channel === "email" && !text(input.senderEmail)) return { allowed: false, error: "Informe o e-mail do remetente." };
+  if (!text(input.senderPhone) && !text(input.senderEmail)) return { allowed: false, error: "Informe pelo menos o telefone ou o e-mail do remetente." };
   if (input.dueDate && !/^\d{4}-\d{2}-\d{2}$/.test(input.dueDate)) return { allowed: false, error: "Informe um prazo válido." };
   if (canonicalStatus(input.status) === "done" && input.resolutionOutcome !== undefined && typeof input.resolutionOutcome !== "string") return { allowed: false, error: "O resultado da resolução é inválido." };
   return { allowed: true, error: "" };

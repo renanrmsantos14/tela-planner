@@ -106,7 +106,6 @@ import { FormMoneyInput, FormTextArea } from "./quotes/QuoteFields";
 import { taskHistoryDetails, visibleTaskHistory } from "./taskHistory";
 import { playCompletionSound, prepareCompletionSound } from "./completionSound";
 import { createDataStore } from "./dataverse";
-import ServiceTypeManager from "./ServiceTypeManager.jsx";
 import { plannerNavigationWindow, plannerUrlForState, readPlannerUrlState } from "./plannerUrl";
 import SearchableSelect, {
   SearchableMultiSelect,
@@ -628,7 +627,7 @@ function QuoteCompletionDialog({ quote, taskId, onUpload, onCancel, onConfirm })
           <label><input type="radio" name="quote-completion-result" checked={result === "sent"} onChange={() => setResult("sent")} />Proposta já enviada ao cliente</label>
         </div>
         <label className="quote-completion-field" htmlFor="quote-completion-value">Valor total (BRL)<FormMoneyInput id="quote-completion-value" value={value} onChange={(event) => setValue(event.target.value)} error={value && validation.errors.value} required /></label>
-        <label className="quote-completion-field" htmlFor="quote-completion-terms">Condições comerciais<FormTextArea id="quote-completion-terms" rows={3} value={commercialTerms} onChange={(event) => setCommercialTerms(event.target.value)} error={commercialTerms && validation.errors.commercialTerms} required /></label>
+        <label className="quote-completion-field" htmlFor="quote-completion-terms">Condições comerciais<FormTextArea id="quote-completion-terms" rows={3} value={commercialTerms} onChange={(event) => setCommercialTerms(event.target.value)} /></label>
         {result === "sent" && <label className="quote-completion-sent"><input type="checkbox" checked={sentConfirmed} onChange={(event) => setSentConfirmed(event.target.checked)} />Confirmo que a proposta já foi enviada ao cliente.</label>}
         <AttachmentSection taskId={taskId} attachments={draftAttachments} onAttachment={addDraftAttachments} onDeleteAttachment={removeDraftAttachment} helperText="Os anexos serão enviados antes de concluir a tarefa." showPreview={false} allowOpen={false} compact />
         <p className="quote-completion-uploaded">Clique, arraste ou cole um arquivo com Ctrl+V. Os anexos são enviados antes da conclusão.</p>
@@ -887,6 +886,7 @@ function notificationPresentation(item, task, contact) {
       tone: "info",
     };
   }
+
   if (type === "overdue_manual") {
     return {
       context,
@@ -897,7 +897,6 @@ function notificationPresentation(item, task, contact) {
       tone: "warning",
     };
   }
-
 
   return {
     context,
@@ -1036,8 +1035,8 @@ function NotificationsPanel({
                   <div className="notification-item-content">
                     <button className="notification-item-main" type="button" onClick={() => item.contactId ? onOpenContact?.(item) : onOpenTask(item)}>
                       <span className="notification-kicker">{presentation.label}</span>
-                      {presentation.message && <span className="notification-message">{presentation.message}</span>}
                       <strong>{presentation.title}</strong>
+                      {presentation.message && <span className="notification-message">{presentation.message}</span>}
                       <span className="notification-meta">
                         <span>{presentation.context}</span>
                         <time dateTime={item.occurredAt || undefined}>{formatNotificationTime(item.occurredAt)}</time>
@@ -1359,8 +1358,8 @@ function TaskViewSelector({ active, onSelect }) {
 const BOARD_SORT_OPTIONS = [
   ["dueDate", "Prazo", "Mais próximo primeiro", "Mais distante primeiro"],
   ["priority", "Prioridade", "Mais alta primeiro", "Mais baixa primeiro"],
-  ["updatedAt", "Atualização", "Mais recente primeiro", "Mais antiga primeiro"],
-  ["createdAt", "Criação", "Mais recente primeiro", "Mais antiga primeiro"],
+  ["updatedAt", "Atualização", "Mais antiga primeiro", "Mais recente primeiro"],
+  ["createdAt", "Criação", "Mais antiga primeiro", "Mais recente primeiro"],
   ["title", "Título", "A–Z", "Z–A"],
 ];
 const BOARD_SORT_DEFAULT = { key: "dueDate", direction: "asc" };
@@ -3245,7 +3244,6 @@ function SettingsView({ onReset, onAdminCleanup, onSendNotificationTest, live, t
         </section>
         <TeamManager teams={teams} tasks={tasks} employees={employees} onSave={onSaveTeam} onDelete={onDeleteTeam} />
       </div>
-      <ServiceTypeManager live={live} />
     </div>
   );
 }
@@ -6694,6 +6692,18 @@ export default function App() {
       store.live ? "Resultado registrado." : "Resultado registrado no mock.",
     );
   }, [runOptimisticMutation, state, store]);
+  const deleteQuote = useCallback((id) => {
+    if (!store.deleteQuote) return Promise.resolve(false);
+    return runOptimisticMutation(
+      (current) => current,
+      () => store.deleteQuote(confirmedStateRef.current || state, id),
+      store.live ? "Excluindo cotação e tarefas vinculadas…" : "Excluindo cotação local…",
+      "Cotação excluída.",
+    ).then((success) => {
+      if (success) setQuoteToOpenId("");
+      return success;
+    });
+  }, [runOptimisticMutation, state, store]);
   const archiveContact = useCallback(
     (contact) => {
       const archivedAt = new Date().toISOString();
@@ -7362,7 +7372,7 @@ export default function App() {
         />
       );
     if (active === "quotes")
-      return state.loading?.quotes ? <LoadingFallback label="Carregando cotações" view="quotes" quoteView={readQuoteViewPreference()} /> : <QuotesView state={viewState} currentEmployee={currentEmployee} WaitingContextFieldsComponent={WaitingContextFields} ReturnsSectionComponent={TaskReturnsSection} onOpenTask={openTask} onCreateQuote={createQuote} onUpdateQuote={updateQuote} onRequestWaitingQuote={setWaitingQuoteId} onRegisterWaitingReturn={openWaitingReturn} onMarkQuoteSent={markQuoteSent} onSetQuoteOutcome={setQuoteOutcome} onEnsureTaskDetails={ensureTaskDetails} onAttachment={addAttachment} onDeleteAttachment={removeAttachment} loadAttachmentContent={store.loadAttachmentContent} AttachmentSectionComponent={AttachmentSection} selectedQuoteId={quoteToOpenId} onSelectQuote={setQuoteToOpenId} workspaceEnabled={QUOTE_WORKSPACE_V2_ENABLED} hybridEnabled={QUOTE_HYBRID_V3_ENABLED} />;
+      return state.loading?.quotes ? <LoadingFallback label="Carregando cotações" view="quotes" quoteView={readQuoteViewPreference()} /> : <QuotesView state={viewState} currentEmployee={currentEmployee} WaitingContextFieldsComponent={WaitingContextFields} ReturnsSectionComponent={TaskReturnsSection} onOpenTask={openTask} onCreateQuote={createQuote} onUpdateQuote={updateQuote} onDeleteQuote={deleteQuote} onRequestWaitingQuote={setWaitingQuoteId} onRegisterWaitingReturn={openWaitingReturn} onMarkQuoteSent={markQuoteSent} onSetQuoteOutcome={setQuoteOutcome} onEnsureTaskDetails={ensureTaskDetails} onAttachment={addAttachment} onDeleteAttachment={removeAttachment} loadAttachmentContent={store.loadAttachmentContent} AttachmentSectionComponent={AttachmentSection} selectedQuoteId={quoteToOpenId} onSelectQuote={setQuoteToOpenId} workspaceEnabled={QUOTE_WORKSPACE_V2_ENABLED} hybridEnabled={QUOTE_HYBRID_V3_ENABLED} />;
     if (active === "board")
       return (
         <BoardView
